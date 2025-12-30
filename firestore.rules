@@ -1,55 +1,8 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ----------------------------------------------------------------------
-    // Helper Functions
-    // ----------------------------------------------------------------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      // Admin is identified by a specific, hardcoded email address.
-      // This is the source of truth for all admin privileges.
-      return isSignedIn() && request.auth.token.email == 'admin@example.com';
-    }
-
-    function isOwner(userId) {
-      // Check if the requesting user's ID matches the document's userId.
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // ----------------------------------------------------------------------
-    // User Profiles & ALL Subcollections (Recursive)
-    // ----------------------------------------------------------------------
-    // This single rule grants admins full control over any user document
-    // and everything inside it (like the 'sessions' subcollection).
-    // It also allows users to manage their own subcollection documents.
-    match /users/{userId}/{document=**} {
-      allow read, write: if isAdmin() || isOwner(userId);
-    }
-
-    // This rule allows a user to read their own top-level profile,
-    // but not other users' profiles. Admins can read any profile.
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
-    }
-
-
-    // ----------------------------------------------------------------------
-    // Public Content: Channels, Seasons, Episodes (Recursive)
-    // ----------------------------------------------------------------------
-    // This rule applies to /channels/{channelId} and any path below it.
-    match /channels/{channelId}/{document=**} {
-      // Any signed-in user can read all content.
-      allow read: if isSignedIn();
-      // Only admins can create, update, or delete content and all sub-documents.
-      allow write: if isAdmin();
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
