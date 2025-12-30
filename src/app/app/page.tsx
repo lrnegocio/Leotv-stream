@@ -1,175 +1,266 @@
-"use client";
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { VideoPlayer } from "@/components/video-player";
-import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-// This should be replaced with real data from Firebase
+'use client';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { VideoPlayer } from '@/components/video-player';
+import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight, Tv, Clapperboard, Film, Radio } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+
 type Channel = {
   id: string;
   name: string;
   category: string;
   url: string;
-  isSeries?: boolean;
-  seriesName?: string;
-  episodeNumber?: number;
-  seasonNumber?: number;
+  type: 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
+  createdAt: string;
 };
 
-const sampleChannels: Channel[] = [
-  { id: '1', name: 'Canal Aberto 1', category: 'Abertos', url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0' },
-  { id: '2', name: 'Canal Aberto 2', category: 'Abertos', url: 'https://www.canva.com/design/DAG8jqppYd4/qnHkHB9kq5UYfBUkGGY9rw/watch?embed' },
-  { id: '3', name: 'Filme Ação 1', category: 'Filmes', url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0' },
-  { id: '4', name: 'Filme Comédia 1', category: 'Filmes', url: 'https://www.canva.com/design/DAG6ONyt5ks/6DuizP3XWwr5xFWBi383CQ/view?embed' },
-  { id: '5', name: 'Série Exemplo T1 E1', category: 'Séries', url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0', isSeries: true, seriesName: 'Série Exemplo', seasonNumber: 1, episodeNumber: 1 },
-  { id: '6', name: 'Série Exemplo T1 E2', category: 'Séries', url: 'https://www.canva.com/design/DAG8jqppYd4/qnHkHB9kq5UYfBUkGGY9rw/watch?embed', isSeries: true, seriesName: 'Série Exemplo', seasonNumber: 1, episodeNumber: 2 },
-  { id: '7', name: 'Rádio Jovem Pan', category: 'Rádios', url: 'https://audio.jovempan.com.br/stream/jovempan-fm-sp-aac' },
-];
+type Episode = {
+    id: string;
+    number: string;
+    url: string;
+}
+
+type Season = {
+    id: string;
+    number: string;
+}
+
+type Series = Channel & {
+    seasons?: (Season & { episodes: Episode[] })[];
+    episodes?: Episode[];
+}
 
 export default function App() {
-  const [sourceToPlay, setSourceToPlay] = useState("");
-  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [sourceToPlay, setSourceToPlay] = useState('');
+  const [currentContent, setCurrentContent] = useState<Channel | Episode | null>(null);
   const [filteredCategory, setFilteredCategory] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [content, setContent] = useState<Channel[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
 
-  // In a real app, you would have authentication logic here.
-  // For now, we assume the user is logged in if they reach this page.
-  
   useEffect(() => {
-    const firstChannel = sampleChannels.find(c => c.category === 'Abertos');
-    if (firstChannel) {
-        setSourceToPlay(firstChannel.url);
-        setCurrentChannel(firstChannel);
+    if (!isUserLoading && !user) {
+      router.replace('/');
     }
-  }, []);
+  }, [user, isUserLoading, router]);
 
-  const handleChannelClick = (channel: Channel) => {
-    setSourceToPlay(channel.url);
-    setCurrentChannel(channel);
-  }
-  
+  useEffect(() => {
+    const fetchContent = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        
+        const channelsQuery = query(collection(firestore, 'channels'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(channelsQuery);
+        
+        const allContent: any[] = [];
+
+        for (const docSnap of querySnapshot.docs) {
+            const channelData = { id: docSnap.id, ...docSnap.data() } as Channel;
+
+            if (channelData.type === 'series-seasons') {
+                const seasonsQuery = query(collection(docSnap.ref, 'seasons'), orderBy('number'));
+                const seasonsSnapshot = await getDocs(seasonsQuery);
+                const seasons = [];
+                for (const seasonDoc of seasonsSnapshot.docs) {
+                    const episodesQuery = query(collection(seasonDoc.ref, 'episodes'), orderBy('number'));
+                    const episodesSnapshot = await getDocs(episodesQuery);
+                    const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, ...epDoc.data() } as Episode));
+                    seasons.push({ id: seasonDoc.id, ...seasonDoc.data(), episodes });
+                }
+                allContent.push({ ...channelData, seasons });
+            } else if (channelData.type === 'series-episodes') {
+                const episodesQuery = query(collection(docSnap.ref, 'episodes'), orderBy('number'));
+                const episodesSnapshot = await getDocs(episodesQuery);
+                const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, ...epDoc.data() } as Episode));
+                allContent.push({ ...channelData, episodes });
+            } else {
+                allContent.push(channelData);
+            }
+        }
+        setContent(allContent);
+        
+        const firstPlayable = allContent.find(c => c.type === 'channel' || c.type === 'movie');
+        if (firstPlayable) {
+            setSourceToPlay(firstPlayable.url);
+            setCurrentContent(firstPlayable);
+        }
+        
+        setIsLoading(false);
+    };
+
+    fetchContent();
+  }, [firestore]);
+
+
+  const handleChannelClick = (item: Channel | Episode) => {
+    setSourceToPlay((item as any).url);
+    setCurrentContent(item);
+  };
+
   const handleLogout = () => {
-      // Clear session, etc.
-      router.push('/');
+    // Clear session, etc.
+    router.push('/');
+  };
+  
+  if (isUserLoading || isLoading) {
+      return (
+          <div className="flex items-center justify-center h-screen">
+              <p>Carregando aplicativo...</p>
+          </div>
+      )
   }
 
-  const categories = ['all', ...Array.from(new Set(sampleChannels.map(c => c.category)))];
-  const filteredChannels = filteredCategory === 'all'
-    ? sampleChannels
-    : sampleChannels.filter(c => c.category === filteredCategory);
-
-  const seriesMap = new Map<string, Channel[]>();
-  const regularChannels: Channel[] = [];
-
-  filteredChannels.forEach(channel => {
-      if (channel.isSeries && channel.seriesName) {
-          if (!seriesMap.has(channel.seriesName)) {
-              seriesMap.set(channel.seriesName, []);
-          }
-          seriesMap.get(channel.seriesName)!.push(channel);
-      } else {
-          regularChannels.push(channel);
-      }
-  });
-
+  const categories = ['all', ...Array.from(new Set(content.map((c) => c.category)))];
+  const filteredContent =
+    filteredCategory === 'all'
+      ? content
+      : content.filter((c) => c.category === filteredCategory);
 
   return (
     <div className="user-container">
-      <div className={cn("user-sidebar", !sidebarOpen && "w-0 overflow-hidden border-none")}>
+      <div className={cn('user-sidebar', !sidebarOpen && 'w-0 overflow-hidden border-none')}>
         <div className="user-header">
-            <div className="category-tabs">
-                {categories.map(cat => (
-                    <button 
-                        key={cat}
-                        className={cn("category-tab", filteredCategory === cat && "active")}
-                        onClick={() => setFilteredCategory(cat)}
-                    >
-                        {cat === 'all' ? 'Todos' : cat}
-                    </button>
-                ))}
-            </div>
+          <div className="category-tabs">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={cn('category-tab', filteredCategory === cat && 'active')}
+                onClick={() => setFilteredCategory(cat)}
+              >
+                {cat === 'all' ? 'Todos' : cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="channels-list">
-        {Array.from(seriesMap.entries()).map(([seriesName, episodes]) => (
-              <SeriesItem 
-                key={seriesName} 
-                seriesName={seriesName} 
-                episodes={episodes}
-                currentChannel={currentChannel}
-                onChannelClick={handleChannelClick}
-              />
-            ))}
-            {regularChannels.map(channel => (
-                <div key={channel.id} 
-                     className={cn("channel-item", currentChannel?.id === channel.id && "active")}
-                     onClick={() => handleChannelClick(channel)}
-                >
-                    <div className="channel-name">{channel.name}</div>
-                    <div className="channel-category">{channel.category}</div>
-                </div>
-            ))}
+        {filteredContent.map(item => {
+             if (item.type === 'series-seasons' || item.type === 'series-episodes') {
+                return <SeriesItem 
+                            key={item.id} 
+                            series={item as Series}
+                            currentContent={currentContent}
+                            onChannelClick={handleChannelClick}
+                        />
+            } else {
+                return <ChannelItem 
+                            key={item.id}
+                            channel={item}
+                            currentContent={currentContent}
+                            onChannelClick={handleChannelClick}
+                        />
+            }
+        })}
+        {filteredContent.length === 0 && !isLoading && (
+            <div className='p-4 text-center text-muted-foreground'>Nenhum conteúdo encontrado nesta categoria.</div>
+        )}
         </div>
         <div className="p-4 border-t border-border">
-            <Button variant="outline" className="w-full" onClick={handleLogout}>Sair</Button>
+          <Button variant="outline" className="w-full" onClick={handleLogout}>
+            Sair
+          </Button>
         </div>
       </div>
 
       <div className="user-main relative">
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute top-1/2 -translate-y-1/2 bg-[#667eea] hover:bg-[#764ba2] text-white rounded-l-none rounded-r-lg h-20 w-8 z-10"
-            style={{ left: sidebarOpen ? '300px' : '0px', transition: 'left 0.3s ease' }}
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1/2 -translate-y-1/2 bg-[#667eea] hover:bg-[#764ba2] text-white rounded-l-none rounded-r-lg h-20 w-8 z-10"
+          style={{ left: sidebarOpen ? '300px' : '0px', transition: 'left 0.3s ease' }}
+          onClick={() => setSidebarOpen(!sidebarOpen)}
         >
-            {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+          {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
         </Button>
         <div className="player-container" id="videoPlayer">
-            <VideoPlayer source={sourceToPlay} />
+          <VideoPlayer source={sourceToPlay} />
         </div>
         <div className="player-controls">
-            <div className="now-playing">▶️ {currentChannel?.name || 'Nenhum canal selecionado'}</div>
-             <div className="control-buttons">
-                <Button variant="secondary">⏮️ Anterior</Button>
-                <Button variant="secondary">Próximo ⏭️</Button>
-            </div>
+          <div className="now-playing">▶️ {currentContent?.name || 'Nenhum canal selecionado'}</div>
+          <div className="control-buttons">
+            <Button variant="secondary" disabled>⏮️ Anterior</Button>
+            <Button variant="secondary" disabled>Próximo ⏭️</Button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function SeriesItem({ seriesName, episodes, currentChannel, onChannelClick }: { seriesName: string, episodes: Channel[], currentChannel: Channel | null, onChannelClick: (channel: Channel) => void }) {
+function ChannelItem({ channel, currentContent, onChannelClick }: { channel: Channel; currentContent: Channel | Episode | null; onChannelClick: (channel: Channel) => void }) {
+    const Icon = channel.category.toLowerCase().includes('rádio') ? Radio : Tv;
+    return (
+        <div
+            key={channel.id}
+            className={cn('channel-item', currentContent?.id === channel.id && 'active')}
+            onClick={() => onChannelClick(channel)}
+        >
+            <div className='flex items-center gap-3'>
+                <Icon className="h-5 w-5 text-muted-foreground" />
+                <div>
+                    <div className="channel-name">{channel.name}</div>
+                    <div className="channel-category">{channel.category}</div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function SeriesItem({ series, currentContent, onChannelClick,}: { series: Series; currentContent: Channel | Episode | null; onChannelClick: (item: Channel | Episode) => void;}) {
   const [isOpen, setIsOpen] = useState(false);
-  const category = episodes[0]?.category;
+  const Icon = series.type === 'movie' ? Film : Clapperboard;
 
   return (
     <>
       <div className="series-header" onClick={() => setIsOpen(!isOpen)}>
-        <div>
-          <div className="channel-name">🎬 {seriesName}</div>
-          <div className="channel-category">{category} • {episodes.length} episódios</div>
+        <div className='flex items-center gap-3'>
+          <Icon className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <div className="channel-name">{series.name}</div>
+            <div className="channel-category">{series.category}</div>
+          </div>
         </div>
-        <span className={cn("series-arrow", isOpen && "open")}>▶</span>
+        <span className={cn('series-arrow', isOpen && 'open')}>▶</span>
       </div>
-      <div className={cn("series-episodes-menu", isOpen && "open")}>
-        {episodes.sort((a,b) => (a.seasonNumber || 0) * 1000 + (a.episodeNumber || 0) - ((b.seasonNumber || 0) * 1000 + (b.episodeNumber || 0))).map(ep => {
-          const epLabel = ep.seasonNumber
-            ? `T${ep.seasonNumber} E${ep.episodeNumber}`
-            : `EP ${ep.episodeNumber}`;
-          return <button 
-                    key={ep.id}
-                    className={cn("episode-button", currentChannel?.id === ep.id && "active")}
-                    onClick={() => onChannelClick(ep)}
-                 >
-                   {epLabel}
-                 </button>;
-        })}
-      </div>
+      {isOpen && (
+        <div className="series-episodes-menu open">
+          {series.type === 'series-seasons' && series.seasons?.map(season => (
+              <div key={season.id} className='mb-2'>
+                  <p className='text-sm font-bold p-2'>Temporada {season.number}</p>
+                  {season.episodes.map(ep => (
+                      <button
+                        key={ep.id}
+                        className={cn('episode-button', currentContent?.id === ep.id && 'active')}
+                        onClick={() => onChannelClick(ep)}
+                        >
+                        EP {ep.number}
+                        </button>
+                  ))}
+              </div>
+          ))}
+          {series.type === 'series-episodes' && series.episodes?.map(ep => (
+              <button
+                key={ep.id}
+                className={cn('episode-button', currentContent?.id === ep.id && 'active')}
+                onClick={() => onChannelClick(ep)}
+              >
+                EP {ep.number}
+              </button>
+          ))}
+        </div>
+      )}
     </>
-  )
+  );
 }
+
+
+    

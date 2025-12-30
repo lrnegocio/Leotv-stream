@@ -25,7 +25,7 @@ import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -42,14 +42,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+
+type UserPlan = 'trial' | 'monthly' | 'custom';
 
 type User = {
   id: string;
   username: string;
   email: string;
-  freeTrialExpiry: string;
+  plan: UserPlan;
+  planExpiry: string | null;
   isBlocked: boolean;
 };
 
@@ -61,7 +64,7 @@ type Channel = {
   type: 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
 };
 
-const FIREBASE_ADMIN_EMAIL = "admin@example.com";
+const FIREBASE_ADMIN_EMAIL = 'admin@example.com';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
@@ -74,21 +77,23 @@ export default function AdminDashboard() {
       router.replace('/admin/login');
     }
   }, [user, isUserLoading, router]);
-  
+
   const handleLogout = () => {
-    auth.signOut().then(() => {
-        router.push('/admin/login');
+    signOut(auth).then(() => {
+      router.push('/admin/login');
     });
-  }
+  };
 
   if (isUserLoading || !user || user.email !== FIREBASE_ADMIN_EMAIL) {
     return (
-        <div className="flex items-center justify-center h-screen">
-            <div className="space-y-4 text-center">
-                 <p className="text-lg">Carregando...</p>
-                <p className="text-sm text-muted-foreground">Verificando sessão de administrador</p>
-            </div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="space-y-4 text-center">
+          <p className="text-lg">Carregando...</p>
+          <p className="text-sm text-muted-foreground">
+            Verificando sessão de administrador
+          </p>
         </div>
+      </div>
     );
   }
 
@@ -137,7 +142,8 @@ export default function AdminDashboard() {
 function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [trialDays, setTrialDays] = useState(7);
+  const [plan, setPlan] = useState<UserPlan>('trial');
+  const [trialHours, setTrialHours] = useState(1);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
@@ -152,25 +158,33 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
 
-    // Use a separate auth instance to avoid conflicts.
-    // This is a common pattern but can be complex. For this case, it's okay.
     const tempAuth = getAuth();
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
-    
+
     try {
-      // 1. Create the user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        tempAuth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
-      // 2. Create the user document in Firestore
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + trialDays);
-      
-      const newUser: Omit<User, 'id'> = {
+      let expiryDate: Date | null = new Date();
+      if (plan === 'trial') {
+        expiryDate.setHours(expiryDate.getHours() + trialHours);
+      } else if (plan === 'monthly') {
+        expiryDate.setMonth(expiryDate.getMonth() + 1);
+      } else {
+        expiryDate = null; // Custom plan has no automatic expiry
+      }
+
+      const newUser = {
         username,
         email,
-        freeTrialExpiry: expiryDate.toISOString(),
+        plan,
+        planExpiry: expiryDate ? expiryDate.toISOString() : null,
         isBlocked: false,
+        createdAt: serverTimestamp(),
       };
 
       await setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, {});
@@ -184,7 +198,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         setError('Ocorreu um erro ao criar o usuário.');
       }
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -216,15 +230,34 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
           />
         </div>
         <div>
-          <Label htmlFor="new-trial">Dias de Teste Grátis</Label>
-          <Input
-            id="new-trial"
-            type="number"
-            value={trialDays}
-            onChange={(e) => setTrialDays(parseInt(e.target.value, 10) || 0)}
-            disabled={isLoading}
-          />
+          <Label htmlFor="plan-type">Tipo de Plano</Label>
+          <Select value={plan} onValueChange={(v) => setPlan(v as UserPlan)} disabled={isLoading}>
+              <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano" />
+              </SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="trial">Teste Grátis</SelectItem>
+                  <SelectItem value="monthly">Plano Mensal</SelectItem>
+                  <SelectItem value="custom">Personalizado / Vitalício</SelectItem>
+              </SelectContent>
+          </Select>
         </div>
+
+        {plan === 'trial' && (
+          <div>
+            <Label htmlFor="new-trial-hours">Horas de Teste Grátis</Label>
+            <Input
+              id="new-trial-hours"
+              type="number"
+              value={trialHours}
+              onChange={(e) => setTrialHours(parseInt(e.target.value, 10) || 0)}
+              min="1"
+              max="6"
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
         {error && <p className="text-sm text-red-500">{error}</p>}
         <DialogFooter>
           <DialogClose asChild>
@@ -240,6 +273,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     </DialogContent>
   );
 }
+
 
 function UsersTab() {
   const firestore = useFirestore();
@@ -266,35 +300,29 @@ function UsersTab() {
     }
   }
 
-  const getStatus = (
-    user: User
-  ): {
-    text: string;
-    className: string;
-  } => {
+  const getStatus = (user: User): { text: string; className: string } => {
     if (user.isBlocked) {
-      return {
-        text: 'Bloqueado',
-        className: 'status-blocked',
-      };
+      return { text: 'Bloqueado', className: 'status-blocked' };
     }
-    const expiryDate = new Date(user.freeTrialExpiry);
-    const now = new Date();
-    // Reset time part to compare dates only
-    expiryDate.setHours(0, 0, 0, 0);
-    now.setHours(0, 0, 0, 0);
-
-    if (expiryDate < now) {
-      return {
-        text: 'Expirado',
-        className: 'status-expired',
-      };
+    if (user.plan === 'custom' || !user.planExpiry) {
+        return { text: 'Ativo', className: 'status-active' };
     }
-    return {
-      text: 'Ativo',
-      className: 'status-active',
-    };
+    const expiryDate = new Date(user.planExpiry);
+    if (expiryDate < new Date()) {
+      return { text: 'Expirado', className: 'status-expired' };
+    }
+    return { text: 'Ativo', className: 'status-active' };
   };
+  
+  const getPlanLabel = (plan: UserPlan) => {
+    switch (plan) {
+      case 'trial': return 'Teste';
+      case 'monthly': return 'Mensal';
+      case 'custom': return 'Personalizado';
+      default: return 'N/A';
+    }
+  };
+
 
   return (
     <div>
@@ -314,6 +342,7 @@ function UsersTab() {
           <thead>
             <tr className="text-left">
               <th className="p-4">Usuário</th>
+              <th className="p-4">Plano</th>
               <th className="p-4">Expira em</th>
               <th className="p-4">Status</th>
               <th className="p-4">Ações</th>
@@ -322,7 +351,7 @@ function UsersTab() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={4} className="p-4 text-center">
+                <td colSpan={5} className="p-4 text-center">
                   <Skeleton className="h-8 w-full" />
                    <Skeleton className="h-8 w-full mt-2" />
                 </td>
@@ -330,7 +359,7 @@ function UsersTab() {
             )}
             {!isLoading && users?.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-4 text-center text-muted-foreground">
+                <td colSpan={5} className="p-4 text-center text-muted-foreground">
                   Nenhum usuário encontrado. Adicione um novo para começar.
                 </td>
               </tr>
@@ -340,8 +369,9 @@ function UsersTab() {
               return (
                 <tr key={user.id} className="border-b border-border">
                   <td className="p-4">{user.username}</td>
+                  <td className="p-4">{getPlanLabel(user.plan)}</td>
                   <td className="p-4">
-                    {new Date(user.freeTrialExpiry).toLocaleDateString()}
+                     {user.planExpiry ? new Date(user.planExpiry).toLocaleDateString() : '—'}
                   </td>
                   <td className="p-4">
                     <span className={`status-badge ${status.className}`}>
@@ -586,7 +616,7 @@ function ChannelsTab() {
                         <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="channel">Canal ao Vivo</SelectItem>
+                        <SelectItem value="channel">Canal ao Vivo / Rádio</SelectItem>
                         <SelectItem value="movie">Filme (item único)</SelectItem>
                         <SelectItem value="series-episodes">Série (só episódios)</SelectItem>
                         <SelectItem value="series-seasons">Série (com temporadas)</SelectItem>
@@ -601,7 +631,7 @@ function ChannelsTab() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="channel-category">Categoria</Label>
-              <Input id="channel-category" placeholder="Ex: Filmes" value={category} onChange={e => setCategory(e.target.value)} required disabled={isSubmitting}/>
+              <Input id="channel-category" placeholder="Ex: Filmes, Rádios, Abertos" value={category} onChange={e => setCategory(e.target.value)} required disabled={isSubmitting}/>
             </div>
           </div>
 
@@ -698,7 +728,7 @@ function SettingsTab() {
           </div>
           <div className="flex items-center gap-4 mt-4">
             <Label htmlFor="apk-upload" className="flex-grow">
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" disabled>
                 <div className="flex items-center cursor-pointer">
                   <Upload className="mr-2 h-4 w-4" />
                   <span>Fazer Upload do APK</span>
@@ -706,9 +736,12 @@ function SettingsTab() {
               </Button>
             </Label>
             <Input id="apk-upload" type="file" className="hidden" accept=".apk" disabled />
+             <p className='text-xs text-muted-foreground'>Upload desativado. Use o campo de URL.</p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+    

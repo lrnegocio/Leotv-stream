@@ -1,27 +1,129 @@
+
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
+import { useAuth, useUser } from "@/firebase";
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
   const router = useRouter();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  const handleLogin = (e: React.FormEvent) => {
+
+  useEffect(() => {
+    // If user is already logged in, redirect to app
+    if (!isUserLoading && user) {
+        // router.replace('/app');
+    }
+  }, [user, isUserLoading, router]);
+  
+  useEffect(() => {
+      // Sign out any lingering user session on page load
+      if(auth) {
+        signOut(auth);
+      }
+      if (rememberMe && localStorage.getItem('username')) {
+          setUsername(localStorage.getItem('username') || '');
+      }
+  }, [auth]);
+
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Dummy login logic for now
-    if (username && password) {
-      // In a real app, you'd verify credentials and then redirect.
-      // We'll just redirect to the app page.
-      router.push('/app');
-    } else {
-      alert("Por favor, insira o usuário e a senha.");
+    setError('');
+    setIsLoading(true);
+
+    if (!username || !password) {
+      setError("Por favor, insira o usuário e a senha.");
+      setIsLoading(false);
+      return;
+    }
+    
+    const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const loggedInUser = userCredential.user;
+
+        const userDocRef = doc(firestore, "users", loggedInUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if(!userDoc.exists()) {
+            setError("Usuário não encontrado no banco de dados.");
+            signOut(auth);
+            setIsLoading(false);
+            return;
+        }
+
+        const userData = userDoc.data();
+        if(userData.isBlocked) {
+            setError("Esta conta está bloqueada.");
+            signOut(auth);
+            setIsLoading(false);
+            return;
+        }
+        
+        if (userData.plan !== 'custom' && userData.planExpiry && new Date(userData.planExpiry) < new Date()) {
+            setError("Seu plano expirou. Entre em contato com o suporte.");
+            signOut(auth);
+            setIsLoading(false);
+            return;
+        }
+
+        const sessionRef = doc(collection(userDocRef, "sessions"), loggedInUser.uid);
+        const sessionDoc = await getDoc(sessionRef);
+
+        if(sessionDoc.exists() && sessionDoc.data().isActive) {
+           setError("Este usuário já está conectado em outro dispositivo.");
+           signOut(auth);
+           setIsLoading(false);
+           return;
+        }
+
+        await setDoc(sessionRef, {
+            isActive: true,
+            loginTime: serverTimestamp(),
+            deviceInfo: navigator.userAgent
+        });
+        
+        // Add a listener to mark session as inactive when window is closed
+        window.addEventListener('beforeunload', () => {
+             updateDoc(sessionRef, { isActive: false });
+        });
+
+        if (rememberMe) {
+            localStorage.setItem('username', username);
+        } else {
+            localStorage.removeItem('username');
+        }
+
+        router.push('/app');
+
+    } catch(err: any) {
+        if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            setError("Usuário ou senha inválidos.");
+        } else {
+            setError("Ocorreu um erro ao tentar fazer o login.");
+            console.error(err);
+        }
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -55,6 +157,7 @@ export default function LoginPage() {
               id="username" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading || isUserLoading}
             />
           </div>
           <div>
@@ -64,22 +167,25 @@ export default function LoginPage() {
               id="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading || isUserLoading}
             />
           </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="rememberMe" 
               checked={rememberMe}
               onCheckedChange={(checked) => setRememberMe(!!checked)}
+              disabled={isLoading || isUserLoading}
             />
             <Label htmlFor="rememberMe" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Lembrar meus dados
+              Lembrar meu usuário
             </Label>
           </div>
-          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90">
-            Entrar
+          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90" disabled={isLoading || isUserLoading}>
+            {isLoading ? 'Entrando...' : 'Entrar'}
           </Button>
-          <Button type="button" variant="outline" onClick={handleAdminLogin} className="w-full mt-2">
+          <Button type="button" variant="outline" onClick={handleAdminLogin} className="w-full mt-2" disabled={isLoading || isUserLoading}>
             Área Admin
           </Button>
         </form>
@@ -87,3 +193,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
