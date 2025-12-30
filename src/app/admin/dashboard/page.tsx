@@ -17,6 +17,7 @@ import {
   Video,
 } from 'lucide-react';
 import {
+  useAuth,
   useCollection,
   useFirestore,
   useMemoFirebase,
@@ -69,7 +70,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const auth = getAuth();
+  const auth = useAuth();
 
   useEffect(() => {
     if (!isUserLoading && (!user || user.email !== FIREBASE_ADMIN_EMAIL)) {
@@ -146,6 +147,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const auth = useAuth(); // Use the main auth instance from the context
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,15 +159,12 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
     
-    // This is a temporary auth instance for user creation.
-    // It's separate from the admin's auth state.
-    const tempAuth = getAuth(); 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
     try {
       // 1. Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
-        tempAuth,
+        auth, // Use the correct auth instance
         email,
         password
       );
@@ -192,7 +191,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       };
 
       // 3. Save the document in Firestore using the user's UID as the document ID
-      // This is a critical step and must be awaited.
       const userDocRef = doc(firestore, 'users', user.uid);
       await setDoc(userDocRef, newUser);
       
@@ -431,7 +429,7 @@ type Season = { id?: string; number: string; episodes: Episode[] };
 function ChannelsTab() {
   const firestore = useFirestore();
   const channelsQuery = useMemoFirebase(
-      () => (firestore ? collection(firestore, 'channels') : null),
+      () => (firestore ? query(collection(firestore, 'channels'), orderBy('name')) : null),
       [firestore]
   );
   const { data: channels, isLoading } = useCollection<Channel>(channelsQuery);
@@ -465,7 +463,7 @@ function ChannelsTab() {
             const episodesCollection = collection(firestore, 'channels', channel.id, 'episodes');
             const q = query(episodesCollection, orderBy('number'));
             const querySnapshot = await getDocs(q);
-            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Episode));
+            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().number, url: doc.data().url }));
             setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '' }]);
         } else if (channel.type === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channel.id, 'seasons');
@@ -476,8 +474,8 @@ function ChannelsTab() {
                 const episodesCollection = collection(firestore, 'channels', channel.id, 'seasons', seasonDoc.id, 'episodes');
                 const qEpisodes = query(episodesCollection, orderBy('number'));
                 const episodesSnapshot = await getDocs(qEpisodes);
-                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Episode));
-                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().number, episodes: fetchedEpisodes });
+                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().number, url: doc.data().url }));
+                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().number, episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
             }
             setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '' }] }]);
         }
@@ -570,7 +568,7 @@ function ChannelsTab() {
       
       if (editingChannel) {
         channelRef = doc(firestore, 'channels', editingChannel.id);
-        await updateDoc(channelRef, { name, category, isAdult, url: channelData.url || null });
+        await updateDoc(channelRef, { name, category, isAdult, type: contentType, url: channelData.url || null });
         
         // Handle episode/season updates for editing
         if (contentType === 'series-episodes') {
@@ -585,14 +583,20 @@ function ChannelsTab() {
         } else if (contentType === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
              const existingSeasons = await getDocs(seasonsCollection);
-             for(const doc of existingSeasons.docs) await deleteDoc(doc.ref); // This will cascade delete episodes in Firestore emulator, but not in production without a function.
+             for(const docSnap of existingSeasons.docs) {
+                const episodesInSeason = await getDocs(collection(docSnap.ref, 'episodes'));
+                for(const epDoc of episodesInSeason.docs) {
+                    await deleteDoc(epDoc.ref);
+                }
+                await deleteDoc(docSnap.ref);
+             }
             
             for(const season of seasons) {
-                const seasonRef = season.id ? doc(seasonsCollection, season.id) : doc(seasonsCollection);
+                const seasonRef = doc(seasonsCollection);
                 await setDoc(seasonRef, { number: season.number, id: seasonRef.id });
                 const episodesCollection = collection(seasonRef, 'episodes');
                 for(const ep of season.episodes) {
-                     const newEpRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
+                     const newEpRef = doc(episodesCollection);
                      await setDoc(newEpRef, { number: ep.number, url: ep.url, id: newEpRef.id });
                 }
             }
@@ -708,7 +712,7 @@ function ChannelsTab() {
         </table>
       </div>
       
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+      <Dialog open={isFormOpen} onOpenChange={(isOpen) => { if (!isOpen) { setIsFormOpen(false); resetForm(); }}}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingChannel ? 'Editar Conteúdo' : 'Adicionar Novo Conteúdo'}</DialogTitle>
@@ -747,7 +751,7 @@ function ChannelsTab() {
               </div>
             )}
 
-            {(contentType === 'series-episodes' || (editingChannel && editingChannel.type === 'series-episodes')) && (
+            {(contentType === 'series-episodes') && (
               <div className="space-y-4 p-4 border rounded-md">
                   <Label>Episódios</Label>
                   {episodes.map((ep, index) => (
@@ -761,7 +765,7 @@ function ChannelsTab() {
               </div>
             )}
 
-            {(contentType === 'series-seasons' || (editingChannel && editingChannel.type === 'series-seasons')) && (
+            {(contentType === 'series-seasons') && (
               <div className="space-y-4">
                   {seasons.map((season, sIndex) => (
                       <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
@@ -791,7 +795,7 @@ function ChannelsTab() {
             </div>
             <DialogFooter>
                <DialogClose asChild>
-                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
+                  <Button type="button" variant="outline" onClick={() => { setIsFormOpen(false); resetForm(); }}>Cancelar</Button>
                </DialogClose>
                <Button type="submit" disabled={isSubmitting}>
                  {isSubmitting ? 'Salvando...' : (editingChannel ? 'Salvar Alterações' : 'Adicionar Conteúdo')}
