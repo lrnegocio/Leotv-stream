@@ -1,25 +1,4 @@
-/**
- * Core Philosophy: This ruleset implements a hybrid security model for the VideoVerse Player application.
- * It combines role-based access for administrators with a strict user-ownership model for personal data.
- * The primary goal is to allow administrators to manage all public content and user accounts, while users
- * can only read public content and manage their own private data.
- *
- * Data Structure:
- * - /users/{userId}: Private user data, owned by the user but manageable by admins.
- *   - /users/{userId}/{document=**}: Recursive wildcard for all subcollections (like 'sessions'),
- *     ensuring admin has full control for operations like recursive deletes.
- * - /channels/{channelId}: Publicly readable content collection managed exclusively by admins. It contains
- *   nested subcollections for seasons and episodes, also covered by a recursive wildcard.
- *
- * Key Security Decisions:
- * - Admin Privilege via Email: Admin status is determined by checking if the authenticated user's email is 'admin@example.com'.
- *   This is a direct and secure method for a single-admin system.
- * - Recursive Permissions: The `{document=**}` wildcard is intentionally used to grant broad permissions
- *   to admins for all subcollections. This is critical for allowing admins to perform recursive deletes
- *   (e.g., deleting a user and all their sessions) without permission errors.
- * - Public Content Model: All content under `/channels` is readable by any authenticated user.
- *   All write operations (create, update, delete) on this content are strictly limited to administrators.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -47,9 +26,9 @@ service cloud.firestore {
     /**
      * @description Controls access to user documents and ALL their subcollections recursively.
      * @path /users/{userId} and /users/{userId}/{document=**}
-     * @allow (read, write) Admins have full read/write access to any user's document and all subcollections (like sessions).
-     *        This is CRITICAL for allowing recursive deletes from the admin panel.
-     * @allow (list, create, update) A user can manage documents within their own subcollections (e.g., creating a session).
+     * @allow (read, write) Admins have full read/write access to any user's document and all subcollections.
+     *        This is CRITICAL for allowing recursive deletes from the admin panel and for admins to manage sessions.
+     * @allow (list, create, update) A user can manage documents within their own subcollections (e.g., creating/updating a session).
      */
     match /users/{userId}/{document=**} {
       allow read, write: if isAdmin();
@@ -57,6 +36,7 @@ service cloud.firestore {
     }
      match /users/{userId} {
       allow get, update: if isOwner(userId);
+       // Admins get full access from the recursive rule above.
     }
 
     // ----------------------------------------------------------------------

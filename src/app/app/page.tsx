@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/video-player';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Tv, Clapperboard, Film, Radio } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Tv, Clapperboard, Film, Radio, LogOut, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
+import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth, useDoc } from '@/firebase';
+import { collection, doc, getDocs, query, orderBy, getDoc, signOut } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 type Channel = {
   id: string;
@@ -16,13 +18,14 @@ type Channel = {
   category: string;
   url: string;
   type: 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
-  createdAt: string;
+  createdAt: any;
 };
 
 type Episode = {
     id: string;
     number: string;
     url: string;
+    name?: string;
 }
 
 type Season = {
@@ -35,17 +38,35 @@ type Series = Channel & {
     episodes?: Episode[];
 }
 
+type UserProfile = {
+    id: string;
+    username: string;
+    email: string;
+    plan: 'trial' | 'monthly' | 'custom';
+    planExpiry: string | null;
+    isBlocked: boolean;
+};
+
+
 export default function App() {
   const [sourceToPlay, setSourceToPlay] = useState('');
   const [currentContent, setCurrentContent] = useState<Channel | Episode | null>(null);
   const [filteredCategory, setFilteredCategory] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [content, setContent] = useState<Channel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingContent, setIsLoadingContent] = useState(true);
 
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -56,9 +77,9 @@ export default function App() {
   useEffect(() => {
     const fetchContent = async () => {
         if (!firestore) return;
-        setIsLoading(true);
+        setIsLoadingContent(true);
         
-        const channelsQuery = query(collection(firestore, 'channels'), orderBy('createdAt', 'desc'));
+        const channelsQuery = query(collection(firestore, 'channels'), orderBy('name', 'asc'));
         const querySnapshot = await getDocs(channelsQuery);
         
         const allContent: any[] = [];
@@ -67,20 +88,20 @@ export default function App() {
             const channelData = { id: docSnap.id, ...docSnap.data() } as Channel;
 
             if (channelData.type === 'series-seasons') {
-                const seasonsQuery = query(collection(docSnap.ref, 'seasons'), orderBy('number'));
+                const seasonsQuery = query(collection(docSnap.ref, 'seasons'), orderBy('seasonNumber'));
                 const seasonsSnapshot = await getDocs(seasonsQuery);
                 const seasons = [];
                 for (const seasonDoc of seasonsSnapshot.docs) {
-                    const episodesQuery = query(collection(seasonDoc.ref, 'episodes'), orderBy('number'));
+                    const episodesQuery = query(collection(seasonDoc.ref, 'episodes'), orderBy('episodeNumber'));
                     const episodesSnapshot = await getDocs(episodesQuery);
-                    const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, ...epDoc.data() } as Episode));
-                    seasons.push({ id: seasonDoc.id, ...seasonDoc.data(), episodes });
+                    const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, name: epDoc.data().name, number: epDoc.data().episodeNumber.toString(), url: epDoc.data().episodeUrl } as Episode));
+                    seasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber.toString(), episodes });
                 }
                 allContent.push({ ...channelData, seasons });
             } else if (channelData.type === 'series-episodes') {
-                const episodesQuery = query(collection(docSnap.ref, 'episodes'), orderBy('number'));
+                const episodesQuery = query(collection(docSnap.ref, 'episodes'), orderBy('episodeNumber'));
                 const episodesSnapshot = await getDocs(episodesQuery);
-                const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, ...epDoc.data() } as Episode));
+                const episodes = episodesSnapshot.docs.map(epDoc => ({ id: epDoc.id, name: epDoc.data().name, number: epDoc.data().episodeNumber.toString(), url: epDoc.data().episodeUrl } as Episode));
                 allContent.push({ ...channelData, episodes });
             } else {
                 allContent.push(channelData);
@@ -94,27 +115,40 @@ export default function App() {
             setCurrentContent(firstPlayable);
         }
         
-        setIsLoading(false);
+        setIsLoadingContent(false);
     };
 
-    fetchContent();
-  }, [firestore]);
+    if (user) {
+        fetchContent();
+    }
+  }, [firestore, user]);
 
 
   const handleChannelClick = (item: Channel | Episode) => {
-    setSourceToPlay((item as any).url);
-    setCurrentContent(item);
+    const url = (item as any).url || (item as any).episodeUrl;
+    if (url) {
+        setSourceToPlay(url);
+        setCurrentContent(item);
+    }
   };
 
   const handleLogout = () => {
-    // Clear session, etc.
-    router.push('/');
+    if (auth) {
+        signOut(auth).then(() => {
+            router.push('/');
+        });
+    }
   };
   
-  if (isUserLoading || isLoading) {
+  const isLoading = isUserLoading || isProfileLoading || isLoadingContent;
+
+  if (isLoading) {
       return (
-          <div className="flex items-center justify-center h-screen">
-              <p>Carregando aplicativo...</p>
+          <div className="flex items-center justify-center h-screen bg-background">
+              <div className="flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-accent"></div>
+                  <p className="text-lg text-muted-foreground">Carregando aplicativo...</p>
+              </div>
           </div>
       )
   }
@@ -125,21 +159,51 @@ export default function App() {
       ? content
       : content.filter((c) => c.category === filteredCategory);
 
+  const getPlanStatus = () => {
+    if (!userProfile) return null;
+    const { plan, planExpiry } = userProfile;
+    
+    if (plan === 'custom') {
+        return 'Plano vitalício ativo';
+    }
+
+    if (planExpiry) {
+        const expiryDate = new Date(planExpiry);
+        if (expiryDate > new Date()) {
+            const friendlyTime = formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR });
+            const planName = plan === 'monthly' ? 'Plano Mensal' : 'Teste Grátis';
+            return `${planName} | Vence ${friendlyTime}`;
+        }
+    }
+    return 'Plano expirado';
+  }
+
   return (
     <div className="user-container">
       <div className={cn('user-sidebar', !sidebarOpen && 'w-0 overflow-hidden border-none')}>
         <div className="user-header">
-          <div className="category-tabs">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                className={cn('category-tab', filteredCategory === cat && 'active')}
-                onClick={() => setFilteredCategory(cat)}
-              >
-                {cat === 'all' ? 'Todos' : cat}
-              </button>
-            ))}
-          </div>
+           <div className="flex flex-col gap-2">
+                {userProfile && (
+                    <div className='bg-background/50 rounded-lg p-3 text-center'>
+                        <p className='font-semibold text-lg'>{userProfile.username}</p>
+                        <div className='flex items-center justify-center gap-2 text-sm text-amber-300 mt-1'>
+                            <Clock className='h-4 w-4' />
+                            <span>{getPlanStatus()}</span>
+                        </div>
+                    </div>
+                )}
+                <div className="category-tabs">
+                    {categories.map((cat) => (
+                    <button
+                        key={cat}
+                        className={cn('category-tab', filteredCategory === cat && 'active')}
+                        onClick={() => setFilteredCategory(cat)}
+                    >
+                        {cat === 'all' ? 'Todos' : cat}
+                    </button>
+                    ))}
+                </div>
+            </div>
         </div>
 
         <div className="channels-list">
@@ -165,7 +229,8 @@ export default function App() {
         )}
         </div>
         <div className="p-4 border-t border-border">
-          <Button variant="outline" className="w-full" onClick={handleLogout}>
+          <Button variant="destructive" className="w-full" onClick={handleLogout}>
+            <LogOut className='mr-2' />
             Sair
           </Button>
         </div>
@@ -198,14 +263,15 @@ export default function App() {
 
 function ChannelItem({ channel, currentContent, onChannelClick }: { channel: Channel; currentContent: Channel | Episode | null; onChannelClick: (channel: Channel) => void }) {
     const Icon = channel.category.toLowerCase().includes('rádio') ? Radio : Tv;
+    const isActive = currentContent?.id === channel.id;
     return (
         <div
             key={channel.id}
-            className={cn('channel-item', currentContent?.id === channel.id && 'active')}
+            className={cn('channel-item', isActive && 'active')}
             onClick={() => onChannelClick(channel)}
         >
             <div className='flex items-center gap-3'>
-                <Icon className="h-5 w-5 text-muted-foreground" />
+                <Icon className={cn("h-5 w-5 text-muted-foreground", isActive && "text-accent")} />
                 <div>
                     <div className="channel-name">{channel.name}</div>
                     <div className="channel-category">{channel.category}</div>
@@ -242,7 +308,7 @@ function SeriesItem({ series, currentContent, onChannelClick,}: { series: Series
                         className={cn('episode-button', currentContent?.id === ep.id && 'active')}
                         onClick={() => onChannelClick(ep)}
                         >
-                        EP {ep.number}
+                        {ep.name ? `${ep.number} - ${ep.name}` : `EP ${ep.number}`}
                         </button>
                   ))}
               </div>
@@ -253,7 +319,7 @@ function SeriesItem({ series, currentContent, onChannelClick,}: { series: Series
                 className={cn('episode-button', currentContent?.id === ep.id && 'active')}
                 onClick={() => onChannelClick(ep)}
               >
-                EP {ep.number}
+                {ep.name ? `${ep.number} - ${ep.name}` : `EP ${ep.number}`}
               </button>
           ))}
         </div>
@@ -261,6 +327,3 @@ function SeriesItem({ series, currentContent, onChannelClick,}: { series: Series
     </>
   );
 }
-
-
-    

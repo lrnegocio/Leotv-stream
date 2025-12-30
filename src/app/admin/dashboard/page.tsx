@@ -45,6 +45,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VideoPlayer } from '@/components/video-player';
 import { initializeApp, getApp, getApps, deleteApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 type UserPlan = 'trial' | 'monthly' | 'custom';
 
@@ -81,9 +83,11 @@ export default function AdminDashboard() {
   }, [user, isUserLoading, router]);
 
   const handleLogout = () => {
-    signOut(auth).then(() => {
-      router.push('/admin/login');
-    });
+    if (auth) {
+      signOut(auth).then(() => {
+        router.push('/admin/login');
+      });
+    }
   };
 
   if (isUserLoading || !user || user.email !== FIREBASE_ADMIN_EMAIL) {
@@ -195,7 +199,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         username,
         email,
         plan,
-        // FIX: Store expiry date as ISO string for consistency
         planExpiry: expiryDate ? expiryDate.toISOString() : null,
         isBlocked: false,
         createdAt: serverTimestamp(),
@@ -365,6 +368,17 @@ function UsersTab() {
     }
   };
 
+  const getExpiryLabel = (user: User) => {
+    if (user.plan === 'custom' || !user.planExpiry) {
+      return 'Vitalício';
+    }
+    const expiryDate = new Date(user.planExpiry);
+    if (expiryDate < new Date()) {
+        return `Expirou ${formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR })}`;
+    }
+    return `Expira ${formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR })}`;
+  }
+
 
   return (
     <div>
@@ -413,7 +427,7 @@ function UsersTab() {
                   <td className="p-4">{user.username}</td>
                   <td className="p-4">{getPlanLabel(user.plan)}</td>
                   <td className="p-4">
-                     {user.planExpiry ? new Date(user.planExpiry).toLocaleDateString() : '—'}
+                     {getExpiryLabel(user)}
                   </td>
                   <td className="p-4">
                     <span className={`status-badge ${status.className}`}>
