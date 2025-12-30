@@ -163,7 +163,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && isNotBlocked() || isAdmin();
       allow create: if isAdmin();
       allow update: if isAdmin() && isExistingDoc();
-      allow delete: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin();
 
       /**
        * @description Controls access to the Seasons subcollection within a Channel.
@@ -177,7 +177,7 @@ service cloud.firestore {
         allow list: if isSignedIn() && isNotBlocked() || isAdmin();
         allow create: if isAdmin() && request.resource.data.channelId == channelId;
         allow update: if isAdmin() && isExistingDoc();
-        allow delete: if isAdmin() && isExistingDoc();
+        allow delete: if isAdmin();
 
         /**
          * @description Controls access to the Episodes subcollection within a Season.
@@ -191,7 +191,7 @@ service cloud.firestore {
           allow list: if isSignedIn() && isNotBlocked() || isAdmin();
           allow create: if isAdmin() && request.resource.data.channelId == channelId;
           allow update: if isAdmin() && isExistingDoc();
-          allow delete: if isAdmin() && isExistingDoc();
+          allow delete: if isAdmin();
         }
       }
     }
