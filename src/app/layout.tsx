@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
-import { Analytics } from '@vercel/analytics/react';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Léo TV & Stream',
@@ -24,9 +24,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#1a1a2e" />
       </head>
       <body className={cn("font-sans antialiased")}>
-        {children}
+        <FirebaseClientProvider>
+          {children}
+        </FirebaseClientProvider>
         <Toaster />
-        <Analytics />
       </body>
     </html>
   );
