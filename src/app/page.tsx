@@ -29,20 +29,17 @@ export default function LoginPage() {
   useEffect(() => {
     // If user is already logged in, redirect to app
     if (!isUserLoading && user) {
-        // router.replace('/app');
+        // Sign out any lingering user session on page load
+        signOut(auth);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, auth]);
   
   useEffect(() => {
-      // Sign out any lingering user session on page load
-      if(auth) {
-        signOut(auth);
-      }
       if (typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true') {
           setUsername(localStorage.getItem('username') || '');
           setRememberMe(true);
       }
-  }, [auth]);
+  }, []);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -50,6 +47,12 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
+    if (!firestore || !auth) {
+        setError("Serviços de autenticação não estão prontos.");
+        setIsLoading(false);
+        return;
+    }
+    
     if (!username || !password) {
       setError("Por favor, insira o usuário e a senha.");
       setIsLoading(false);
@@ -92,7 +95,6 @@ export default function LoginPage() {
         const activeSessions = await getDocs(q);
 
         if(!activeSessions.empty) {
-            setError("Este usuário já está conectado em outro dispositivo. Desconectando sessão antiga...");
             for (const sessionDoc of activeSessions.docs) {
                 await updateDoc(sessionDoc.ref, { isActive: false });
             }
@@ -198,3 +200,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

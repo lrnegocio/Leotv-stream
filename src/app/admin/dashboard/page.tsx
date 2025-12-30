@@ -165,10 +165,11 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     
     // Create a temporary, secondary Firebase app instance for user creation
     const tempAppName = `temp-user-creation-${Date.now()}`;
-    const tempApp = initializeApp(firebaseConfig, tempAppName);
-    const tempAuth = getAuth(tempApp);
-
+    let tempApp;
     try {
+      tempApp = initializeApp(firebaseConfig, tempAppName);
+      const tempAuth = getAuth(tempApp);
+
       // 1. Create user in the temporary authentication instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
@@ -213,10 +214,11 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       }
     } finally {
       // 4. Clean up the temporary app instance regardless of success or failure
-      if (tempAuth) {
+      if (tempApp) {
+        const tempAuth = getAuth(tempApp);
         await signOut(tempAuth); // Sign out from the temporary instance
+        await deleteApp(tempApp); // Delete the temporary app
       }
-      await deleteApp(tempApp); // Delete the temporary app
       setIsLoading(false);
     }
   };
@@ -477,7 +479,7 @@ function ChannelsTab() {
             const episodesCollection = collection(firestore, 'channels', channel.id, 'episodes');
             const q = query(episodesCollection, orderBy('episodeNumber'));
             const querySnapshot = await getDocs(q);
-            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber, url: doc.data().episodeUrl }));
+            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl }));
             setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '' }]);
         } else if (channel.type === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channel.id, 'seasons');
@@ -488,8 +490,8 @@ function ChannelsTab() {
                 const episodesCollection = collection(firestore, 'channels', channel.id, 'seasons', seasonDoc.id, 'episodes');
                 const qEpisodes = query(episodesCollection, orderBy('episodeNumber'));
                 const episodesSnapshot = await getDocs(qEpisodes);
-                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber, url: doc.data().episodeUrl }));
-                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber, episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
+                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl }));
+                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber.toString(), episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
             }
             setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '' }] }]);
         }
@@ -597,7 +599,7 @@ function ChannelsTab() {
             for (const ep of episodes) {
                 if(ep.url) { // only add if has url
                     const epRef = doc(collection(episodesCollection));
-                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url });
                 }
             }
         } else if (contentType === 'series-seasons') {
@@ -611,12 +613,12 @@ function ChannelsTab() {
 
             for (const season of seasons) {
                 const seasonRef = doc(collection(seasonsCollection));
-                await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: season.number });
+                await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: parseInt(season.number) });
                 const episodesCollection = collection(seasonRef, 'episodes');
                 for (const ep of season.episodes) {
                     if (ep.url) { // only add if has url
                         const epRef = doc(collection(episodesCollection));
-                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url });
                     }
                 }
             }
@@ -751,7 +753,7 @@ function ChannelsTab() {
                   <Label>Episódios</Label>
                   {episodes.map((ep, index) => (
                       <div key={index} className="flex items-end gap-2">
-                          <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required/>
+                          <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required type="number" />
                           <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
                           <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
                       </div>
@@ -766,11 +768,11 @@ function ChannelsTab() {
                       <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
                           <div className="flex items-end gap-2">
                               <Label className="w-24 mb-2">Temporada</Label>
-                              <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting} required/>
+                              <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting} required type="number"/>
                           </div>
                           {season.episodes.map((ep, eIndex) => (
                             <div key={eIndex} className="flex items-end gap-2 ml-6">
-                                  <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required/>
+                                  <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required type="number"/>
                                   <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
                                   <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
                               </div>
