@@ -167,34 +167,32 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     
-    // Create a temporary, secondary Firebase app for user creation to avoid session conflicts
+    let tempApp, tempAuth;
     const tempAppName = `temp-user-creation-${Date.now()}`;
-    let tempApp;
-    let tempAuth;
 
     try {
       tempApp = initializeApp(firebaseConfig, tempAppName);
       tempAuth = getAuth(tempApp);
 
-      // 1. Create user in the temporary authentication instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
         email,
         password
       );
       const newUserAuth = userCredential.user;
-
-      // 2. Prepare the user document for Firestore
+      
       let expiryDate: Date | null = new Date();
       if (plan === 'trial') {
         expiryDate.setHours(expiryDate.getHours() + trialHours);
       } else if (plan === 'monthly') {
         expiryDate.setMonth(expiryDate.getMonth() + 1);
       } else {
-        expiryDate = null; // Custom plan has no automatic expiry
+        expiryDate = null;
       }
 
-      const newUserDoc = {
+      if (!firestore) throw new Error("Firestore is not initialized.");
+      const userDocRef = doc(firestore, 'users', newUserAuth.uid);
+      await setDoc(userDocRef, {
         id: newUserAuth.uid,
         username,
         email,
@@ -202,12 +200,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         planExpiry: expiryDate ? expiryDate.toISOString() : null,
         isBlocked: false,
         createdAt: serverTimestamp(),
-      };
-
-      // 3. Save the document in Firestore using the main app's firestore instance
-      if (!firestore) throw new Error("Firestore is not initialized.");
-      const userDocRef = doc(firestore, 'users', newUserAuth.uid);
-      await setDoc(userDocRef, newUserDoc);
+      });
 
       onUserAdded();
       
@@ -219,13 +212,8 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         setError('Ocorreu um erro ao criar o usuário: ' + err.message);
       }
     } finally {
-      // 5. Clean up the temporary app instance regardless of success or failure
-      if (tempAuth) {
-        await signOut(tempAuth);
-      }
-      if (tempApp) {
-        await deleteApp(tempApp);
-      }
+      if (tempAuth) await signOut(tempAuth);
+      if (tempApp) await deleteApp(tempApp);
       setIsLoading(false);
     }
   };
@@ -336,7 +324,7 @@ function UsersTab() {
             batch.delete(userRef);
             await batch.commit();
             
-            alert(`Usuário ${userToDelete.username} excluído do banco de dados.`);
+            alert(`Usuário ${userToDelete.username} excluído do banco de dados. A remoção da autenticação deve ser feita no console do Firebase.`);
         } catch (e) {
             console.error("Error deleting user:", e);
             alert("Falha ao excluir usuário: " + (e as Error).message);
@@ -372,11 +360,17 @@ function UsersTab() {
     if (user.plan === 'custom' || !user.planExpiry) {
       return 'Vitalício';
     }
-    const expiryDate = new Date(user.planExpiry);
-    if (expiryDate < new Date()) {
-        return `Expirou ${formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR })}`;
+    try {
+        const expiryDate = new Date(user.planExpiry);
+        if (isNaN(expiryDate.getTime())) {
+            return 'Data inválida';
+        }
+        const now = new Date();
+        const label = formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR });
+        return expiryDate < now ? `Expirou ${label}` : `Expira ${label}`;
+    } catch {
+        return 'Data inválida';
     }
-    return `Expira ${formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR })}`;
   }
 
 
@@ -652,54 +646,52 @@ function ChannelsTab() {
             await setDoc(channelRef, channelData);
         }
         
-        // Handle episodes and seasons for both creating and editing
+        const batch = writeBatch(firestore);
+
         if (contentType === 'series-episodes') {
             const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
             const existingEpsSnap = await getDocs(episodesCollection);
-            // Sync logic: delete episodes that are no longer in the form
             for (const docSnap of existingEpsSnap.docs) {
                 if (!episodes.some(ep => ep.id === docSnap.id)) {
-                    await deleteDoc(docSnap.ref);
+                   batch.delete(docSnap.ref);
                 }
             }
-            // Add or update episodes
             for (const ep of episodes) {
                 if(ep.url) { 
                     const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
-                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
+                    batch.set(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
                 }
             }
         } else if (contentType === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
-             // Sync seasons
             const existingSeasonsSnap = await getDocs(seasonsCollection);
             for (const seasonDocSnap of existingSeasonsSnap.docs) {
                 if (!seasons.some(s => s.id === seasonDocSnap.id)) {
-                    await deleteDoc(seasonDocSnap.ref);
+                    batch.delete(seasonDocSnap.ref);
                 }
             }
 
             for (const season of seasons) {
                 const seasonRef = season.id ? doc(seasonsCollection, season.id) : doc(seasonsCollection);
-                await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: parseInt(season.number) }, { merge: true });
+                batch.set(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: parseInt(season.number) }, { merge: true });
                 
                 const episodesCollection = collection(seasonRef, 'episodes');
                 const existingEpsSnap = await getDocs(episodesCollection);
-                // Sync episodes within the season
                 for (const docSnap of existingEpsSnap.docs) {
                     if (!season.episodes.some(ep => ep.id === docSnap.id)) {
-                        await deleteDoc(docSnap.ref);
+                        batch.delete(docSnap.ref);
                     }
                 }
                 for (const ep of season.episodes) {
                     if (ep.url) { 
                         const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
-                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
+                        batch.set(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
                     }
                 }
             }
         }
 
+        await batch.commit();
         resetForm();
         setIsFormOpen(false);
 

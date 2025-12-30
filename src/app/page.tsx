@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 
@@ -58,7 +58,6 @@ export default function LoginPage() {
       return;
     }
     
-    // CRITICAL FIX: Ensure email format matches the creation logic in admin panel
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
     try {
@@ -83,45 +82,50 @@ export default function LoginPage() {
             return;
         }
         
-        // FIX: Ensure correct date comparison by parsing the ISO string
-        if (userData.plan !== 'custom' && userData.planExpiry && new Date(userData.planExpiry) < new Date()) {
-            setError("Seu plano expirou. Entre em contato com o suporte.");
-            await signOut(auth);
-            setIsLoading(false);
-            return;
+        // Robust plan expiry check
+        if (userData.plan !== 'custom' && userData.planExpiry) {
+            const expiryDate = new Date(userData.planExpiry);
+            if (isNaN(expiryDate.getTime()) || expiryDate < new Date()) {
+                setError("Seu plano expirou. Entre em contato com o suporte.");
+                await signOut(auth);
+                setIsLoading(false);
+                return;
+            }
         }
+
 
         // Invalidate previous active sessions
         const sessionsRef = collection(userDocRef, "sessions");
         const q = query(sessionsRef, where("isActive", "==", true));
         const activeSessions = await getDocs(q);
+        const batch = writeBatch(firestore);
 
         if(!activeSessions.empty) {
             for (const sessionDoc of activeSessions.docs) {
-                await updateDoc(sessionDoc.ref, { isActive: false });
+                batch.update(sessionDoc.ref, { isActive: false });
             }
         }
         
         // Create a new session
         const newSessionRef = doc(sessionsRef);
-        await setDoc(newSessionRef, {
+        batch.set(newSessionRef, {
             id: newSessionRef.id,
             isActive: true,
             loginTime: serverTimestamp(),
             deviceInfo: navigator.userAgent
         });
+
+        await batch.commit();
         
-        // This is a simplified "keep alive". A better implementation would use a proper listener.
         const keepaliveInterval = setInterval(async () => {
           try {
             await updateDoc(newSessionRef, { lastSeen: serverTimestamp() });
           } catch (e) {
             clearInterval(keepaliveInterval);
           }
-        }, 60000); // every minute
+        }, 60000); 
         
         const handleBeforeUnload = () => {
-          // This is not guaranteed to run, but it's a good last effort
           updateDoc(newSessionRef, { isActive: false, logoutTime: serverTimestamp() });
           clearInterval(keepaliveInterval);
         }
