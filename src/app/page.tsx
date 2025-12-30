@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
 import { useAuth, useUser } from "@/firebase";
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 
 
@@ -38,8 +38,9 @@ export default function LoginPage() {
       if(auth) {
         signOut(auth);
       }
-      if (rememberMe && localStorage.getItem('username')) {
+      if (typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true') {
           setUsername(localStorage.getItem('username') || '');
+          setRememberMe(true);
       }
   }, [auth]);
 
@@ -66,7 +67,7 @@ export default function LoginPage() {
 
         if(!userDoc.exists()) {
             setError("Usuário não encontrado no banco de dados.");
-            signOut(auth);
+            await signOut(auth);
             setIsLoading(false);
             return;
         }
@@ -74,43 +75,47 @@ export default function LoginPage() {
         const userData = userDoc.data();
         if(userData.isBlocked) {
             setError("Esta conta está bloqueada.");
-            signOut(auth);
+            await signOut(auth);
             setIsLoading(false);
             return;
         }
         
         if (userData.plan !== 'custom' && userData.planExpiry && new Date(userData.planExpiry) < new Date()) {
             setError("Seu plano expirou. Entre em contato com o suporte.");
-            signOut(auth);
+            await signOut(auth);
             setIsLoading(false);
             return;
         }
 
-        const sessionRef = doc(collection(userDocRef, "sessions"), loggedInUser.uid);
-        const sessionDoc = await getDoc(sessionRef);
+        const sessionsRef = collection(userDocRef, "sessions");
+        const q = query(sessionsRef, where("isActive", "==", true));
+        const activeSessions = await getDocs(q);
 
-        if(sessionDoc.exists() && sessionDoc.data().isActive) {
-           setError("Este usuário já está conectado em outro dispositivo.");
-           signOut(auth);
-           setIsLoading(false);
-           return;
+        if(!activeSessions.empty) {
+            setError("Este usuário já está conectado em outro dispositivo. Desconectando sessão antiga...");
+            for (const sessionDoc of activeSessions.docs) {
+                await updateDoc(sessionDoc.ref, { isActive: false });
+            }
         }
-
-        await setDoc(sessionRef, {
+        
+        const newSessionRef = doc(sessionsRef);
+        await setDoc(newSessionRef, {
+            id: newSessionRef.id,
             isActive: true,
             loginTime: serverTimestamp(),
             deviceInfo: navigator.userAgent
         });
         
-        // Add a listener to mark session as inactive when window is closed
         window.addEventListener('beforeunload', () => {
-             updateDoc(sessionRef, { isActive: false });
+             updateDoc(newSessionRef, { isActive: false });
         });
 
         if (rememberMe) {
             localStorage.setItem('username', username);
+            localStorage.setItem('rememberMe', 'true');
         } else {
             localStorage.removeItem('username');
+            localStorage.removeItem('rememberMe');
         }
 
         router.push('/app');
@@ -193,5 +198,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

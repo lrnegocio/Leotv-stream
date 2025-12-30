@@ -14,6 +14,7 @@ import {
   Upload,
   Plus,
   XCircle,
+  Video,
 } from 'lucide-react';
 import {
   useCollection,
@@ -23,9 +24,8 @@ import {
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   addDocumentNonBlocking,
-  setDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VideoPlayer } from '@/components/video-player';
 
 type UserPlan = 'trial' | 'monthly' | 'custom';
 
@@ -57,10 +58,11 @@ type User = {
 };
 
 type Channel = {
-  id: string;
+  id:string;
   name: string;
   category: string;
   url?: string;
+  isAdult: boolean;
   type: 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
 };
 
@@ -187,7 +189,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         createdAt: serverTimestamp(),
       };
 
-      await setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, {});
+      await setDoc(doc(firestore, 'users', user.uid), newUser, {});
       
       onUserAdded();
     } catch (err: any) {
@@ -290,13 +292,17 @@ function UsersTab() {
     updateDocumentNonBlocking(userRef, { isBlocked: !user.isBlocked });
   };
   
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = async (user: User) => {
     if(!firestore) return;
     if(confirm(`Tem certeza que deseja excluir o usuário ${user.username}? Esta ação não pode ser desfeita.`)) {
         const userRef = doc(firestore, 'users', user.id);
-        deleteDocumentNonBlocking(userRef);
-        // Note: This does not delete the user from Firebase Auth. 
-        // A cloud function would be needed for that for a full cleanup.
+        try {
+            await deleteDoc(userRef);
+            // Note: This does not delete the user from Firebase Auth. 
+            // A cloud function would be needed for that for a full cleanup.
+        } catch(e) {
+            console.error("Error deleting user document:", e);
+        }
     }
   }
 
@@ -409,8 +415,8 @@ function UsersTab() {
 }
 
 type ContentType = 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
-type Episode = { number: string; url: string };
-type Season = { number: string; episodes: Episode[] };
+type Episode = { id?: string; number: string; url: string };
+type Season = { id?: string; number: string; episodes: Episode[] };
 
 function ChannelsTab() {
   const firestore = useFirestore();
@@ -420,15 +426,37 @@ function ChannelsTab() {
   );
   const { data: channels, isLoading } = useCollection<Channel>(channelsQuery);
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  
   const [contentType, setContentType] = useState<ContentType>('channel');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [url, setUrl] = useState('');
   const [isAdult, setIsAdult] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [episodes, setEpisodes] = useState<Episode[]>([{ number: '1', url: '' }]);
   const [seasons, setSeasons] = useState<Season[]>([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  const handleOpenForm = (channel: Channel | null = null) => {
+    if (channel) {
+      setEditingChannel(channel);
+      setName(channel.name);
+      setCategory(channel.category);
+      setContentType(channel.type);
+      setIsAdult(channel.isAdult);
+      if (channel.type === 'channel' || channel.type === 'movie') {
+        setUrl(channel.url || '');
+      }
+      // TODO: Fetch seasons/episodes if editing series
+    } else {
+      setEditingChannel(null);
+      resetForm();
+    }
+    setIsFormOpen(true);
+  }
 
   const handleAddEpisode = (seasonIndex?: number) => {
       if(seasonIndex !== undefined) {
@@ -490,6 +518,7 @@ function ChannelsTab() {
       setEpisodes([{ number: '1', url: '' }]);
       setSeasons([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
       setContentType('channel');
+      setEditingChannel(null);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -497,7 +526,7 @@ function ChannelsTab() {
     if (!firestore || !name || !category) return;
     setIsSubmitting(true);
 
-    const channelData: any = {
+    const channelData: Omit<Channel, 'id'> & { createdAt: string, url?: string } = {
         name,
         category,
         isAdult,
@@ -506,46 +535,63 @@ function ChannelsTab() {
     };
 
     try {
-        if (contentType === 'channel' || contentType === 'movie') {
-            channelData.url = url;
-        }
-
-        const channelRef = await addDocumentNonBlocking(collection(firestore, 'channels'), channelData);
+      let channelRef;
+      if (contentType === 'channel' || contentType === 'movie') {
+          channelData.url = url;
+      }
+      
+      if (editingChannel) {
+        channelRef = doc(firestore, 'channels', editingChannel.id);
+        await updateDoc(channelRef, channelData);
+      } else {
+        channelRef = doc(collection(firestore, 'channels'));
+        await setDoc(channelRef, { ...channelData, id: channelRef.id });
+      }
         
-        if (contentType === 'series-episodes') {
-            const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
-            for(const ep of episodes) {
-                // Not using await to allow parallel writes
-                addDocumentNonBlocking(episodesCollection, ep);
-            }
-        } else if (contentType === 'series-seasons') {
-            const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
-            for(const season of seasons) {
-                const seasonDoc = { number: season.number };
-                const seasonRef = await addDocumentNonBlocking(seasonsCollection, seasonDoc);
-                const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
-                for(const ep of season.episodes) {
-                    // Not using await to allow parallel writes
-                     addDocumentNonBlocking(episodesCollection, ep);
-                }
-            }
-        }
-        
-        resetForm();
+        // TODO: Handle episode/season updates for editing
+      if (!editingChannel) {
+          if (contentType === 'series-episodes') {
+              const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
+              for(const ep of episodes) {
+                  addDocumentNonBlocking(episodesCollection, ep);
+              }
+          } else if (contentType === 'series-seasons') {
+              const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
+              for(const season of seasons) {
+                  const seasonDoc = { number: season.number };
+                  const seasonRef = await addDocumentNonBlocking(seasonsCollection, seasonDoc);
+                  const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
+                  for(const ep of season.episodes) {
+                       addDocumentNonBlocking(episodesCollection, ep);
+                  }
+              }
+          }
+      }
+      
+      resetForm();
+      setIsFormOpen(false);
 
     } catch (error) {
-        console.error("Error adding content: ", error);
+        console.error("Error adding/updating content: ", error);
     } finally {
         setIsSubmitting(false);
     }
-};
+  };
 
 
   return (
     <div>
+      <Dialog open={!!previewUrl} onOpenChange={(isOpen) => !isOpen && setPreviewUrl('')}>
+          <DialogContent className="max-w-4xl h-[70vh]">
+              <DialogHeader><DialogTitle>Pré-visualização</DialogTitle></DialogHeader>
+              <div className="w-full h-full rounded-lg overflow-hidden mt-4">
+                  <VideoPlayer source={previewUrl} />
+              </div>
+          </DialogContent>
+      </Dialog>
       <div className="admin-header">
         <h1 className="admin-title">Gerenciar Conteúdo</h1>
-        <Button onClick={() => document.getElementById('add-content-form')?.scrollIntoView({ behavior: 'smooth' })}>
+        <Button onClick={() => handleOpenForm()}>
           <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Conteúdo
         </Button>
       </div>
@@ -577,19 +623,19 @@ function ChannelsTab() {
                 <td className="p-4">{channel.category}</td>
                 <td className="p-4">{channel.type}</td>
                 <td className="p-4 flex items-center gap-2">
-                  <Button variant="ghost" size="icon" disabled>
+                  <Button variant="ghost" size="icon" onClick={() => channel.url && setPreviewUrl(channel.url)} disabled={!channel.url}>
                     <Play className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" disabled>
+                  <Button variant="ghost" size="icon" onClick={() => handleOpenForm(channel)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="text-red-500 hover:text-red-400"
-                    onClick={() => {
+                    onClick={async () => {
                         if (confirm(`Tem certeza que deseja excluir "${channel.name}"?`)) {
-                           deleteDocumentNonBlocking(doc(firestore, 'channels', channel.id))
+                           await deleteDoc(doc(firestore, 'channels', channel.id))
                         }
                     }}
                   >
@@ -606,89 +652,99 @@ function ChannelsTab() {
           </tbody>
         </table>
       </div>
-      <div id="add-content-form" className="p-6 bg-card rounded-lg border mt-8">
-        <h3 className="text-lg font-semibold mb-4">Adicionar Novo Conteúdo</h3>
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-                <Label>Tipo de Conteúdo</Label>
-                <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)} disabled={isSubmitting}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="channel">Canal ao Vivo / Rádio</SelectItem>
-                        <SelectItem value="movie">Filme (item único)</SelectItem>
-                        <SelectItem value="series-episodes">Série (só episódios)</SelectItem>
-                        <SelectItem value="series-seasons">Série (com temporadas)</SelectItem>
-                    </SelectContent>
-                </Select>
+      
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingChannel ? 'Editar Conteúdo' : 'Adicionar Novo Conteúdo'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto p-2">
+              <div className="space-y-2">
+                  <Label>Tipo de Conteúdo</Label>
+                  <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)} disabled={isSubmitting || !!editingChannel}>
+                      <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="channel">Canal ao Vivo / Rádio</SelectItem>
+                          <SelectItem value="movie">Filme (item único)</SelectItem>
+                          <SelectItem value="series-episodes">Série (só episódios)</SelectItem>
+                          <SelectItem value="series-seasons">Série (com temporadas)</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+              
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="channel-name">Nome do Conteúdo</Label>
+                <Input id="channel-name" placeholder="Ex: Filme Ação" value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting}/>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="channel-category">Categoria</Label>
+                <Input id="channel-category" placeholder="Ex: Filmes, Rádios, Abertos" value={category} onChange={e => setCategory(e.target.value)} required disabled={isSubmitting}/>
+              </div>
             </div>
-            
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="channel-name">Nome do Conteúdo</Label>
-              <Input id="channel-name" placeholder="Ex: Filme Ação" value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting}/>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="channel-category">Categoria</Label>
-              <Input id="channel-category" placeholder="Ex: Filmes, Rádios, Abertos" value={category} onChange={e => setCategory(e.target.value)} required disabled={isSubmitting}/>
-            </div>
-          </div>
 
-          {(contentType === 'channel' || contentType === 'movie') && (
-            <div className="space-y-2">
-                <Label htmlFor="channel-url">URL do Conteúdo</Label>
-                <Input id="channel-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} required disabled={isSubmitting}/>
+            {(contentType === 'channel' || contentType === 'movie') && (
+              <div className="space-y-2">
+                  <Label htmlFor="channel-url">URL do Conteúdo</Label>
+                  <Input id="channel-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} required disabled={isSubmitting}/>
+              </div>
+            )}
+
+            {contentType === 'series-episodes' && !editingChannel && (
+              <div className="space-y-4 p-4 border rounded-md">
+                  <Label>Episódios</Label>
+                  {episodes.map((ep, index) => (
+                      <div key={index} className="flex items-end gap-2">
+                          <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required/>
+                          <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
+                          <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
+                      </div>
+                  ))}
+                  <Button type="button" variant="outline" onClick={() => handleAddEpisode()} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Episódio</Button>
+              </div>
+            )}
+
+            {contentType === 'series-seasons' && !editingChannel && (
+              <div className="space-y-4">
+                  {seasons.map((season, sIndex) => (
+                      <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
+                          <div className="flex items-end gap-2">
+                              <Label className="w-24 mb-2">Temporada</Label>
+                              <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting} required/>
+                          </div>
+                          {season.episodes.map((ep, eIndex) => (
+                            <div key={eIndex} className="flex items-end gap-2 ml-6">
+                                  <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required/>
+                                  <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
+                                  <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
+                              </div>
+                          ))}
+                          <Button type="button" variant="outline" size="sm" className="ml-6" onClick={() => handleAddEpisode(sIndex)} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Episódio</Button>
+                          {seasons.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-500" onClick={() => handleRemoveSeason(sIndex)} disabled={isSubmitting}><XCircle /></Button>}
+                      </div>
+                  ))}
+                  <Button type="button" variant="secondary" onClick={handleAddSeason} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Temporada</Button>
+              </div>
+            )}
+
+
+            <div className="flex items-center space-x-2 pt-4">
+              <Checkbox id="is-adult" checked={isAdult} onCheckedChange={c => setIsAdult(!!c)} disabled={isSubmitting}/>
+              <Label htmlFor="is-adult">Conteúdo Adulto (+18)</Label>
             </div>
-          )}
-
-          {contentType === 'series-episodes' && (
-            <div className="space-y-4 p-4 border rounded-md">
-                <Label>Episódios</Label>
-                {episodes.map((ep, index) => (
-                    <div key={index} className="flex items-end gap-2">
-                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required/>
-                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
-                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
-                    </div>
-                ))}
-                <Button type="button" variant="outline" onClick={() => handleAddEpisode()} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Episódio</Button>
-            </div>
-          )}
-
-          {contentType === 'series-seasons' && (
-             <div className="space-y-4">
-                {seasons.map((season, sIndex) => (
-                    <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
-                         <div className="flex items-end gap-2">
-                            <Label className="w-24 mb-2">Temporada</Label>
-                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting} required/>
-                         </div>
-                        {season.episodes.map((ep, eIndex) => (
-                           <div key={eIndex} className="flex items-end gap-2 ml-6">
-                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required/>
-                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
-                                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
-                            </div>
-                        ))}
-                         <Button type="button" variant="outline" size="sm" className="ml-6" onClick={() => handleAddEpisode(sIndex)} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Episódio</Button>
-                         {seasons.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-500" onClick={() => handleRemoveSeason(sIndex)} disabled={isSubmitting}><XCircle /></Button>}
-                    </div>
-                ))}
-                 <Button type="button" variant="secondary" onClick={handleAddSeason} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Temporada</Button>
-            </div>
-          )}
-
-
-          <div className="flex items-center space-x-2 pt-4">
-            <Checkbox id="is-adult" checked={isAdult} onCheckedChange={c => setIsAdult(!!c)} disabled={isSubmitting}/>
-            <Label htmlFor="is-adult">Conteúdo Adulto (+18)</Label>
-          </div>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Adicionando...' : 'Adicionar Conteúdo'}
-          </Button>
-        </form>
-      </div>
+            <DialogFooter>
+               <DialogClose asChild>
+                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancelar</Button>
+               </DialogClose>
+               <Button type="submit" disabled={isSubmitting}>
+                 {isSubmitting ? 'Salvando...' : (editingChannel ? 'Salvar Alterações' : 'Adicionar Conteúdo')}
+               </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -743,5 +799,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-    
