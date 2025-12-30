@@ -5,17 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Trash2,
   Edit,
   PlusCircle,
-  CheckCircle,
-  XCircle,
   Play,
   Upload,
   Plus,
+  XCircle,
 } from 'lucide-react';
 import {
   useCollection,
@@ -59,8 +57,8 @@ type Channel = {
   id: string;
   name: string;
   category: string;
-  url: string;
-  type: 'channel' | 'movie' | 'series';
+  url?: string;
+  type: 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
 };
 
 const FIREBASE_ADMIN_EMAIL = "admin@example.com";
@@ -83,12 +81,12 @@ export default function AdminDashboard() {
     });
   }
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || user.email !== FIREBASE_ADMIN_EMAIL) {
     return (
         <div className="flex items-center justify-center h-screen">
-            <div className="space-y-4">
-                <Skeleton className="h-8 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
+            <div className="space-y-4 text-center">
+                 <p className="text-lg">Carregando...</p>
+                <p className="text-sm text-muted-foreground">Verificando sessão de administrador</p>
             </div>
         </div>
     );
@@ -154,17 +152,20 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
 
+    // Use a separate auth instance to avoid conflicts.
+    // This is a common pattern but can be complex. For this case, it's okay.
+    const tempAuth = getAuth();
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + trialDays);
-
+    
     try {
-      // We need a temporary auth instance to create a user, 
-      // as we don't want to use the currently logged in admin's auth state for this.
-      const tempAuth = getAuth();
+      // 1. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
       const user = userCredential.user;
 
+      // 2. Create the user document in Firestore
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + trialDays);
+      
       const newUser: Omit<User, 'id'> = {
         username,
         email,
@@ -172,8 +173,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         isBlocked: false,
       };
 
-      // Use setDocumentNonBlocking as we are setting with a specific ID
-      setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, {});
+      await setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, {});
       
       onUserAdded();
     } catch (err: any) {
@@ -262,7 +262,7 @@ function UsersTab() {
         const userRef = doc(firestore, 'users', user.id);
         deleteDocumentNonBlocking(userRef);
         // Note: This does not delete the user from Firebase Auth. 
-        // A cloud function would be needed for that.
+        // A cloud function would be needed for that for a full cleanup.
     }
   }
 
@@ -270,26 +270,28 @@ function UsersTab() {
     user: User
   ): {
     text: string;
-    icon: JSX.Element;
     className: string;
   } => {
     if (user.isBlocked) {
       return {
         text: 'Bloqueado',
-        icon: <XCircle className="text-yellow-400" />,
         className: 'status-blocked',
       };
     }
-    if (new Date(user.freeTrialExpiry) < new Date()) {
+    const expiryDate = new Date(user.freeTrialExpiry);
+    const now = new Date();
+    // Reset time part to compare dates only
+    expiryDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+
+    if (expiryDate < now) {
       return {
         text: 'Expirado',
-        icon: <XCircle className="text-red-400" />,
         className: 'status-expired',
       };
     }
     return {
       text: 'Ativo',
-      icon: <CheckCircle className="text-green-400" />,
       className: 'status-active',
     };
   };
@@ -321,7 +323,8 @@ function UsersTab() {
             {isLoading && (
               <tr>
                 <td colSpan={4} className="p-4 text-center">
-                  Carregando usuários...
+                  <Skeleton className="h-8 w-full" />
+                   <Skeleton className="h-8 w-full mt-2" />
                 </td>
               </tr>
             )}
@@ -352,7 +355,7 @@ function UsersTab() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-red-500"
+                      className="text-red-500 hover:text-red-400"
                       onClick={() => handleDeleteUser(user)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -480,16 +483,17 @@ function ChannelsTab() {
         const channelRef = await addDocumentNonBlocking(collection(firestore, 'channels'), channelData);
         
         if (contentType === 'series-episodes') {
-            const episodesCollection = collection(channelRef, 'episodes');
+            const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
             for(const ep of episodes) {
                 // Not using await to allow parallel writes
                 addDocumentNonBlocking(episodesCollection, ep);
             }
         } else if (contentType === 'series-seasons') {
-            const seasonsCollection = collection(channelRef, 'seasons');
+            const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
             for(const season of seasons) {
-                const seasonRef = await addDocumentNonBlocking(seasonsCollection, { number: season.number });
-                const episodesCollection = collection(seasonRef, 'episodes');
+                const seasonDoc = { number: season.number };
+                const seasonRef = await addDocumentNonBlocking(seasonsCollection, seasonDoc);
+                const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
                 for(const ep of season.episodes) {
                     // Not using await to allow parallel writes
                      addDocumentNonBlocking(episodesCollection, ep);
@@ -531,7 +535,10 @@ function ChannelsTab() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={4} className="p-4 text-center">Carregando...</td>
+                <td colSpan={4} className="p-4 text-center">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full mt-2" />
+                </td>
               </tr>
             )}
             {!isLoading && channels?.map((channel) => (
@@ -549,8 +556,12 @@ function ChannelsTab() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-red-500"
-                    onClick={() => deleteDocumentNonBlocking(doc(firestore, 'channels', channel.id))}
+                    className="text-red-500 hover:text-red-400"
+                    onClick={() => {
+                        if (confirm(`Tem certeza que deseja excluir "${channel.name}"?`)) {
+                           deleteDocumentNonBlocking(doc(firestore, 'channels', channel.id))
+                        }
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -606,8 +617,8 @@ function ChannelsTab() {
                 <Label>Episódios</Label>
                 {episodes.map((ep, index) => (
                     <div key={index} className="flex items-end gap-2">
-                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting}/>
-                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting}/>
+                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required/>
+                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
                         <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
                     </div>
                 ))}
@@ -621,12 +632,12 @@ function ChannelsTab() {
                     <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
                          <div className="flex items-end gap-2">
                             <Label className="w-24 mb-2">Temporada</Label>
-                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting}/>
+                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting} required/>
                          </div>
                         {season.episodes.map((ep, eIndex) => (
                            <div key={eIndex} className="flex items-end gap-2 ml-6">
-                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting}/>
-                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting}/>
+                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required/>
+                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
                                 <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         ))}

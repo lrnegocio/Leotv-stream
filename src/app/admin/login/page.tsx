@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, useUser } from "@/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 // Dummy credentials for the form validation
 const ADMIN_USERNAME = "lrnegocio";
@@ -45,16 +45,26 @@ export default function AdminLoginPage() {
     // 2. If local credentials are correct, sign in to Firebase with the admin account
     setIsLoading(true);
     try {
+      // Try to sign in
       await signInWithEmailAndPassword(auth, FIREBASE_ADMIN_EMAIL, FIREBASE_ADMIN_PASSWORD);
-      // The `onAuthStateChanged` listener in the `useEffect` hook will handle the redirect to the dashboard.
+      // The `onAuthStateChanged` listener in the `useEffect` hook will handle the redirect
     } catch (err: any) {
-      console.error("Firebase Auth Error:", err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError('Erro de Autenticação do Painel. Verifique a configuração do Firebase.');
+      // If sign-in fails because the user doesn't exist, create it.
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, FIREBASE_ADMIN_EMAIL, FIREBASE_ADMIN_PASSWORD);
+          // After creating, the onAuthStateChanged listener will pick up the new user and redirect.
+        } catch (creationError: any) {
+          console.error("Firebase Admin Creation Error:", creationError);
+          setError("Falha ao configurar a sessão de admin.");
+          setIsLoading(false);
+        }
       } else {
-        setError("Ocorreu um erro ao fazer login.");
+        // For other sign-in errors (e.g. wrong password on existing user)
+        console.error("Firebase Auth Error:", err);
+        setError("Erro de Autenticação do Painel. Verifique a configuração.");
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
   };
 
@@ -86,7 +96,7 @@ export default function AdminLoginPage() {
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90" disabled={isLoading || isUserLoading}>
             {isLoading ? 'Entrando...' : 'Entrar como Admin'}
           </Button>
           <Button type="button" variant="outline" onClick={() => router.push('/')} className="w-full mt-2" disabled={isLoading}>
