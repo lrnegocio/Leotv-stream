@@ -111,7 +111,7 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) A new user can create their own profile document.
+     * @allow (create) A new user can create their own profile document OR an admin can create one.
      * @allow (get, update, delete) The document owner or an admin can manage the profile.
      * @allow (list) Only admins can list all user profiles.
      * @deny (update) A user cannot change another user's profile.
@@ -120,7 +120,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && hasValidUserIdOnCreate(userId);
+      allow create: if (isOwner(userId) || isAdmin()) && hasValidUserIdOnCreate(userId);
       allow update: if (isOwner(userId) && isExistingDoc() && userIdIsImmutable()) || (isAdmin() && isExistingDoc());
       allow delete: if (isOwner(userId) && isExistingDoc()) || (isAdmin() && isExistingDoc());
     }
