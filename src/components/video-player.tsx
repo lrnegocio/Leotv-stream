@@ -11,8 +11,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
   if (!source.trim()) {
     return (
       <div className="text-center text-muted-foreground p-4">
-        <p>Insira um URL ou código de incorporação na barra lateral para começar.</p>
-        <p className="text-sm">Suportamos YouTube, Canva e iframes/divs brutos.</p>
+        <p>Selecione um canal na barra lateral para começar.</p>
       </div>
     );
   }
@@ -25,7 +24,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
   const youtubeMatch = source.match(youtubeRegex);
   if (youtubeMatch) {
     const videoId = youtubeMatch[1];
-    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}`;
+    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
   }
 
   // 2. Check for Canva URL
@@ -56,6 +55,18 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
       }
   }
 
+  // Fallback for any other valid URL
+  if(!embedSrc && !isRawEmbed) {
+    try {
+        const url = new URL(source);
+        if(url.protocol === 'http:' || url.protocol === 'https:') {
+            embedSrc = source;
+        }
+    } catch (e) {
+        // not a valid URL
+    }
+  }
+
 
   if (embedSrc && !isRawEmbed) {
      return (
@@ -84,11 +95,11 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
   // 4. Handle error/invalid input
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
+        <Alert variant="destructive" className="max-w-md bg-destructive/20 border-destructive text-destructive-foreground">
         <Terminal className="h-4 w-4" />
         <AlertTitle>Entrada Inválida</AlertTitle>
         <AlertDescription>
-            A entrada fornecida não é um URL válido do YouTube/Canva ou código de incorporação. Por favor, verifique sua entrada e tente novamente.
+            O link fornecido não é um URL válido ou código de incorporação. Por favor, verifique sua entrada e tente novamente.
         </AlertDescription>
         </Alert>
     </div>
