@@ -149,7 +149,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const auth = useAuth(); // Use the main auth instance
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,71 +162,65 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     }
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
-
-    // This is the correct, robust way to create a user.
-    // It avoids using a temporary app instance which was causing issues.
-    // We create the user in a separate auth context to not disturb the admin's session.
     const tempAppName = `temp-user-creation-${Date.now()}`;
     let tempApp;
+    let tempAuth;
 
     try {
-        tempApp = initializeApp(firebaseConfig, tempAppName);
-        const tempAuth = getAuth(tempApp);
+      // Create a temporary, secondary Firebase app instance for user creation
+      tempApp = initializeApp(firebaseConfig, tempAppName);
+      tempAuth = getAuth(tempApp);
 
-        // 1. Create user in the temporary authentication instance
-        const userCredential = await createUserWithEmailAndPassword(
-            tempAuth,
-            email,
-            password
-        );
-        const newUserAuth = userCredential.user;
+      // 1. Create user in the temporary authentication instance
+      const userCredential = await createUserWithEmailAndPassword(
+        tempAuth,
+        email,
+        password
+      );
+      const newUserAuth = userCredential.user;
 
-        // 2. Prepare the user document for Firestore
-        let expiryDate: Date | null = new Date();
-        if (plan === 'trial') {
-            expiryDate.setHours(expiryDate.getHours() + trialHours);
-        } else if (plan === 'monthly') {
-            expiryDate.setMonth(expiryDate.getMonth() + 1);
-        } else {
-            expiryDate = null; // Custom plan has no automatic expiry
-        }
+      // 2. Prepare the user document for Firestore
+      let expiryDate: Date | null = new Date();
+      if (plan === 'trial') {
+        expiryDate.setHours(expiryDate.getHours() + trialHours);
+      } else if (plan === 'monthly') {
+        expiryDate.setMonth(expiryDate.getMonth() + 1);
+      } else {
+        expiryDate = null; // Custom plan has no automatic expiry
+      }
 
-        const newUserDoc = {
-            id: newUserAuth.uid,
-            username,
-            email,
-            plan,
-            planExpiry: expiryDate ? expiryDate.toISOString() : null,
-            isBlocked: false,
-            createdAt: serverTimestamp(),
-        };
+      const newUserDoc = {
+        id: newUserAuth.uid,
+        username,
+        email,
+        plan,
+        planExpiry: expiryDate ? expiryDate.toISOString() : null,
+        isBlocked: false,
+        createdAt: serverTimestamp(),
+      };
 
-        // 3. Save the document in Firestore using the user's UID as the document ID
-        // This is a critical step. Use await to ensure it completes.
-        const userDocRef = doc(firestore, 'users', newUserAuth.uid);
-        await setDoc(userDocRef, newUserDoc);
-        
-        onUserAdded();
-        
+      // 3. Save the document in Firestore using the user's UID as the document ID
+      const userDocRef = doc(firestore, 'users', newUserAuth.uid);
+      await setDoc(userDocRef, newUserDoc);
+
+      onUserAdded();
+      
     } catch (err: any) {
-        console.error('Error creating user:', err);
-        if (err.code === 'auth/email-already-in-use') {
-            setError('Este nome de usuário já está em uso. Tente outro.');
-        } else {
-            setError('Ocorreu um erro ao criar o usuário: ' + err.message);
-        }
+      console.error('Error creating user:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Este nome de usuário já está em uso. Tente outro.');
+      } else {
+        setError('Ocorreu um erro ao criar o usuário: ' + err.message);
+      }
     } finally {
-        // 4. Clean up the temporary app instance
-        if (tempApp) {
-            try {
-              const tempAuth = getAuth(tempApp);
-              await signOut(tempAuth); // Sign out from temp instance
-              await deleteApp(tempApp); // Delete the temporary app
-            } catch (cleanupError) {
-              console.error("Error during temp app cleanup:", cleanupError);
-            }
-        }
-        setIsLoading(false);
+      // 4. Clean up the temporary app instance regardless of success or failure
+      if (tempAuth) {
+        await signOut(tempAuth); // Sign out from the temporary instance
+      }
+      if (tempApp) {
+        await deleteApp(tempApp); // Delete the temporary app
+      }
+      setIsLoading(false);
     }
   };
 
@@ -863,7 +856,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-    
-
-    
