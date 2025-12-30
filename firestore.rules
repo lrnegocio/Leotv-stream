@@ -14,7 +14,7 @@
  * - Admin Privilege via Email: Admin status is determined by checking if the authenticated user's email is 'admin@example.com'.
  *   This is a direct and secure method for a single-admin system.
  * - User Data Privacy vs. Admin Management: Users have limited control over their own data in `/users/{userId}`.
- *   Administrators are granted full `read` and `write` permissions to manage all user accounts.
+ *   Administrators are granted full `read` and `write` permissions to manage all user accounts, including deletion.
  * - Public Content Model: All content under `/channels` is readable by any authenticated user.
  *   All write operations (create, update, delete) on this content are strictly limited to administrators.
  * - App-Side Blocking Logic: The user `isBlocked` flag is enforced by the application logic during login,
@@ -50,36 +50,25 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------------------------
-    // User Profiles
+    // User Profiles & All Subcollections
     // ----------------------------------------------------------------------
 
     /**
-     * @description Controls access to user profile documents.
-     * @path /users/{userId}
-     * @allow (read, write) Admins can fully manage any user document. A user can read their own document.
-     * @principle Enforces document ownership for users and provides admin override for management tasks.
+     * @description Controls access to user profile documents and ALL their subcollections.
+     * @path /users/{userId} and /users/{userId}/{document=**}
+     * @allow (read, write) Admins can fully manage any user document and their subcollections (like sessions).
+     * @allow (get, update) A user can read or update their own top-level document.
+     * @allow (list, create, update) for subcollections like sessions.
+     * @principle Enforces document ownership for users and provides admin override for management tasks, including recursive deletes.
      */
-    match /users/{userId} {
-      allow read, write: if isAdmin();
-      allow get: if isOwner(userId);
-      allow update: if isOwner(userId);
-    }
-
-    // ----------------------------------------------------------------------
-    // User Sessions
-    // ----------------------------------------------------------------------
-
-    /**
-     * @description Controls access to a user's session data.
-     * @path /users/{userId}/sessions/{sessionId}
-     * @allow (read, write) Admins have full control for management.
-     * @allow (read, create, update) A user can manage their own session documents.
-     * @principle Restricts access to a user's own data tree with admin override.
-     */
-    match /users/{userId}/sessions/{sessionId} {
+    match /users/{userId}/{document=**} {
       allow read, write: if isAdmin();
       allow list, create, update: if isOwner(userId);
     }
+     match /users/{userId} {
+      allow get, update: if isOwner(userId);
+    }
+
 
     // ----------------------------------------------------------------------
     // Public Content: Channels, Seasons, Episodes
@@ -89,7 +78,7 @@ service cloud.firestore {
      * @description Controls access to all public content collections.
      * @path /channels/{channelId} and its subcollections.
      * @allow (read) Any authenticated user can read channel, season, and episode data.
-     * @allow (write) Only admins can manage content.
+     * @allow (write) Only admins can manage content (create, update, delete).
      * @principle Implements public read access for valid users with role-based write restrictions.
      */
     match /channels/{channelId}/{document=**} {

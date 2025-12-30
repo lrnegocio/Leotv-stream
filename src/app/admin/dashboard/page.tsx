@@ -149,29 +149,31 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const mainAuth = useAuth(); // Use the main auth instance from the provider
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-  
+
     if (!username || !password) {
       setError('Usuário e senha são obrigatórios.');
       setIsLoading(false);
       return;
     }
-  
+
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     
-    // Use a temporary, secondary Firebase app for user creation to avoid session conflicts
+    // Create a temporary, secondary Firebase app for user creation to avoid session conflicts
     const tempAppName = `temp-user-creation-${Date.now()}`;
     let tempApp;
     let tempAuth;
-  
+
     try {
+      // Initialize a temporary app instance
       tempApp = initializeApp(firebaseConfig, tempAppName);
       tempAuth = getAuth(tempApp);
-  
+
       // 1. Create user in the temporary authentication instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
@@ -179,7 +181,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         password
       );
       const newUserAuth = userCredential.user;
-  
+
       // 2. Prepare the user document for Firestore
       let expiryDate: Date | null = new Date();
       if (plan === 'trial') {
@@ -189,23 +191,23 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       } else {
         expiryDate = null; // Custom plan has no automatic expiry
       }
-  
+
       const newUserDoc = {
         id: newUserAuth.uid,
         username,
         email,
         plan,
-        planExpiry: expiryDate ? expiryDate.toISOString() : null, // Use ISO string for consistency
+        planExpiry: expiryDate ? expiryDate.toISOString() : null,
         isBlocked: false,
         createdAt: serverTimestamp(),
       };
-  
+
       // 3. Save the document in Firestore using the main app's firestore instance
       if (!firestore) throw new Error("Firestore is not initialized.");
       const userDocRef = doc(firestore, 'users', newUserAuth.uid);
       await setDoc(userDocRef, newUserDoc);
-  
-      // 4. Success, call the callback
+
+      // 4. Success, close dialog and trigger refresh
       onUserAdded();
       
     } catch (err: any) {
@@ -218,10 +220,10 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     } finally {
       // 5. Clean up the temporary app instance regardless of success or failure
       if (tempAuth) {
-        await signOut(tempAuth); // Sign out from the temporary instance
+        await signOut(tempAuth); // Sign out from the temporary instance to clear its state
       }
       if (tempApp) {
-        await deleteApp(tempApp); // Delete the temporary app
+        await deleteApp(tempApp); // Delete the temporary app to free up resources
       }
       setIsLoading(false);
     }
@@ -319,21 +321,32 @@ function UsersTab() {
     await updateDoc(userRef, { isBlocked: !user.isBlocked });
   };
   
-  const handleDeleteUser = async (user: User) => {
-    if(!firestore) return;
-    if(confirm(`Tem certeza que deseja excluir o usuário ${user.username}? Esta ação não pode ser desfeita.`)) {
-        const userRef = doc(firestore, 'users', user.id);
+  const handleDeleteUser = async (userToDelete: User) => {
+    if (!firestore) return;
+    if (window.confirm(`Tem certeza que deseja excluir o usuário ${userToDelete.username}? Esta ação não pode ser desfeita e excluirá todos os dados associados.`)) {
         try {
-            // Note: This deletes the Firestore document. Deleting the user from
-            // Firebase Auth requires admin privileges and is typically done in a Cloud Function
-            // for security reasons. For this app, just deleting the DB record prevents login.
+            const userRef = doc(firestore, 'users', userToDelete.id);
+
+            // 1. Delete subcollections recursively (e.g., 'sessions')
+            const sessionsCollectionRef = collection(userRef, 'sessions');
+            const sessionsSnapshot = await getDocs(sessionsCollectionRef);
+            const deletePromises = sessionsSnapshot.docs.map((sessionDoc) => deleteDoc(sessionDoc.ref));
+            await Promise.all(deletePromises);
+
+            // 2. Delete the main user document
             await deleteDoc(userRef);
-        } catch(e) {
-            console.error("Error deleting user document:", e);
-            alert("Falha ao excluir usuário: " + e);
+
+            // NOTE: Deleting the user from Firebase Auth is a privileged operation
+            // and should be handled by a backend Cloud Function for security reasons.
+            // Deleting the Firestore document is sufficient to block app access.
+            alert(`Usuário ${userToDelete.username} excluído do banco de dados.`);
+        } catch (e) {
+            console.error("Error deleting user:", e);
+            alert("Falha ao excluir usuário: " + (e as Error).message);
         }
     }
-  }
+}
+
 
   const getStatus = (user: User): { text: string; className: string } => {
     if (user.isBlocked) {
