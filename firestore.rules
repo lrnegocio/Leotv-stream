@@ -7,7 +7,7 @@
  *
  * Data Structure:
  * - /users/{userId}: Private user data, owned by the user but manageable by admins.
- *   - /users/{userId}/sessions/{sessionId}: Subcollection for user session data, strictly owned by the user.
+ *   - /users/{userId}/sessions/{sessionId}: Subcollection for user session data, strictly owned by the user but deletable by admins.
  * - /channels/{channelId}: Publicly readable content collection managed exclusively by admins. It contains
  *   nested subcollections for seasons and episodes.
  *
@@ -132,16 +132,17 @@ service cloud.firestore {
     /**
      * @description Controls access to a user's session data, used to prevent dual logins.
      * @path /users/{userId}/sessions/{sessionId}
-     * @allow (create, get, list, update, delete) A user can fully manage their own session documents.
-     * @deny (create, get, list, update, delete) A user cannot access another user's sessions. Admins are also denied access as this is user-managed state.
-     * @principle Restricts access to a user's own data tree (Strict Ownership).
+     * @allow (create, get, list, update) A user can fully manage their own session documents.
+     * @allow (delete) A user OR an admin can delete a session. This is required for admin to delete a user account.
+     * @deny (create, get, list, update, delete) A user cannot access another user's sessions.
+     * @principle Restricts access to a user's own data tree (Strict Ownership) with an exception for admin deletion.
      */
     match /users/{userId}/sessions/{sessionId} {
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && hasValidOwnerIdOnCreate(userId);
       allow update: if isOwner(userId) && isExistingDoc() && ownerIdIsImmutable();
-      allow delete: if isOwner(userId) && isExistingDoc();
+      allow delete: if (isOwner(userId) && isExistingDoc()) || (isAdmin() && isExistingDoc());
     }
 
     // ----------------------------------------------------------------------
