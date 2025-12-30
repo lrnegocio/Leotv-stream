@@ -149,7 +149,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const mainAuth = useAuth(); // Use the main auth instance from the provider
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +169,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     let tempAuth;
 
     try {
-      // Initialize a temporary app instance
       tempApp = initializeApp(firebaseConfig, tempAppName);
       tempAuth = getAuth(tempApp);
 
@@ -197,6 +195,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         username,
         email,
         plan,
+        // FIX: Store expiry date as ISO string for consistency
         planExpiry: expiryDate ? expiryDate.toISOString() : null,
         isBlocked: false,
         createdAt: serverTimestamp(),
@@ -207,7 +206,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       const userDocRef = doc(firestore, 'users', newUserAuth.uid);
       await setDoc(userDocRef, newUserDoc);
 
-      // 4. Success, close dialog and trigger refresh
       onUserAdded();
       
     } catch (err: any) {
@@ -220,10 +218,10 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     } finally {
       // 5. Clean up the temporary app instance regardless of success or failure
       if (tempAuth) {
-        await signOut(tempAuth); // Sign out from the temporary instance to clear its state
+        await signOut(tempAuth);
       }
       if (tempApp) {
-        await deleteApp(tempApp); // Delete the temporary app to free up resources
+        await deleteApp(tempApp);
       }
       setIsLoading(false);
     }
@@ -323,22 +321,18 @@ function UsersTab() {
   
   const handleDeleteUser = async (userToDelete: User) => {
     if (!firestore) return;
-    if (window.confirm(`Tem certeza que deseja excluir o usuário ${userToDelete.username}? Esta ação não pode ser desfeita e excluirá todos os dados associados.`)) {
+    if (window.confirm(`Tem certeza que deseja excluir o usuário ${userToDelete.username}? Esta ação não pode ser desfeita.`)) {
         try {
             const userRef = doc(firestore, 'users', userToDelete.id);
+            const batch = writeBatch(firestore);
 
-            // 1. Delete subcollections recursively (e.g., 'sessions')
             const sessionsCollectionRef = collection(userRef, 'sessions');
             const sessionsSnapshot = await getDocs(sessionsCollectionRef);
-            const deletePromises = sessionsSnapshot.docs.map((sessionDoc) => deleteDoc(sessionDoc.ref));
-            await Promise.all(deletePromises);
+            sessionsSnapshot.docs.forEach((sessionDoc) => batch.delete(sessionDoc.ref));
 
-            // 2. Delete the main user document
-            await deleteDoc(userRef);
-
-            // NOTE: Deleting the user from Firebase Auth is a privileged operation
-            // and should be handled by a backend Cloud Function for security reasons.
-            // Deleting the Firestore document is sufficient to block app access.
+            batch.delete(userRef);
+            await batch.commit();
+            
             alert(`Usuário ${userToDelete.username} excluído do banco de dados.`);
         } catch (e) {
             console.error("Error deleting user:", e);
@@ -457,7 +451,7 @@ function UsersTab() {
 }
 
 type ContentType = 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
-type Episode = { id?: string; number: string; url: string };
+type Episode = { id?: string; number: string; url: string; name?: string };
 type Season = { id?: string; number: string; episodes: Episode[] };
 
 function ChannelsTab() {
@@ -497,8 +491,8 @@ function ChannelsTab() {
             const episodesCollection = collection(firestore, 'channels', channel.id, 'episodes');
             const q = query(episodesCollection, orderBy('episodeNumber'));
             const querySnapshot = await getDocs(q);
-            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl }));
-            setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '' }]);
+            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl, name: doc.data().name || '' }));
+            setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '', name: '' }]);
         } else if (channel.type === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channel.id, 'seasons');
             const qSeasons = query(seasonsCollection, orderBy('seasonNumber'));
@@ -508,10 +502,10 @@ function ChannelsTab() {
                 const episodesCollection = collection(firestore, 'channels', channel.id, 'seasons', seasonDoc.id, 'episodes');
                 const qEpisodes = query(episodesCollection, orderBy('episodeNumber'));
                 const episodesSnapshot = await getDocs(qEpisodes);
-                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl }));
-                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber.toString(), episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
+                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber.toString(), url: doc.data().episodeUrl, name: doc.data().name || '' }));
+                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber.toString(), episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: '', name:''}] });
             }
-            setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+            setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '', name:'' }] }]);
         }
     }
     setIsFormOpen(true);
@@ -522,17 +516,17 @@ function ChannelsTab() {
       if(seasonIndex !== undefined) {
           const newSeasons = [...seasons];
           const newEpisodeNumber = newSeasons[seasonIndex].episodes.length > 0 ? Math.max(...newSeasons[seasonIndex].episodes.map(e => parseInt(e.number))) + 1 : 1;
-          newSeasons[seasonIndex].episodes.push({ number: newEpisodeNumber.toString(), url: '' });
+          newSeasons[seasonIndex].episodes.push({ number: newEpisodeNumber.toString(), url: '', name: '' });
           setSeasons(newSeasons);
       } else {
           const newEpisodeNumber = episodes.length > 0 ? Math.max(...episodes.map(e => parseInt(e.number))) + 1 : 1;
-          setEpisodes([...episodes, { number: newEpisodeNumber.toString(), url: '' }]);
+          setEpisodes([...episodes, { number: newEpisodeNumber.toString(), url: '', name:'' }]);
       }
   };
   
   const handleAddSeason = () => {
     const newSeasonNumber = seasons.length > 0 ? Math.max(...seasons.map(s => parseInt(s.number))) + 1 : 1;
-    setSeasons([...seasons, { number: newSeasonNumber.toString(), episodes: [{ number: '1', url: '' }] }]);
+    setSeasons([...seasons, { number: newSeasonNumber.toString(), episodes: [{ number: '1', url: '', name: '' }] }]);
   }
 
   const handleRemoveEpisode = (index: number, seasonIndex?: number) => {
@@ -555,14 +549,14 @@ function ChannelsTab() {
     }
   }
   
-  const handleEpisodeChange = (value: string, index: number, field: 'number' | 'url', seasonIndex?: number) => {
+  const handleEpisodeChange = (value: string, index: number, field: 'number' | 'url' | 'name', seasonIndex?: number) => {
        if(seasonIndex !== undefined) {
           const newSeasons = [...seasons];
-          newSeasons[seasonIndex].episodes[index][field] = value;
+          (newSeasons[seasonIndex].episodes[index] as any)[field] = value;
           setSeasons(newSeasons);
        } else {
           const newEpisodes = [...episodes];
-          newEpisodes[index][field] = value;
+          (newEpisodes[index] as any)[field] = value;
           setEpisodes(newEpisodes);
        }
   }
@@ -578,8 +572,8 @@ function ChannelsTab() {
       setCategory('');
       setUrl('');
       setIsAdult(false);
-      setEpisodes([{ number: '1', url: '' }]);
-      setSeasons([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+      setEpisodes([{ number: '1', url: '', name: '' }]);
+      setSeasons([{ number: '1', episodes: [{ number: '1', url: '', name:'' }] }]);
       setContentType('channel');
       setEditingChannel(null);
   }
@@ -590,8 +584,6 @@ function ChannelsTab() {
 
         try {
             const channelRef = doc(firestore, 'channels', channelId);
-            
-            // Batch delete for all subcollections
             const batch = writeBatch(firestore);
 
             const seasonsRef = collection(channelRef, 'seasons');
@@ -660,7 +652,7 @@ function ChannelsTab() {
             for (const ep of episodes) {
                 if(ep.url) { 
                     const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
-                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url }, { merge: true });
+                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
                 }
             }
         } else if (contentType === 'series-seasons') {
@@ -669,7 +661,7 @@ function ChannelsTab() {
             const existingSeasonsSnap = await getDocs(seasonsCollection);
             for (const seasonDocSnap of existingSeasonsSnap.docs) {
                 if (!seasons.some(s => s.id === seasonDocSnap.id)) {
-                    await deleteDoc(seasonDocSnap.ref); // This will also delete subcollections in Firestore
+                    await deleteDoc(seasonDocSnap.ref);
                 }
             }
 
@@ -688,7 +680,7 @@ function ChannelsTab() {
                 for (const ep of season.episodes) {
                     if (ep.url) { 
                         const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
-                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url }, { merge: true });
+                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url, name: ep.name || `Episódio ${ep.number}` }, { merge: true });
                     }
                 }
             }
@@ -820,7 +812,11 @@ function ChannelsTab() {
                   {episodes.map((ep, index) => (
                       <div key={index} className="flex items-end gap-2">
                           <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting} required type="number" />
-                          <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
+                          <Input placeholder="Nome (opcional)" value={ep.name} onChange={e => handleEpisodeChange(e.target.value, index, 'name')} className="flex-grow-[0.5]" disabled={isSubmitting} />
+                          <div className="flex-grow flex items-center gap-1">
+                            <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting} required/>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => ep.url && setPreviewUrl(ep.url)} disabled={!ep.url}><Play className="h-4 w-4"/></Button>
+                          </div>
                           <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
                       </div>
                   ))}
@@ -839,7 +835,11 @@ function ChannelsTab() {
                           {season.episodes.map((ep, eIndex) => (
                             <div key={eIndex} className="flex items-end gap-2 ml-6">
                                   <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting} required type="number"/>
-                                  <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
+                                  <Input placeholder="Nome (opcional)" value={ep.name} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'name', sIndex)} className="flex-grow-[0.5]" disabled={isSubmitting} />
+                                  <div className="flex-grow flex items-center gap-1">
+                                    <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting} required/>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => ep.url && setPreviewUrl(ep.url)} disabled={!ep.url}><Play className="h-4 w-4"/></Button>
+                                  </div>
                                   <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
                               </div>
                           ))}

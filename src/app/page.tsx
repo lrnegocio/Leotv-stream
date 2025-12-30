@@ -27,9 +27,8 @@ export default function LoginPage() {
 
 
   useEffect(() => {
-    // If user is already logged in, redirect to app
+    // If user is already logged in, sign them out to ensure a clean login flow.
     if (!isUserLoading && user) {
-        // Sign out any lingering user session on page load
         signOut(auth);
     }
   }, [user, isUserLoading, router, auth]);
@@ -59,6 +58,7 @@ export default function LoginPage() {
       return;
     }
     
+    // CRITICAL FIX: Ensure email format matches the creation logic in admin panel
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
     try {
@@ -83,6 +83,7 @@ export default function LoginPage() {
             return;
         }
         
+        // FIX: Ensure correct date comparison by parsing the ISO string
         if (userData.plan !== 'custom' && userData.planExpiry && new Date(userData.planExpiry) < new Date()) {
             setError("Seu plano expirou. Entre em contato com o suporte.");
             await signOut(auth);
@@ -90,6 +91,7 @@ export default function LoginPage() {
             return;
         }
 
+        // Invalidate previous active sessions
         const sessionsRef = collection(userDocRef, "sessions");
         const q = query(sessionsRef, where("isActive", "==", true));
         const activeSessions = await getDocs(q);
@@ -100,6 +102,7 @@ export default function LoginPage() {
             }
         }
         
+        // Create a new session
         const newSessionRef = doc(sessionsRef);
         await setDoc(newSessionRef, {
             id: newSessionRef.id,
@@ -139,7 +142,7 @@ export default function LoginPage() {
         if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
             setError("Usuário ou senha inválidos.");
         } else {
-            setError("Ocorreu um erro ao tentar fazer o login.");
+            setError("Ocorreu um erro ao tentar fazer o login: " + err.message);
             console.error(err);
         }
     } finally {
@@ -213,5 +216,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    
