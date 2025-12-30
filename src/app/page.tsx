@@ -1,24 +1,38 @@
+"use client";
+import { useState } from "react";
 import { PlayerForm } from "@/components/player-form";
 import { Icons } from "@/components/icons";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { VideoPlayer } from "@/components/video-player";
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen w-full flex-col items-center p-4 sm:p-8">
-      <div className="flex w-full max-w-4xl flex-col items-center gap-8">
-        <header className="flex items-center gap-3 text-center">
-          <Icons.logo className="h-10 w-10 text-accent" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-primary sm:text-4xl font-headline">
-              VideoVerse Player
-            </h1>
-            <p className="text-muted-foreground">
-              Your universal player for YouTube and Canva content.
-            </p>
-          </div>
-        </header>
+  const [sourceToPlay, setSourceToPlay] = useState("https://www.canva.com/design/DAG6ONyt5ks/6DuizP3XWwr5xFWBi383CQ/view?embed");
 
-        <PlayerForm />
-      </div>
-    </main>
+  return (
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-3 p-2">
+            <Icons.logo className="h-8 w-8 text-accent" />
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold tracking-tight text-primary font-headline">
+                Léo Tv & Stream
+              </h1>
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <PlayerForm setSourceToPlay={setSourceToPlay} />
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <main className="relative flex h-svh w-full flex-col items-center justify-center bg-muted/50">
+          <div className="absolute top-4 left-4 z-20">
+            <SidebarTrigger />
+          </div>
+          <VideoPlayer source={sourceToPlay} />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

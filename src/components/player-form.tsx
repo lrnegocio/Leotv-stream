@@ -1,29 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Form,
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { VideoPlayer } from "@/components/video-player";
-import { Separator } from "@/components/ui/separator";
 
 const FormSchema = z.object({
   source: z.string().min(1, "Please enter a URL or embed code."),
@@ -31,13 +21,15 @@ const FormSchema = z.object({
 
 type FormValues = z.infer<typeof FormSchema>;
 
-export function PlayerForm() {
-  const [sourceToPlay, setSourceToPlay] = useState("");
+type PlayerFormProps = {
+  setSourceToPlay: (source: string) => void;
+};
 
+export function PlayerForm({ setSourceToPlay }: PlayerFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      source: "",
+      source: "https://www.canva.com/design/DAG6ONyt5ks/6DuizP3XWwr5xFWBi383CQ/view?embed",
     },
   });
 
@@ -46,21 +38,15 @@ export function PlayerForm() {
   };
 
   return (
-    <Card className="w-full shadow-lg">
-      <CardHeader>
-        <CardTitle className="font-headline">Embed Your Content</CardTitle>
-        <CardDescription>
-          Paste a YouTube URL, Canva URL, or an embed code below.
-        </CardDescription>
-      </CardHeader>
+    <div className="p-4">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="source"
               render={({ field }) => (
                 <FormItem>
+                  <FormLabel>URL ou código de incorporação</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="e.g., https://www.youtube.com/watch?v=..."
@@ -72,24 +58,15 @@ export function PlayerForm() {
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter className="border-t px-6 py-4">
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
             >
-              Load Player
+              Carregar Player
             </Button>
-          </CardFooter>
         </form>
       </Form>
-      <Separator />
-      <CardContent className="p-4 md:p-6">
-        <div className="rounded-lg bg-muted/50 p-4 min-h-[300px] flex justify-center items-center">
-            <VideoPlayer source={sourceToPlay} />
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
