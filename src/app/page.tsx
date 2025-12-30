@@ -108,9 +108,22 @@ export default function LoginPage() {
             deviceInfo: navigator.userAgent
         });
         
-        window.addEventListener('beforeunload', () => {
-             updateDoc(newSessionRef, { isActive: false });
-        });
+        // This is a simplified "keep alive". A better implementation would use a proper listener.
+        const keepaliveInterval = setInterval(async () => {
+          try {
+            await updateDoc(newSessionRef, { lastSeen: serverTimestamp() });
+          } catch (e) {
+            clearInterval(keepaliveInterval);
+          }
+        }, 60000); // every minute
+        
+        const handleBeforeUnload = () => {
+          // This is not guaranteed to run, but it's a good last effort
+          updateDoc(newSessionRef, { isActive: false, logoutTime: serverTimestamp() });
+          clearInterval(keepaliveInterval);
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
 
         if (rememberMe) {
             localStorage.setItem('username', username);

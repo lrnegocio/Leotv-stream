@@ -23,7 +23,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -195,7 +195,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         username,
         email,
         plan,
-        planExpiry: expiryDate ? expiryDate.toISOString() : null, // Use ISO string
+        planExpiry: expiryDate ? expiryDate.toISOString() : null, // Use ISO string for consistency
         isBlocked: false,
         createdAt: serverTimestamp(),
       };
@@ -326,10 +326,11 @@ function UsersTab() {
         try {
             // Note: This deletes the Firestore document. Deleting the user from
             // Firebase Auth requires admin privileges and is typically done in a Cloud Function
-            // for security reasons. For now, this will prevent login.
+            // for security reasons. For this app, just deleting the DB record prevents login.
             await deleteDoc(userRef);
         } catch(e) {
             console.error("Error deleting user document:", e);
+            alert("Falha ao excluir usuário: " + e);
         }
     }
   }
@@ -507,15 +508,18 @@ function ChannelsTab() {
   const handleAddEpisode = (seasonIndex?: number) => {
       if(seasonIndex !== undefined) {
           const newSeasons = [...seasons];
-          newSeasons[seasonIndex].episodes.push({ number: (newSeasons[seasonIndex].episodes.length + 1).toString(), url: '' });
+          const newEpisodeNumber = newSeasons[seasonIndex].episodes.length > 0 ? Math.max(...newSeasons[seasonIndex].episodes.map(e => parseInt(e.number))) + 1 : 1;
+          newSeasons[seasonIndex].episodes.push({ number: newEpisodeNumber.toString(), url: '' });
           setSeasons(newSeasons);
       } else {
-          setEpisodes([...episodes, { number: (episodes.length + 1).toString(), url: '' }]);
+          const newEpisodeNumber = episodes.length > 0 ? Math.max(...episodes.map(e => parseInt(e.number))) + 1 : 1;
+          setEpisodes([...episodes, { number: newEpisodeNumber.toString(), url: '' }]);
       }
   };
   
   const handleAddSeason = () => {
-    setSeasons([...seasons, { number: (seasons.length + 1).toString(), episodes: [{ number: '1', url: '' }] }]);
+    const newSeasonNumber = seasons.length > 0 ? Math.max(...seasons.map(s => parseInt(s.number))) + 1 : 1;
+    setSeasons([...seasons, { number: newSeasonNumber.toString(), episodes: [{ number: '1', url: '' }] }]);
   }
 
   const handleRemoveEpisode = (index: number, seasonIndex?: number) => {
@@ -599,30 +603,45 @@ function ChannelsTab() {
         if (contentType === 'series-episodes') {
             const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
             const existingEpsSnap = await getDocs(episodesCollection);
-            for (const docSnap of existingEpsSnap.docs) await deleteDoc(docSnap.ref); // Clear existing
+            // Sync logic: delete episodes that are no longer in the form
+            for (const docSnap of existingEpsSnap.docs) {
+                if (!episodes.some(ep => ep.id === docSnap.id)) {
+                    await deleteDoc(docSnap.ref);
+                }
+            }
+            // Add or update episodes
             for (const ep of episodes) {
-                if(ep.url) { // only add if has url
-                    const epRef = doc(collection(episodesCollection));
-                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url });
+                if(ep.url) { 
+                    const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
+                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url }, { merge: true });
                 }
             }
         } else if (contentType === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
+             // Sync seasons
             const existingSeasonsSnap = await getDocs(seasonsCollection);
-            for (const docSnap of existingSeasonsSnap.docs) {
-                const episodesInSeasonSnap = await getDocs(collection(docSnap.ref, 'episodes'));
-                for(const epDoc of episodesInSeasonSnap.docs) await deleteDoc(epDoc.ref);
-                await deleteDoc(docSnap.ref);
+            for (const seasonDocSnap of existingSeasonsSnap.docs) {
+                if (!seasons.some(s => s.id === seasonDocSnap.id)) {
+                    await deleteDoc(seasonDocSnap.ref); // This will also delete subcollections in Firestore
+                }
             }
 
             for (const season of seasons) {
-                const seasonRef = doc(collection(seasonsCollection));
-                await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: parseInt(season.number) });
+                const seasonRef = season.id ? doc(seasonsCollection, season.id) : doc(seasonsCollection);
+                await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: parseInt(season.number) }, { merge: true });
+                
                 const episodesCollection = collection(seasonRef, 'episodes');
+                const existingEpsSnap = await getDocs(episodesCollection);
+                // Sync episodes within the season
+                for (const docSnap of existingEpsSnap.docs) {
+                    if (!season.episodes.some(ep => ep.id === docSnap.id)) {
+                        await deleteDoc(docSnap.ref);
+                    }
+                }
                 for (const ep of season.episodes) {
-                    if (ep.url) { // only add if has url
-                        const epRef = doc(collection(episodesCollection));
-                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url });
+                    if (ep.url) { 
+                        const epRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
+                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: parseInt(ep.number), episodeUrl: ep.url }, { merge: true });
                     }
                 }
             }
