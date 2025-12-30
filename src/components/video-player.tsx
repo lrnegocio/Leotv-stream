@@ -1,13 +1,29 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Terminal, Music } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 type VideoPlayerProps = {
   source: string;
 };
 
+// List of common audio file extensions
+const audioExtensions = ['.mp3', '.aac', '.ogg', '.wav', '.flac', '.m4a'];
+
 export function VideoPlayer({ source }: VideoPlayerProps) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // Cleanup function to stop audio when component unmounts or source changes
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    };
+  }, [source]);
+
   if (!source.trim()) {
     return (
       <div className="text-center text-muted-foreground p-4">
@@ -18,6 +34,18 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
 
   let embedSrc = "";
   let isRawEmbed = false;
+  let isAudio = false;
+
+  try {
+    const url = new URL(source);
+    if (audioExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext))) {
+      isAudio = true;
+      embedSrc = source;
+    }
+  } catch (e) {
+    // Not a valid URL, might be an embed code
+  }
+
 
   // 1. Check for YouTube URL
   const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/;
@@ -36,7 +64,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
   }
   
   // 3. Check for raw embed code
-  if (!embedSrc) {
+  if (!embedSrc && !isAudio) {
       const srcRegex = /src="([^"]+)"/;
       const srcMatch = source.match(srcRegex);
       if (/<(iframe|div)/i.test(source) && srcMatch) {
@@ -55,8 +83,8 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
       }
   }
 
-  // Fallback for any other valid URL
-  if(!embedSrc && !isRawEmbed) {
+  // Fallback for any other valid URL that isn't audio
+  if(!embedSrc && !isRawEmbed && !isAudio) {
     try {
         const url = new URL(source);
         if(url.protocol === 'http:' || url.protocol === 'https:') {
@@ -65,6 +93,18 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
     } catch (e) {
         // not a valid URL
     }
+  }
+  
+  if (isAudio) {
+    return (
+       <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white">
+          <Music size={96} className="text-accent mb-4" />
+          <p className="text-lg mb-4">Tocando rádio</p>
+          <audio ref={audioRef} controls autoPlay src={embedSrc} className="w-3/4 max-w-lg">
+              Seu navegador não suporta o elemento de áudio.
+          </audio>
+      </div>
+    )
   }
 
 
@@ -99,7 +139,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
         <Terminal className="h-4 w-4" />
         <AlertTitle>Entrada Inválida</AlertTitle>
         <AlertDescription>
-            O link fornecido não é um URL válido ou código de incorporação. Por favor, verifique sua entrada e tente novamente.
+            O link ou código fornecido não é um formato válido de vídeo, rádio ou embed. Por favor, verifique sua entrada.
         </AlertDescription>
         </Alert>
     </div>

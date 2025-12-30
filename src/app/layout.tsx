@@ -2,10 +2,12 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
-  title: 'Léo Tv & Stream',
-  description: 'An enhanced video player for YouTube and Canva links.',
+  title: 'Léo TV & Stream',
+  description: 'Sua plataforma de streaming de vídeo aprimorada.',
+  manifest: '/manifest.json'
 };
 
 export default function RootLayout({
@@ -19,10 +21,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#1a1a2e" />
       </head>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn("font-sans antialiased")}>
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
