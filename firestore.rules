@@ -8,34 +8,28 @@
  * Data Structure:
  * - /users/{userId}: Private user data, owned by the user but manageable by admins.
  *   - /users/{userId}/sessions/{sessionId}: Subcollection for user session data, strictly owned by the user.
- * - /roles_admin/{adminId}: A lookup collection defining who is an administrator. Existence of a document
- *   with a user's UID as the ID grants admin privileges. This collection is not client-writable.
  * - /channels/{channelId}: Publicly readable content collection managed exclusively by admins. It contains
  *   nested subcollections for seasons and episodes.
  *
  * Key Security Decisions:
- * - Admin Privilege via Lookup: Admin status is determined by checking for the existence of a document in
- *   `/roles_admin/{uid}`. This is highly performant and secure, avoiding the need to place a role field
- *   on user documents. This collection is read-only from the client to prevent privilege escalation.
+ * - Admin Privilege via Email: Admin status is determined by checking if the authenticated user's email is 'admin@example.com'.
+ *   This is a direct and secure method for a single-admin system.
  * - Global Block Check: A helper function `isNotBlocked()` performs a `get` operation on the user's own
  *   profile before granting read access to any public content. This ensures that an admin's decision to
  *   block a user is enforced immediately across the entire application.
  * - User Data Privacy vs. Admin Management: Users have full control over their own data in `/users/{userId}`.
- *   However, administrators are granted `get`, `update`, and `delete` permissions on these documents to
- *   manage accounts (e.g., blocking users, extending trials), but are denied `list` access to protect user privacy.
+ *   However, administrators are granted `get`, `list`, `update`, and `delete` permissions on these documents to
+ *   manage accounts (e.g., blocking users, extending trials).
  * - Public Content Model: All content under `/channels` is readable by any authenticated, non-blocked user.
  *   All write operations (create, update, delete) on this content are strictly limited to administrators.
  *
  * Denormalization for Authorization:
- * The `/roles_admin` collection is a prime example of denormalization. By creating a separate, simple
- * collection of admin UIDs, we avoid costly and complex lookups inside user documents. The `isBlocked`
- * flag on the user document is another example; its presence allows a single, fast check to gate access
- * to the entire app's content.
+ * The `isBlocked` flag on the user document is an example of denormalization for authorization. Its presence allows
+ * a single, fast check to gate access to the entire app's content.
  *
  * Structural Segregation:
  * The ruleset clearly segregates private user data (`/users`) from public, admin-managed content (`/channels`).
- * This separation simplifies rules and makes public listing queries on content collections safe and efficient,
- * as there is no risk of exposing private data within those collections.
+ * This separation simplifies rules and makes public listing queries on content collections safe and efficient.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -53,11 +47,10 @@ service cloud.firestore {
     }
 
     /**
-     * Returns true if the requesting user's UID matches the document ID
-     * in the `/roles_admin` collection, granting them admin privileges.
+     * Returns true if the requesting user's email matches the admin email.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && request.auth.token.email == 'admin@example.com';
     }
 
     /**
@@ -120,7 +113,7 @@ service cloud.firestore {
      * @path /users/{userId}
      * @allow (create) A new user can create their own profile document.
      * @allow (get, update, delete) The document owner or an admin can manage the profile.
-     * @deny (list) No user can list all user profiles, protecting user privacy. Only admins can.
+     * @allow (list) Only admins can list all user profiles.
      * @deny (update) A user cannot change another user's profile.
      * @principle Enforces document ownership for users and provides admin override for management tasks.
      */
@@ -152,25 +145,6 @@ service cloud.firestore {
     }
 
     // ----------------------------------------------------------------------
-    // Admin Roles
-    // ----------------------------------------------------------------------
-
-    /**
-     * @description Manages the collection of administrator UIDs.
-     * @path /roles_admin/{adminId}
-     * @allow (get, list) An existing admin can read the list of other admins.
-     * @deny (create, update, delete) This collection cannot be modified by any client. It must be managed server-side or via the Firebase Console to prevent privilege escalation.
-     * @principle Secures role-defining data by making it client-immutable.
-     */
-    match /roles_admin/{adminId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    // ----------------------------------------------------------------------
     // Public Content: Channels, Seasons, Episodes
     // ----------------------------------------------------------------------
 
@@ -184,8 +158,8 @@ service cloud.firestore {
      * @principle Implements public read access for valid users with role-based write restrictions.
      */
     match /channels/{channelId} {
-      allow get: if isSignedIn() && isNotBlocked();
-      allow list: if isSignedIn() && isNotBlocked();
+      allow get: if isSignedIn() && isNotBlocked() || isAdmin();
+      allow list: if isSignedIn() && isNotBlocked() || isAdmin();
       allow create: if isAdmin();
       allow update: if isAdmin() && isExistingDoc();
       allow delete: if isAdmin() && isExistingDoc();
@@ -198,8 +172,8 @@ service cloud.firestore {
        * @principle Inherits the parent collection's model: public read, admin-only write.
        */
       match /seasons/{seasonId} {
-        allow get: if isSignedIn() && isNotBlocked();
-        allow list: if isSignedIn() && isNotBlocked();
+        allow get: if isSignedIn() && isNotBlocked() || isAdmin();
+        allow list: if isSignedIn() && isNotBlocked() || isAdmin();
         allow create: if isAdmin() && request.resource.data.channelId == channelId;
         allow update: if isAdmin() && isExistingDoc();
         allow delete: if isAdmin() && isExistingDoc();
@@ -212,8 +186,8 @@ service cloud.firestore {
          * @principle Inherits the parent collection's model: public read, admin-only write.
          */
         match /episodes/{episodeId} {
-          allow get: if isSignedIn() && isNotBlocked();
-          allow list: if isSignedIn() && isNotBlocked();
+          allow get: if isSignedIn() && isNotBlocked() || isAdmin();
+          allow list: if isSignedIn() && isNotBlocked() || isAdmin();
           allow create: if isAdmin() && request.resource.data.channelId == channelId;
           allow update: if isAdmin() && isExistingDoc();
           allow delete: if isAdmin() && isExistingDoc();

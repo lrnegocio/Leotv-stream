@@ -202,27 +202,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. Includes 'id', 'username', 'email', 'freeTrialExpiry', and 'isBlocked'. Path-based ownership ensures only the user can modify their own data.",
+          "description": "Stores user profiles. Includes 'id', 'username', 'email', 'freeTrialExpiry', and 'isBlocked'. Path-based ownership ensures only the user can modify their own data, but admins have override.",
           "params": [
             {
               "name": "userId",
               "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/Admin"
-          },
-          "description": "Stores admin UIDs. Existence of a document for a given UID in this collection grants admin privileges.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique identifier of the admin."
             }
           ]
         }
@@ -308,6 +292,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and manageable data model for the VideoVerse Player application. The core principle is Authorization Independence, achieved through denormalization of access control data. This eliminates the need for `get()` calls in security rules, enabling atomic operations and simplifying debugging.\n\n**Authorization Independence & QAPs:**\n\n*   **Users:** User data is stored under `/users/{userId}` ensuring path-based ownership. User-specific data remains private to the user.\n*   **Admins:** Admin UIDs are stored in `/roles_admin/{uid}`.  The existence of a document for a given `uid` in this collection grants admin privileges. This approach avoids needing to read user documents to verify admin roles.\n*   **Channels, Seasons, Episodes:** These entities are stored under a top-level collection `/channels/{channelId}`, `/channels/{channelId}/seasons/{seasonId}`, `/channels/{channelId}/seasons/{seasonId}/episodes/{episodeId}` respectively. These collections can be read by all users; authorization independence is unnecessary here.\n*   **Sessions:** Stored under `/users/{userId}/sessions/{sessionId}`. Enforces one session per user.\n\n**Data Clarity and Predictability:**\n\n*   Consistent naming conventions are used throughout the database (e.g., `userId`, `channelId`).\n*   The `isBlocked` field in the `/users/{userId}` collection explicitly models the user's blocked status."
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and manageable data model for the VideoVerse Player application. The core principle is Authorization Independence, achieved through denormalization of access control data. This eliminates the need for `get()` calls in security rules, enabling atomic operations and simplifying debugging.\n\n**Authorization Independence & QAPs:**\n\n*   **Users:** User data is stored under `/users/{userId}` ensuring path-based ownership. User-specific data remains private to the user.\n*   **Admins:** Admin status is determined by the authenticated user's email, simplifying the rules. This avoids needing a separate collection to grant admin privileges.\n*   **Channels, Seasons, Episodes:** These entities are stored under a top-level collection `/channels/{channelId}`, `/channels/{channelId}/seasons/{seasonId}`, `/channels/{channelId}/seasons/{seasonId}/episodes/{episodeId}` respectively. These collections can be read by all users; authorization independence is unnecessary here.\n*   **Sessions:** Stored under `/users/{userId}/sessions/{sessionId}`. Enforces one session per user.\n\n**Data Clarity and Predictability:**\n\n*   Consistent naming conventions are used throughout the database (e.g., `userId`, `channelId`).\n*   The `isBlocked` field in the `/users/{userId}` collection explicitly models the user's blocked status."
   }
 }
