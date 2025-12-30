@@ -1,6 +1,7 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,10 +21,11 @@ import {
   useCollection,
   useFirestore,
   useMemoFirebase,
-  useAuth,
+  useUser,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   addDocumentNonBlocking,
+  setDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import {
@@ -42,6 +44,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type User = {
   id: string;
@@ -59,8 +63,36 @@ type Channel = {
   type: 'channel' | 'movie' | 'series';
 };
 
+const FIREBASE_ADMIN_EMAIL = "admin@example.com";
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const auth = getAuth();
+
+  useEffect(() => {
+    if (!isUserLoading && (!user || user.email !== FIREBASE_ADMIN_EMAIL)) {
+      router.replace('/admin/login');
+    }
+  }, [user, isUserLoading, router]);
+  
+  const handleLogout = () => {
+    auth.signOut().then(() => {
+        router.push('/admin/login');
+    });
+  }
+
+  if (isUserLoading || !user) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <div className="space-y-4">
+                <Skeleton className="h-8 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="admin-container">
@@ -90,7 +122,7 @@ export default function AdminDashboard() {
           </Button>
         </nav>
         <div className="mt-auto">
-          <Button variant="destructive" className="w-full">
+          <Button variant="destructive" className="w-full" onClick={handleLogout}>
             Sair
           </Button>
         </div>
@@ -109,14 +141,16 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [password, setPassword] = useState('');
   const [trialDays, setTrialDays] = useState(7);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const auth = useAuth();
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     if (!username || !password) {
       setError('Usuário e senha são obrigatórios.');
+      setIsLoading(false);
       return;
     }
 
@@ -125,11 +159,10 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     expiryDate.setDate(expiryDate.getDate() + trialDays);
 
     try {
-      // Create user in Auth
-      const userCredential = await auth.createUserWithEmailAndPassword(
-        email,
-        password
-      );
+      // We need a temporary auth instance to create a user, 
+      // as we don't want to use the currently logged in admin's auth state for this.
+      const tempAuth = getAuth();
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
       const user = userCredential.user;
 
       const newUser: Omit<User, 'id'> = {
@@ -139,8 +172,9 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         isBlocked: false,
       };
 
-      await addDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser);
-
+      // Use setDocumentNonBlocking as we are setting with a specific ID
+      setDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser, {});
+      
       onUserAdded();
     } catch (err: any) {
       console.error('Error creating user:', err);
@@ -149,6 +183,8 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       } else {
         setError('Ocorreu um erro ao criar o usuário.');
       }
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -165,6 +201,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Ex: novo_usuario"
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -175,6 +212,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Senha forte"
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -184,16 +222,19 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
             type="number"
             value={trialDays}
             onChange={(e) => setTrialDays(parseInt(e.target.value, 10) || 0)}
+            disabled={isLoading}
           />
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" disabled={isLoading}>
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="submit">Adicionar Usuário</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Adicionando...' : 'Adicionar Usuário'}
+          </Button>
         </DialogFooter>
       </form>
     </DialogContent>
@@ -351,6 +392,7 @@ function ChannelsTab() {
   const [category, setCategory] = useState('');
   const [url, setUrl] = useState('');
   const [isAdult, setIsAdult] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [episodes, setEpisodes] = useState<Episode[]>([{ number: '1', url: '' }]);
   const [seasons, setSeasons] = useState<Season[]>([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
@@ -372,15 +414,21 @@ function ChannelsTab() {
   const handleRemoveEpisode = (index: number, seasonIndex?: number) => {
     if(seasonIndex !== undefined) {
         const newSeasons = [...seasons];
-        newSeasons[seasonIndex].episodes.splice(index, 1);
-        setSeasons(newSeasons);
+        if (newSeasons[seasonIndex].episodes.length > 1) {
+            newSeasons[seasonIndex].episodes.splice(index, 1);
+            setSeasons(newSeasons);
+        }
     } else {
-        setEpisodes(episodes.filter((_, i) => i !== index));
+        if (episodes.length > 1) {
+            setEpisodes(episodes.filter((_, i) => i !== index));
+        }
     }
   }
 
   const handleRemoveSeason = (index: number) => {
+    if (seasons.length > 1) {
       setSeasons(seasons.filter((_, i) => i !== index));
+    }
   }
   
   const handleEpisodeChange = (value: string, index: number, field: 'number' | 'url', seasonIndex?: number) => {
@@ -401,11 +449,22 @@ function ChannelsTab() {
       setSeasons(newSeasons);
   }
 
+  const resetForm = () => {
+      setName('');
+      setCategory('');
+      setUrl('');
+      setIsAdult(false);
+      setEpisodes([{ number: '1', url: '' }]);
+      setSeasons([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+      setContentType('channel');
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !name || !category) return;
+    setIsSubmitting(true);
 
-    const channelData = {
+    const channelData: any = {
         name,
         category,
         isAdult,
@@ -414,14 +473,17 @@ function ChannelsTab() {
     };
 
     try {
+        if (contentType === 'channel' || contentType === 'movie') {
+            channelData.url = url;
+        }
+
         const channelRef = await addDocumentNonBlocking(collection(firestore, 'channels'), channelData);
         
-        if (contentType === 'channel' || contentType === 'movie') {
-            await updateDocumentNonBlocking(channelRef, { url });
-        } else if (contentType === 'series-episodes') {
+        if (contentType === 'series-episodes') {
             const episodesCollection = collection(channelRef, 'episodes');
             for(const ep of episodes) {
-                await addDocumentNonBlocking(episodesCollection, ep);
+                // Not using await to allow parallel writes
+                addDocumentNonBlocking(episodesCollection, ep);
             }
         } else if (contentType === 'series-seasons') {
             const seasonsCollection = collection(channelRef, 'seasons');
@@ -429,21 +491,18 @@ function ChannelsTab() {
                 const seasonRef = await addDocumentNonBlocking(seasonsCollection, { number: season.number });
                 const episodesCollection = collection(seasonRef, 'episodes');
                 for(const ep of season.episodes) {
-                     await addDocumentNonBlocking(episodesCollection, ep);
+                    // Not using await to allow parallel writes
+                     addDocumentNonBlocking(episodesCollection, ep);
                 }
             }
         }
         
-        // Reset form
-        setName('');
-        setCategory('');
-        setUrl('');
-        setIsAdult(false);
-        setEpisodes([{ number: '1', url: '' }]);
-        setSeasons([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+        resetForm();
 
     } catch (error) {
         console.error("Error adding content: ", error);
+    } finally {
+        setIsSubmitting(false);
     }
 };
 
@@ -498,6 +557,11 @@ function ChannelsTab() {
                 </td>
               </tr>
             ))}
+             {!isLoading && channels?.length === 0 && (
+                <tr>
+                    <td colSpan={4} className="p-4 text-center text-muted-foreground">Nenhum conteúdo adicionado ainda.</td>
+                </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -506,7 +570,7 @@ function ChannelsTab() {
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
                 <Label>Tipo de Conteúdo</Label>
-                <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)}>
+                <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)} disabled={isSubmitting}>
                     <SelectTrigger>
                         <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
@@ -522,18 +586,18 @@ function ChannelsTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="channel-name">Nome do Conteúdo</Label>
-              <Input id="channel-name" placeholder="Ex: Filme Ação" value={name} onChange={e => setName(e.target.value)} required />
+              <Input id="channel-name" placeholder="Ex: Filme Ação" value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting}/>
             </div>
             <div className="space-y-2">
               <Label htmlFor="channel-category">Categoria</Label>
-              <Input id="channel-category" placeholder="Ex: Filmes" value={category} onChange={e => setCategory(e.target.value)} required />
+              <Input id="channel-category" placeholder="Ex: Filmes" value={category} onChange={e => setCategory(e.target.value)} required disabled={isSubmitting}/>
             </div>
           </div>
 
           {(contentType === 'channel' || contentType === 'movie') && (
             <div className="space-y-2">
                 <Label htmlFor="channel-url">URL do Conteúdo</Label>
-                <Input id="channel-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} required />
+                <Input id="channel-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} required disabled={isSubmitting}/>
             </div>
           )}
 
@@ -542,12 +606,12 @@ function ChannelsTab() {
                 <Label>Episódios</Label>
                 {episodes.map((ep, index) => (
                     <div key={index} className="flex items-end gap-2">
-                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20"/>
-                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow"/>
-                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)}><Trash2 className="h-4 w-4"/></Button>
+                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20" disabled={isSubmitting}/>
+                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow" disabled={isSubmitting}/>
+                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)} disabled={isSubmitting || episodes.length <= 1}><Trash2 className="h-4 w-4"/></Button>
                     </div>
                 ))}
-                <Button type="button" variant="outline" onClick={() => handleAddEpisode()}><Plus className="mr-2 h-4 w-4" /> Adicionar Episódio</Button>
+                <Button type="button" variant="outline" onClick={() => handleAddEpisode()} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Episódio</Button>
             </div>
           )}
 
@@ -557,30 +621,30 @@ function ChannelsTab() {
                     <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
                          <div className="flex items-end gap-2">
                             <Label className="w-24 mb-2">Temporada</Label>
-                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20"/>
+                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20" disabled={isSubmitting}/>
                          </div>
                         {season.episodes.map((ep, eIndex) => (
                            <div key={eIndex} className="flex items-end gap-2 ml-6">
-                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16"/>
-                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow"/>
-                                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)}><Trash2 className="h-4 w-4"/></Button>
+                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16" disabled={isSubmitting}/>
+                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow" disabled={isSubmitting}/>
+                                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)} disabled={isSubmitting || season.episodes.length <=1}><Trash2 className="h-4 w-4"/></Button>
                             </div>
                         ))}
-                         <Button type="button" variant="outline" size="sm" className="ml-6" onClick={() => handleAddEpisode(sIndex)}><Plus className="mr-2 h-4 w-4" /> Episódio</Button>
-                         {seasons.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-500" onClick={() => handleRemoveSeason(sIndex)}><XCircle /></Button>}
+                         <Button type="button" variant="outline" size="sm" className="ml-6" onClick={() => handleAddEpisode(sIndex)} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Episódio</Button>
+                         {seasons.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-500" onClick={() => handleRemoveSeason(sIndex)} disabled={isSubmitting}><XCircle /></Button>}
                     </div>
                 ))}
-                 <Button type="button" variant="secondary" onClick={handleAddSeason}><Plus className="mr-2 h-4 w-4" /> Adicionar Temporada</Button>
+                 <Button type="button" variant="secondary" onClick={handleAddSeason} disabled={isSubmitting}><Plus className="mr-2 h-4 w-4" /> Adicionar Temporada</Button>
             </div>
           )}
 
 
           <div className="flex items-center space-x-2 pt-4">
-            <Checkbox id="is-adult" checked={isAdult} onCheckedChange={c => setIsAdult(!!c)} />
+            <Checkbox id="is-adult" checked={isAdult} onCheckedChange={c => setIsAdult(!!c)} disabled={isSubmitting}/>
             <Label htmlFor="is-adult">Conteúdo Adulto (+18)</Label>
           </div>
-          <Button type="submit">
-            Adicionar Conteúdo
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Adicionando...' : 'Adicionar Conteúdo'}
           </Button>
         </form>
       </div>

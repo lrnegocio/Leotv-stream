@@ -1,27 +1,60 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth, useUser } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
-// Dummy credentials for now. In a real app, use environment variables.
+// Dummy credentials for the form validation
 const ADMIN_USERNAME = "lrnegocio";
 const ADMIN_PASSWORD = "135796lR@";
+
+// Firebase admin credentials (should be stored securely in a real app, e.g., env vars)
+const FIREBASE_ADMIN_EMAIL = "admin@example.com";
+const FIREBASE_ADMIN_PASSWORD = "password123";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  // Redirect to dashboard if firebase admin is already logged in
+  useEffect(() => {
+    if (!isUserLoading && user?.email === FIREBASE_ADMIN_EMAIL) {
+      router.replace('/admin/dashboard');
+    }
+  }, [user, isUserLoading, router]);
+
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      // In a real app, you'd set a secure, http-only cookie or token.
-      // For now, we'll just navigate.
-      router.push('/admin/dashboard');
-    } else {
-      alert("Credenciais de admin inválidas.");
+    setError('');
+    
+    // 1. First, validate the local admin credentials
+    if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+      setError("Credenciais de admin inválidas.");
+      return;
+    }
+
+    // 2. If local credentials are correct, sign in to Firebase with the admin account
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, FIREBASE_ADMIN_EMAIL, FIREBASE_ADMIN_PASSWORD);
+      // The `onAuthStateChanged` listener in the `useEffect` hook will handle the redirect to the dashboard.
+    } catch (err: any) {
+      console.error("Firebase Auth Error:", err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Erro de Autenticação do Painel. Verifique a configuração do Firebase.');
+      } else {
+        setError("Ocorreu um erro ao fazer login.");
+      }
+      setIsLoading(false);
     }
   };
 
@@ -38,6 +71,7 @@ export default function AdminLoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required 
+              disabled={isLoading}
             />
           </div>
           <div>
@@ -48,12 +82,14 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required 
+              disabled={isLoading}
             />
           </div>
-          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90">
-            Entrar como Admin
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <Button type="submit" className="w-full bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:opacity-90" disabled={isLoading}>
+            {isLoading ? 'Entrando...' : 'Entrar como Admin'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => router.push('/')} className="w-full mt-2">
+          <Button type="button" variant="outline" onClick={() => router.push('/')} className="w-full mt-2" disabled={isLoading}>
             Voltar
           </Button>
         </form>
