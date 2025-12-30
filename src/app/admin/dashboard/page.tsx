@@ -21,9 +21,6 @@ import {
   useFirestore,
   useMemoFirebase,
   useUser,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
-  addDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import {
@@ -159,9 +156,10 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       setIsLoading(false);
       return;
     }
-
-    // IMPORTANT: We need a separate auth instance for user creation
-    // to not interfere with the admin's session.
+    
+    // This is a temporary auth instance. We need it to create a user.
+    // It's a quirk of Firebase that you can't create a user from the admin SDK on the client.
+    // NOTE: This does NOT sign the admin out.
     const tempAuth = getAuth(); 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
@@ -294,10 +292,10 @@ function UsersTab() {
   const { data: users, isLoading } = useCollection<User>(usersQuery);
   const [isAddUserOpen, setAddUserOpen] = useState(false);
 
-  const handleToggleBlock = (user: User) => {
+  const handleToggleBlock = async (user: User) => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', user.id);
-    updateDocumentNonBlocking(userRef, { isBlocked: !user.isBlocked });
+    await updateDoc(userRef, { isBlocked: !user.isBlocked });
   };
   
   const handleDeleteUser = async (user: User) => {
@@ -562,16 +560,20 @@ function ChannelsTab() {
           if (contentType === 'series-episodes') {
               const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
               for(const ep of episodes) {
-                  addDocumentNonBlocking(episodesCollection, ep);
+                  const newEpRef = doc(episodesCollection);
+                  await setDoc(newEpRef, {...ep, id: newEpRef.id});
               }
           } else if (contentType === 'series-seasons') {
               const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
               for(const season of seasons) {
                   const seasonDoc = { number: season.number };
-                  const seasonRef = await addDocumentNonBlocking(seasonsCollection, seasonDoc);
+                  const seasonRef = doc(seasonsCollection);
+                  await setDoc(seasonRef, {...seasonDoc, id: seasonRef.id});
+                  
                   const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
                   for(const ep of season.episodes) {
-                       addDocumentNonBlocking(episodesCollection, ep);
+                       const newEpRef = doc(episodesCollection);
+                       await setDoc(newEpRef, {...ep, id: newEpRef.id});
                   }
               }
           }
@@ -808,5 +810,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-    
