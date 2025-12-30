@@ -14,12 +14,12 @@ import {
   XCircle,
   Play,
   Upload,
+  Plus,
 } from 'lucide-react';
 import {
   useCollection,
   useFirestore,
   useMemoFirebase,
-  initiateEmailSignUp,
   useAuth,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
@@ -35,6 +35,13 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type User = {
   id: string;
@@ -49,28 +56,8 @@ type Channel = {
   name: string;
   category: string;
   url: string;
+  type: 'channel' | 'movie' | 'series';
 };
-
-const mockChannels: Channel[] = [
-  {
-    id: '1',
-    name: 'Canal Aberto 1',
-    category: 'Abertos',
-    url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0',
-  },
-  {
-    id: '2',
-    name: 'Filme Ação 1',
-    category: 'Filmes',
-    url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0',
-  },
-  {
-    id: '3',
-    name: 'Série Exemplo T1 E1',
-    category: 'Séries',
-    url: 'https://www.youtube.com/watch?v=z4ZZhEw0JA0',
-  },
-];
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
@@ -133,18 +120,17 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
 
-    const email = `${username}@example.com`; // Create a unique email
+    const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + trialDays);
 
     try {
       // Create user in Auth
-      const userCredential = await initiateEmailSignUp(auth, email, password);
-
-      // We can't get the user from the result of the non-blocking call,
-      // so we make the assumption that the user will be created and we create the
-      // firestore doc. This is not ideal but necessary with the current setup.
-      // A better approach would be a Cloud Function that creates the doc on user creation.
+      const userCredential = await auth.createUserWithEmailAndPassword(
+        email,
+        password
+      );
+      const user = userCredential.user;
 
       const newUser: Omit<User, 'id'> = {
         username,
@@ -153,9 +139,8 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         isBlocked: false,
       };
 
-      // Add user to Firestore 'users' collection
-      await addDocumentNonBlocking(collection(firestore, 'users'), newUser);
-      
+      await addDocumentNonBlocking(doc(firestore, 'users', user.uid), newUser);
+
       onUserAdded();
     } catch (err: any) {
       console.error('Error creating user:', err);
@@ -229,6 +214,16 @@ function UsersTab() {
     const userRef = doc(firestore, 'users', user.id);
     updateDocumentNonBlocking(userRef, { isBlocked: !user.isBlocked });
   };
+  
+  const handleDeleteUser = (user: User) => {
+    if(!firestore) return;
+    if(confirm(`Tem certeza que deseja excluir o usuário ${user.username}? Esta ação não pode ser desfeita.`)) {
+        const userRef = doc(firestore, 'users', user.id);
+        deleteDocumentNonBlocking(userRef);
+        // Note: This does not delete the user from Firebase Auth. 
+        // A cloud function would be needed for that.
+    }
+  }
 
   const getStatus = (
     user: User
@@ -290,7 +285,7 @@ function UsersTab() {
               </tr>
             )}
             {!isLoading && users?.length === 0 && (
-                <tr>
+              <tr>
                 <td colSpan={4} className="p-4 text-center text-muted-foreground">
                   Nenhum usuário encontrado. Adicione um novo para começar.
                 </td>
@@ -317,7 +312,7 @@ function UsersTab() {
                       variant="ghost"
                       size="icon"
                       className="text-red-500"
-                      disabled
+                      onClick={() => handleDeleteUser(user)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -339,12 +334,125 @@ function UsersTab() {
   );
 }
 
+type ContentType = 'channel' | 'movie' | 'series-episodes' | 'series-seasons';
+type Episode = { number: string; url: string };
+type Season = { number: string; episodes: Episode[] };
+
 function ChannelsTab() {
+  const firestore = useFirestore();
+  const channelsQuery = useMemoFirebase(
+      () => (firestore ? collection(firestore, 'channels') : null),
+      [firestore]
+  );
+  const { data: channels, isLoading } = useCollection<Channel>(channelsQuery);
+
+  const [contentType, setContentType] = useState<ContentType>('channel');
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [url, setUrl] = useState('');
+  const [isAdult, setIsAdult] = useState(false);
+
+  const [episodes, setEpisodes] = useState<Episode[]>([{ number: '1', url: '' }]);
+  const [seasons, setSeasons] = useState<Season[]>([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+
+  const handleAddEpisode = (seasonIndex?: number) => {
+      if(seasonIndex !== undefined) {
+          const newSeasons = [...seasons];
+          newSeasons[seasonIndex].episodes.push({ number: (newSeasons[seasonIndex].episodes.length + 1).toString(), url: '' });
+          setSeasons(newSeasons);
+      } else {
+          setEpisodes([...episodes, { number: (episodes.length + 1).toString(), url: '' }]);
+      }
+  };
+  
+  const handleAddSeason = () => {
+    setSeasons([...seasons, { number: (seasons.length + 1).toString(), episodes: [{ number: '1', url: '' }] }]);
+  }
+
+  const handleRemoveEpisode = (index: number, seasonIndex?: number) => {
+    if(seasonIndex !== undefined) {
+        const newSeasons = [...seasons];
+        newSeasons[seasonIndex].episodes.splice(index, 1);
+        setSeasons(newSeasons);
+    } else {
+        setEpisodes(episodes.filter((_, i) => i !== index));
+    }
+  }
+
+  const handleRemoveSeason = (index: number) => {
+      setSeasons(seasons.filter((_, i) => i !== index));
+  }
+  
+  const handleEpisodeChange = (value: string, index: number, field: 'number' | 'url', seasonIndex?: number) => {
+       if(seasonIndex !== undefined) {
+          const newSeasons = [...seasons];
+          newSeasons[seasonIndex].episodes[index][field] = value;
+          setSeasons(newSeasons);
+       } else {
+          const newEpisodes = [...episodes];
+          newEpisodes[index][field] = value;
+          setEpisodes(newEpisodes);
+       }
+  }
+
+  const handleSeasonChange = (value: string, index: number) => {
+      const newSeasons = [...seasons];
+      newSeasons[index].number = value;
+      setSeasons(newSeasons);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !name || !category) return;
+
+    const channelData = {
+        name,
+        category,
+        isAdult,
+        type: contentType,
+        createdAt: new Date().toISOString(),
+    };
+
+    try {
+        const channelRef = await addDocumentNonBlocking(collection(firestore, 'channels'), channelData);
+        
+        if (contentType === 'channel' || contentType === 'movie') {
+            await updateDocumentNonBlocking(channelRef, { url });
+        } else if (contentType === 'series-episodes') {
+            const episodesCollection = collection(channelRef, 'episodes');
+            for(const ep of episodes) {
+                await addDocumentNonBlocking(episodesCollection, ep);
+            }
+        } else if (contentType === 'series-seasons') {
+            const seasonsCollection = collection(channelRef, 'seasons');
+            for(const season of seasons) {
+                const seasonRef = await addDocumentNonBlocking(seasonsCollection, { number: season.number });
+                const episodesCollection = collection(seasonRef, 'episodes');
+                for(const ep of season.episodes) {
+                     await addDocumentNonBlocking(episodesCollection, ep);
+                }
+            }
+        }
+        
+        // Reset form
+        setName('');
+        setCategory('');
+        setUrl('');
+        setIsAdult(false);
+        setEpisodes([{ number: '1', url: '' }]);
+        setSeasons([{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+
+    } catch (error) {
+        console.error("Error adding content: ", error);
+    }
+};
+
+
   return (
     <div>
       <div className="admin-header">
         <h1 className="admin-title">Gerenciar Conteúdo</h1>
-        <Button disabled>
+        <Button onClick={() => document.getElementById('add-content-form')?.scrollIntoView({ behavior: 'smooth' })}>
           <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Conteúdo
         </Button>
       </div>
@@ -357,14 +465,21 @@ function ChannelsTab() {
             <tr className="text-left">
               <th className="p-4">Nome</th>
               <th className="p-4">Categoria</th>
+              <th className="p-4">Tipo</th>
               <th className="p-4">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {mockChannels.map((channel) => (
+            {isLoading && (
+              <tr>
+                <td colSpan={4} className="p-4 text-center">Carregando...</td>
+              </tr>
+            )}
+            {!isLoading && channels?.map((channel) => (
               <tr key={channel.id} className="border-b border-border">
                 <td className="p-4">{channel.name}</td>
                 <td className="p-4">{channel.category}</td>
+                <td className="p-4">{channel.type}</td>
                 <td className="p-4 flex items-center gap-2">
                   <Button variant="ghost" size="icon" disabled>
                     <Play className="h-4 w-4" />
@@ -376,7 +491,7 @@ function ChannelsTab() {
                     variant="ghost"
                     size="icon"
                     className="text-red-500"
-                    disabled
+                    onClick={() => deleteDocumentNonBlocking(doc(firestore, 'channels', channel.id))}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -386,29 +501,86 @@ function ChannelsTab() {
           </tbody>
         </table>
       </div>
-      <div className="p-6 bg-card rounded-lg border mt-8">
-        <h3 className="text-lg font-semibold mb-2">Adicionar Conteúdo</h3>
-        <form className="space-y-4">
+      <div id="add-content-form" className="p-6 bg-card rounded-lg border mt-8">
+        <h3 className="text-lg font-semibold mb-4">Adicionar Novo Conteúdo</h3>
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+                <Label>Tipo de Conteúdo</Label>
+                <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="channel">Canal ao Vivo</SelectItem>
+                        <SelectItem value="movie">Filme (item único)</SelectItem>
+                        <SelectItem value="series-episodes">Série (só episódios)</SelectItem>
+                        <SelectItem value="series-seasons">Série (com temporadas)</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="channel-name">Nome do Conteúdo</Label>
-              <Input id="channel-name" placeholder="Ex: Filme Ação" disabled />
+              <Input id="channel-name" placeholder="Ex: Filme Ação" value={name} onChange={e => setName(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="channel-category">Categoria</Label>
-              <Input id="channel-category" placeholder="Ex: Filmes" disabled />
+              <Input id="channel-category" placeholder="Ex: Filmes" value={category} onChange={e => setCategory(e.target.value)} required />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="channel-url">URL do Conteúdo</Label>
-            <Input id="channel-url" placeholder="https://..." disabled />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox id="is-adult" disabled />
+
+          {(contentType === 'channel' || contentType === 'movie') && (
+            <div className="space-y-2">
+                <Label htmlFor="channel-url">URL do Conteúdo</Label>
+                <Input id="channel-url" placeholder="https://..." value={url} onChange={e => setUrl(e.target.value)} required />
+            </div>
+          )}
+
+          {contentType === 'series-episodes' && (
+            <div className="space-y-4 p-4 border rounded-md">
+                <Label>Episódios</Label>
+                {episodes.map((ep, index) => (
+                    <div key={index} className="flex items-end gap-2">
+                        <Input placeholder="Nº Ex: 1" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, index, 'number')} className="w-20"/>
+                        <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, index, 'url')} className="flex-grow"/>
+                        <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(index)}><Trash2 className="h-4 w-4"/></Button>
+                    </div>
+                ))}
+                <Button type="button" variant="outline" onClick={() => handleAddEpisode()}><Plus className="mr-2 h-4 w-4" /> Adicionar Episódio</Button>
+            </div>
+          )}
+
+          {contentType === 'series-seasons' && (
+             <div className="space-y-4">
+                {seasons.map((season, sIndex) => (
+                    <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
+                         <div className="flex items-end gap-2">
+                            <Label className="w-24 mb-2">Temporada</Label>
+                            <Input placeholder="Nº Ex: 1" value={season.number} onChange={e => handleSeasonChange(e.target.value, sIndex)} className="w-20"/>
+                         </div>
+                        {season.episodes.map((ep, eIndex) => (
+                           <div key={eIndex} className="flex items-end gap-2 ml-6">
+                                <Input placeholder="EP" value={ep.number} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'number', sIndex)} className="w-16"/>
+                                <Input placeholder="URL do episódio" value={ep.url} onChange={e => handleEpisodeChange(e.target.value, eIndex, 'url', sIndex)} className="flex-grow"/>
+                                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveEpisode(eIndex, sIndex)}><Trash2 className="h-4 w-4"/></Button>
+                            </div>
+                        ))}
+                         <Button type="button" variant="outline" size="sm" className="ml-6" onClick={() => handleAddEpisode(sIndex)}><Plus className="mr-2 h-4 w-4" /> Episódio</Button>
+                         {seasons.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2 text-red-500" onClick={() => handleRemoveSeason(sIndex)}><XCircle /></Button>}
+                    </div>
+                ))}
+                 <Button type="button" variant="secondary" onClick={handleAddSeason}><Plus className="mr-2 h-4 w-4" /> Adicionar Temporada</Button>
+            </div>
+          )}
+
+
+          <div className="flex items-center space-x-2 pt-4">
+            <Checkbox id="is-adult" checked={isAdult} onCheckedChange={c => setIsAdult(!!c)} />
             <Label htmlFor="is-adult">Conteúdo Adulto (+18)</Label>
           </div>
-          <Button type="submit" disabled>
-            Adicionar
+          <Button type="submit">
+            Adicionar Conteúdo
           </Button>
         </form>
       </div>
@@ -465,6 +637,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-
-    
