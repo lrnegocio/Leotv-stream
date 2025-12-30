@@ -12,20 +12,25 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // Admin is identified by a specific, hardcoded email address.
       return isSignedIn() && request.auth.token.email == 'admin@example.com';
     }
 
     function isOwner(userId) {
+      // Check if the requesting user's ID matches the document's userId.
       return isSignedIn() && request.auth.uid == userId;
     }
 
     // ----------------------------------------------------------------------
     // User Profiles & ALL Subcollections (Recursive)
     // ----------------------------------------------------------------------
+    // This rule applies to /users/{userId} and any subcollection path below it
+    // (e.g., /users/{userId}/sessions/{sessionId}, etc.)
     match /users/{userId}/{document=**} {
       // Admins have full read/write access to user documents and all their subcollections.
       allow read, write: if isAdmin();
       // Users can manage documents in their OWN subcollections (e.g., sessions).
+      // This is crucial for login session management.
       allow list, create, update: if isOwner(userId);
     }
      match /users/{userId} {
@@ -34,13 +39,15 @@ service cloud.firestore {
       // Admin access is covered by the recursive rule above.
     }
 
+
     // ----------------------------------------------------------------------
     // Public Content: Channels, Seasons, Episodes (Recursive)
     // ----------------------------------------------------------------------
+    // This rule applies to /channels/{channelId} and any path below it.
     match /channels/{channelId}/{document=**} {
       // Any signed-in user can read all content.
       allow read: if isSignedIn();
-      // Only admins can create, update, or delete content.
+      // Only admins can create, update, or delete content and all sub-documents.
       allow write: if isAdmin();
     }
   }
