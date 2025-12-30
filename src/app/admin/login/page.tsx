@@ -1,4 +1,3 @@
-
 "use client";
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
@@ -7,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 // Dummy credentials for now. In a real app, use environment variables.
-const ADMIN_USERNAME = 'lrnegocio';
-const ADMIN_PASSWORD = '135796lR@';
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'password';
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
@@ -22,7 +21,7 @@ export default function AdminLoginPage() {
       // For now, we'll just navigate.
       router.push('/admin/dashboard');
     } else {
-      alert("Credenciais de admin inválidas");
+      alert("Credenciais de admin inválidas. Por segurança, o login foi desativado temporariamente.");
     }
   };
 

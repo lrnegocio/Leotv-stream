@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Edit, PlusCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Trash2, Edit, PlusCircle, CheckCircle, XCircle, Play, Upload } from 'lucide-react';
 
 type User = {
   id: string;
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
         <h2 className="login-title">Admin</h2>
         <nav className="flex flex-col gap-2 mt-8">
             <Button variant={activeTab === 'users' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('users')} className="justify-start">👤 Usuários</Button>
-            <Button variant={activeTab === 'channels' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('channels')} className="justify-start">📺 Canais e Séries</Button>
+            <Button variant={activeTab === 'channels' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('channels')} className="justify-start">📺 Conteúdo</Button>
             <Button variant={activeTab === 'settings' ? 'secondary' : 'ghost'} onClick={() => setActiveTab('settings')} className="justify-start">⚙️ Configurações</Button>
         </nav>
         <div className="mt-auto">
@@ -72,14 +72,19 @@ function UsersTab() {
     
     const handleUnblock = (userId: string) => {
         setUsers(users.map(u => u.id === userId ? {...u, status: 'active'} : u));
-        // Show toast notification
+        // TODO: Show toast notification
+    }
+
+    const handleBlock = (userId: string) => {
+        setUsers(users.map(u => u.id === userId ? {...u, status: 'blocked'} : u));
+        // TODO: Show toast notification
     }
 
     return (
         <div>
             <div className="admin-header">
                 <h1 className="admin-title">Gerenciar Usuários</h1>
-                <Button><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Usuário</Button>
+                <Button disabled><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Usuário</Button>
             </div>
             <div className="table-container">
                 <table className="w-full">
@@ -104,10 +109,12 @@ function UsersTab() {
                                     </span>
                                 </td>
                                 <td className="p-4 flex items-center gap-2">
-                                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
-                                    {user.status === 'blocked' && (
+                                    <Button variant="ghost" size="icon" disabled><Edit className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="text-red-500" disabled><Trash2 className="h-4 w-4" /></Button>
+                                    {user.status === 'blocked' ? (
                                         <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)}>Desbloquear</Button>
+                                    ) : (
+                                        <Button variant="outline" size="sm" variant="destructive" onClick={() => handleBlock(user.id)}>Bloquear</Button>
                                     )}
                                 </td>
                             </tr>
@@ -124,17 +131,15 @@ function ChannelsTab() {
         <div>
             <div className="admin-header">
                 <h1 className="admin-title">Gerenciar Conteúdo</h1>
-                 <Button><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Conteúdo</Button>
+                 <Button disabled><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Conteúdo</Button>
             </div>
             <p className="text-muted-foreground mb-4">Adicione e gerencie canais, filmes, séries e episódios.</p>
-            {/* Placeholder for channel management UI */}
              <div className="table-container">
                 <table className="w-full">
                     <thead>
                         <tr className="text-left">
                             <th className="p-4">Nome</th>
                             <th className="p-4">Categoria</th>
-                            <th className="p-4">URL</th>
                             <th className="p-4">Ações</th>
                         </tr>
                     </thead>
@@ -143,15 +148,39 @@ function ChannelsTab() {
                             <tr key={channel.id} className="border-b border-border">
                                 <td className="p-4">{channel.name}</td>
                                 <td className="p-4">{channel.category}</td>
-                                <td className="p-4 truncate max-w-xs">{channel.url}</td>
                                 <td className="p-4 flex items-center gap-2">
-                                    <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" disabled><Play className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" disabled><Edit className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="text-red-500" disabled><Trash2 className="h-4 w-4" /></Button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+            </div>
+             <div className="p-6 bg-card rounded-lg border mt-8">
+                <h3 className="text-lg font-semibold mb-2">Adicionar Conteúdo</h3>
+                 <form className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="channel-name">Nome do Conteúdo</Label>
+                            <Input id="channel-name" placeholder="Ex: Filme Ação" disabled />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="channel-category">Categoria</Label>
+                            <Input id="channel-category" placeholder="Ex: Filmes" disabled />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="channel-url">URL do Conteúdo</Label>
+                        <Input id="channel-url" placeholder="https://..." disabled/>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="is-adult" disabled/>
+                        <Label htmlFor="is-adult">Conteúdo Adulto (+18)</Label>
+                    </div>
+                    <Button type="submit" disabled>Adicionar</Button>
+                </form>
             </div>
         </div>
     );
@@ -168,16 +197,27 @@ function SettingsTab() {
                     <h3 className="text-lg font-semibold mb-2">Senha para Conteúdo Adulto</h3>
                     <p className="text-muted-foreground mb-4">Defina uma senha para proteger o acesso a canais marcados como conteúdo adulto.</p>
                     <div className="flex gap-4">
-                        <Input type="password" placeholder="Nova senha" />
+                        <Input type="password" defaultValue="09120415" />
                         <Button>Salvar Senha</Button>
                     </div>
                 </div>
                  <div className="p-6 bg-card rounded-lg border">
                     <h3 className="text-lg font-semibold mb-2">Link do APK</h3>
-                    <p className="text-muted-foreground mb-4">URL para o arquivo .apk que aparecerá na tela de login.</p>
-                    <div className="flex gap-4">
-                        <Input defaultValue="http://179.0.178.146/leotv.apk" />
+                    <p className="text-muted-foreground mb-4">URL para o arquivo .apk que aparecerá na tela de login. Você também pode fazer o upload de um novo arquivo.</p>
+                    <div className="flex items-center gap-4">
+                        <Input defaultValue="http://179.0.178.146/leotv.apk" className="flex-grow"/>
                         <Button>Salvar URL</Button>
+                    </div>
+                     <div className="flex items-center gap-4 mt-4">
+                        <Label htmlFor="apk-upload" className="flex-grow">
+                             <Button asChild variant="outline">
+                                <div className="flex items-center cursor-pointer">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    <span>Fazer Upload do APK</span>
+                                </div>
+                             </Button>
+                        </Label>
+                        <Input id="apk-upload" type="file" className="hidden" accept=".apk" disabled/>
                     </div>
                 </div>
             </div>
