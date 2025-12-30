@@ -163,59 +163,62 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     
-    // Create a temporary, secondary Firebase app instance for user creation
     const tempAppName = `temp-user-creation-${Date.now()}`;
-    const tempApp = initializeApp(firebaseConfig, tempAppName);
-    const tempAuth = getAuth(tempApp);
-
+    let tempApp;
     try {
-      // 1. Create user in the temporary authentication instance
-      const userCredential = await createUserWithEmailAndPassword(
-        tempAuth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+        tempApp = initializeApp(firebaseConfig, tempAppName);
+        const tempAuth = getAuth(tempApp);
 
-      // 2. Prepare the user document for Firestore
-      let expiryDate: Date | null = new Date();
-      if (plan === 'trial') {
-        expiryDate.setHours(expiryDate.getHours() + trialHours);
-      } else if (plan === 'monthly') {
-        expiryDate.setMonth(expiryDate.getMonth() + 1);
-      } else {
-        expiryDate = null; // Custom plan has no automatic expiry
-      }
+        // 1. Create user in the temporary authentication instance
+        const userCredential = await createUserWithEmailAndPassword(
+            tempAuth,
+            email,
+            password
+        );
+        const newUserAuth = userCredential.user;
 
-      const newUser = {
-        id: user.uid,
-        username,
-        email,
-        plan,
-        planExpiry: expiryDate ? expiryDate.toISOString() : null,
-        isBlocked: false,
-        createdAt: serverTimestamp(),
-      };
+        // 2. Prepare the user document for Firestore
+        let expiryDate: Date | null = new Date();
+        if (plan === 'trial') {
+            expiryDate.setHours(expiryDate.getHours() + trialHours);
+        } else if (plan === 'monthly') {
+            expiryDate.setMonth(expiryDate.getMonth() + 1);
+        } else {
+            expiryDate = null; // Custom plan has no automatic expiry
+        }
 
-      // 3. Save the document in Firestore using the user's UID as the document ID
-      // This is a critical step. Use await to ensure it completes.
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, newUser);
-      
-      onUserAdded();
-      
+        const newUserDoc = {
+            id: newUserAuth.uid,
+            username,
+            email,
+            plan,
+            planExpiry: expiryDate ? expiryDate.toISOString() : null,
+            isBlocked: false,
+            createdAt: serverTimestamp(),
+        };
+
+        // 3. Save the document in Firestore using the user's UID as the document ID
+        // This is a critical step. Use await to ensure it completes.
+        const userDocRef = doc(firestore, 'users', newUserAuth.uid);
+        await setDoc(userDocRef, newUserDoc);
+        
+        onUserAdded();
+        
     } catch (err: any) {
-      console.error('Error creating user:', err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Este nome de usuário já está em uso. Tente outro.');
-      } else {
-        setError('Ocorreu um erro ao criar o usuário: ' + err.message);
-      }
+        console.error('Error creating user:', err);
+        if (err.code === 'auth/email-already-in-use') {
+            setError('Este nome de usuário já está em uso. Tente outro.');
+        } else {
+            setError('Ocorreu um erro ao criar o usuário: ' + err.message);
+        }
     } finally {
-      // 4. Clean up the temporary app instance
-      await signOut(tempAuth); // Sign out from the temp instance
-      await deleteApp(tempApp); // Delete the temp app
-      setIsLoading(false);
+        // 4. Clean up the temporary app instance
+        if (tempApp) {
+            const tempAuth = getAuth(tempApp);
+            await signOut(tempAuth);
+            await deleteApp(tempApp);
+        }
+        setIsLoading(false);
     }
   };
 
@@ -473,21 +476,21 @@ function ChannelsTab() {
             setUrl(channel.url || '');
         } else if (channel.type === 'series-episodes') {
             const episodesCollection = collection(firestore, 'channels', channel.id, 'episodes');
-            const q = query(episodesCollection, orderBy('number'));
+            const q = query(episodesCollection, orderBy('episodeNumber'));
             const querySnapshot = await getDocs(q);
-            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().number, url: doc.data().episodeUrl }));
+            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber, url: doc.data().episodeUrl }));
             setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '' }]);
         } else if (channel.type === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channel.id, 'seasons');
-            const qSeasons = query(seasonsCollection, orderBy('number'));
+            const qSeasons = query(seasonsCollection, orderBy('seasonNumber'));
             const seasonsSnapshot = await getDocs(qSeasons);
             const fetchedSeasons: Season[] = [];
             for (const seasonDoc of seasonsSnapshot.docs) {
                 const episodesCollection = collection(firestore, 'channels', channel.id, 'seasons', seasonDoc.id, 'episodes');
-                const qEpisodes = query(episodesCollection, orderBy('number'));
+                const qEpisodes = query(episodesCollection, orderBy('episodeNumber'));
                 const episodesSnapshot = await getDocs(qEpisodes);
-                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().number, url: doc.data().episodeUrl }));
-                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().number, episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
+                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, number: doc.data().episodeNumber, url: doc.data().episodeUrl }));
+                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().seasonNumber, episodes: fetchedEpisodes.length > 0 ? fetchedEpisodes : [{number: '1', url: ''}] });
             }
             setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '' }] }]);
         }
@@ -564,12 +567,11 @@ function ChannelsTab() {
     if (!firestore || !name || !category) return;
     setIsSubmitting(true);
 
-    const channelData: Partial<Channel> & { createdAt: any } = {
+    const channelData: Partial<Omit<Channel, 'id'>> & { createdAt?: any, id?: string } = {
         name,
         category,
         isAdult,
         type: contentType,
-        createdAt: serverTimestamp(),
     };
 
     try {
@@ -584,6 +586,7 @@ function ChannelsTab() {
         } else {
             channelRef = doc(collection(firestore, 'channels'));
             channelData.id = channelRef.id;
+            channelData.createdAt = serverTimestamp();
             await setDoc(channelRef, channelData);
         }
         
@@ -593,8 +596,10 @@ function ChannelsTab() {
             const existingEpsSnap = await getDocs(episodesCollection);
             for (const docSnap of existingEpsSnap.docs) await deleteDoc(docSnap.ref); // Clear existing
             for (const ep of episodes) {
-                const epRef = doc(collection(episodesCollection));
-                await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                if(ep.url) { // only add if has url
+                    const epRef = doc(collection(episodesCollection));
+                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                }
             }
         } else if (contentType === 'series-seasons') {
             const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
@@ -610,8 +615,10 @@ function ChannelsTab() {
                 await setDoc(seasonRef, { id: seasonRef.id, channelId: channelRef.id, seasonNumber: season.number });
                 const episodesCollection = collection(seasonRef, 'episodes');
                 for (const ep of season.episodes) {
-                    const epRef = doc(collection(episodesCollection));
-                    await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                    if (ep.url) { // only add if has url
+                        const epRef = doc(collection(episodesCollection));
+                        await setDoc(epRef, { id: epRef.id, channelId: channelRef.id, seasonId: seasonRef.id, episodeNumber: ep.number, episodeUrl: ep.url });
+                    }
                 }
             }
         }
@@ -847,5 +854,7 @@ function SettingsTab() {
     </div>
   );
 }
+
+    
 
     
