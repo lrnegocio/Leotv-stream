@@ -22,7 +22,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -157,9 +157,8 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
     
-    // This is a temporary auth instance. We need it to create a user.
-    // It's a quirk of Firebase that you can't create a user from the admin SDK on the client.
-    // NOTE: This does NOT sign the admin out.
+    // This is a temporary auth instance for user creation.
+    // It's separate from the admin's auth state.
     const tempAuth = getAuth(); 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
@@ -289,8 +288,12 @@ function UsersTab() {
     () => (firestore ? collection(firestore, 'users') : null),
     [firestore]
   );
-  const { data: users, isLoading } = useCollection<User>(usersQuery);
+  const { data: users, isLoading, error } = useCollection<User>(usersQuery);
   const [isAddUserOpen, setAddUserOpen] = useState(false);
+
+  if (error) {
+    console.error("Error fetching users:", error);
+  }
 
   const handleToggleBlock = async (user: User) => {
     if (!firestore) return;
@@ -305,7 +308,7 @@ function UsersTab() {
         try {
             // Note: This deletes the Firestore document. Deleting the user from
             // Firebase Auth requires admin privileges and is typically done in a Cloud Function
-            // for security reasons. The user won't be able to log in anyway if the doc is gone.
+            // for security reasons. For now, this will prevent login.
             await deleteDoc(userRef);
         } catch(e) {
             console.error("Error deleting user document:", e);
@@ -447,23 +450,41 @@ function ChannelsTab() {
 
   const [previewUrl, setPreviewUrl] = useState('');
 
-  const handleOpenForm = (channel: Channel | null = null) => {
-    if (channel) {
-      setEditingChannel(channel);
-      setName(channel.name);
-      setCategory(channel.category);
-      setContentType(channel.type);
-      setIsAdult(channel.isAdult);
-      if (channel.type === 'channel' || channel.type === 'movie') {
-        setUrl(channel.url || '');
-      }
-      // TODO: Fetch seasons/episodes if editing series
-    } else {
-      setEditingChannel(null);
-      resetForm();
+  const handleOpenForm = async (channel: Channel | null = null) => {
+    resetForm();
+    if (channel && firestore) {
+        setEditingChannel(channel);
+        setName(channel.name);
+        setCategory(channel.category);
+        setContentType(channel.type);
+        setIsAdult(channel.isAdult);
+
+        if (channel.type === 'channel' || channel.type === 'movie') {
+            setUrl(channel.url || '');
+        } else if (channel.type === 'series-episodes') {
+            const episodesCollection = collection(firestore, 'channels', channel.id, 'episodes');
+            const q = query(episodesCollection, orderBy('number'));
+            const querySnapshot = await getDocs(q);
+            const fetchedEpisodes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Episode));
+            setEpisodes(fetchedEpisodes.length > 0 ? fetchedEpisodes : [{ number: '1', url: '' }]);
+        } else if (channel.type === 'series-seasons') {
+            const seasonsCollection = collection(firestore, 'channels', channel.id, 'seasons');
+            const qSeasons = query(seasonsCollection, orderBy('number'));
+            const seasonsSnapshot = await getDocs(qSeasons);
+            const fetchedSeasons: Season[] = [];
+            for (const seasonDoc of seasonsSnapshot.docs) {
+                const episodesCollection = collection(firestore, 'channels', channel.id, 'seasons', seasonDoc.id, 'episodes');
+                const qEpisodes = query(episodesCollection, orderBy('number'));
+                const episodesSnapshot = await getDocs(qEpisodes);
+                const fetchedEpisodes = episodesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Episode));
+                fetchedSeasons.push({ id: seasonDoc.id, number: seasonDoc.data().number, episodes: fetchedEpisodes });
+            }
+            setSeasons(fetchedSeasons.length > 0 ? fetchedSeasons : [{ number: '1', episodes: [{ number: '1', url: '' }] }]);
+        }
     }
     setIsFormOpen(true);
-  }
+}
+
 
   const handleAddEpisode = (seasonIndex?: number) => {
       if(seasonIndex !== undefined) {
@@ -549,34 +570,57 @@ function ChannelsTab() {
       
       if (editingChannel) {
         channelRef = doc(firestore, 'channels', editingChannel.id);
-        await updateDoc(channelRef, channelData);
+        await updateDoc(channelRef, { name, category, isAdult, url: channelData.url || null });
+        
+        // Handle episode/season updates for editing
+        if (contentType === 'series-episodes') {
+            const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
+            // This is a simple overwrite. A more robust solution might diff changes.
+            const existingEps = await getDocs(episodesCollection);
+            for(const doc of existingEps.docs) await deleteDoc(doc.ref);
+            for(const ep of episodes) {
+                const newEpRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
+                await setDoc(newEpRef, { number: ep.number, url: ep.url, id: newEpRef.id });
+            }
+        } else if (contentType === 'series-seasons') {
+            const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
+             const existingSeasons = await getDocs(seasonsCollection);
+             for(const doc of existingSeasons.docs) await deleteDoc(doc.ref); // This will cascade delete episodes in Firestore emulator, but not in production without a function.
+            
+            for(const season of seasons) {
+                const seasonRef = season.id ? doc(seasonsCollection, season.id) : doc(seasonsCollection);
+                await setDoc(seasonRef, { number: season.number, id: seasonRef.id });
+                const episodesCollection = collection(seasonRef, 'episodes');
+                for(const ep of season.episodes) {
+                     const newEpRef = ep.id ? doc(episodesCollection, ep.id) : doc(episodesCollection);
+                     await setDoc(newEpRef, { number: ep.number, url: ep.url, id: newEpRef.id });
+                }
+            }
+        }
+
       } else {
         channelRef = doc(collection(firestore, 'channels'));
         await setDoc(channelRef, { ...channelData, id: channelRef.id });
-      }
         
-        // TODO: Handle episode/season updates for editing
-      if (!editingChannel) {
-          if (contentType === 'series-episodes') {
-              const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
-              for(const ep of episodes) {
-                  const newEpRef = doc(episodesCollection);
-                  await setDoc(newEpRef, {...ep, id: newEpRef.id});
-              }
-          } else if (contentType === 'series-seasons') {
-              const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
-              for(const season of seasons) {
-                  const seasonDoc = { number: season.number };
-                  const seasonRef = doc(seasonsCollection);
-                  await setDoc(seasonRef, {...seasonDoc, id: seasonRef.id});
-                  
-                  const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
-                  for(const ep of season.episodes) {
-                       const newEpRef = doc(episodesCollection);
-                       await setDoc(newEpRef, {...ep, id: newEpRef.id});
-                  }
-              }
-          }
+        if (contentType === 'series-episodes') {
+            const episodesCollection = collection(firestore, 'channels', channelRef.id, 'episodes');
+            for(const ep of episodes) {
+                const newEpRef = doc(episodesCollection);
+                await setDoc(newEpRef, { number: ep.number, url: ep.url, id: newEpRef.id });
+            }
+        } else if (contentType === 'series-seasons') {
+            const seasonsCollection = collection(firestore, 'channels', channelRef.id, 'seasons');
+            for(const season of seasons) {
+                const seasonRef = doc(seasonsCollection);
+                await setDoc(seasonRef, { number: season.number, id: seasonRef.id });
+                
+                const episodesCollection = collection(firestore, 'channels', channelRef.id, 'seasons', seasonRef.id, 'episodes');
+                for(const ep of season.episodes) {
+                     const newEpRef = doc(episodesCollection);
+                     await setDoc(newEpRef, { number: ep.number, url: ep.url, id: newEpRef.id });
+                }
+            }
+        }
       }
       
       resetForm();
@@ -645,7 +689,7 @@ function ChannelsTab() {
                     size="icon"
                     className="text-red-500 hover:text-red-400"
                     onClick={async () => {
-                        if (confirm(`Tem certeza que deseja excluir "${channel.name}"?`)) {
+                        if (firestore && confirm(`Tem certeza que deseja excluir "${channel.name}"?`)) {
                            await deleteDoc(doc(firestore, 'channels', channel.id))
                         }
                     }}
@@ -703,7 +747,7 @@ function ChannelsTab() {
               </div>
             )}
 
-            {contentType === 'series-episodes' && !editingChannel && (
+            {(contentType === 'series-episodes' || (editingChannel && editingChannel.type === 'series-episodes')) && (
               <div className="space-y-4 p-4 border rounded-md">
                   <Label>Episódios</Label>
                   {episodes.map((ep, index) => (
@@ -717,7 +761,7 @@ function ChannelsTab() {
               </div>
             )}
 
-            {contentType === 'series-seasons' && !editingChannel && (
+            {(contentType === 'series-seasons' || (editingChannel && editingChannel.type === 'series-seasons')) && (
               <div className="space-y-4">
                   {seasons.map((season, sIndex) => (
                       <div key={sIndex} className="space-y-4 p-4 border rounded-md relative">
@@ -810,3 +854,5 @@ function SettingsTab() {
     </div>
   );
 }
+
+    
