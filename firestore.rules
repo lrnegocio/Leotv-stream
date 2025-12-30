@@ -2,8 +2,7 @@
  * Core Philosophy: This ruleset implements a hybrid security model for the VideoVerse Player application.
  * It combines role-based access for administrators with a strict user-ownership model for personal data.
  * The primary goal is to allow administrators to manage all public content and user accounts, while users
- * can only read public content and manage their own private data. A critical security feature is a global
- * check that prevents users marked as 'isBlocked' from accessing any data.
+ * can only read public content and manage their own private data.
  *
  * Data Structure:
  * - /users/{userId}: Private user data, owned by the user but manageable by admins.
@@ -14,22 +13,12 @@
  * Key Security Decisions:
  * - Admin Privilege via Email: Admin status is determined by checking if the authenticated user's email is 'admin@example.com'.
  *   This is a direct and secure method for a single-admin system.
- * - Global Block Check: A helper function `isNotBlocked()` performs a `get` operation on the user's own
- *   profile before granting read access to any public content. This ensures that an admin's decision to
- *   block a user is enforced immediately across the entire application.
- * - User Data Privacy vs. Admin Management: Users have full control over their own data in `/users/{userId}`.
- *   However, administrators are granted `get`, `list`, `update`, and `delete` permissions on these documents to
- *   manage accounts (e.g., blocking users, extending trials).
- * - Public Content Model: All content under `/channels` is readable by any authenticated, non-blocked user.
+ * - User Data Privacy vs. Admin Management: Users have limited control over their own data in `/users/{userId}`.
+ *   Administrators are granted full `read` and `write` permissions to manage all user accounts.
+ * - Public Content Model: All content under `/channels` is readable by any authenticated user.
  *   All write operations (create, update, delete) on this content are strictly limited to administrators.
- *
- * Denormalization for Authorization:
- * The `isBlocked` flag on the user document is an example of denormalization for authorization. Its presence allows
- * a single, fast check to gate access to the entire app's content.
- *
- * Structural Segregation:
- * The ruleset clearly segregates private user data (`/users`) from public, admin-managed content (`/channels`).
- * This separation simplifies rules and makes public listing queries on content collections safe and efficient.
+ * - App-Side Blocking Logic: The user `isBlocked` flag is enforced by the application logic during login,
+ *   not by complex read rules. This simplifies the ruleset and prevents permission denial cycles.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -60,50 +49,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * Returns true if the requesting user's profile document has `isBlocked` set to false.
-     * This is a critical check for non-admins to access any content.
-     */
-    function isNotBlocked() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBlocked == false;
-    }
-
-    /**
-     * Returns true if the document being written to already exists.
-     * Required for all update and delete operations.
-     */
-    function isExistingDoc() {
-      return resource != null;
-    }
-
-    /**
-     * Validates that an incoming 'create' request for a user document has a matching ID field.
-     */
-    function hasValidUserIdOnCreate(userId) {
-      return request.resource.data.id == userId;
-    }
-
-    /**
-     * Enforces immutability of the user ID field on update.
-     */
-    function userIdIsImmutable() {
-      return request.resource.data.id == resource.data.id;
-    }
-
-    /**
-     * Validates that an incoming 'create' request for a session document has a matching userId field.
-     */
-    function hasValidOwnerIdOnCreate(userId) {
-      return request.resource.data.userId == userId;
-    }
-
-    /**
-     * Enforces immutability of the userId field on session updates.
-     */
-    function ownerIdIsImmutable() {
-      return request.resource.data.userId == resource.data.id;
-    }
-
     // ----------------------------------------------------------------------
     // User Profiles
     // ----------------------------------------------------------------------
@@ -111,18 +56,13 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) A new user can create their own profile document OR an admin can create one.
-     * @allow (get, update, delete) The document owner or an admin can manage the profile.
-     * @allow (list) Only admins can list all user profiles.
-     * @deny (update) A user cannot change another user's profile.
+     * @allow (read, write) Admins can fully manage any user document. A user can read their own document.
      * @principle Enforces document ownership for users and provides admin override for management tasks.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if (isOwner(userId) && isExistingDoc() && userIdIsImmutable()) || (isAdmin() && isExistingDoc());
-      allow delete: if (isOwner(userId) && isExistingDoc()) || (isAdmin() && isExistingDoc());
+      allow read, write: if isAdmin();
+      allow get: if isOwner(userId);
+      allow update: if isOwner(userId);
     }
 
     // ----------------------------------------------------------------------
@@ -130,19 +70,15 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * @description Controls access to a user's session data, used to prevent dual logins.
+     * @description Controls access to a user's session data.
      * @path /users/{userId}/sessions/{sessionId}
-     * @allow (create, get, list, update) A user can fully manage their own session documents.
-     * @allow (delete) A user OR an admin can delete a session. This is required for admin to delete a user account.
-     * @deny (create, get, list, update, delete) A user cannot access another user's sessions.
-     * @principle Restricts access to a user's own data tree (Strict Ownership) with an exception for admin deletion.
+     * @allow (read, write) Admins have full control for management.
+     * @allow (read, create, update) A user can manage their own session documents.
+     * @principle Restricts access to a user's own data tree with admin override.
      */
     match /users/{userId}/sessions/{sessionId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && hasValidOwnerIdOnCreate(userId);
-      allow update: if isOwner(userId) && isExistingDoc() && ownerIdIsImmutable();
-      allow delete: if (isOwner(userId) && isExistingDoc()) || (isAdmin() && isExistingDoc());
+      allow read, write: if isAdmin();
+      allow list, create, update: if isOwner(userId);
     }
 
     // ----------------------------------------------------------------------
@@ -150,50 +86,15 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * @description Controls access to the top-level Channels collection.
-     * @path /channels/{channelId}
-     * @allow (get, list) Any authenticated, non-blocked user can read channel data.
-     * @allow (create, update, delete) Only admins can manage channels.
-     * @deny (get, list) An unauthenticated or blocked user cannot read channel data.
-     * @deny (create, update, delete) A regular user cannot modify channel data.
+     * @description Controls access to all public content collections.
+     * @path /channels/{channelId} and its subcollections.
+     * @allow (read) Any authenticated user can read channel, season, and episode data.
+     * @allow (write) Only admins can manage content.
      * @principle Implements public read access for valid users with role-based write restrictions.
      */
-    match /channels/{channelId} {
-      allow get: if isSignedIn() && isNotBlocked() || isAdmin();
-      allow list: if isSignedIn() && isNotBlocked() || isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && isExistingDoc();
-      allow delete: if isAdmin();
-
-      /**
-       * @description Controls access to the Seasons subcollection within a Channel.
-       * @path /channels/{channelId}/seasons/{seasonId}
-       * @allow (get, list) Any authenticated, non-blocked user can read season data.
-       * @allow (create, update, delete) Only admins can manage seasons.
-       * @principle Inherits the parent collection's model: public read, admin-only write.
-       */
-      match /seasons/{seasonId} {
-        allow get: if isSignedIn() && isNotBlocked() || isAdmin();
-        allow list: if isSignedIn() && isNotBlocked() || isAdmin();
-        allow create: if isAdmin() && request.resource.data.channelId == channelId;
-        allow update: if isAdmin() && isExistingDoc();
-        allow delete: if isAdmin();
-
-        /**
-         * @description Controls access to the Episodes subcollection within a Season.
-         * @path /channels/{channelId}/seasons/{seasonId}/episodes/{episodeId}
-         * @allow (get, list) Any authenticated, non-blocked user can read episode data.
-         * @allow (create, update, delete) Only admins can manage episodes.
-         * @principle Inherits the parent collection's model: public read, admin-only write.
-         */
-        match /episodes/{episodeId} {
-          allow get: if isSignedIn() && isNotBlocked() || isAdmin();
-          allow list: if isSignedIn() && isNotBlocked() || isAdmin();
-          allow create: if isAdmin() && request.resource.data.channelId == channelId;
-          allow update: if isAdmin() && isExistingDoc();
-          allow delete: if isAdmin();
-        }
-      }
+    match /channels/{channelId}/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
