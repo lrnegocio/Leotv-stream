@@ -160,10 +160,13 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       return;
     }
 
-    const tempAuth = getAuth();
+    // IMPORTANT: We need a separate auth instance for user creation
+    // to not interfere with the admin's session.
+    const tempAuth = getAuth(); 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
 
     try {
+      // 1. Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
         email,
@@ -171,6 +174,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       );
       const user = userCredential.user;
 
+      // 2. Prepare the user document for Firestore
       let expiryDate: Date | null = new Date();
       if (plan === 'trial') {
         expiryDate.setHours(expiryDate.getHours() + trialHours);
@@ -181,6 +185,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       }
 
       const newUser = {
+        id: user.uid, // explicitly set the ID
         username,
         email,
         plan,
@@ -189,13 +194,16 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         createdAt: serverTimestamp(),
       };
 
-      await setDoc(doc(firestore, 'users', user.uid), newUser, {});
+      // 3. Save the document in Firestore using the user's UID as the document ID
+      // This is a critical step and must be awaited.
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await setDoc(userDocRef, newUser);
       
       onUserAdded();
     } catch (err: any) {
       console.error('Error creating user:', err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('Este nome de usuário já está em uso.');
+        setError('Este nome de usuário já está em uso. Tente outro.');
       } else {
         setError('Ocorreu um erro ao criar o usuário.');
       }
@@ -238,7 +246,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
                   <SelectValue placeholder="Selecione o plano" />
               </SelectTrigger>
               <SelectContent>
-                  <SelectItem value="trial">Teste Grátis</SelectItem>
+                  <SelectItem value="trial">Teste Grátis (Horas)</SelectItem>
                   <SelectItem value="monthly">Plano Mensal</SelectItem>
                   <SelectItem value="custom">Personalizado / Vitalício</SelectItem>
               </SelectContent>
@@ -247,7 +255,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 
         {plan === 'trial' && (
           <div>
-            <Label htmlFor="new-trial-hours">Horas de Teste Grátis</Label>
+            <Label htmlFor="new-trial-hours">Horas de Teste</Label>
             <Input
               id="new-trial-hours"
               type="number"
@@ -297,9 +305,10 @@ function UsersTab() {
     if(confirm(`Tem certeza que deseja excluir o usuário ${user.username}? Esta ação não pode ser desfeita.`)) {
         const userRef = doc(firestore, 'users', user.id);
         try {
+            // Note: This deletes the Firestore document. Deleting the user from
+            // Firebase Auth requires admin privileges and is typically done in a Cloud Function
+            // for security reasons. The user won't be able to log in anyway if the doc is gone.
             await deleteDoc(userRef);
-            // Note: This does not delete the user from Firebase Auth. 
-            // A cloud function would be needed for that for a full cleanup.
         } catch(e) {
             console.error("Error deleting user document:", e);
         }
@@ -526,12 +535,12 @@ function ChannelsTab() {
     if (!firestore || !name || !category) return;
     setIsSubmitting(true);
 
-    const channelData: Omit<Channel, 'id'> & { createdAt: string, url?: string } = {
+    const channelData: Omit<Channel, 'id'> & { createdAt: any, url?: string } = {
         name,
         category,
         isAdult,
         type: contentType,
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
     };
 
     try {
@@ -799,3 +808,5 @@ function SettingsTab() {
     </div>
   );
 }
+
+    
