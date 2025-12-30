@@ -27,11 +27,11 @@ export default function LoginPage() {
 
 
   useEffect(() => {
-    // If user is already logged in, sign them out to ensure a clean login flow.
+    // If user is already authenticated, redirect them to the app page.
     if (!isUserLoading && user) {
-        signOut(auth);
+      router.replace('/app');
     }
-  }, [user, isUserLoading, router, auth]);
+  }, [user, isUserLoading, router]);
   
   useEffect(() => {
       if (typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true') {
@@ -119,14 +119,22 @@ export default function LoginPage() {
         
         const keepaliveInterval = setInterval(async () => {
           try {
-            await updateDoc(newSessionRef, { lastSeen: serverTimestamp() });
+            if (document.hidden) return; // Don't run in background
+            const sessionDoc = await getDoc(newSessionRef);
+            if (sessionDoc.exists() && sessionDoc.data().isActive) {
+               await updateDoc(newSessionRef, { lastSeen: serverTimestamp() });
+            } else {
+               clearInterval(keepaliveInterval);
+            }
           } catch (e) {
             clearInterval(keepaliveInterval);
           }
         }, 60000); 
         
         const handleBeforeUnload = () => {
-          updateDoc(newSessionRef, { isActive: false, logoutTime: serverTimestamp() });
+          if(auth.currentUser) {
+            updateDoc(newSessionRef, { isActive: false, logoutTime: serverTimestamp() });
+          }
           clearInterval(keepaliveInterval);
         }
         window.addEventListener('beforeunload', handleBeforeUnload);

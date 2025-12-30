@@ -153,7 +153,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const mainAuth = useAuth(); // Use the main auth instance
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,8 +167,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     
-    // Create a temporary, secondary auth instance for user creation
-    // This is a robust way to create users without logging out the admin
     let tempApp;
     let tempAuth;
     try {
@@ -195,7 +192,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 
       if (!firestore) throw new Error("Firestore is not initialized.");
       const userDocRef = doc(firestore, 'users', newUserAuth.uid);
-      // IMPORTANT: AWAIT this operation to ensure the user is saved in the database
       await setDoc(userDocRef, {
         id: newUserAuth.uid,
         username,
@@ -206,7 +202,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         createdAt: serverTimestamp(),
       });
 
-      onUserAdded(); // This will close the dialog and refresh the user list
+      onUserAdded();
       
     } catch (err: any) {
       console.error('Error creating user:', err);
@@ -216,7 +212,6 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         setError('Ocorreu um erro ao criar o usuário: ' + err.message);
       }
     } finally {
-      // Clean up the temporary auth instance
       if (tempAuth) await signOut(tempAuth);
       if (tempApp) await deleteApp(tempApp);
       setIsLoading(false);
@@ -328,9 +323,9 @@ function UsersTab() {
             sessionsSnapshot.docs.forEach((sessionDoc) => batch.delete(sessionDoc.ref));
 
             batch.delete(userRef);
-            await batch.commit(); // Ensure the batch commit is awaited
+            await batch.commit(); 
             
-            alert(`Usuário ${userToDelete.username} excluído com sucesso. A autenticação pode levar algum tempo para ser removida ou pode ser feita manualmente no console do Firebase.`);
+            alert(`Usuário ${userToDelete.username} excluído com sucesso. A autenticação associada deve ser removida manualmente no console do Firebase.`);
         } catch (e) {
             console.error("Error deleting user:", e);
             alert("Falha ao excluir usuário: " + (e as Error).message);
@@ -615,7 +610,7 @@ function ChannelsTab() {
 
             batch.delete(channelRef);
 
-            await batch.commit(); // Ensure the batch commit is awaited
+            await batch.commit();
             alert('Conteúdo excluído com sucesso.');
         } catch (error) {
             console.error("Error deleting channel recursively: ", error);

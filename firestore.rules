@@ -1,8 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    
+    // Helper Functions
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@example.com';
+    }
+
+    // User Data Rules
+    // Admin: Can do anything.
+    // Owner: Can read their own profile.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin(); // Only admin can create/update/delete user profiles directly.
+    }
+    
+    // User Subcollections Rules (e.g., sessions)
+    // Admin: Can do anything.
+    // Owner: Can read and write to their own subcollections.
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Content Rules (channels and subcollections)
+    // Admin: Can do anything.
+    // Authenticated Users: Can read all content.
+    match /channels/{channelId} {
+        allow get: if request.auth != null;
+        allow list: if request.auth != null;
+        allow write: if isAdmin();
+    }
+
+    match /channels/{channelId}/{document=**} {
+        allow read: if request.auth != null;
+        allow write: if isAdmin();
     }
   }
 }
