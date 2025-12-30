@@ -154,22 +154,24 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
+  
     if (!username || !password) {
       setError('Usuário e senha são obrigatórios.');
       setIsLoading(false);
       return;
     }
-
+  
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
     
-    // Create a temporary, secondary Firebase app instance for user creation
+    // Use a temporary, secondary Firebase app for user creation to avoid session conflicts
     const tempAppName = `temp-user-creation-${Date.now()}`;
     let tempApp;
+    let tempAuth;
+  
     try {
       tempApp = initializeApp(firebaseConfig, tempAppName);
-      const tempAuth = getAuth(tempApp);
-
+      tempAuth = getAuth(tempApp);
+  
       // 1. Create user in the temporary authentication instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
@@ -177,7 +179,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         password
       );
       const newUserAuth = userCredential.user;
-
+  
       // 2. Prepare the user document for Firestore
       let expiryDate: Date | null = new Date();
       if (plan === 'trial') {
@@ -187,22 +189,23 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       } else {
         expiryDate = null; // Custom plan has no automatic expiry
       }
-
+  
       const newUserDoc = {
         id: newUserAuth.uid,
         username,
         email,
         plan,
-        planExpiry: expiryDate ? expiryDate.toISOString() : null,
+        planExpiry: expiryDate ? expiryDate.toISOString() : null, // Use ISO string
         isBlocked: false,
         createdAt: serverTimestamp(),
       };
-
-      // 3. Save the document in Firestore using the user's UID as the document ID
+  
+      // 3. Save the document in Firestore using the main app's firestore instance
       if (!firestore) throw new Error("Firestore is not initialized.");
       const userDocRef = doc(firestore, 'users', newUserAuth.uid);
       await setDoc(userDocRef, newUserDoc);
-
+  
+      // 4. Success, call the callback
       onUserAdded();
       
     } catch (err: any) {
@@ -213,10 +216,11 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
         setError('Ocorreu um erro ao criar o usuário: ' + err.message);
       }
     } finally {
-      // 4. Clean up the temporary app instance regardless of success or failure
-      if (tempApp) {
-        const tempAuth = getAuth(tempApp);
+      // 5. Clean up the temporary app instance regardless of success or failure
+      if (tempAuth) {
         await signOut(tempAuth); // Sign out from the temporary instance
+      }
+      if (tempApp) {
         await deleteApp(tempApp); // Delete the temporary app
       }
       setIsLoading(false);
