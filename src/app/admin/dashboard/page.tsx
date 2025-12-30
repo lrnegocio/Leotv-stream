@@ -162,15 +162,13 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     }
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
+    
+    // Create a temporary, secondary Firebase app instance for user creation
     const tempAppName = `temp-user-creation-${Date.now()}`;
-    let tempApp;
-    let tempAuth;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = getAuth(tempApp);
 
     try {
-      // Create a temporary, secondary Firebase app instance for user creation
-      tempApp = initializeApp(firebaseConfig, tempAppName);
-      tempAuth = getAuth(tempApp);
-
       // 1. Create user in the temporary authentication instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
@@ -200,6 +198,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       };
 
       // 3. Save the document in Firestore using the user's UID as the document ID
+      if (!firestore) throw new Error("Firestore is not initialized.");
       const userDocRef = doc(firestore, 'users', newUserAuth.uid);
       await setDoc(userDocRef, newUserDoc);
 
@@ -217,9 +216,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
       if (tempAuth) {
         await signOut(tempAuth); // Sign out from the temporary instance
       }
-      if (tempApp) {
-        await deleteApp(tempApp); // Delete the temporary app
-      }
+      await deleteApp(tempApp); // Delete the temporary app
       setIsLoading(false);
     }
   };
@@ -856,3 +853,5 @@ function SettingsTab() {
     </div>
   );
 }
+
+    
