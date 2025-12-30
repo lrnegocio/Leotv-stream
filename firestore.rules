@@ -24,19 +24,18 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
     // User Profiles & ALL Subcollections (Recursive)
     // ----------------------------------------------------------------------
-    // This rule applies to /users/{userId} and any subcollection path below it
-    // (e.g., /users/{userId}/sessions/{sessionId}, etc.)
+    // This single rule grants admins full control over any user document
+    // and everything inside it (like the 'sessions' subcollection).
+    // It also allows users to manage their own subcollection documents.
     match /users/{userId}/{document=**} {
-      // Admins have full read/write access to user documents and all their subcollections.
       allow read, write: if isAdmin();
-      // Users can manage documents in their OWN subcollections (e.g., sessions).
-      // This is crucial for login session management.
-      allow list, create, update: if isOwner(userId);
+      allow list, create, update, delete: if isOwner(userId);
     }
+    
+    // This rule allows a user to read their own top-level profile,
+    // but not other users' profiles.
      match /users/{userId} {
-      // A user can get or update their own profile.
       allow get, update: if isOwner(userId);
-      // Admin access is covered by the recursive rule above.
     }
 
 
