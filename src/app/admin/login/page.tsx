@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-// These will be securely read from environment variables on the server
-const ADMIN_USERNAME = process.env.NEXT_PUBLIC_ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+// Dummy credentials for now. In a real app, use environment variables.
+const ADMIN_USERNAME = "lrnegocio";
+const ADMIN_PASSWORD = "135796lR@";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
@@ -16,13 +16,12 @@ export default function AdminLoginPage() {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Dummy credentials for now. In a real app, use environment variables.
-    if (username === 'admin' && password === 'password') {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       // In a real app, you'd set a secure, http-only cookie or token.
       // For now, we'll just navigate.
       router.push('/admin/dashboard');
     } else {
-      alert("Credenciais de admin inválidas. Por segurança, o login foi desativado temporariamente.");
+      alert("Credenciais de admin inválidas.");
     }
   };
 
