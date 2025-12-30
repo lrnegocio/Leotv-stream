@@ -6,19 +6,19 @@
  *
  * Data Structure:
  * - /users/{userId}: Private user data, owned by the user but manageable by admins.
- *   - /users/{userId}/sessions/{sessionId}: Subcollection for user session data, strictly owned by the user but deletable by admins.
+ *   - /users/{userId}/{document=**}: Recursive wildcard for all subcollections (like 'sessions'),
+ *     ensuring admin has full control for operations like recursive deletes.
  * - /channels/{channelId}: Publicly readable content collection managed exclusively by admins. It contains
- *   nested subcollections for seasons and episodes.
+ *   nested subcollections for seasons and episodes, also covered by a recursive wildcard.
  *
  * Key Security Decisions:
  * - Admin Privilege via Email: Admin status is determined by checking if the authenticated user's email is 'admin@example.com'.
  *   This is a direct and secure method for a single-admin system.
- * - User Data Privacy vs. Admin Management: Users have limited control over their own data in `/users/{userId}`.
- *   Administrators are granted full `read` and `write` permissions to manage all user accounts, including deletion.
+ * - Recursive Permissions: The `{document=**}` wildcard is intentionally used to grant broad permissions
+ *   to admins for all subcollections. This is critical for allowing admins to perform recursive deletes
+ *   (e.g., deleting a user and all their sessions) without permission errors.
  * - Public Content Model: All content under `/channels` is readable by any authenticated user.
  *   All write operations (create, update, delete) on this content are strictly limited to administrators.
- * - App-Side Blocking Logic: The user `isBlocked` flag is enforced by the application logic during login,
- *   not by complex read rules. This simplifies the ruleset and prevents permission denial cycles.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -28,38 +28,28 @@ service cloud.firestore {
     // Helper Functions
     // ----------------------------------------------------------------------
 
-    /**
-     * Returns true if the user is signed in.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Returns true if the requesting user's email matches the admin email.
-     */
     function isAdmin() {
       return isSignedIn() && request.auth.token.email == 'admin@example.com';
     }
 
-    /**
-     * Returns true if the requesting user is the owner of the document.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     // ----------------------------------------------------------------------
-    // User Profiles & All Subcollections
+    // User Profiles & ALL Subcollections (Recursive)
     // ----------------------------------------------------------------------
 
     /**
-     * @description Controls access to user profile documents and ALL their subcollections.
+     * @description Controls access to user documents and ALL their subcollections recursively.
      * @path /users/{userId} and /users/{userId}/{document=**}
-     * @allow (read, write) Admins can fully manage any user document and their subcollections (like sessions).
-     * @allow (get, update) A user can read or update their own top-level document.
-     * @allow (list, create, update) for subcollections like sessions.
-     * @principle Enforces document ownership for users and provides admin override for management tasks, including recursive deletes.
+     * @allow (read, write) Admins have full read/write access to any user's document and all subcollections (like sessions).
+     *        This is CRITICAL for allowing recursive deletes from the admin panel.
+     * @allow (list, create, update) A user can manage documents within their own subcollections (e.g., creating a session).
      */
     match /users/{userId}/{document=**} {
       allow read, write: if isAdmin();
@@ -69,17 +59,15 @@ service cloud.firestore {
       allow get, update: if isOwner(userId);
     }
 
-
     // ----------------------------------------------------------------------
-    // Public Content: Channels, Seasons, Episodes
+    // Public Content: Channels, Seasons, Episodes (Recursive)
     // ----------------------------------------------------------------------
 
     /**
-     * @description Controls access to all public content collections.
+     * @description Controls access to all public content collections recursively.
      * @path /channels/{channelId} and its subcollections.
      * @allow (read) Any authenticated user can read channel, season, and episode data.
-     * @allow (write) Only admins can manage content (create, update, delete).
-     * @principle Implements public read access for valid users with role-based write restrictions.
+     * @allow (write) Only admins can manage content (create, update, delete at all levels).
      */
     match /channels/{channelId}/{document=**} {
       allow read: if isSignedIn();
