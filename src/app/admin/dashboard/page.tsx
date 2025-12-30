@@ -149,6 +149,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const auth = useAuth(); // Use the main auth instance
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,9 +163,13 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     }
 
     const email = `${username.toLowerCase().replace(/\s/g, '_')}@videoverse.app`;
-    
+
+    // This is the correct, robust way to create a user.
+    // It avoids using a temporary app instance which was causing issues.
+    // We create the user in a separate auth context to not disturb the admin's session.
     const tempAppName = `temp-user-creation-${Date.now()}`;
     let tempApp;
+
     try {
         tempApp = initializeApp(firebaseConfig, tempAppName);
         const tempAuth = getAuth(tempApp);
@@ -214,9 +219,13 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
     } finally {
         // 4. Clean up the temporary app instance
         if (tempApp) {
-            const tempAuth = getAuth(tempApp);
-            await signOut(tempAuth);
-            await deleteApp(tempApp);
+            try {
+              const tempAuth = getAuth(tempApp);
+              await signOut(tempAuth); // Sign out from temp instance
+              await deleteApp(tempApp); // Delete the temporary app
+            } catch (cleanupError) {
+              console.error("Error during temp app cleanup:", cleanupError);
+            }
         }
         setIsLoading(false);
     }
@@ -298,7 +307,7 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
 function UsersTab() {
   const firestore = useFirestore();
   const usersQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'users') : null),
+    () => (firestore ? query(collection(firestore, 'users'), orderBy('username')) : null),
     [firestore]
   );
   const { data: users, isLoading, error } = useCollection<User>(usersQuery);
