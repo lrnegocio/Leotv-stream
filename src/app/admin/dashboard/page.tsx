@@ -23,7 +23,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, setDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc, writeBatch } from 'firebase/firestore';
 import {
   Dialog,
   DialogContent,
@@ -584,6 +584,40 @@ function ChannelsTab() {
       setEditingChannel(null);
   }
 
+    const handleDeleteChannel = async (channelId: string) => {
+        if (!firestore) return;
+        if (!confirm(`Tem certeza que deseja excluir este conteúdo e todos os seus episódios/temporadas?`)) return;
+
+        try {
+            const channelRef = doc(firestore, 'channels', channelId);
+            
+            // Batch delete for all subcollections
+            const batch = writeBatch(firestore);
+
+            const seasonsRef = collection(channelRef, 'seasons');
+            const seasonsSnap = await getDocs(seasonsRef);
+            for (const seasonDoc of seasonsSnap.docs) {
+                const episodesRef = collection(seasonDoc.ref, 'episodes');
+                const episodesSnap = await getDocs(episodesRef);
+                episodesSnap.docs.forEach(epDoc => batch.delete(epDoc.ref));
+                batch.delete(seasonDoc.ref);
+            }
+
+            const episodesRef = collection(channelRef, 'episodes');
+            const episodesSnap = await getDocs(episodesRef);
+            episodesSnap.docs.forEach(epDoc => batch.delete(epDoc.ref));
+
+            batch.delete(channelRef);
+
+            await batch.commit();
+            alert('Conteúdo excluído com sucesso.');
+        } catch (error) {
+            console.error("Error deleting channel recursively: ", error);
+            alert('Falha ao excluir conteúdo: ' + (error as Error).message);
+        }
+    };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !name || !category) return;
@@ -725,11 +759,7 @@ function ChannelsTab() {
                     variant="ghost"
                     size="icon"
                     className="text-red-500 hover:text-red-400"
-                    onClick={async () => {
-                        if (firestore && confirm(`Tem certeza que deseja excluir "${channel.name}"?`)) {
-                           await deleteDoc(doc(firestore, 'channels', channel.id))
-                        }
-                    }}
+                    onClick={() => handleDeleteChannel(channel.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -891,5 +921,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-    
