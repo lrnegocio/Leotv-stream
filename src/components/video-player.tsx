@@ -29,8 +29,10 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
         try {
             if (typeof event.data === 'string') {
                 const data = JSON.parse(event.data);
-                // Listen for events from various embeddable players (e.g. YouTube)
-                if (data.event === 'ended' || data.event === 'finish' || data.event === 'end' || (data.event === 'info' && data.info?.playerState === 0)) {
+                // Listen for events from various embeddable players (e.g. YouTube, Vimeo)
+                if (event.origin.includes('youtube.com') && data.event === 'onStateChange' && data.info === 0) {
+                     handleMediaEnd(); // YouTube's ended state
+                } else if (data.event === 'ended' || data.event === 'finish' || data.event === 'end') {
                     handleMediaEnd();
                 }
             }
@@ -95,31 +97,78 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
   const youtubeMatch = source.match(youtubeRegex);
   if (youtubeMatch) {
     const videoId = youtubeMatch[1];
-    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
+    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1&origin=${window.location.origin}`;
   }
 
-  // 2. Check for Canva URL
-  const canvaRegex = /(?:https?:\/\/)?(?:www\.)?canva\.com\/design\/([a-zA-Z0-9_-]+)\/(?:view|watch)/;
-  const canvaMatch = source.match(canvaRegex);
-  if (canvaMatch && !embedSrc) {
-    const designId = canvaMatch[1];
-    embedSrc = `https://www.canva.com/design/${designId}/view?embed`;
+  // 2. Check for Canva URL (both long and short formats)
+  const canvaLongRegex = /(?:https?:\/\/)?(?:www\.)?canva\.com\/design\/([a-zA-Z0-9_-]+)\/(?:view|watch)/;
+  const canvaShortRegex = /(?:https?:\/\/)?(?:www\.)?canva\.com\/V\/([a-zA-Z0-9_-]+)/;
+  const canvaLongMatch = source.match(canvaLongRegex);
+  const canvaShortMatch = source.match(canvaShortRegex);
+
+  if (!embedSrc && (canvaLongMatch || canvaShortMatch)) {
+    // Canva's embed format is different from the watch format. It uses the design ID.
+    // The short /V/ link redirects to the long /design/ link. We can construct the embed URL from the design ID.
+    // However, the simplest way to embed Canva is using their specific embed URL.
+    // Let's create a generic embed for any Canva link.
+    const url = new URL(source);
+    const pathParts = url.pathname.split('/').filter(p => p);
+    if(pathParts[0] === 'design' && pathParts[2] === 'view') {
+        embedSrc = `${url.origin}/design/${pathParts[1]}/view?embed`;
+    } else if (pathParts[0] === 'V') {
+         // The short link itself can often be embedded. Let's try that.
+         // A more robust solution might be needed if they change this.
+         // For now we'll assume it redirects properly inside an iframe.
+         embedSrc = source;
+    }
   }
   
-  // 3. Check for raw embed code
+  // 3. Check for Dailymotion URL
+  const dailymotionRegex = /(?:https?:\/\/)?(?:www\.)?dailymotion\.com\/(?:video|embed\/video)\/([a-zA-Z0-9]+)/;
+  const dailymotionMatch = source.match(dailymotionRegex);
+  if (!embedSrc && dailymotionMatch) {
+    const videoId = dailymotionMatch[1];
+    embedSrc = `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1`;
+  }
+  
+  // 4. Check for Tokyvideo URL
+  const tokyvideoRegex = /(?:https?:\/\/)?(?:www\.)?tokyvideo\.com\/(?:br\/)?video\/([a-zA-Z0-9-]+)/;
+  const tokyvideoMatch = source.match(tokyvideoRegex);
+  if (!embedSrc && tokyvideoMatch) {
+    // Tokyvideo uses the video title/slug as an ID in the URL, but the embed usually works with a numerical ID.
+    // However, their embed generator often just uses the full path in an iframe.
+    // The most reliable way is often just to get the embed ID from the page, but since we can't do that,
+    // we'll try to construct a generic embed URL which often works.
+    const videoSlug = tokyvideoMatch[1];
+    // Tokyvideo embed URLs are often just `https://www.tokyvideo.com/embed/{ID}`. We need to find the ID.
+    // A simpler approach is to try embedding the page itself, which sometimes works for these sites.
+    // A common embed format is just /embed/<slug-or-id>
+    // Let's try to extract the last part of the url, which is often the id
+    const parts = source.split('/');
+    const videoId = parts[parts.length -1].split('?')[0]; // get last part of path
+     embedSrc = `https://www.tokyvideo.com/embed/${videoId}`;
+  }
+
+
+  // 5. Check for raw embed code
   if (!embedSrc && !isAudio && !isVideo) {
       const srcRegex = /src="([^"]+)"/;
       const srcMatch = source.match(srcRegex);
       if (/<(iframe|div)/i.test(source) && srcMatch) {
-          const rawSrc = srcMatch[1];
-          // Check if it's a canva link that needs the "embed" param
-          if(rawSrc.includes('canva.com/design') && !rawSrc.includes('embed')) {
+          let rawSrc = srcMatch[1];
+          // Ensure autoplay and other useful params if possible
+          try {
             const url = new URL(rawSrc);
-            url.pathname += url.pathname.endsWith('/') ? 'view' : '/view';
-            url.searchParams.set('embed', '');
+            if(url.hostname.includes('youtube.com') || url.hostname.includes('youtube-nocookie.com')) {
+                url.searchParams.set('autoplay', '1');
+                url.searchParams.set('enablejsapi', '1');
+                url.searchParams.set('origin', window.location.origin);
+            } else if (url.hostname.includes('dailymotion.com')) {
+                 url.searchParams.set('autoplay', '1');
+            }
             embedSrc = url.toString();
-          } else {
-            embedSrc = rawSrc;
+          } catch {
+             embedSrc = rawSrc;
           }
       } else if (/<(iframe|div)/i.test(source)) {
         isRawEmbed = true;
@@ -190,7 +239,7 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
     );
   }
   
-  // 4. Handle error/invalid input
+  // Handle error/invalid input
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md bg-destructive/20 border-destructive text-destructive-foreground">
@@ -203,5 +252,3 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
     </div>
   );
 }
-
-    
