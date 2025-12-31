@@ -18,18 +18,17 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   
   useEffect(() => {
-    const handleVideoEnd = () => {
+    const handleMediaEnd = () => {
       onEnded();
     };
 
-    const currentVideoRef = videoRef.current;
-    
     // For some players, we need to listen to messages
     const handleMessage = (event: MessageEvent) => {
         try {
             if (typeof event.data === 'string') {
                 const data = JSON.parse(event.data);
-                if (data.event === 'ended' || data.event === 'finish') {
+                // Listen for events from various embeddable players
+                if (data.event === 'ended' || data.event === 'finish' || data.event === 'end') {
                     onEnded();
                 }
             }
@@ -40,16 +39,15 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
     
     window.addEventListener('message', handleMessage);
 
-    if (audioRef.current) {
-        audioRef.current.addEventListener('ended', handleVideoEnd);
+    const currentAudioRef = audioRef.current;
+    if (currentAudioRef) {
+        currentAudioRef.addEventListener('ended', handleMediaEnd);
     }
 
     // Cleanup function
     return () => {
-      if (audioRef.current) {
-        audioRef.current.removeEventListener('ended', handleVideoEnd);
-        audioRef.current.pause();
-        audioRef.current.src = '';
+      if (currentAudioRef) {
+        currentAudioRef.removeEventListener('ended', handleMediaEnd);
       }
       window.removeEventListener('message', handleMessage);
     };
