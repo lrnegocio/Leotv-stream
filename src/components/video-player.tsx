@@ -14,22 +14,24 @@ type VideoPlayerProps = {
 const audioExtensions = ['.mp3', '.aac', '.ogg', '.wav', '.flac', '.m4a'];
 
 export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   
   useEffect(() => {
     const handleMediaEnd = () => {
-      onEnded();
+      if (onEnded) {
+        onEnded();
+      }
     };
 
-    // For some players, we need to listen to messages
     const handleMessage = (event: MessageEvent) => {
         try {
             if (typeof event.data === 'string') {
                 const data = JSON.parse(event.data);
-                // Listen for events from various embeddable players
-                if (data.event === 'ended' || data.event === 'finish' || data.event === 'end') {
-                    onEnded();
+                // Listen for events from various embeddable players (e.g. YouTube)
+                if (data.event === 'ended' || data.event === 'finish' || data.event === 'end' || (data.event === 'info' && data.info?.playerState === 0)) {
+                    handleMediaEnd();
                 }
             }
         } catch (e) {
@@ -43,11 +45,18 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
     if (currentAudioRef) {
         currentAudioRef.addEventListener('ended', handleMediaEnd);
     }
+    
+    const currentVideoRef = videoRef.current;
+    if (currentVideoRef) {
+        currentVideoRef.addEventListener('ended', handleMediaEnd);
+    }
 
-    // Cleanup function
     return () => {
       if (currentAudioRef) {
         currentAudioRef.removeEventListener('ended', handleMediaEnd);
+      }
+      if (currentVideoRef) {
+        currentVideoRef.removeEventListener('ended', handleMediaEnd);
       }
       window.removeEventListener('message', handleMessage);
     };
@@ -65,12 +74,16 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
   let embedSrc = "";
   let isRawEmbed = false;
   let isAudio = false;
+  let isVideo = false;
 
   try {
     const url = new URL(source);
     if (audioExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext))) {
       isAudio = true;
-      embedSrc = source;
+    }
+    const videoExtensions = ['.mp4', '.webm', '.mkv', '.ogg', '.mov'];
+    if (videoExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext))) {
+      isVideo = true;
     }
   } catch (e) {
     // Not a valid URL, might be an embed code
@@ -94,7 +107,7 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
   }
   
   // 3. Check for raw embed code
-  if (!embedSrc && !isAudio) {
+  if (!embedSrc && !isAudio && !isVideo) {
       const srcRegex = /src="([^"]+)"/;
       const srcMatch = source.match(srcRegex);
       if (/<(iframe|div)/i.test(source) && srcMatch) {
@@ -113,28 +126,11 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
       }
   }
 
-  // Fallback for any other valid URL that isn't audio
-  if(!embedSrc && !isRawEmbed && !isAudio) {
+  // Fallback for any other valid URL that isn't audio or video
+  if(!embedSrc && !isRawEmbed && !isAudio && !isVideo) {
     try {
         const url = new URL(source);
         if(url.protocol === 'http:' || url.protocol === 'https:') {
-            // Check for video files
-            const videoExtensions = ['.mp4', '.webm', '.mkv', '.ogg', '.mov'];
-            if(videoExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext))) {
-                return (
-                     <div className="w-full h-full">
-                        <video 
-                          ref={videoRef as any}
-                          src={source} 
-                          controls 
-                          autoPlay 
-                          className="w-full h-full"
-                          onEnded={onEnded}
-                        />
-                     </div>
-                )
-            }
-            // Otherwise, iframe it
             embedSrc = source;
         }
     } catch (e) {
@@ -147,10 +143,24 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
        <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white">
           <Music size={96} className="text-accent mb-4" />
           <p className="text-lg mb-4">Tocando rádio</p>
-          <audio ref={audioRef} controls autoPlay src={embedSrc} className="w-3/4 max-w-lg">
+          <audio ref={audioRef} controls autoPlay src={source} className="w-3/4 max-w-lg">
               Seu navegador não suporta o elemento de áudio.
           </audio>
       </div>
+    )
+  }
+
+  if (isVideo) {
+    return (
+         <div className="w-full h-full">
+            <video 
+              ref={videoRef}
+              src={source} 
+              controls 
+              autoPlay 
+              className="w-full h-full"
+            />
+         </div>
     )
   }
 
@@ -159,7 +169,7 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
      return (
         <div className="w-full h-full">
             <iframe
-            ref={videoRef}
+            ref={iframeRef}
             key={embedSrc}
             src={embedSrc}
             title="Embedded Content"
@@ -193,3 +203,5 @@ export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
     </div>
   );
 }
+
+    

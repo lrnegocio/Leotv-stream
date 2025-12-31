@@ -465,8 +465,11 @@ function UsersTab() {
             return 'Data inválida';
         }
         const now = new Date();
+        if (expiryDate < now) {
+            return 'Expirado';
+        }
         const label = formatDistanceToNow(expiryDate, { addSuffix: true, locale: ptBR });
-        return expiryDate < now ? `Expirou ${label}` : `Expira ${label}`;
+        return `Expira ${label}`;
     } catch {
         return 'Data inválida';
     }
@@ -891,7 +894,7 @@ function ChannelsTab() {
           <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto p-2">
               <div className="space-y-2">
                   <Label>Tipo de Conteúdo</Label>
-                  <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)} disabled={isSubmitting || !!editingChannel}>
+                  <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)} disabled={isSubmitting}>
                       <SelectTrigger>
                           <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
@@ -1037,3 +1040,5 @@ function SettingsTab() {
     </div>
   );
 }
+
+    
