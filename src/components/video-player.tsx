@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,25 +7,56 @@ import { useEffect, useRef } from "react";
 
 type VideoPlayerProps = {
   source: string;
+  onEnded: () => void;
 };
 
 // List of common audio file extensions
 const audioExtensions = ['.mp3', '.aac', '.ogg', '.wav', '.flac', '.m4a'];
 
-export function VideoPlayer({ source }: VideoPlayerProps) {
+export function VideoPlayer({ source, onEnded }: VideoPlayerProps) {
+  const videoRef = useRef<HTMLIFrameElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-
+  
   useEffect(() => {
-    // Cleanup function to stop audio when component unmounts or source changes
+    const handleVideoEnd = () => {
+      onEnded();
+    };
+
+    const currentVideoRef = videoRef.current;
+    
+    // For some players, we need to listen to messages
+    const handleMessage = (event: MessageEvent) => {
+        try {
+            if (typeof event.data === 'string') {
+                const data = JSON.parse(event.data);
+                if (data.event === 'ended' || data.event === 'finish') {
+                    onEnded();
+                }
+            }
+        } catch (e) {
+            // Not a JSON message, ignore
+        }
+    };
+    
+    window.addEventListener('message', handleMessage);
+
+    if (audioRef.current) {
+        audioRef.current.addEventListener('ended', handleVideoEnd);
+    }
+
+    // Cleanup function
     return () => {
       if (audioRef.current) {
+        audioRef.current.removeEventListener('ended', handleVideoEnd);
         audioRef.current.pause();
         audioRef.current.src = '';
       }
+      window.removeEventListener('message', handleMessage);
     };
-  }, [source]);
+  }, [source, onEnded]);
 
-  if (!source.trim()) {
+
+  if (!source || !source.trim()) {
     return (
       <div className="text-center text-muted-foreground p-4">
         <p>Selecione um canal na barra lateral para começar.</p>
@@ -52,7 +84,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
   const youtubeMatch = source.match(youtubeRegex);
   if (youtubeMatch) {
     const videoId = youtubeMatch[1];
-    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+    embedSrc = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&enablejsapi=1`;
   }
 
   // 2. Check for Canva URL
@@ -88,6 +120,23 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
     try {
         const url = new URL(source);
         if(url.protocol === 'http:' || url.protocol === 'https:') {
+            // Check for video files
+            const videoExtensions = ['.mp4', '.webm', '.mkv', '.ogg', '.mov'];
+            if(videoExtensions.some(ext => url.pathname.toLowerCase().endsWith(ext))) {
+                return (
+                     <div className="w-full h-full">
+                        <video 
+                          ref={videoRef as any}
+                          src={source} 
+                          controls 
+                          autoPlay 
+                          className="w-full h-full"
+                          onEnded={onEnded}
+                        />
+                     </div>
+                )
+            }
+            // Otherwise, iframe it
             embedSrc = source;
         }
     } catch (e) {
@@ -112,6 +161,7 @@ export function VideoPlayer({ source }: VideoPlayerProps) {
      return (
         <div className="w-full h-full">
             <iframe
+            ref={videoRef}
             key={embedSrc}
             src={embedSrc}
             title="Embedded Content"

@@ -1,10 +1,12 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { VideoPlayer } from '@/components/video-player';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, ChevronRight, Tv, Clapperboard, Film, Radio, LogOut, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Tv, Clapperboard, Film, Radio, LogOut, Clock, SkipBack, SkipForward } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUser, useCollection, useFirestore, useMemoFirebase, useAuth, useDoc } from '@/firebase';
 import { collection, doc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
@@ -56,6 +58,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [content, setContent] = useState<Channel[]>([]);
   const [isLoadingContent, setIsLoadingContent] = useState(true);
+  const [autoAdvance, setAutoAdvance] = useState(false);
+
 
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
@@ -124,9 +128,47 @@ export default function App() {
     }
   }, [firestore, user]);
 
+  const playableContent = useMemo(() => {
+    const flatList: (Channel | Episode)[] = [];
+    const contentToFilter = filteredCategory === 'all'
+      ? content
+      : content.filter((c) => c.category === filteredCategory);
+
+    contentToFilter.forEach(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+            flatList.push(item);
+        } else if (item.type === 'series-episodes' && (item as Series).episodes) {
+            flatList.push(...(item as Series).episodes!);
+        } else if (item.type === 'series-seasons' && (item as Series).seasons) {
+            (item as Series).seasons!.forEach(season => {
+                flatList.push(...season.episodes);
+            });
+        }
+    });
+    return flatList;
+  }, [content, filteredCategory]);
+
+
+  const handleNavigation = useCallback((direction: 'next' | 'prev') => {
+      if (playableContent.length < 2 || !currentContent) return;
+
+      const currentIndex = playableContent.findIndex(item => item.id === currentContent.id);
+      if (currentIndex === -1) return;
+
+      let nextIndex;
+      if (direction === 'next') {
+          nextIndex = (currentIndex + 1) % playableContent.length;
+      } else {
+          nextIndex = (currentIndex - 1 + playableContent.length) % playableContent.length;
+      }
+      
+      const nextContent = playableContent[nextIndex];
+      handleChannelClick(nextContent);
+  }, [playableContent, currentContent]);
+
 
   const handleChannelClick = (item: Channel | Episode) => {
-    const url = (item as any).url || (item as any).episodeUrl;
+    const url = (item as any).url || (item as any).episodeUrl || (item as any).url;
     if (url) {
         setSourceToPlay(url);
         setCurrentContent(item);
@@ -141,6 +183,12 @@ export default function App() {
     }
   };
   
+  const handleAutoAdvance = () => {
+    if(autoAdvance) {
+      handleNavigation('next');
+    }
+  }
+
   const isLoading = isUserLoading || isProfileLoading || isLoadingContent;
 
   if (isLoading) {
@@ -248,13 +296,21 @@ export default function App() {
           {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
         </Button>
         <div className="player-container" id="videoPlayer">
-          <VideoPlayer source={sourceToPlay} />
+          <VideoPlayer source={sourceToPlay} onEnded={handleAutoAdvance} />
         </div>
         <div className="player-controls">
           <div className="now-playing">▶️ {currentContent?.name || 'Nenhum canal selecionado'}</div>
           <div className="control-buttons">
-            <Button variant="secondary" disabled>⏮️ Anterior</Button>
-            <Button variant="secondary" disabled>Próximo ⏭️</Button>
+            <Button variant="secondary" onClick={() => handleNavigation('prev')} disabled={playableContent.length < 2}>
+                <SkipBack className='h-4 w-4 mr-2'/> Anterior
+            </Button>
+            <Button variant="secondary" onClick={() => handleNavigation('next')} disabled={playableContent.length < 2}>
+                Próximo <SkipForward className='h-4 w-4 ml-2'/>
+            </Button>
+          </div>
+           <div className="flex items-center space-x-2 mt-2">
+            <Checkbox id="auto-advance" checked={autoAdvance} onCheckedChange={(c) => setAutoAdvance(!!c)} />
+            <Label htmlFor="auto-advance">Avançar Automaticamente</Label>
           </div>
         </div>
       </div>

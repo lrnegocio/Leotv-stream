@@ -291,6 +291,103 @@ function AddUserDialog({ onUserAdded }: { onUserAdded: () => void }) {
   );
 }
 
+function EditUserDialog({ user, onUserEdited, onOpenChange }: { user: User, onUserEdited: () => void, onOpenChange: (open: boolean) => void }) {
+  const [plan, setPlan] = useState<UserPlan>(user.plan);
+  const [expiry, setExpiry] = useState(user.planExpiry ? user.planExpiry.split('T')[0] : '');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const firestore = useFirestore();
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    if (!firestore) {
+        setError('Serviço indisponível.');
+        setIsLoading(false);
+        return;
+    }
+    
+    try {
+        const userRef = doc(firestore, 'users', user.id);
+        let newExpiryDate: string | null = null;
+        if (plan === 'trial' || plan === 'monthly') {
+            if (expiry) {
+                const date = new Date(expiry);
+                date.setUTCHours(23, 59, 59, 999);
+                newExpiryDate = date.toISOString();
+            } else {
+              // Set a default if empty
+              const date = new Date();
+              if(plan === 'trial') date.setDate(date.getDate() + 1);
+              else date.setMonth(date.getMonth() + 1);
+              newExpiryDate = date.toISOString();
+            }
+        }
+
+        await updateDoc(userRef, {
+            plan: plan,
+            planExpiry: newExpiryDate
+        });
+        
+        onUserEdited();
+
+    } catch (err: any) {
+        console.error('Error updating user:', err);
+        setError('Ocorreu um erro ao atualizar o usuário: ' + err.message);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Editar Usuário: {user.username}</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleEditUser} className="space-y-4">
+        <div>
+          <Label htmlFor="edit-plan-type">Tipo de Plano</Label>
+          <Select value={plan} onValueChange={(v) => setPlan(v as UserPlan)} disabled={isLoading}>
+              <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano" />
+              </SelectTrigger>
+              <SelectContent>
+                  <SelectItem value="trial">Teste Grátis</SelectItem>
+                  <SelectItem value="monthly">Plano Mensal</SelectItem>
+                  <SelectItem value="custom">Personalizado / Vitalício</SelectItem>
+              </SelectContent>
+          </Select>
+        </div>
+
+        {(plan === 'trial' || plan === 'monthly') && (
+          <div>
+            <Label htmlFor="edit-expiry-date">Data de Expiração</Label>
+            <Input
+              id="edit-expiry-date"
+              type="date"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value)}
+              disabled={isLoading}
+              required
+            />
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
 
 function UsersTab() {
   const firestore = useFirestore();
@@ -300,6 +397,7 @@ function UsersTab() {
   );
   const { data: users, isLoading, error } = useCollection<User>(usersQuery);
   const [isAddUserOpen, setAddUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   if (error) {
     console.error("Error fetching users:", error);
@@ -387,6 +485,17 @@ function UsersTab() {
           </DialogTrigger>
           <AddUserDialog onUserAdded={() => setAddUserOpen(false)} />
         </Dialog>
+        
+        {editingUser && (
+            <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+                <EditUserDialog 
+                    user={editingUser} 
+                    onUserEdited={() => setEditingUser(null)} 
+                    onOpenChange={(open) => !open && setEditingUser(null)}
+                />
+            </Dialog>
+        )}
+
       </div>
       <div className="table-container">
         <table className="w-full">
@@ -430,7 +539,7 @@ function UsersTab() {
                     </span>
                   </td>
                   <td className="p-4 flex items-center gap-2">
-                    <Button variant="ghost" size="icon" disabled>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingUser(user)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
@@ -710,7 +819,7 @@ function ChannelsTab() {
           <DialogContent className="max-w-4xl h-[70vh]">
               <DialogHeader><DialogTitle>Pré-visualização</DialogTitle></DialogHeader>
               <div className="w-full h-full rounded-lg overflow-hidden mt-4">
-                  <VideoPlayer source={previewUrl} />
+                  <VideoPlayer source={previewUrl} onEnded={() => {}} />
               </div>
           </DialogContent>
       </Dialog>
