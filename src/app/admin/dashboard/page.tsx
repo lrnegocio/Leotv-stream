@@ -1040,5 +1040,3 @@ function SettingsTab() {
     </div>
   );
 }
-
-    
