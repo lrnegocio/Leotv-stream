@@ -1,5 +1,10 @@
-# Firebase Studio
+# Léo TV & Stream
 
-This is a NextJS starter in Firebase Studio.
+Este é um projeto Next.js para uma plataforma de streaming de vídeo.
 
-To get started, take a look at src/app/page.tsx.
+## Funcionalidades
+
+- Player de vídeo para canais, filmes e séries.
+- Painel de administração para gerenciamento de usuários e conteúdo.
+- Sistema de login para usuários e admin.
+- Deploy automatizado com GitHub Actions.
