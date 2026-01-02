@@ -198,7 +198,7 @@ export default function LoginPage() {
           <div>
             <Label htmlFor="password">Senha</Label>
             <Input 
-              type="password" 
+              type="password"
               id="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -228,5 +228,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
 
     
