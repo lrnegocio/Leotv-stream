@@ -10,3 +10,5 @@ Este é um projeto Next.js para uma plataforma de streaming de vídeo.
 - Deploy automatizado com GitHub Actions.
 
 _Esta linha foi adicionada para reiniciar o deploy._
+
+_Esta linha força um novo deploy após a ativação do Actions._
