@@ -32,7 +32,6 @@ export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
 
 export interface User {
   id: string;
-  email?: string;
   pin: string; 
   role: 'admin' | 'user';
   subscriptionTier: SubscriptionTier;
@@ -43,7 +42,6 @@ export interface User {
   parentalPin?: string;
 }
 
-// Funções de Persistência em LocalStorage para garantir que os PINs funcionem
 const IS_SERVER = typeof window === 'undefined';
 
 const getStorageItem = (key: string, defaultValue: any) => {
@@ -59,11 +57,11 @@ const setStorageItem = (key: string, value: any) => {
 };
 
 export const getMockContent = (): ContentItem[] => getStorageItem('leo_content', []);
+
 export const getMockUsers = (): User[] => {
   const users = getStorageItem('leo_users', [
     { 
       id: 'admin-master', 
-      email: 'admin@leo.tv', 
       pin: 'adm77x2p',
       role: 'admin', 
       subscriptionTier: 'lifetime',

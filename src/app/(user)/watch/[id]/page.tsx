@@ -3,13 +3,14 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Lock, Play, ListOrdered, Layers } from "lucide-react"
+import { ChevronLeft, Lock, Play, ListOrdered, Layers, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VideoPlayer } from "@/components/video-player"
-import { mockContent, Episode } from "@/lib/store"
+import { getMockContent, Episode, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 
 export default function WatchPage() {
   const { id } = useParams()
@@ -18,28 +19,48 @@ export default function WatchPage() {
   const [pin, setPin] = React.useState("")
   const [currentUrl, setCurrentUrl] = React.useState("")
   const [currentEpTitle, setCurrentEpTitle] = React.useState("")
-  
-  const content = mockContent.find(c => c.id === id) || mockContent[0]
+  const [contentList, setContentList] = React.useState<ContentItem[]>([])
+  const [content, setContent] = React.useState<ContentItem | null>(null)
 
   React.useEffect(() => {
-    if (content.isRestricted) {
-      setLocked(true)
+    const list = getMockContent()
+    setContentList(list)
+    const item = list.find(c => c.id === id) || list[0]
+    if (item) {
+      setContent(item)
+      if (item.isRestricted) {
+        setLocked(true)
+      }
+      
+      if (item.type === 'channel' || item.type === 'movie') {
+        setCurrentUrl(item.streamUrl || "")
+        setCurrentEpTitle(item.title)
+      } else if (item.type === 'series' && item.episodes?.length) {
+        setCurrentUrl(item.episodes[0].streamUrl)
+        setCurrentEpTitle(`Episódio ${item.episodes[0].number}`)
+      } else if (item.type === 'multi-season' && item.seasons?.length && item.seasons[0].episodes.length) {
+        setCurrentUrl(item.seasons[0].episodes[0].streamUrl)
+        setCurrentEpTitle(`T1: Ep ${item.seasons[0].episodes[0].number}`)
+      }
     }
-    // Define URL inicial
-    if (content.type === 'channel' || content.type === 'movie') {
-      setCurrentUrl(content.streamUrl || "")
-      setCurrentEpTitle(content.title)
-    } else if (content.type === 'series' && content.episodes?.length) {
-      setCurrentUrl(content.episodes[0].streamUrl)
-      setCurrentEpTitle(`Episódio ${content.episodes[0].number}`)
-    } else if (content.type === 'multi-season' && content.seasons?.length && content.seasons[0].episodes.length) {
-      setCurrentUrl(content.seasons[0].episodes[0].streamUrl)
-      setCurrentEpTitle(`T1: Ep ${content.seasons[0].episodes[0].number}`)
+  }, [id])
+
+  const handleNext = () => {
+    const currentIndex = contentList.findIndex(c => c.id === content?.id)
+    if (currentIndex < contentList.length - 1) {
+      router.push(`/watch/${contentList[currentIndex + 1].id}`)
     }
-  }, [content])
+  }
+
+  const handlePrev = () => {
+    const currentIndex = contentList.findIndex(c => c.id === content?.id)
+    if (currentIndex > 0) {
+      router.push(`/watch/${contentList[currentIndex - 1].id}`)
+    }
+  }
 
   const handleUnlock = () => {
-    if (pin === "1234") { // Senha parental padrão
+    if (pin === "1234") {
       setLocked(false)
       toast({ title: "Desbloqueado", description: "Acesso concedido." })
     } else {
@@ -53,6 +74,8 @@ export default function WatchPage() {
     toast({ title: "Carregando", description: `${prefix} ${ep.number}` })
   }
 
+  if (!content) return null
+
   if (locked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -60,8 +83,8 @@ export default function WatchPage() {
           <div className="mx-auto w-20 h-20 bg-secondary/10 flex items-center justify-center rounded-full mb-4">
             <Lock className="h-10 w-10 text-secondary" />
           </div>
-          <h1 className="text-3xl font-bold font-headline">Conteúdo Restrito</h1>
-          <p className="text-muted-foreground">Digite a senha parental para continuar.</p>
+          <h1 className="text-3xl font-bold font-headline uppercase tracking-tighter">Conteúdo Restrito</h1>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest">Digite a senha parental para continuar.</p>
           <div className="flex gap-2 justify-center">
             <Input 
               type="password" 
@@ -72,9 +95,9 @@ export default function WatchPage() {
               onChange={(e) => setPin(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
             />
-            <Button onClick={handleUnlock} className="bg-secondary hover:bg-secondary/90">ENTRAR</Button>
+            <Button onClick={handleUnlock} className="bg-secondary hover:bg-secondary/90 font-bold uppercase">ENTRAR</Button>
           </div>
-          <Button variant="ghost" onClick={() => router.back()}>Voltar para Home</Button>
+          <Button variant="ghost" onClick={() => router.push('/home')} className="uppercase text-[10px]">Voltar para Home</Button>
         </div>
       </div>
     )
@@ -83,30 +106,34 @@ export default function WatchPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="fixed top-0 inset-x-0 h-16 flex items-center px-6 z-50 bg-gradient-to-b from-background to-transparent pointer-events-none">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="pointer-events-auto rounded-xl bg-black/60 text-white hover:bg-black/80">
+        <Button variant="ghost" size="icon" onClick={() => router.push('/home')} className="pointer-events-auto rounded-xl bg-black/60 text-white hover:bg-black/80">
           <ChevronLeft className="h-6 w-6" />
         </Button>
       </header>
 
       <div className="max-w-6xl mx-auto pt-20 px-6 space-y-8 pb-20">
         <VideoPlayer 
-          url={currentUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ"} 
+          url={currentUrl || ""} 
           title={`${content.title} - ${currentEpTitle}`}
+          onNext={handleNext}
+          onPrev={handlePrev}
         />
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary">{content.genre}</Badge>
-              <span className="text-xs text-muted-foreground uppercase">{content.type}</span>
+              <Badge className="bg-primary uppercase text-[9px] font-bold">{content.genre}</Badge>
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{content.type}</span>
             </div>
-            <h1 className="text-4xl font-extrabold font-headline uppercase">{content.title}</h1>
-            <p className="text-muted-foreground leading-relaxed">{content.description}</p>
+            <h1 className="text-4xl font-extrabold font-headline uppercase tracking-tighter">{content.title}</h1>
+            <p className="text-muted-foreground leading-relaxed text-sm">{content.description}</p>
           </div>
 
           <div className="space-y-6">
             <div className="p-6 bg-card rounded-xl border border-white/5 shadow-lg space-y-4">
-              <h3 className="font-bold text-lg flex items-center gap-2"><ListOrdered className="h-5 w-5 text-primary" /> Episódios / Canais</h3>
+              <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tight">
+                <ListOrdered className="h-5 w-5 text-primary" /> Episódios / Canais
+              </h3>
               
               {content.type === 'series' && (
                 <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2">
@@ -114,7 +141,7 @@ export default function WatchPage() {
                     <Button 
                       key={ep.id} 
                       variant={currentUrl === ep.streamUrl ? "default" : "secondary"}
-                      className="text-xs font-bold"
+                      className="text-[10px] font-bold uppercase"
                       onClick={() => handleEpChange(ep)}
                     >
                       EPISÓDIO {ep.number}
@@ -127,7 +154,7 @@ export default function WatchPage() {
                 <Tabs defaultValue="s1">
                   <TabsList className="w-full bg-black/40">
                     {content.seasons?.map(s => (
-                      <TabsTrigger key={s.id} value={`s${s.number}`} className="flex-1">T {s.number}</TabsTrigger>
+                      <TabsTrigger key={s.id} value={`s${s.number}`} className="flex-1 uppercase font-bold text-[10px]">T {s.number}</TabsTrigger>
                     ))}
                   </TabsList>
                   {content.seasons?.map(s => (
@@ -136,7 +163,7 @@ export default function WatchPage() {
                         <Button 
                           key={ep.id} 
                           variant={currentUrl === ep.streamUrl ? "default" : "secondary"}
-                          className="text-xs"
+                          className="text-[10px] font-bold uppercase"
                           onClick={() => handleEpChange(ep, `T${s.number} Ep`)}
                         >
                           EP {ep.number}
@@ -148,9 +175,13 @@ export default function WatchPage() {
               )}
 
               {content.type === 'channel' && (
-                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-center">
-                  <p className="text-xs font-bold text-primary">TRANSAMISSÃO P2P MASTER ATIVA</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Sinal direto e ultrarrápido</p>
+                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-center space-y-2">
+                  <p className="text-[10px] font-bold text-primary uppercase">SINAL P2P MASTER ATIVO</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-widest">Transmissão Direta Sem Delay</p>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={handlePrev} className="flex-1 text-[10px] uppercase font-bold">Anterior</Button>
+                    <Button variant="secondary" size="sm" onClick={handleNext} className="flex-1 text-[10px] uppercase font-bold">Próximo</Button>
+                  </div>
                 </div>
               )}
             </div>
