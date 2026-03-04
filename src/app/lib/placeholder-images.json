@@ -1,0 +1,41 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "movie-1",
+      "description": "Epic Space Odyssey Movie Poster",
+      "imageUrl": "https://picsum.photos/seed/movie1/600/900",
+      "imageHint": "sci-fi movie"
+    },
+    {
+      "id": "movie-2",
+      "description": "Gritty Crime Drama Movie Poster",
+      "imageUrl": "https://picsum.photos/seed/movie2/600/900",
+      "imageHint": "crime thriller"
+    },
+    {
+      "id": "movie-3",
+      "description": "Animated Adventure Movie Poster",
+      "imageUrl": "https://picsum.photos/seed/movie3/600/900",
+      "imageHint": "animation adventure"
+    },
+    {
+      "id": "series-1",
+      "description": "Cyberpunk Action Series Thumbnail",
+      "imageUrl": "https://picsum.photos/seed/series1/600/900",
+      "imageHint": "cyberpunk city"
+    },
+    {
+      "id": "series-2",
+      "description": "Historical Mystery Series Thumbnail",
+      "imageUrl": "https://picsum.photos/seed/series2/600/900",
+      "imageHint": "vintage mystery"
+    },
+    {
+      "id": "hero-bg",
+      "description": "Cinematic Background",
+      "imageUrl": "https://picsum.photos/seed/hero/1920/1080",
+      "imageHint": "cinema background"
+    }
+  ]
+}

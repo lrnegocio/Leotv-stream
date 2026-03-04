@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/auto-generate-content-description-flow.ts';
+import '@/ai/flows/voice-search-content-flow.ts';
