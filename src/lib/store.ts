@@ -1,4 +1,3 @@
-
 'use client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
