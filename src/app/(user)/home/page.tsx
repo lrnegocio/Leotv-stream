@@ -3,22 +3,31 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Tv, Play, Lock, Folder, FolderOpen } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Tv, Play, Lock, Folder, FolderOpen, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { VoiceSearch } from "@/components/voice-search"
 import { getMockContent, ContentItem } from "@/lib/store"
 import { useSearchParams } from "next/navigation"
+import { toast } from "@/hooks/use-toast"
 
 export default function UserHomePage() {
   const [activeGenre, setActiveGenre] = React.useState<string | null>(null)
   const [content, setContent] = React.useState<ContentItem[]>([])
+  const router = useRouter()
   const searchParams = useSearchParams()
   const searchTerm = searchParams.get('q') || ""
 
   React.useEffect(() => {
     setContent(getMockContent())
   }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem("user_session")
+    toast({ title: "Sessão Encerrada", description: "Você saiu do sistema." })
+    router.push("/login")
+  }
 
   const genres = Array.from(new Set(content.map(c => c.genre)))
   
@@ -44,6 +53,9 @@ export default function UserHomePage() {
         </div>
         <div className="flex items-center gap-4">
           <VoiceSearch />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-destructive transition-colors" title="Sair">
+            <LogOut className="h-5 w-5" />
+          </Button>
           <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold border border-primary/20 text-xs">U</div>
         </div>
       </header>

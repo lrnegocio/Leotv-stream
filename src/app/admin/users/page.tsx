@@ -21,8 +21,7 @@ export default function UserManagementPage() {
     pin: "",
     tier: "test" as SubscriptionTier,
     hours: "6",
-    screens: "1",
-    parentalPin: "0000"
+    screens: "1"
   })
 
   React.useEffect(() => {
@@ -49,8 +48,7 @@ export default function UserManagementPage() {
       expiryDate: expiry,
       maxScreens: parseInt(newUser.screens),
       activeDevices: [],
-      isBlocked: false,
-      parentalPin: newUser.parentalPin
+      isBlocked: false
     }
 
     const updatedUsers = addUser(createdUser)
@@ -78,7 +76,7 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar Acessos</h1>
-          <p className="text-muted-foreground">Gere PINs, defina tempos de expiração e controle telas.</p>
+          <p className="text-muted-foreground">Gere PINs, renove tempos de expiração e controle telas.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -117,14 +115,10 @@ export default function UserManagementPage() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="grid gap-2">
                   <Label>Limite de Telas</Label>
                   <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/20" />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Senha Parental</Label>
-                  <Input maxLength={4} value={newUser.parentalPin} onChange={e => setNewUser({...newUser, parentalPin: e.target.value})} className="bg-black/20" />
                 </div>
               </div>
             </div>

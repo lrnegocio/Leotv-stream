@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation"
 import { ChevronLeft, Lock, Play, ListOrdered, Layers, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VideoPlayer } from "@/components/video-player"
-import { getMockContent, Episode, ContentItem } from "@/lib/store"
+import { getMockContent, Episode, ContentItem, getGlobalParentalPin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -60,11 +60,12 @@ export default function WatchPage() {
   }
 
   const handleUnlock = () => {
-    if (pin === "1234") {
+    const globalPin = getGlobalParentalPin()
+    if (pin === globalPin) {
       setLocked(false)
       toast({ title: "Desbloqueado", description: "Acesso concedido." })
     } else {
-      toast({ variant: "destructive", title: "PIN Incorreto", description: "Verifique a senha parental." })
+      toast({ variant: "destructive", title: "PIN Incorreto", description: "Verifique a senha parental global." })
     }
   }
 

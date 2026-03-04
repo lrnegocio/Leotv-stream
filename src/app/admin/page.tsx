@@ -3,20 +3,28 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck } from "lucide-react"
+import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { getMockUsers, getMockContent } from "@/lib/store"
+import { getMockUsers, getMockContent, getGlobalParentalPin, setGlobalParentalPin } from "@/lib/store"
+import { toast } from "@/hooks/use-toast"
 
 export default function AdminDashboard() {
   const [content, setContent] = React.useState<any[]>([])
   const [users, setUsers] = React.useState<any[]>([])
+  const [parentalPin, setParentalPin] = React.useState("")
 
   React.useEffect(() => {
     setContent(getMockContent())
     setUsers(getMockUsers())
+    setParentalPin(getGlobalParentalPin())
   }, [])
+
+  const handleSaveParentalPin = () => {
+    setGlobalParentalPin(parentalPin)
+    toast({ title: "Configuração Salva", description: "Senha Parental Global atualizada com sucesso." })
+  }
 
   const stats = [
     { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-400" },
@@ -96,18 +104,28 @@ export default function AdminDashboard() {
 
         <Card className="bg-card/50 border-white/5 shadow-xl">
           <CardHeader>
-            <CardTitle className="uppercase text-lg">Ações do Sistema</CardTitle>
+            <CardTitle className="uppercase text-lg">Configurações do Sistema</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="p-4 bg-muted/30 rounded-lg border border-white/5">
                <h4 className="font-semibold mb-2 flex items-center gap-2 uppercase text-xs"><ShieldCheck className="h-4 w-4 text-green-400" /> Sistema P2P Master Ativo</h4>
                <p className="text-[10px] text-muted-foreground uppercase">Sua rede está otimizada para transmissões em tempo real 4K sem travamentos.</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium uppercase tracking-tighter">Senha Parental Mestra (Global)</p>
+            
+            <div className="space-y-3">
+              <label className="text-sm font-medium uppercase tracking-tighter flex items-center gap-2">
+                <Lock className="h-4 w-4 text-primary" /> Senha Parental Global
+              </label>
+              <p className="text-[10px] text-muted-foreground uppercase mb-2">Esta senha será usada para desbloquear todos os canais restritos/adultos.</p>
               <div className="flex gap-2">
-                <Input defaultValue="1234" className="bg-background border-white/10" maxLength={4} />
-                <Button size="sm" className="uppercase font-bold">Salvar</Button>
+                <Input 
+                  value={parentalPin} 
+                  onChange={(e) => setParentalPin(e.target.value)} 
+                  className="bg-background border-white/10 text-center font-bold tracking-widest" 
+                  maxLength={4} 
+                  type="password"
+                />
+                <Button onClick={handleSaveParentalPin} className="uppercase font-bold">Salvar Senha</Button>
               </div>
             </div>
           </CardContent>

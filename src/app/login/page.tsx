@@ -6,20 +6,29 @@ import { useRouter } from "next/navigation"
 import { Tv, Key, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
 import { getMockUsers } from "@/lib/store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
+  const [rememberMe, setRememberMe] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const router = useRouter()
+
+  React.useEffect(() => {
+    const savedPin = localStorage.getItem("remembered_pin")
+    if (savedPin) {
+      setPin(savedPin)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simula delay de verificação
     setTimeout(() => {
       const users = getMockUsers()
       const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
@@ -35,6 +44,12 @@ export default function LoginPage() {
           toast({ variant: "destructive", title: "PIN Expirado", description: "Seu acesso expirou. Renove com o suporte." })
           setLoading(false)
           return
+        }
+
+        if (rememberMe) {
+          localStorage.setItem("remembered_pin", pin)
+        } else {
+          localStorage.removeItem("remembered_pin")
         }
 
         localStorage.setItem("user_session", JSON.stringify({
@@ -82,6 +97,14 @@ export default function LoginPage() {
                   required
                 />
               </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe} 
+                onCheckedChange={(val) => setRememberMe(!!val)}
+              />
+              <label htmlFor="remember" className="text-xs font-medium cursor-pointer uppercase tracking-widest text-muted-foreground">Lembrar meu PIN</label>
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-12 text-lg font-semibold" disabled={loading}>
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "ENTRAR AGORA"}

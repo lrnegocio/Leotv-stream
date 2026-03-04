@@ -39,7 +39,6 @@ export interface User {
   maxScreens: number;
   activeDevices: string[]; 
   isBlocked: boolean;
-  parentalPin?: string;
 }
 
 const IS_SERVER = typeof window === 'undefined';
@@ -67,12 +66,14 @@ export const getMockUsers = (): User[] => {
       subscriptionTier: 'lifetime',
       maxScreens: 10,
       activeDevices: [],
-      isBlocked: false,
-      parentalPin: '1234'
+      isBlocked: false
     }
   ]);
   return users;
 };
+
+export const getGlobalParentalPin = (): string => getStorageItem('leo_global_parental_pin', '1234');
+export const setGlobalParentalPin = (pin: string) => setStorageItem('leo_global_parental_pin', pin);
 
 export const generateRandomPin = (length: number = 6) => {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
