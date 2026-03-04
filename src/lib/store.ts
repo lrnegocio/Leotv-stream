@@ -1,4 +1,6 @@
 
+'use client';
+
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 
 export interface Episode {
@@ -23,7 +25,7 @@ export interface ContentItem {
   isRestricted: boolean; 
   streamUrl?: string; 
   seasons?: Season[];
-  episodes?: Episode[]; // Para séries simples de uma temporada
+  episodes?: Episode[];
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
@@ -41,49 +43,38 @@ export interface User {
   parentalPin?: string;
 }
 
-export let mockContent: ContentItem[] = [
-  {
-    id: 'c1',
-    title: 'GLOBO RJ HD',
-    type: 'channel',
-    description: 'Transmissão ao vivo regional.',
-    genre: 'CANAIS ABERTOS',
-    isRestricted: false,
-    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-  },
-  {
-    id: 'c2',
-    title: 'HBO PLUS',
-    type: 'channel',
-    description: 'Filmes 24h.',
-    genre: 'CANAIS PREMIUM',
-    isRestricted: false,
-    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-  },
-  {
-    id: 'm1',
-    title: 'Batman: O Cavaleiro das Trevas',
-    type: 'movie',
-    description: 'Filme único de ação.',
-    genre: 'FILMES DE AÇÃO',
-    isRestricted: false,
-    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-  }
-];
+// Funções de Persistência em LocalStorage para garantir que os PINs funcionem
+const IS_SERVER = typeof window === 'undefined';
 
-export let mockUsers: User[] = [
-  { 
-    id: 'admin-master', 
-    email: 'admin@leo.tv', 
-    pin: 'adm77x2p',
-    role: 'admin', 
-    subscriptionTier: 'lifetime',
-    maxScreens: 10,
-    activeDevices: [],
-    isBlocked: false,
-    parentalPin: '1234'
+const getStorageItem = (key: string, defaultValue: any) => {
+  if (IS_SERVER) return defaultValue;
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : defaultValue;
+};
+
+const setStorageItem = (key: string, value: any) => {
+  if (!IS_SERVER) {
+    localStorage.setItem(key, JSON.stringify(value));
   }
-];
+};
+
+export const getMockContent = (): ContentItem[] => getStorageItem('leo_content', []);
+export const getMockUsers = (): User[] => {
+  const users = getStorageItem('leo_users', [
+    { 
+      id: 'admin-master', 
+      email: 'admin@leo.tv', 
+      pin: 'adm77x2p',
+      role: 'admin', 
+      subscriptionTier: 'lifetime',
+      maxScreens: 10,
+      activeDevices: [],
+      isBlocked: false,
+      parentalPin: '1234'
+    }
+  ]);
+  return users;
+};
 
 export const generateRandomPin = (length: number = 6) => {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -95,21 +86,36 @@ export const generateRandomPin = (length: number = 6) => {
 };
 
 export const addContent = (item: ContentItem) => {
-  mockContent = [...mockContent, item];
+  const content = getMockContent();
+  const updated = [...content, item];
+  setStorageItem('leo_content', updated);
+  return updated;
 };
 
 export const updateContent = (item: ContentItem) => {
-  mockContent = mockContent.map(c => c.id === item.id ? item : c);
+  const content = getMockContent();
+  const updated = content.map(c => c.id === item.id ? item : c);
+  setStorageItem('leo_content', updated);
+  return updated;
 };
 
 export const deleteContent = (id: string) => {
-  mockContent = mockContent.filter(c => c.id !== id);
+  const content = getMockContent();
+  const updated = content.filter(c => c.id !== id);
+  setStorageItem('leo_content', updated);
+  return updated;
 };
 
 export const addUser = (user: User) => {
-  mockUsers = [...mockUsers, user];
+  const users = getMockUsers();
+  const updated = [...users, user];
+  setStorageItem('leo_users', updated);
+  return updated;
 };
 
 export const updateUser = (user: User) => {
-  mockUsers = mockUsers.map(u => u.id === user.id ? user : u);
+  const users = getMockUsers();
+  const updated = users.map(u => u.id === user.id ? user : u);
+  setStorageItem('leo_users', updated);
+  return updated;
 };

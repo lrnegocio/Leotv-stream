@@ -3,21 +3,21 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Tv, Users, CreditCard, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, Film, Tv, Users, CreditCard, LogOut } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
-        <Sidebar className="border-r border-white/5 shadow-xl">
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        <Sidebar className="border-r border-white/5 shadow-xl bg-card">
           <SidebarHeader className="p-6">
             <Link href="/admin" className="flex items-center gap-3">
               <div className="bg-primary p-2 rounded-lg">
                 <Tv className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-primary font-headline">Léo Admin</span>
+              <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter">Léo Admin</span>
             </Link>
           </SidebarHeader>
           <SidebarContent>
@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/content">
                     <Film className="h-5 w-5" />
-                    <span>Gerenciar Conteúdo</span>
+                    <span>Gerenciar Canais/Filmes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/users">
                     <Users className="h-5 w-5" />
-                    <span>Gerenciar Clientes/PINs</span>
+                    <span>Clientes & PINs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -51,14 +51,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link href="/admin/subscriptions">
                     <CreditCard className="h-5 w-5" />
                     <span>Financeiro</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/admin/settings">
-                    <Settings className="h-5 w-5" />
-                    <span>Configurações</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

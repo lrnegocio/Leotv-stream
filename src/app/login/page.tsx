@@ -3,12 +3,12 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key } from "lucide-react"
+import { Tv, Key, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { mockUsers } from "@/lib/store"
+import { getMockUsers } from "@/lib/store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
@@ -19,8 +19,10 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
+    // Simula delay de verificação
     setTimeout(() => {
-      const user = mockUsers.find(u => u.pin === pin.toLowerCase())
+      const users = getMockUsers()
+      const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
 
       if (user) {
         if (user.isBlocked) {
@@ -63,8 +65,8 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <Tv className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Léo Tv & Stream</CardTitle>
-          <CardDescription>Insira seu código de acesso para entrar</CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline uppercase">Léo Tv</CardTitle>
+          <CardDescription>Insira seu código de acesso</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -74,7 +76,7 @@ export default function LoginPage() {
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="DIGITE SEU PIN" 
-                  className="pl-10 text-center text-lg tracking-widest uppercase font-bold"
+                  className="pl-10 text-center text-lg tracking-widest uppercase font-bold bg-black/20"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   required
@@ -82,13 +84,13 @@ export default function LoginPage() {
               </div>
             </div>
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-12 text-lg font-semibold" disabled={loading}>
-              {loading ? "Verificando..." : "Entrar Agora"}
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "ENTRAR AGORA"}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <p className="text-xs text-center text-muted-foreground">
-            Sistema P2P Master Ativo.
+        <CardFooter>
+          <p className="text-[10px] text-center w-full text-muted-foreground uppercase tracking-widest">
+            Sistema P2P Mestre Ultra Rápido
           </p>
         </CardFooter>
       </Card>
