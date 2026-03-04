@@ -1,10 +1,10 @@
-
 "use client"
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { mockUsers, mockContent } from "@/lib/store"
 
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
         <Card className="bg-card/50 border-white/5 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Últimos Acessos Gerados</CardTitle>
-            <Button variant="ghost" size="sm" asChild><Link href="/admin/users text-primary">Ver todos</Link></Button>
+            <Button variant="ghost" size="sm" asChild><Link href="/admin/users">Ver todos</Link></Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
