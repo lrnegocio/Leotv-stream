@@ -57,17 +57,22 @@ const setStorageItem = (key: string, value: any) => {
 export const getMockContent = (): ContentItem[] => getStorageItem('leo_content', []);
 
 export const getMockUsers = (): User[] => {
-  const users = getStorageItem('leo_users', [
-    { 
+  const users = getStorageItem('leo_users', []);
+  // Garantir que o Admin Master sempre exista e nunca expire
+  const adminExists = users.some((u: User) => u.pin === 'adm77x2p');
+  if (!adminExists) {
+    const admin: User = { 
       id: 'admin-master', 
       pin: 'adm77x2p',
       role: 'admin', 
       subscriptionTier: 'lifetime',
-      maxScreens: 10,
+      maxScreens: 99,
       activeDevices: [],
       isBlocked: false
-    }
-  ]);
+    };
+    users.push(admin);
+    setStorageItem('leo_users', users);
+  }
   return users;
 };
 
