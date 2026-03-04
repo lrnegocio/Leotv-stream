@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Tv, Users, CreditCard, Settings, LogOut, Search } from "lucide-react"
+import { LayoutDashboard, Film, Tv, Users, CreditCard, Settings, LogOut } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin">
                     <LayoutDashboard className="h-5 w-5" />
-                    <span>Dashboard</span>
+                    <span>Painel Geral</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/content">
                     <Film className="h-5 w-5" />
-                    <span>Content Management</span>
+                    <span>Gerenciar Conteúdo</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/users">
                     <Users className="h-5 w-5" />
-                    <span>User Management</span>
+                    <span>Gerenciar Clientes/PINs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/subscriptions">
                     <CreditCard className="h-5 w-5" />
-                    <span>Subscriptions</span>
+                    <span>Financeiro</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <SidebarMenuButton asChild>
                   <Link href="/admin/settings">
                     <Settings className="h-5 w-5" />
-                    <span>Parental Lock & System</span>
+                    <span>Configurações</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <SidebarMenuButton asChild className="text-destructive hover:bg-destructive/10">
               <Link href="/login">
                 <LogOut className="h-5 w-5" />
-                <span>Sign Out</span>
+                <span>Sair do Sistema</span>
               </Link>
             </SidebarMenuButton>
           </SidebarFooter>
@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold">A</div>
-                <span className="text-sm font-medium">Administrator</span>
+                <span className="text-sm font-medium">Administrador Master</span>
               </div>
             </div>
           </header>

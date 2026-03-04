@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key, Lock } from "lucide-react"
+import { Tv, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,34 +24,33 @@ export default function LoginPage() {
 
       if (user) {
         if (user.isBlocked) {
-          toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso pelo administrador." })
+          toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso." })
           setLoading(false)
           return
         }
 
         if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
-          toast({ variant: "destructive", title: "PIN Expirado", description: "Seu tempo de acesso acabou. Renove com o suporte." })
+          toast({ variant: "destructive", title: "PIN Expirado", description: "Seu acesso expirou. Renove com o suporte." })
           setLoading(false)
           return
         }
 
-        // Store session
         localStorage.setItem("user_session", JSON.stringify({
           id: user.id,
           role: user.role,
           pin: user.pin,
-          deviceId: Math.random().toString(36).substring(7) // Simple device ID simulation
+          deviceId: Math.random().toString(36).substring(7)
         }))
 
         if (user.role === 'admin') {
-          toast({ title: "Bem-vindo, Admin!", description: "Painel de controle liberado." })
+          toast({ title: "Bem-vindo, Administrador!", description: "Acesso total liberado." })
           router.push("/admin")
         } else {
-          toast({ title: "Acesso Liberado!", description: `Sua assinatura é: ${user.subscriptionTier}` })
+          toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
           router.push("/home")
         }
       } else {
-        toast({ variant: "destructive", title: "Erro de Acesso", description: "PIN ou Código inválido." })
+        toast({ variant: "destructive", title: "Erro de Acesso", description: "PIN inválido ou inexistente." })
       }
       setLoading(false)
     }, 800)
@@ -65,36 +64,32 @@ export default function LoginPage() {
             <Tv className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Léo Tv & Stream</CardTitle>
-          <CardDescription>Insira seu código PIN para começar</CardDescription>
+          <CardDescription>Insira seu código de acesso para entrar</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Código de Acesso (PIN)</label>
+              <label className="text-sm font-medium">Seu Código PIN</label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Ex: ab12cd" 
-                  className="pl-10 text-center text-lg tracking-widest uppercase"
+                  placeholder="DIGITE SEU PIN" 
+                  className="pl-10 text-center text-lg tracking-widest uppercase font-bold"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   required
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-12 text-lg font-semibold transition-all-smooth" disabled={loading}>
-              {loading ? "Validando..." : "Entrar no Sistema"}
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-12 text-lg font-semibold" disabled={loading}>
+              {loading ? "Verificando..." : "Entrar Agora"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <p className="text-xs text-center text-muted-foreground">
-            Ainda não tem um código? Solicite um teste grátis com o suporte.
+            Sistema P2P Master Ativo.
           </p>
-          <div className="grid grid-cols-2 gap-2 w-full text-[10px] text-muted-foreground/50 border-t pt-4 border-white/5">
-            <div>Admin: admin123</div>
-            <div>Teste: test1234</div>
-          </div>
         </CardFooter>
       </Card>
     </div>

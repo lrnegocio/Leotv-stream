@@ -20,9 +20,9 @@ export interface ContentItem {
   description: string;
   genre: string;
   thumbnail: string;
-  isRestricted: boolean; // For adult content / locked content
-  streamUrl?: string; // For movies or channels
-  seasons?: Season[]; // For series
+  isRestricted: boolean; 
+  streamUrl?: string; 
+  seasons?: Season[]; 
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
@@ -30,35 +30,44 @@ export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
 export interface User {
   id: string;
   email?: string;
-  pin: string; // The access code
+  pin: string; 
   role: 'admin' | 'user';
   subscriptionTier: SubscriptionTier;
-  expiryDate?: string; // ISO string
+  expiryDate?: string; 
   maxScreens: number;
-  activeDevices: string[]; // List of device IDs
+  activeDevices: string[]; 
   isBlocked: boolean;
   parentalPin?: string;
 }
 
-// In-memory mock data
 export let mockContent: ContentItem[] = [
   {
     id: 'm1',
-    title: 'Neon Shadows',
+    title: 'Sombras de Neon',
     type: 'movie',
-    description: 'A detective in a neon-lit futuristic city uncovers a conspiracy.',
-    genre: 'Sci-Fi',
+    description: 'Um detetive em uma cidade futurista iluminada por neon descobre uma conspiração que ameaça a humanidade.',
+    genre: 'Ficção Científica',
     thumbnail: 'https://picsum.photos/seed/movie1/600/900',
     isRestricted: false,
     streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
     id: 'c1',
-    title: 'HBO Latino',
+    title: 'HBO Latino HD',
     type: 'channel',
-    description: 'Canal de filmes e séries premiadas.',
+    description: 'O melhor do cinema mundial e séries exclusivas 24 horas por dia.',
     genre: 'Premium',
     thumbnail: 'https://picsum.photos/seed/hbo/600/900',
+    isRestricted: false,
+    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+  },
+  {
+    id: 'm2',
+    title: 'Horizonte Perdido',
+    type: 'movie',
+    description: 'Uma jornada épica através de terras desconhecidas em busca de uma civilização antiga.',
+    genre: 'Aventura',
+    thumbnail: 'https://picsum.photos/seed/movie2/600/900',
     isRestricted: false,
     streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   }
@@ -66,26 +75,15 @@ export let mockContent: ContentItem[] = [
 
 export let mockUsers: User[] = [
   { 
-    id: 'u1', 
+    id: 'admin-master', 
     email: 'admin@leo.tv', 
-    pin: 'admin123',
+    pin: 'adm77x2p',
     role: 'admin', 
     subscriptionTier: 'lifetime',
     maxScreens: 10,
     activeDevices: [],
     isBlocked: false,
     parentalPin: '1234'
-  },
-  { 
-    id: 'u2', 
-    pin: 'test1234',
-    role: 'user', 
-    subscriptionTier: 'test',
-    expiryDate: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), // 6 hours from now
-    maxScreens: 1,
-    activeDevices: [],
-    isBlocked: false,
-    parentalPin: '0000'
   }
 ];
 

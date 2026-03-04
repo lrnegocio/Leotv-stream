@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,7 +14,7 @@ export default function AdminDashboard() {
     { title: "Clientes Ativos", value: mockUsers.length.toString(), icon: Users, color: "text-blue-400" },
     { title: "Canais P2P", value: mockContent.filter(c => c.type === 'channel').length.toString(), icon: Tv, color: "text-primary" },
     { title: "Filmes/Séries", value: mockContent.filter(c => c.type !== 'channel').length.toString(), icon: Film, color: "text-secondary" },
-    { title: "PINs Gerados", value: "152", icon: Key, color: "text-orange-400" },
+    { title: "PINs Criados", value: "152", icon: Key, color: "text-orange-400" },
   ]
 
   return (
@@ -50,7 +51,7 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center">
                 <ArrowUpRight className="h-3 w-3 mr-1 text-green-400" />
-                Crescimento constante
+                Crescimento estável
               </p>
             </CardContent>
           </Card>
@@ -60,22 +61,24 @@ export default function AdminDashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="bg-card/50 border-white/5 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Últimos Acessos Gerados</CardTitle>
+            <CardTitle>Acessos Recentes</CardTitle>
             <Button variant="ghost" size="sm" asChild><Link href="/admin/users">Ver todos</Link></Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {mockUsers.slice(0, 5).map((user) => (
                 <div key={user.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors group">
-                  <div className="w-10 h-10 bg-muted rounded flex items-center justify-center font-mono font-bold text-primary">
-                    {user.pin.substring(0, 2).toUpperCase()}
+                  <div className="w-10 h-10 bg-muted rounded flex items-center justify-center font-mono font-bold text-primary uppercase">
+                    {user.pin.substring(0, 2)}
                   </div>
                   <div className="flex-1">
                     <p className="font-bold uppercase tracking-widest">{user.pin}</p>
-                    <p className="text-xs text-muted-foreground">Plano {user.subscriptionTier} • {user.maxScreens} Telas</p>
+                    <p className="text-xs text-muted-foreground">Plano {user.subscriptionTier === 'test' ? 'Teste' : 'Mensal'} • {user.maxScreens} Telas</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-medium">{user.isBlocked ? 'BLOQUEADO' : 'ATIVO'}</p>
+                    <p className={`text-xs font-bold ${user.isBlocked ? 'text-destructive' : 'text-green-400'}`}>
+                      {user.isBlocked ? 'BLOQUEADO' : 'ATIVO'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -85,18 +88,18 @@ export default function AdminDashboard() {
 
         <Card className="bg-card/50 border-white/5 shadow-xl">
           <CardHeader>
-            <CardTitle>Configurações Rápidas</CardTitle>
+            <CardTitle>Ações do Sistema</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 bg-muted/30 rounded-lg border border-white/5">
-               <h4 className="font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-400" /> Sistema P2P Master</h4>
-               <p className="text-xs text-muted-foreground">Seu sistema está rodando com aceleração PWA e rede P2P otimizada para canais 4K.</p>
+               <h4 className="font-semibold mb-2 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-green-400" /> Sistema P2P Master Ativo</h4>
+               <p className="text-xs text-muted-foreground">Sua rede está otimizada para transmissões em tempo real 4K.</p>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Senha Mestra Parental (Global)</p>
+              <p className="text-sm font-medium">Senha Parental Padrão</p>
               <div className="flex gap-2">
                 <Input defaultValue="1234" className="bg-background border-white/10" maxLength={4} />
-                <Button size="sm">Salvar</Button>
+                <Button size="sm">Atualizar</Button>
               </div>
             </div>
           </CardContent>
