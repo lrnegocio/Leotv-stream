@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Tv, Users, CreditCard, LogOut } from "lucide-react"
+import { LayoutDashboard, Film, Tv, Users, Settings, LogOut } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -48,9 +48,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/admin/subscriptions">
-                    <CreditCard className="h-5 w-5" />
-                    <span>Financeiro</span>
+                  <Link href="/admin/settings">
+                    <Settings className="h-5 w-5" />
+                    <span>Configurações</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
