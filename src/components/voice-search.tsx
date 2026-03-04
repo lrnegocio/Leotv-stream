@@ -2,10 +2,10 @@
 "use client"
 
 import * as React from "react"
-import { Mic, Search, Loader2 } from "lucide-react"
+import { Mic, Search, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { voiceSearchContent, VoiceSearchContentOutput } from "@/ai/flows/voice-search-content-flow"
+import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
 import { toast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
@@ -19,13 +19,16 @@ export function VoiceSearch() {
     if (!searchTerm) return
     setIsProcessing(true)
     try {
+      // O fluxo da IA ajuda a entender se é uma categoria ou nome
       const result = await voiceSearchContent({ query: searchTerm })
-      router.push(`/search?q=${encodeURIComponent(result.searchTerm)}&category=${result.searchCategory}`)
+      // Redireciona para home com os filtros já pensados
+      router.push(`/home?q=${encodeURIComponent(result.searchTerm)}`)
+      toast({ title: "Busca Inteligente", description: `Encontrando: ${result.searchTerm}` })
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Search Error",
-        description: "Could not process your voice command."
+        title: "Erro na Busca",
+        description: "Não foi possível processar o comando de voz."
       })
     } finally {
       setIsProcessing(false)
@@ -36,8 +39,8 @@ export function VoiceSearch() {
     if (!('webkitSpeechRecognition' in window)) {
       toast({
         variant: "destructive",
-        title: "Not Supported",
-        description: "Speech recognition is not supported in this browser."
+        title: "Não Suportado",
+        description: "Reconhecimento de voz não disponível neste navegador."
       })
       return
     }
@@ -45,7 +48,7 @@ export function VoiceSearch() {
     const recognition = new (window as any).webkitSpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = false
-    recognition.lang = 'en-US'
+    recognition.lang = 'pt-BR' // Configurado para Português
 
     recognition.onstart = () => setIsListening(true)
     recognition.onresult = (event: any) => {
@@ -57,8 +60,8 @@ export function VoiceSearch() {
       setIsListening(false)
       toast({
         variant: "destructive",
-        title: "Microphone Error",
-        description: "Access to microphone was denied or failed."
+        title: "Erro de Microfone",
+        description: "Acesso negado ou falhou."
       })
     }
     recognition.onend = () => setIsListening(false)
@@ -71,12 +74,17 @@ export function VoiceSearch() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search movies, series..."
-          className="pl-10 pr-10 bg-card/50 border-none focus:ring-primary"
+          placeholder="Busque canais, pastas ou filmes..."
+          className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch(query)}
         />
+        {query && (
+          <Button variant="ghost" size="icon" className="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6" onClick={() => setQuery("")}>
+            <X className="h-3 w-3" />
+          </Button>
+        )}
         {isProcessing && (
           <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
         )}
@@ -84,10 +92,10 @@ export function VoiceSearch() {
       <Button
         variant={isListening ? "destructive" : "secondary"}
         size="icon"
-        className={`rounded-full shadow-lg transition-all-smooth ${isListening ? "animate-pulse" : ""}`}
+        className={`rounded-xl shadow-lg transition-all-smooth h-10 w-10 ${isListening ? "animate-pulse" : ""}`}
         onClick={startListening}
       >
-        <Mic className="h-4 w-4" />
+        <Mic className="h-5 w-5" />
       </Button>
     </div>
   )

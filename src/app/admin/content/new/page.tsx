@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Plus, Trash2, ListOrdered, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,23 +12,49 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
 import { toast } from "@/hooks/use-toast"
-import { addContent } from "@/lib/store"
+import { addContent, Season, Episode, ContentType } from "@/lib/store"
 import Link from "next/link"
 
 export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   const [generating, setGenerating] = React.useState(false)
+  
   const [formData, setFormData] = React.useState({
     title: "",
-    type: "channel" as any,
+    type: "channel" as ContentType,
     genre: "",
-    keywords: "",
     description: "",
     streamUrl: "",
     isRestricted: false,
-    thumbnail: ""
   })
+
+  const [episodes, setEpisodes] = React.useState<Episode[]>([])
+  const [seasons, setSeasons] = React.useState<Season[]>([])
+
+  const addEpisode = (seasonId?: string) => {
+    const newEp: Episode = {
+      id: Math.random().toString(36).substring(7),
+      title: `Episódio ${seasonId ? 'Temporada' : ''}`,
+      number: episodes.length + 1,
+      streamUrl: ""
+    }
+    
+    if (seasonId) {
+      setSeasons(seasons.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
+    } else {
+      setEpisodes([...episodes, newEp])
+    }
+  }
+
+  const addSeason = () => {
+    const newSeason: Season = {
+      id: Math.random().toString(36).substring(7),
+      number: seasons.length + 1,
+      episodes: []
+    }
+    setSeasons([...seasons, newSeason])
+  }
 
   const generateAI = async () => {
     if (!formData.title) {
@@ -39,14 +65,11 @@ export default function NewContentPage() {
     try {
       const res = await autoGenerateContentDescription({
         title: formData.title,
-        contentType: formData.type === 'channel' ? 'movie' : formData.type,
-        genre: formData.genre,
-        keywords: formData.keywords
+        contentType: formData.type === 'channel' ? 'movie' : formData.type as any,
       })
       setFormData(prev => ({ ...prev, description: res.description }))
-      toast({ title: "Descrição Gerada", description: "O texto foi criado pela IA com sucesso." })
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique se você inseriu sua GEMINI_API_KEY no arquivo .env." })
+      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua GEMINI_API_KEY no .env." })
     } finally {
       setGenerating(false)
     }
@@ -59,33 +82,35 @@ export default function NewContentPage() {
     addContent({
       id: Math.random().toString(36).substring(7),
       ...formData,
-      thumbnail: formData.thumbnail || `https://picsum.photos/seed/${formData.title}/600/900`
+      episodes: formData.type === 'series' ? episodes : undefined,
+      seasons: formData.type === 'multi-season' ? seasons : undefined,
+      thumbnail: `https://picsum.photos/seed/${formData.title}/200/200` // Gerado internamente
     })
 
     setTimeout(() => {
-      toast({ title: "Conteúdo Adicionado", description: "Canal/Filme salvo na biblioteca." })
+      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
       router.push("/admin/content")
-    }, 1000)
+    }, 800)
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-bold font-headline">Novo Conteúdo</h1>
+        <h1 className="text-3xl font-bold font-headline">Novo Conteúdo P2P</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-8 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-6">
-          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-lg">
+      <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
             <div className="space-y-2">
-              <Label>Nome do Canal ou Filme</Label>
+              <Label>Nome do Canal, Filme ou Série</Label>
               <Input 
                 value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
-                placeholder="Ex: HBO Plus HD" required
+                placeholder="Ex: HBO Family ou Stranger Things" required
               />
             </div>
 
@@ -95,67 +120,102 @@ export default function NewContentPage() {
                 <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="channel">Canal ao Vivo (P2P)</SelectItem>
-                    <SelectItem value="movie">Filme</SelectItem>
-                    <SelectItem value="series">Série</SelectItem>
+                    <SelectItem value="channel">Canal ao Vivo</SelectItem>
+                    <SelectItem value="movie">Filme Único</SelectItem>
+                    <SelectItem value="series">Série (Episódios Diretos)</SelectItem>
+                    <SelectItem value="multi-season">Série (Temporadas + Episódios)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Categoria / Gênero</Label>
+                <Label>Categoria (Pasta)</Label>
                 <Input 
                   value={formData.genre} 
                   onChange={e => setFormData({...formData, genre: e.target.value})} 
-                  placeholder="Ex: Esportes, Action"
+                  placeholder="Ex: ESPORTES, INFANTIL, 4K"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label>Descrição / Sinopse</Label>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-primary border-primary/20 hover:bg-primary/10"
-                  onClick={generateAI}
-                  disabled={generating}
-                >
-                  {generating ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Sparkles className="mr-2 h-3 w-3" />}
-                  IA: Escrever Sinopse
+                <Label>Descrição</Label>
+                <Button type="button" variant="outline" size="sm" onClick={generateAI} disabled={generating}>
+                  {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                  IA: Gerar Sinopse
                 </Button>
               </div>
-              <Textarea 
-                value={formData.description} 
-                onChange={e => setFormData({...formData, description: e.target.value})}
-                placeholder="Descreva o conteúdo..." 
-                className="h-32" 
-              />
+              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24" />
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-lg">
-            <h3 className="font-semibold flex items-center gap-2"><Globe className="h-4 w-4" /> Fonte da Transmissão</h3>
-            <div className="space-y-2">
-              <Label>URL da Stream (HLS, MP4, M3U8)</Label>
+          {/* Gerenciamento de Links */}
+          {formData.type === 'channel' || formData.type === 'movie' ? (
+            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+              <h3 className="font-semibold flex items-center gap-2 text-primary"><Globe className="h-4 w-4" /> Link da Stream</h3>
               <Input 
                 value={formData.streamUrl} 
                 onChange={e => setFormData({...formData, streamUrl: e.target.value})}
-                placeholder="https://sua-stream.xyz/live.m3u8" 
+                placeholder="https://sua-stream.m3u8" 
                 required
               />
             </div>
-          </div>
+          ) : formData.type === 'series' ? (
+            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Lista de Episódios</h3>
+                <Button type="button" size="sm" onClick={() => addEpisode()}><Plus className="h-4 w-4 mr-1" /> Adicionar Ep</Button>
+              </div>
+              <div className="space-y-3">
+                {episodes.map((ep, idx) => (
+                  <div key={ep.id} className="flex gap-2 items-end bg-black/20 p-3 rounded-lg border border-white/5">
+                    <div className="w-16"><Label className="text-xs">Ep Nº</Label><Input type="number" defaultValue={idx+1} /></div>
+                    <div className="flex-1"><Label className="text-xs">Título/Link</Label><Input placeholder="URL do Episódio" value={ep.streamUrl} onChange={e => {
+                      const newEps = [...episodes];
+                      newEps[idx].streamUrl = e.target.value;
+                      setEpisodes(newEps);
+                    }} /></div>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setEpisodes(episodes.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4" /> Temporadas</h3>
+                <Button type="button" size="sm" onClick={addSeason}><Plus className="h-4 w-4 mr-1" /> Nova Temp</Button>
+              </div>
+              {seasons.map((season, sIdx) => (
+                <div key={season.id} className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-primary">Temporada {season.number}</h4>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)}><Plus className="h-3 w-3 mr-1" /> Add Episódio</Button>
+                  </div>
+                  <div className="space-y-2">
+                    {season.episodes.map((ep, eIdx) => (
+                      <div key={ep.id} className="flex gap-2">
+                        <Input placeholder={`Link Ep ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                          const newSeasons = [...seasons];
+                          newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
+                          setSeasons(newSeasons);
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
-          <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-lg space-y-4">
-            <h3 className="font-semibold flex items-center gap-2"><Lock className="h-4 w-4" /> Restrições</h3>
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><Lock className="h-4 w-4" /> Segurança</h3>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Conteúdo Adulto / Bloqueado</Label>
-                <p className="text-xs text-muted-foreground">Exigir senha para assistir</p>
+                <Label>Conteúdo Restrito</Label>
+                <p className="text-xs text-muted-foreground">Bloqueia com senha parental</p>
               </div>
               <Switch 
                 checked={formData.isRestricted} 
@@ -164,26 +224,9 @@ export default function NewContentPage() {
             </div>
           </div>
 
-          <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-lg space-y-4">
-            <h3 className="font-semibold">Capa / Thumbnail</h3>
-            <Input 
-              placeholder="URL da imagem..." 
-              value={formData.thumbnail}
-              onChange={e => setFormData({...formData, thumbnail: e.target.value})}
-              className="mb-2"
-            />
-            <div className="aspect-[2/3] w-full bg-muted/30 rounded-lg flex items-center justify-center border-2 border-dashed border-white/5 overflow-hidden">
-               {formData.thumbnail ? (
-                 <img src={formData.thumbnail} className="w-full h-full object-cover" />
-               ) : (
-                 <p className="text-xs text-muted-foreground">Prévia da Capa</p>
-               )}
-            </div>
-          </div>
-
-          <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-            Salvar no Sistema
+          <Button type="submit" className="w-full h-14 bg-primary text-lg font-bold shadow-lg shadow-primary/20" disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />}
+            SALVAR NO SISTEMA
           </Button>
         </div>
       </form>

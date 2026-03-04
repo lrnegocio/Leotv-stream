@@ -1,5 +1,5 @@
 
-export type ContentType = 'movie' | 'series' | 'channel';
+export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 
 export interface Episode {
   id: string;
@@ -9,6 +9,7 @@ export interface Episode {
 }
 
 export interface Season {
+  id: string;
   number: number;
   episodes: Episode[];
 }
@@ -19,10 +20,10 @@ export interface ContentItem {
   type: ContentType;
   description: string;
   genre: string;
-  thumbnail: string;
   isRestricted: boolean; 
   streamUrl?: string; 
-  seasons?: Season[]; 
+  seasons?: Season[];
+  episodes?: Episode[]; // Para séries simples de uma temporada
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
@@ -42,32 +43,29 @@ export interface User {
 
 export let mockContent: ContentItem[] = [
   {
-    id: 'm1',
-    title: 'Sombras de Neon',
-    type: 'movie',
-    description: 'Um detetive em uma cidade futurista iluminada por neon descobre uma conspiração que ameaça a humanidade.',
-    genre: 'Ficção Científica',
-    thumbnail: 'https://picsum.photos/seed/movie1/600/900',
-    isRestricted: false,
-    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
-  },
-  {
     id: 'c1',
-    title: 'HBO Latino HD',
+    title: 'GLOBO RJ HD',
     type: 'channel',
-    description: 'O melhor do cinema mundial e séries exclusivas 24 horas por dia.',
-    genre: 'Premium',
-    thumbnail: 'https://picsum.photos/seed/hbo/600/900',
+    description: 'Transmissão ao vivo regional.',
+    genre: 'CANAIS ABERTOS',
     isRestricted: false,
     streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   },
   {
-    id: 'm2',
-    title: 'Horizonte Perdido',
+    id: 'c2',
+    title: 'HBO PLUS',
+    type: 'channel',
+    description: 'Filmes 24h.',
+    genre: 'CANAIS PREMIUM',
+    isRestricted: false,
+    streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
+  },
+  {
+    id: 'm1',
+    title: 'Batman: O Cavaleiro das Trevas',
     type: 'movie',
-    description: 'Uma jornada épica através de terras desconhecidas em busca de uma civilização antiga.',
-    genre: 'Aventura',
-    thumbnail: 'https://picsum.photos/seed/movie2/600/900',
+    description: 'Filme único de ação.',
+    genre: 'FILMES DE AÇÃO',
     isRestricted: false,
     streamUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ'
   }
