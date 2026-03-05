@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2 } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,6 +16,7 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [users, setUsers] = React.useState<User[]>([])
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
   const [newUser, setNewUser] = React.useState({
     pin: "",
     tier: "test" as SubscriptionTier,
@@ -33,28 +33,44 @@ export default function UserManagementPage() {
   }
 
   const handleAddUser = () => {
-    let expiry = undefined;
+    let expiry = undefined
     if (newUser.tier === 'test') {
-      expiry = new Date(Date.now() + parseInt(newUser.hours) * 60 * 60 * 1000).toISOString();
+      expiry = new Date(Date.now() + parseInt(newUser.hours) * 60 * 60 * 1000).toISOString()
     } else if (newUser.tier === 'monthly') {
-      expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     }
 
-    const createdUser: User = {
-      id: Math.random().toString(36).substring(7),
-      pin: newUser.pin || generateRandomPin(),
-      role: 'user',
-      subscriptionTier: newUser.tier,
-      expiryDate: expiry,
-      maxScreens: parseInt(newUser.screens),
-      activeDevices: [],
-      isBlocked: false
+    if (editingUserId) {
+      const updatedUser = users.find(u => u.id === editingUserId)
+      if (updatedUser) {
+        updatedUser.pin = newUser.pin
+        updatedUser.subscriptionTier = newUser.tier
+        updatedUser.maxScreens = parseInt(newUser.screens)
+        updatedUser.expiryDate = expiry
+        const updated = updateUser(updatedUser)
+        setUsers(updated)
+        toast({ title: "PIN Atualizado", description: `O código ${newUser.pin} foi atualizado com sucesso.` })
+      }
+      setEditingUserId(null)
+    } else {
+      const createdUser: User = {
+        id: Math.random().toString(36).substring(7),
+        pin: newUser.pin || generateRandomPin(),
+        role: 'user',
+        subscriptionTier: newUser.tier,
+        expiryDate: expiry,
+        maxScreens: parseInt(newUser.screens),
+        activeDevices: [],
+        isBlocked: false
+      }
+
+      const updatedUsers = addUser(createdUser)
+      setUsers(updatedUsers)
+      toast({ title: "PIN Gerado", description: `O código ${createdUser.pin} foi criado com sucesso.` })
     }
 
-    const updatedUsers = addUser(createdUser)
-    setUsers(updatedUsers)
     setIsDialogOpen(false)
-    toast({ title: "PIN Gerado", description: `O código ${createdUser.pin} foi criado com sucesso.` })
+    setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
   }
 
   const toggleBlock = (userId: string) => {
@@ -65,6 +81,23 @@ export default function UserManagementPage() {
       setUsers(updated)
       toast({ title: user.isBlocked ? "Bloqueado" : "Desbloqueado", description: "O status do usuário foi alterado." })
     }
+  }
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
   }
 
   const filteredUsers = users.filter(u => 
@@ -86,7 +119,7 @@ export default function UserManagementPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
-              <DialogTitle className="uppercase tracking-tight">Gerar Novo Acesso</DialogTitle>
+              <DialogTitle className="uppercase tracking-tight">{editingUserId ? 'Editar' : 'Gerar Novo'} Acesso</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -123,7 +156,7 @@ export default function UserManagementPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddUser} className="w-full font-bold uppercase h-12">Confirmar e Gerar PIN</Button>
+              <Button onClick={handleAddUser} className="w-full font-bold uppercase h-12">{editingUserId ? 'Atualizar' : 'Confirmar e Gerar'} PIN</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -176,7 +209,12 @@ export default function UserManagementPage() {
                     <Button variant="ghost" size="icon" onClick={() => toggleBlock(user.id)} title={user.isBlocked ? "Desbloquear" : "Bloquear"}>
                       {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar PIN" className="text-blue-400">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive" title="Deletar PIN">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
