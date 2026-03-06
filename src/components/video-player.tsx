@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -15,7 +16,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const getEmbedUrl = (rawUrl: string) => {
-    if (!rawUrl) return null
+    if (!rawUrl || rawUrl.trim() === "") return null
     
     try {
       // YouTube
@@ -34,7 +35,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
       }
 
-      return rawUrl
+      // Verificação básica de URL
+      if (rawUrl.startsWith('http')) return rawUrl;
+      return null;
     } catch (e) {
       return null
     }
@@ -64,9 +67,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-6 text-center">
           <AlertCircle className="h-12 w-12 text-destructive/50" />
           <div className="space-y-1">
-            <p className="font-bold uppercase text-xs tracking-widest">Link de transmissão inválido</p>
-            <p className="text-[10px] uppercase opacity-50">Verifique a URL no painel administrativo</p>
+            <p className="font-bold uppercase text-xs tracking-widest text-white">Link de transmissão indisponível</p>
+            <p className="text-[10px] uppercase opacity-50">O formato do link pode não ser compatível com o player interno.</p>
           </div>
+          {url && (
+            <Button variant="outline" size="sm" asChild className="mt-4">
+              <a href={url} target="_blank" rel="noopener noreferrer">
+                ABRIR NO PLAYER EXTERNO
+              </a>
+            </Button>
+          )}
         </div>
       )}
       

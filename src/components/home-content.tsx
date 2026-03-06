@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, Folder, Tv, Play, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getMockContent, getGlobalParentalPin, ContentItem } from "@/lib/store"
+import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -15,6 +16,7 @@ export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
+  const [loading, setLoading] = React.useState(true)
   const router = useRouter()
 
   React.useEffect(() => {
@@ -23,7 +25,18 @@ export default function HomeContent() {
       router.push("/login")
       return
     }
-    setContent(getMockContent())
+    
+    const load = async () => {
+      try {
+        const data = await getRemoteContent()
+        setContent(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [router])
 
   const handleLogout = () => {
@@ -41,16 +54,24 @@ export default function HomeContent() {
     return matchesSearch && matchesFolder
   })
 
-  const openContent = (item: ContentItem) => {
+  const openContent = async (item: ContentItem) => {
     if (item.isRestricted) {
-      const pin = getGlobalParentalPin()
-      const userInput = prompt("Este conteúdo é restrito. Insira a Senha Parental:")
-      if (userInput !== pin) {
+      const settings = await getGlobalSettings()
+      const userInput = prompt("Conteúdo Restrito. Senha Parental:")
+      if (userInput !== settings.parentalPin) {
         toast({ variant: "destructive", title: "Senha Incorreta", description: "Acesso negado." })
         return
       }
     }
     setActiveVideo(item)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    )
   }
 
   return (

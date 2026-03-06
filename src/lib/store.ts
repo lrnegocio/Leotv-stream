@@ -1,8 +1,23 @@
+
 'use client';
 
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  deleteDoc, 
+  query, 
+  where,
+  onSnapshot
+} from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+
 /**
- * @fileOverview Gerenciamento de estado local persistente para o Léo Tv.
- * Utiliza LocalStorage para garantir que o app funcione sem erros de servidor.
+ * @fileOverview Gerenciamento de dados via Firebase Firestore.
+ * Garante que os dados sejam salvos na nuvem e acessíveis de qualquer lugar.
  */
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -32,7 +47,7 @@ export interface ContentItem {
   episodes?: Episode[];
 }
 
-export type SubscriptionTier = 'test' | 'monthly' | 'lifetime' | 'custom';
+export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
 
 export interface User {
   id: string;
@@ -45,47 +60,71 @@ export interface User {
   isBlocked: boolean;
 }
 
-const IS_SERVER = typeof window === 'undefined';
+// Inicializa os serviços
+const { db } = initializeFirebase();
 
-const getStorageItem = (key: string, defaultValue: any) => {
-  if (IS_SERVER) return defaultValue;
-  const saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : defaultValue;
-};
+// Funções de Gerenciamento de Conteúdo
+export async function getRemoteContent(): Promise<ContentItem[]> {
+  const querySnapshot = await getDocs(collection(db, 'content'));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContentItem));
+}
 
-const setStorageItem = (key: string, value: any) => {
-  if (!IS_SERVER) {
-    localStorage.setItem(key, JSON.stringify(value));
-  }
-};
+export async function saveContent(item: ContentItem) {
+  const docRef = doc(db, 'content', item.id);
+  await setDoc(docRef, item, { merge: true });
+}
 
-// Dados Iniciais e Funções de Acesso
-export const getMockContent = (): ContentItem[] => getStorageItem('leo_content', []);
+export async function removeContent(id: string) {
+  await deleteDoc(doc(db, 'content', id));
+}
 
-export const getMockUsers = (): User[] => {
-  const users = getStorageItem('leo_users', []);
-  const adminPin = 'adm77x2p';
-  const adminExists = users.find((u: User) => u.pin === adminPin);
+// Funções de Gerenciamento de Usuários/PINs
+export async function getRemoteUsers(): Promise<User[]> {
+  const querySnapshot = await getDocs(collection(db, 'users'));
+  const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
   
-  if (!adminExists) {
-    const admin: User = { 
-      id: 'admin-master', 
+  // Garante que o Admin Master sempre exista
+  const adminPin = 'adm77x2p';
+  if (!users.find(u => u.pin === adminPin)) {
+    const admin: User = {
+      id: 'admin-master',
       pin: adminPin,
-      role: 'admin', 
+      role: 'admin',
       subscriptionTier: 'lifetime',
       maxScreens: 99,
       activeDevices: [],
       isBlocked: false
     };
-    const updated = [admin, ...users.filter((u: User) => u.id !== 'admin-master')];
-    setStorageItem('leo_users', updated);
-    return updated;
+    await setDoc(doc(db, 'users', 'admin-master'), admin);
+    users.push(admin);
   }
+  
   return users;
-};
+}
 
-export const getGlobalParentalPin = (): string => getStorageItem('leo_global_parental_pin', '1234');
-export const setGlobalParentalPin = (pin: string) => setStorageItem('leo_global_parental_pin', pin);
+export async function saveUser(user: User) {
+  await setDoc(doc(db, 'users', user.id), user, { merge: true });
+}
+
+export async function removeUser(id: string) {
+  await deleteDoc(doc(db, 'users', id));
+}
+
+// Configurações Globais (Senha Parental)
+export async function getGlobalSettings() {
+  const docRef = doc(db, 'settings', 'global');
+  const snap = await getDoc(docRef);
+  if (snap.exists()) return snap.data();
+  
+  // Default
+  const def = { parentalPin: '1234' };
+  await setDoc(docRef, def);
+  return def;
+}
+
+export async function updateGlobalSettings(data: any) {
+  await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
+}
 
 export const generateRandomPin = (length: number = 6) => {
   const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
@@ -94,39 +133,4 @@ export const generateRandomPin = (length: number = 6) => {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
-};
-
-export const addContent = (item: ContentItem) => {
-  const content = getMockContent();
-  const updated = [...content, item];
-  setStorageItem('leo_content', updated);
-  return updated;
-};
-
-export const updateContent = (item: ContentItem) => {
-  const content = getMockContent();
-  const updated = content.map(c => c.id === item.id ? item : c);
-  setStorageItem('leo_content', updated);
-  return updated;
-};
-
-export const deleteContent = (id: string) => {
-  const content = getMockContent();
-  const updated = content.filter(c => c.id !== id);
-  setStorageItem('leo_content', updated);
-  return updated;
-};
-
-export const addUser = (user: User) => {
-  const users = getMockUsers();
-  const updated = [...users, user];
-  setStorageItem('leo_users', updated);
-  return updated;
-};
-
-export const updateUser = (user: User) => {
-  const users = getMockUsers();
-  const updated = users.map(u => u.id === user.id ? user : u);
-  setStorageItem('leo_users', updated);
-  return updated;
 };

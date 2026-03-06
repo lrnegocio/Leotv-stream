@@ -1,0 +1,52 @@
+
+{
+  "entities": {
+    "ContentItem": {
+      "title": "Item de Conteúdo",
+      "description": "Filme, série ou canal de TV",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Nome do canal ou filme" },
+        "type": { "type": "string", "enum": ["movie", "series", "multi-season", "channel"], "description": "Tipo de mídia" },
+        "description": { "type": "string", "description": "Sinopse ou descrição" },
+        "genre": { "type": "string", "description": "Categoria/Pasta" },
+        "isRestricted": { "type": "boolean", "description": "Se requer senha parental" },
+        "streamUrl": { "type": "string", "description": "Link da stream m3u8 ou youtube" },
+        "seasons": { "type": "array", "description": "Lista de temporadas" },
+        "episodes": { "type": "array", "description": "Lista de episódios diretos" }
+      },
+      "required": ["title", "type", "genre"]
+    },
+    "User": {
+      "title": "Cliente",
+      "description": "Perfil de acesso via PIN",
+      "type": "object",
+      "properties": {
+        "pin": { "type": "string", "description": "Código de acesso único" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "Nível de acesso" },
+        "subscriptionTier": { "type": "string", "enum": ["test", "monthly", "lifetime"], "description": "Tipo de plano" },
+        "expiryDate": { "type": "string", "format": "date-time", "description": "Data de expiração" },
+        "maxScreens": { "type": "number", "description": "Limite de telas simultâneas" },
+        "isBlocked": { "type": "boolean", "description": "Se o acesso está suspenso" }
+      },
+      "required": ["pin", "role"]
+    }
+  },
+  "auth": {
+    "providers": ["anonymous", "password"]
+  },
+  "firestore": {
+    "/content/{contentId}": {
+      "schema": "ContentItem",
+      "description": "Coleção de canais e filmes da biblioteca"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Coleção de clientes e PINs cadastrados"
+    },
+    "/settings/global": {
+      "schema": "object",
+      "description": "Configurações globais como senha parental"
+    }
+  }
+}

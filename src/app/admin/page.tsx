@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -5,16 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getMockUsers, getMockContent, User, ContentItem } from "@/lib/store"
+import { getRemoteUsers, getRemoteContent, User, ContentItem } from "@/lib/store"
 
 export default function AdminDashboard() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [users, setUsers] = React.useState<User[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    setContent(getMockContent())
-    setUsers(getMockUsers())
+    const load = async () => {
+      try {
+        const u = await getRemoteUsers()
+        const c = await getRemoteContent()
+        setUsers(u)
+        setContent(c)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
+
+  if (loading) return null
 
   const stats = [
     { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-400" },
@@ -52,7 +67,7 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold tracking-tighter">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
                 <ArrowUpRight className="h-3 w-3 mr-1 text-green-400" />
-                Sincronizado
+                Sincronizado Cloud
               </p>
             </CardContent>
           </Card>
@@ -64,7 +79,7 @@ export default function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between border-b border-white/5">
             <div>
               <CardTitle className="uppercase text-sm font-bold tracking-widest italic text-primary">Acessos Recentes</CardTitle>
-              <p className="text-[9px] text-muted-foreground uppercase font-bold">Últimos códigos criados ou renovados.</p>
+              <p className="text-[9px] text-muted-foreground uppercase font-bold">Últimos códigos criados no Firestore.</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-bold hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
           </CardHeader>
@@ -78,7 +93,7 @@ export default function AdminDashboard() {
                   <div className="flex-1">
                     <p className="font-black uppercase tracking-[0.2em] text-sm text-primary group-hover:scale-105 origin-left transition-transform">{user.pin}</p>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
-                      Plano {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.maxScreens} Telas
+                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.maxScreens} Telas
                     </p>
                   </div>
                   <div className="text-right">
@@ -102,8 +117,8 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status do Sistema P2P Master</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Rede otimizada para transmissões em tempo real 4K sem travamentos.</p>
+                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status do Sistema P2P Master Cloud</h4>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Conectado ao Firebase - Sincronização em tempo real ativada.</p>
               </div>
             </div>
           </CardContent>
