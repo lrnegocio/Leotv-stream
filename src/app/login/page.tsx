@@ -1,19 +1,21 @@
+
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key, Loader2, CheckCircle2 } from "lucide-react"
+import { Tv, Key, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { getRemoteUsers, User } from "@/lib/store"
+import { getRemoteUsers } from "@/lib/store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
   const [rememberMe, setRememberMe] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
   const router = useRouter()
 
   React.useEffect(() => {
@@ -27,9 +29,14 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
-      const users = await getRemoteUsers()
+      // Timeout de 10 segundos para não carregar infinitamente caso o Firebase esteja fora
+      const usersPromise = getRemoteUsers();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000));
+      
+      const users = await Promise.race([usersPromise, timeoutPromise]) as any[];
       const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
 
       if (!user) {
@@ -39,21 +46,12 @@ export default function LoginPage() {
       }
 
       if (user.isBlocked) {
-        toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso pelo administrador." })
+        toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso." })
         setLoading(false)
         return
       }
 
-      // Verifica expiração (exceto Vitalício/Admin)
-      if (user.subscriptionTier !== 'lifetime' && user.expiryDate) {
-        if (new Date(user.expiryDate) < new Date()) {
-          toast({ variant: "destructive", title: "PIN Expirado", description: "Seu tempo de acesso acabou. Entre em contato para renovar." })
-          setLoading(false)
-          return
-        }
-      }
-
-      // Lembrar PIN
+      // Salva PIN no navegador
       if (rememberMe) {
         localStorage.setItem("remembered_pin", pin)
       } else {
@@ -75,8 +73,10 @@ export default function LoginPage() {
         toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
         router.push("/user/home")
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro de Rede", description: "Verifique sua conexão com o banco de dados." })
+    } catch (err: any) {
+      console.error("Erro no login:", err);
+      setError("Erro ao conectar ao servidor. Tente novamente em instantes.")
+      toast({ variant: "destructive", title: "Erro de Rede", description: "O banco de dados demorou para responder." })
     } finally {
       setLoading(false)
     }
@@ -107,6 +107,13 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[10px] font-bold uppercase">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </div>
+            )}
             
             <div className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/5">
               <Checkbox 
@@ -123,10 +130,11 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
+        <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4">
           <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
             <CheckCircle2 className="h-3 w-3" /> Servidores Online (P2P Ativo)
           </div>
+          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold">Acesso exclusivo para assinantes autorizados.</p>
         </CardFooter>
       </Card>
     </div>

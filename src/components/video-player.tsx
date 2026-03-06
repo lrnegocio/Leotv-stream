@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -14,29 +13,31 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const [loading, setLoading] = React.useState(true)
 
   const getEmbedUrl = (rawUrl: string) => {
     if (!rawUrl || rawUrl.trim() === "") return null
     
     try {
+      const trimmed = rawUrl.trim()
       // YouTube
-      if (rawUrl.includes("youtube.com/watch?v=")) {
-        const id = rawUrl.split("v=")[1]?.split("&")[0]
+      if (trimmed.includes("youtube.com/watch?v=")) {
+        const id = trimmed.split("v=")[1]?.split("&")[0]
         return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
       }
-      if (rawUrl.includes("youtu.be/")) {
-        const id = rawUrl.split("youtu.be/")[1]?.split("?")[0]
+      if (trimmed.includes("youtu.be/")) {
+        const id = trimmed.split("youtu.be/")[1]?.split("?")[0]
         return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
       }
       
       // Dailymotion
-      if (rawUrl.includes("dailymotion.com/video/")) {
-        const id = rawUrl.split("/video/")[1]?.split("?")[0]
+      if (trimmed.includes("dailymotion.com/video/")) {
+        const id = trimmed.split("/video/")[1]?.split("?")[0]
         return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
       }
 
-      // Verificação básica de URL
-      if (rawUrl.startsWith('http')) return rawUrl;
+      // Se for link direto de vídeo ou outro
+      if (trimmed.startsWith('http')) return trimmed;
       return null;
     } catch (e) {
       return null
@@ -57,23 +58,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-xl shadow-2xl border border-white/5">
       {embedUrl ? (
-        <iframe
-          src={embedUrl}
-          className="h-full w-full border-0 relative z-10"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowFullScreen
-        />
+        <>
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+          )}
+          <iframe
+            src={embedUrl}
+            className="h-full w-full border-0 relative z-10"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            onLoad={() => setLoading(false)}
+          />
+        </>
       ) : (
         <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-6 text-center">
           <AlertCircle className="h-12 w-12 text-destructive/50" />
           <div className="space-y-1">
-            <p className="font-bold uppercase text-xs tracking-widest text-white">Link de transmissão indisponível</p>
-            <p className="text-[10px] uppercase opacity-50">O formato do link pode não ser compatível com o player interno.</p>
+            <p className="font-bold uppercase text-xs tracking-widest text-white">Transmissão indisponível</p>
+            <p className="text-[10px] uppercase opacity-50">O link inserido não é suportado pelo player interno.</p>
           </div>
           {url && (
-            <Button variant="outline" size="sm" asChild className="mt-4">
+            <Button variant="outline" size="sm" asChild className="mt-4 pointer-events-auto">
               <a href={url} target="_blank" rel="noopener noreferrer">
-                ABRIR NO PLAYER EXTERNO
+                ABRIR PLAYER EXTERNO
               </a>
             </Button>
           )}

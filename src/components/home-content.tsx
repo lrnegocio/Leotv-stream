@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -31,7 +30,7 @@ export default function HomeContent() {
         const data = await getRemoteContent()
         setContent(data)
       } catch (err) {
-        console.error(err)
+        console.error("HomeContent load error:", err)
       } finally {
         setLoading(false)
       }
