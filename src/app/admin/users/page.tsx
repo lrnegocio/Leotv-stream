@@ -74,25 +74,15 @@ export default function UserManagementPage() {
   }
 
   const toggleBlock = (userId: string) => {
+    const updatedUsers = users.map(u => 
+      u.id === userId ? { ...u, isBlocked: !u.isBlocked } : u
+    )
+    setUsers(updatedUsers)
+    const user = updatedUsers.find(u => u.id === userId)
+    toast({ title: user?.isBlocked ? "PIN Bloqueado" : "PIN Desbloqueado", description: "Status atualizado com sucesso." })
+  }
 
   const handleDeleteUser = (userId: string) => {
-    const updatedUsers = users.filter(u => u.id !== userId)
-    setUsers(updatedUsers)
-    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
-  }
-
-  const handleEditUser = (user: User) => {
-    setEditingUserId(user.id)
-    setNewUser({
-      pin: user.pin,
-      tier: user.subscriptionTier,
-      hours: "6",
-      screens: user.maxScreens.toString()
-    })
-    setIsDialogOpen(true)
-  }
-    const user = users.find(u => u.id === userId)
-
     const updatedUsers = users.filter(u => u.id !== userId)
     setUsers(updatedUsers)
     toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
