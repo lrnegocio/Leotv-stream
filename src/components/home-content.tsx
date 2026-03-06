@@ -4,10 +4,9 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, Folder, Tv, Play, Lock, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { getMockContent, getGlobalParentalPin, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -15,7 +14,6 @@ export default function HomeContent() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null)
-  const [parentalInput, setParentalInput] = React.useState("")
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
   const router = useRouter()
 
@@ -34,7 +32,6 @@ export default function HomeContent() {
     toast({ title: "Sessão Encerrada", description: "Até a próxima!" })
   }
 
-  // Agrupar por Pastas (Categorias)
   const categories = Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort()
 
   const filtered = content.filter(item => {
@@ -58,7 +55,6 @@ export default function HomeContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
-      {/* Header Profissional */}
       <header className="h-16 border-b border-white/5 bg-card/50 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2 rounded-lg">
@@ -77,7 +73,6 @@ export default function HomeContent() {
       </header>
 
       <main className="p-6 space-y-8 max-w-7xl mx-auto">
-        {/* Navegação por Pastas */}
         <section>
           <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">Pastas de Canais</h2>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
@@ -101,7 +96,6 @@ export default function HomeContent() {
           </div>
         </section>
 
-        {/* Grade de Canais/Filmes */}
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.length === 0 ? (
             <div className="col-span-full py-20 text-center opacity-50">
@@ -134,10 +128,12 @@ export default function HomeContent() {
         </section>
       </main>
 
-      {/* Player de Vídeo Modal */}
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-2xl shadow-2xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{activeVideo.title}</DialogTitle>
+            </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 
               title={activeVideo.title} 

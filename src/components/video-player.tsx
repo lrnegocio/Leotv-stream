@@ -56,14 +56,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         allowFullScreen
       />
       
-      {/* Camadas de Controle Simplificadas (Apenas aparecem no hover) */}
+      {/* Controles apenas no hover e não bloqueando o iframe */}
       <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        {/* Título Superior */}
         <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
           <h3 className="text-sm font-bold text-white uppercase tracking-tight">{title}</h3>
         </div>
 
-        {/* Botões Laterais de Navegação */}
         <div className="absolute inset-y-0 left-0 flex items-center p-4">
           <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-black/40 text-white hover:bg-primary pointer-events-auto" onClick={onPrev}>
             <ChevronLeft className="h-8 w-8" />
@@ -76,7 +74,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </Button>
         </div>
 
-        {/* Barra Inferior */}
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-white/10 text-white h-8 text-[10px] uppercase font-bold pointer-events-auto" onClick={() => window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-3 w-3" /> Player Externo

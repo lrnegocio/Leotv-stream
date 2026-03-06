@@ -103,7 +103,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <h4 className="font-bold text-lg uppercase tracking-tight italic">Status do Sistema P2P Master</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Rede otimizada para transmissões em tempo real 4K sem travamentos em {users.length} aparelhos ativos.</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Rede otimizada para transmissões em tempo real 4K sem travamentos.</p>
               </div>
             </div>
           </CardContent>

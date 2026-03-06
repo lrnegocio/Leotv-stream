@@ -1,11 +1,11 @@
 {
   "name": "Léo Tv & Stream",
   "short_name": "Léo Tv",
-  "description": "Plataforma de streaming P2P Master de alta performance",
+  "description": "Plataforma Master P2P",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1E161D",
-  "theme_color": "#1E161D",
+  "theme_color": "#ff5eff",
   "icons": [
     {
       "src": "https://picsum.photos/seed/leo/192/192",
