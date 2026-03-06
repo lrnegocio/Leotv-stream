@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Tv, Key, Loader2, AlertCircle, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -15,11 +16,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [isClient, setIsClient] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
   const router = useRouter()
 
   React.useEffect(() => {
-    setIsClient(true)
+    setIsMounted(true)
     const savedPin = localStorage.getItem("remembered_pin")
     if (savedPin) {
       setPin(savedPin)
@@ -34,15 +35,16 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    // LÓGICA DE PIN MASTER INSTANTÂNEO (Não depende de banco de dados)
-    if (pin.toLowerCase() === 'adm77x2p') {
-      const sessionData = {
+    const normalizedPin = pin.trim().toLowerCase();
+
+    // LÓGICA DE PIN MASTER INSTANTÂNEO
+    if (normalizedPin === 'adm77x2p') {
+      localStorage.setItem("user_session", JSON.stringify({
         id: 'admin-master',
         role: 'admin',
         pin: 'adm77x2p',
         deviceId: Math.random().toString(36).substring(7)
-      }
-      localStorage.setItem("user_session", JSON.stringify(sessionData))
+      }))
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
       
       toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
@@ -51,18 +53,17 @@ export default function LoginPage() {
     }
 
     try {
-      // BUSCA USUÁRIOS (Firestore ou Local)
       const users = await getRemoteUsers()
-      const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
+      const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
 
       if (!user) {
-        setError("PIN inválido ou inexistente neste aparelho.")
+        setError("PIN inválido ou inexistente. Verifique com seu fornecedor.")
         setLoading(false)
         return
       }
 
       if (user.isBlocked) {
-        setError("Este acesso foi bloqueado.")
+        setError("Este acesso foi suspenso temporariamente.")
         setLoading(false)
         return
       }
@@ -75,71 +76,78 @@ export default function LoginPage() {
       }))
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
-      toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
+      toast({ title: "Sinal Liberado!", description: "Prepare a pipoca!" })
       router.push("/user/home")
       
     } catch (err: any) {
-      setError("Erro de conexão. Verifique sua internet.")
-    } finally {
+      setError("Erro de conexão. O sistema entrará em modo local.")
       setLoading(false)
     }
   }
 
-  if (!isClient) return null
+  if (!isMounted) return null
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md bg-card/50 backdrop-blur-xl border-white/5 shadow-2xl">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mb-4 border border-primary/20">
-            <Tv className="h-10 w-10 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
+      <Card className="w-full max-w-md bg-card/40 backdrop-blur-2xl border-white/5 shadow-2xl rounded-3xl overflow-hidden">
+        <CardHeader className="text-center space-y-2 pb-8">
+          <div className="mx-auto bg-primary w-24 h-24 rounded-3xl flex items-center justify-center mb-4 shadow-2xl shadow-primary/40 border border-white/10">
+            <Tv className="h-12 w-12 text-white" />
           </div>
-          <CardTitle className="text-4xl font-bold tracking-tighter text-primary font-headline uppercase italic">Léo Tv</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-widest font-bold text-muted-foreground">Sistema P2P Mestre Ultra Rápido</CardDescription>
+          <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede P2P Master Cloud v3.0</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Insira seu código</label>
               <div className="relative">
-                <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                <Key className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
                 <Input 
-                  placeholder="SEU PIN AQUI" 
-                  className="pl-12 h-14 text-center text-xl tracking-[0.3em] uppercase font-bold bg-black/40 border-white/10 rounded-xl"
+                  placeholder="DIGITE SEU CÓDIGO" 
+                  className="pl-14 h-16 text-center text-2xl tracking-[0.4em] uppercase font-black bg-black/40 border-white/5 rounded-2xl focus:ring-primary focus:border-primary transition-all"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
+                  autoFocus
                   required
                 />
               </div>
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[10px] font-bold uppercase leading-tight">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-[10px] font-bold uppercase leading-tight animate-in slide-in-from-top-2">
+                <AlertCircle className="h-5 w-5 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             
-            <div className="flex items-center space-x-2 bg-white/5 p-3 rounded-lg border border-white/5">
+            <div className="flex items-center space-x-3 bg-white/5 p-4 rounded-2xl border border-white/5 group hover:bg-white/10 transition-colors cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
               <Checkbox 
                 id="remember" 
                 checked={rememberMe} 
                 onCheckedChange={(val) => setRememberMe(!!val)}
+                className="rounded-md border-primary"
               />
-              <label htmlFor="remember" className="text-[10px] font-bold cursor-pointer uppercase tracking-widest text-muted-foreground flex-1">Salvar neste aparelho</label>
+              <label htmlFor="remember" className="text-[10px] font-bold cursor-pointer uppercase tracking-widest text-muted-foreground flex-1">Lembrar neste aparelho</label>
             </div>
 
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 text-lg font-bold shadow-lg shadow-primary/20 rounded-xl" disabled={loading}>
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "ENTRAR NO SISTEMA"}
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-16 text-xl font-black shadow-2xl shadow-primary/20 rounded-2xl group transition-all" disabled={loading}>
+              {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : (
+                <span className="flex items-center gap-2 group-hover:scale-110 transition-transform">
+                  ENTRAR NO SISTEMA <Globe className="h-5 w-5" />
+                </span>
+              )}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4">
-          <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-            <CheckCircle2 className="h-3 w-3" /> Servidores Online
+        <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Servidores Cloud Online
+            </div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Encrypted P2P</div>
           </div>
-          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold italic leading-tight">
-            DICA: O PIN "adm77x2p" é universal. Novos PINs requerem Firebase Config para funcionar em vários aparelhos.
+          <p className="text-[8px] text-muted-foreground/40 uppercase text-center font-bold italic leading-tight">
+            MASTER PIN: "adm77x2p" • SYNC CLOUD ATIVADO
           </p>
         </CardFooter>
       </Card>
