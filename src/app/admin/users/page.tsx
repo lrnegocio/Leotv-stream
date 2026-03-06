@@ -74,13 +74,166 @@ export default function UserManagementPage() {
   }
 
   const toggleBlock = (userId: string) => {
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
     const user = users.find(u => u.id === userId)
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
     if (user) {
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
       user.isBlocked = !user.isBlocked
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
       const updated = updateUser(user)
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
       setUsers(updated)
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
       toast({ title: user.isBlocked ? "Bloqueado" : "Desbloqueado", description: "O status do usuário foi alterado." })
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
     }
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
+  }
+  }
+
+  const handleDeleteUser = (userId: string) => {
+    const updatedUsers = users.filter(u => u.id !== userId)
+    setUsers(updatedUsers)
+    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  }
+
+  const handleEditUser = (user: User) => {
+    setEditingUserId(user.id)
+    setNewUser({
+      pin: user.pin,
+      tier: user.subscriptionTier,
+      hours: "6",
+      screens: user.maxScreens.toString()
+    })
+    setIsDialogOpen(true)
   }
 
   const handleDeleteUser = (userId: string) => {
