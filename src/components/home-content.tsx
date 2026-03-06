@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -19,7 +20,7 @@ export default function HomeContent() {
   const router = useRouter()
 
   React.useEffect(() => {
-    const session = localStorage.getItem("user_session")
+    const session = typeof window !== 'undefined' ? localStorage.getItem("user_session") : null;
     if (!session) {
       router.push("/login")
       return

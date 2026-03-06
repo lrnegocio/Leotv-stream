@@ -1,21 +1,24 @@
+
 {
-  "name": "Léo Tv & Stream",
+  "name": "Léo Tv P2P",
   "short_name": "Léo Tv",
-  "description": "Plataforma Master P2P",
+  "description": "Streaming P2P Master de Alta Performance",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1E161D",
-  "theme_color": "#ff5eff",
+  "theme_color": "#EE69E5",
   "icons": [
     {
       "src": "https://picsum.photos/seed/leo/192/192",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://picsum.photos/seed/leo/512/512",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

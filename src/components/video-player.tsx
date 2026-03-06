@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -16,7 +17,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
 
   const getEmbedUrl = (rawUrl: string) => {
-    if (!rawUrl || rawUrl.trim() === "") return null
+    if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === "") return null
     
     try {
       const trimmed = rawUrl.trim()
@@ -36,7 +37,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
       }
 
-      // Se for link direto de vídeo ou outro
+      // Se for link direto (HLS, MP4, etc) ou outro iframe
       if (trimmed.startsWith('http')) return trimmed;
       return null;
     } catch (e) {
@@ -49,45 +50,42 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const toggleFullScreen = () => {
     if (!containerRef.current) return
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen()
+      containerRef.current.requestFullscreen().catch(err => {
+        console.error("Fullscreen error", err);
+      })
     } else {
       document.exitFullscreen()
     }
   }
 
+  // Previne erro de src vazio
+  if (!embedUrl) {
+    return (
+      <div className="aspect-video w-full flex flex-col items-center justify-center gap-4 bg-black rounded-xl border border-white/5 text-center p-6">
+        <AlertCircle className="h-12 w-12 text-destructive/50" />
+        <div className="space-y-1">
+          <p className="font-bold uppercase text-xs tracking-widest text-white">Link Inválido</p>
+          <p className="text-[10px] uppercase opacity-50">Certifique-se de que o link do vídeo está correto.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-xl shadow-2xl border border-white/5">
-      {embedUrl ? (
-        <>
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            </div>
-          )}
-          <iframe
-            src={embedUrl}
-            className="h-full w-full border-0 relative z-10"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            onLoad={() => setLoading(false)}
-          />
-        </>
-      ) : (
-        <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-destructive/50" />
-          <div className="space-y-1">
-            <p className="font-bold uppercase text-xs tracking-widest text-white">Transmissão indisponível</p>
-            <p className="text-[10px] uppercase opacity-50">O link inserido não é suportado pelo player interno.</p>
-          </div>
-          {url && (
-            <Button variant="outline" size="sm" asChild className="mt-4 pointer-events-auto">
-              <a href={url} target="_blank" rel="noopener noreferrer">
-                ABRIR PLAYER EXTERNO
-              </a>
-            </Button>
-          )}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-20">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       )}
+      
+      <iframe
+        src={embedUrl}
+        className="h-full w-full border-0 relative z-10"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        onLoad={() => setLoading(false)}
+      />
       
       <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
@@ -107,8 +105,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center">
-          <Button variant="secondary" size="sm" className="bg-white/10 text-white h-8 text-[10px] uppercase font-bold pointer-events-auto" onClick={() => url && window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-3 w-3" /> Player Externo
+          <Button variant="secondary" size="sm" className="bg-white/10 text-white h-8 text-[10px] uppercase font-bold pointer-events-auto" onClick={() => window.open(url, '_blank')}>
+            <ExternalLink className="mr-2 h-3 w-3" /> Abrir Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 pointer-events-auto" onClick={toggleFullScreen}>
             <Maximize className="h-5 w-5" />

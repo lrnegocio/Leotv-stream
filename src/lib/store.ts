@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -11,9 +12,8 @@ import {
 import { initializeFirebase } from '@/firebase';
 
 /**
- * @fileOverview Gerenciamento de dados Híbrido.
- * Tenta usar Firebase se configurado, caso contrário usa LocalStorage.
- * Isso evita o erro de "Internal Server Error" ou loading infinito.
+ * @fileOverview Gerenciamento de dados Híbrido Resiliente.
+ * Resolve "Internal Server Error" ao garantir que o localStorage só seja acessado no cliente.
  */
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -56,50 +56,61 @@ export interface User {
   isBlocked: boolean;
 }
 
-// Verifica se o Firebase está configurado corretamente (evita erro de chaves placeholder)
+// Verifica se o Firebase tem chaves válidas configuradas
 const isFirebaseConfigured = () => {
   if (typeof window === 'undefined') return false;
   try {
     const { firebaseConfig } = require('@/firebase/config');
-    return firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('seu-api-key') && !firebaseConfig.apiKey.includes('AIzaSy');
+    const isPlaceholder = !firebaseConfig.apiKey || 
+                         firebaseConfig.apiKey.includes('seu-api-key') || 
+                         firebaseConfig.apiKey.includes('AIzaSy');
+    return !isPlaceholder;
   } catch {
     return false;
   }
 };
 
-const useFirebase = isFirebaseConfigured();
-
-// Funções Auxiliares para LocalStorage (Fallback)
+// Funções de Fallback LocalStorage (Seguras para SSR)
 const getLocal = (key: string) => {
   if (typeof window === 'undefined') return [];
-  return JSON.parse(localStorage.getItem(key) || '[]');
-}
-const setLocal = (key: string, data: any) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(data));
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
 }
 
-// Funções de Gerenciamento de Conteúdo
+const setLocal = (key: string, data: any) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error("Local storage set error", e);
+  }
+}
+
+// CONTEÚDO
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       const querySnapshot = await getDocs(collection(db, 'content'));
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContentItem));
     } catch (e) {
-      console.warn("Firebase content failed, using local", e);
+      console.warn("Firebase content error, using local fallback");
     }
   }
   return getLocal('leo_tv_content');
 }
 
 export async function saveContent(item: ContentItem) {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       await setDoc(doc(db, 'content', item.id), item, { merge: true });
     } catch (e) {
-      console.error(e);
+      console.error("Save content error:", e);
     }
   }
   const items = getLocal('leo_tv_content');
@@ -109,40 +120,39 @@ export async function saveContent(item: ContentItem) {
 }
 
 export async function removeContent(id: string) {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       await deleteDoc(doc(db, 'content', id));
     } catch (e) {
-      console.error(e);
+      console.error("Delete content error:", e);
     }
   }
   const items = getLocal('leo_tv_content').filter((i: any) => i.id !== id);
   setLocal('leo_tv_content', items);
 }
 
-// Funções de Gerenciamento de Usuários/PINs
+// USUÁRIOS E PINS
 export async function getRemoteUsers(): Promise<User[]> {
   let users: User[] = [];
   
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       const querySnapshot = await getDocs(collection(db, 'users'));
       users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
     } catch (e) {
-      console.warn("Firebase users failed, using local", e);
       users = getLocal('leo_tv_users');
     }
   } else {
     users = getLocal('leo_tv_users');
   }
 
-  // GARANTE QUE O ADMIN MASTER SEMPRE EXISTA (adm77x2p)
+  // GARANTE O ADMIN MASTER adm77x2p SEMPRE ATIVO
   const adminPin = 'adm77x2p';
   if (!users.find(u => u.pin.toLowerCase() === adminPin)) {
-    const admin: User = {
-      id: 'admin-master',
+    const masterAdmin: User = {
+      id: 'admin-master-permanent',
       pin: adminPin,
       role: 'admin',
       subscriptionTier: 'lifetime',
@@ -150,20 +160,19 @@ export async function getRemoteUsers(): Promise<User[]> {
       activeDevices: [],
       isBlocked: false
     };
-    users.push(admin);
-    // Não salvamos no local aqui para evitar loop, o login salvará se necessário
+    users.push(masterAdmin);
   }
   
   return users;
 }
 
 export async function saveUser(user: User) {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       await setDoc(doc(db, 'users', user.id), user, { merge: true });
     } catch (e) {
-      console.error(e);
+      console.error("Save user error:", e);
     }
   }
   const users = getLocal('leo_tv_users');
@@ -173,47 +182,52 @@ export async function saveUser(user: User) {
 }
 
 export async function removeUser(id: string) {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       await deleteDoc(doc(db, 'users', id));
     } catch (e) {
-      console.error(e);
+      console.error("Remove user error:", e);
     }
   }
   const users = getLocal('leo_tv_users').filter((u: any) => u.id !== id);
   setLocal('leo_tv_users', users);
 }
 
-// Configurações Globais (Senha Parental)
+// CONFIGURAÇÕES GLOBAIS
 export async function getGlobalSettings() {
-  if (useFirebase) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       const docRef = doc(db, 'settings', 'global');
       const snap = await getDoc(docRef);
-      if (snap.exists()) return snap.data();
+      if (snap.exists()) return snap.data() as { parentalPin: string };
     } catch (e) {
-      console.error("Firebase settings failed", e);
+      console.warn("Settings error, using local fallback");
     }
   }
   
   if (typeof window === 'undefined') return { parentalPin: '1234' };
-  const localSettings = localStorage.getItem('leo_tv_settings');
-  if (localSettings) return JSON.parse(localSettings);
+  
+  try {
+    const localSettings = localStorage.getItem('leo_tv_settings');
+    if (localSettings) return JSON.parse(localSettings);
+  } catch {}
 
   const def = { parentalPin: '1234' };
-  localStorage.setItem('leo_tv_settings', JSON.stringify(def));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('leo_tv_settings', JSON.stringify(def));
+  }
   return def;
 }
 
-export async function updateGlobalSettings(data: any) {
-  if (useFirebase) {
+export async function updateGlobalSettings(data: { parentalPin: string }) {
+  if (isFirebaseConfigured()) {
     try {
       const { db } = initializeFirebase();
       await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
     } catch (e) {
-      console.error(e);
+      console.error("Update settings error:", e);
     }
   }
   if (typeof window !== 'undefined') {
@@ -222,7 +236,7 @@ export async function updateGlobalSettings(data: any) {
 }
 
 export const generateRandomPin = (length: number = 6) => {
-  const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+  const chars = '0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
