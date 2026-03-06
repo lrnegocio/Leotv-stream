@@ -18,11 +18,14 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null)
   const router = useRouter()
 
+  // Evita Hydration Mismatch carregando apenas no cliente
   React.useEffect(() => {
-    const savedPin = localStorage.getItem("remembered_pin")
-    if (savedPin) {
-      setPin(savedPin)
-      setRememberMe(true)
+    if (typeof window !== 'undefined') {
+      const savedPin = localStorage.getItem("remembered_pin")
+      if (savedPin) {
+        setPin(savedPin)
+        setRememberMe(true)
+      }
     }
   }, [])
 
@@ -34,7 +37,7 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      // PIN DE ADMIN MASTER BLINDADO (HARDCODED PARA SEGURANÇA MÁXIMA)
+      // 1. PIN DE ADMIN MASTER GLOBAL (adm77x2p)
       if (pin.toLowerCase() === 'adm77x2p') {
         const sessionData = {
           id: 'admin-master',
@@ -45,36 +48,30 @@ export default function LoginPage() {
         localStorage.setItem("user_session", JSON.stringify(sessionData))
         if (rememberMe) localStorage.setItem("remembered_pin", pin)
         
-        toast({ title: "Bem-vindo, Mestre Léo!", description: "Acesso administrativo vitalício liberado." })
+        toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
         router.push("/admin")
         return
       }
 
-      // BUSCA OUTROS USUÁRIOS NO BANCO/LOCAL
+      // 2. BUSCA USUÁRIOS NO BANCO OU LOCAL
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
 
       if (!user) {
-        setError("PIN inválido ou não cadastrado.")
+        setError("PIN inválido ou inexistente neste aparelho.")
         toast({ variant: "destructive", title: "Acesso Negado", description: "Verifique seu código." })
         setLoading(false)
         return
       }
 
       if (user.isBlocked) {
-        setError("Este acesso foi bloqueado pelo administrador.")
+        setError("Este acesso foi bloqueado.")
         toast({ variant: "destructive", title: "Conta Bloqueada" })
         setLoading(false)
         return
       }
 
-      // SUCESSO NO LOGIN DO CLIENTE
-      if (rememberMe) {
-        localStorage.setItem("remembered_pin", pin)
-      } else {
-        localStorage.removeItem("remembered_pin")
-      }
-
+      // SUCESSO CLIENTE
       localStorage.setItem("user_session", JSON.stringify({
         id: user.id,
         role: user.role,
@@ -82,12 +79,11 @@ export default function LoginPage() {
         deviceId: Math.random().toString(36).substring(7)
       }))
 
-      if (user.role === 'admin') {
-        router.push("/admin")
-      } else {
-        toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
-        router.push("/user/home")
-      }
+      if (rememberMe) localStorage.setItem("remembered_pin", pin)
+
+      toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
+      router.push("/user/home")
+      
     } catch (err: any) {
       console.error("Login fail:", err)
       setError("Erro de conexão. Tente novamente.")
@@ -118,7 +114,6 @@ export default function LoginPage() {
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   required
-                  autoFocus
                 />
               </div>
             </div>
@@ -136,7 +131,7 @@ export default function LoginPage() {
                 checked={rememberMe} 
                 onCheckedChange={(val) => setRememberMe(!!val)}
               />
-              <label htmlFor="remember" className="text-[10px] font-bold cursor-pointer uppercase tracking-widest text-muted-foreground flex-1">Salvar este código no aparelho</label>
+              <label htmlFor="remember" className="text-[10px] font-bold cursor-pointer uppercase tracking-widest text-muted-foreground flex-1">Salvar neste aparelho</label>
             </div>
 
             <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 text-lg font-bold shadow-lg shadow-primary/20 rounded-xl" disabled={loading}>
@@ -148,7 +143,7 @@ export default function LoginPage() {
           <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
             <CheckCircle2 className="h-3 w-3" /> Servidores Online (P2P Ativo)
           </div>
-          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold">Acesso exclusivo para assinantes autorizados.</p>
+          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold italic">Atenção: PINs criados em outros aparelhos requerem configuração Cloud ativa.</p>
         </CardFooter>
       </Card>
     </div>

@@ -11,11 +11,6 @@ import {
 } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
-/**
- * @fileOverview Gerenciamento de dados Híbrido Resiliente.
- * Resolve "Internal Server Error" ao garantir que o localStorage só seja acessado no cliente.
- */
-
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 
 export interface Episode {
@@ -56,21 +51,6 @@ export interface User {
   isBlocked: boolean;
 }
 
-// Verifica se o Firebase tem chaves válidas configuradas
-const isFirebaseConfigured = () => {
-  if (typeof window === 'undefined') return false;
-  try {
-    const { firebaseConfig } = require('@/firebase/config');
-    const isPlaceholder = !firebaseConfig.apiKey || 
-                         firebaseConfig.apiKey.includes('seu-api-key') || 
-                         firebaseConfig.apiKey.includes('AIzaSy');
-    return !isPlaceholder;
-  } catch {
-    return false;
-  }
-};
-
-// Funções de Fallback LocalStorage (Seguras para SSR)
 const getLocal = (key: string) => {
   if (typeof window === 'undefined') return [];
   try {
@@ -85,33 +65,29 @@ const setLocal = (key: string, data: any) => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.error("Local storage set error", e);
-  }
+  } catch {}
 }
 
 // CONTEÚDO
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       const querySnapshot = await getDocs(collection(db, 'content'));
       return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContentItem));
     } catch (e) {
-      console.warn("Firebase content error, using local fallback");
+      console.warn("Firestore fail, local used");
     }
   }
   return getLocal('leo_tv_content');
 }
 
 export async function saveContent(item: ContentItem) {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       await setDoc(doc(db, 'content', item.id), item, { merge: true });
-    } catch (e) {
-      console.error("Save content error:", e);
-    }
+    } catch (e) {}
   }
   const items = getLocal('leo_tv_content');
   const index = items.findIndex((i: any) => i.id === item.id);
@@ -120,13 +96,11 @@ export async function saveContent(item: ContentItem) {
 }
 
 export async function removeContent(id: string) {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       await deleteDoc(doc(db, 'content', id));
-    } catch (e) {
-      console.error("Delete content error:", e);
-    }
+    } catch (e) {}
   }
   const items = getLocal('leo_tv_content').filter((i: any) => i.id !== id);
   setLocal('leo_tv_content', items);
@@ -135,10 +109,10 @@ export async function removeContent(id: string) {
 // USUÁRIOS E PINS
 export async function getRemoteUsers(): Promise<User[]> {
   let users: User[] = [];
+  const { db } = initializeFirebase();
   
-  if (isFirebaseConfigured()) {
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       const querySnapshot = await getDocs(collection(db, 'users'));
       users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
     } catch (e) {
@@ -148,10 +122,10 @@ export async function getRemoteUsers(): Promise<User[]> {
     users = getLocal('leo_tv_users');
   }
 
-  // GARANTE O ADMIN MASTER adm77x2p SEMPRE ATIVO
+  // GARANTE O ADMIN MASTER adm77x2p SEMPRE ATIVO EM QUALQUER APARELHO
   const adminPin = 'adm77x2p';
   if (!users.find(u => u.pin.toLowerCase() === adminPin)) {
-    const masterAdmin: User = {
+    users.push({
       id: 'admin-master-permanent',
       pin: adminPin,
       role: 'admin',
@@ -159,21 +133,18 @@ export async function getRemoteUsers(): Promise<User[]> {
       maxScreens: 99,
       activeDevices: [],
       isBlocked: false
-    };
-    users.push(masterAdmin);
+    });
   }
   
   return users;
 }
 
 export async function saveUser(user: User) {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       await setDoc(doc(db, 'users', user.id), user, { merge: true });
-    } catch (e) {
-      console.error("Save user error:", e);
-    }
+    } catch (e) {}
   }
   const users = getLocal('leo_tv_users');
   const index = users.findIndex((u: any) => u.id === user.id);
@@ -182,13 +153,11 @@ export async function saveUser(user: User) {
 }
 
 export async function removeUser(id: string) {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       await deleteDoc(doc(db, 'users', id));
-    } catch (e) {
-      console.error("Remove user error:", e);
-    }
+    } catch (e) {}
   }
   const users = getLocal('leo_tv_users').filter((u: any) => u.id !== id);
   setLocal('leo_tv_users', users);
@@ -196,15 +165,13 @@ export async function removeUser(id: string) {
 
 // CONFIGURAÇÕES GLOBAIS
 export async function getGlobalSettings() {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       const docRef = doc(db, 'settings', 'global');
       const snap = await getDoc(docRef);
       if (snap.exists()) return snap.data() as { parentalPin: string };
-    } catch (e) {
-      console.warn("Settings error, using local fallback");
-    }
+    } catch (e) {}
   }
   
   if (typeof window === 'undefined') return { parentalPin: '1234' };
@@ -215,24 +182,18 @@ export async function getGlobalSettings() {
   } catch {}
 
   const def = { parentalPin: '1234' };
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('leo_tv_settings', JSON.stringify(def));
-  }
+  if (typeof window !== 'undefined') localStorage.setItem('leo_tv_settings', JSON.stringify(def));
   return def;
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
-  if (isFirebaseConfigured()) {
+  const { db } = initializeFirebase();
+  if (db) {
     try {
-      const { db } = initializeFirebase();
       await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
-    } catch (e) {
-      console.error("Update settings error:", e);
-    }
+    } catch (e) {}
   }
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('leo_tv_settings', JSON.stringify(data));
-  }
+  if (typeof window !== 'undefined') localStorage.setItem('leo_tv_settings', JSON.stringify(data));
 }
 
 export const generateRandomPin = (length: number = 6) => {
