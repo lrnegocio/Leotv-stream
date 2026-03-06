@@ -30,6 +30,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
         <meta name="theme-color" content="#1E161D" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
         {children}

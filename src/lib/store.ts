@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * @fileOverview Gerenciamento de estado local persistente para o Léo Tv.
+ * Utiliza LocalStorage para garantir que o app funcione sem erros de servidor.
+ */
+
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 
 export interface Episode {
@@ -54,24 +59,27 @@ const setStorageItem = (key: string, value: any) => {
   }
 };
 
+// Dados Iniciais e Funções de Acesso
 export const getMockContent = (): ContentItem[] => getStorageItem('leo_content', []);
 
 export const getMockUsers = (): User[] => {
   const users = getStorageItem('leo_users', []);
-  // Garantir que o Admin Master sempre exista e nunca expire
-  const adminExists = users.some((u: User) => u.pin === 'adm77x2p');
+  const adminPin = 'adm77x2p';
+  const adminExists = users.some((u: User) => u.pin === adminPin);
+  
   if (!adminExists) {
     const admin: User = { 
       id: 'admin-master', 
-      pin: 'adm77x2p',
+      pin: adminPin,
       role: 'admin', 
       subscriptionTier: 'lifetime',
       maxScreens: 99,
       activeDevices: [],
       isBlocked: false
     };
-    users.push(admin);
-    setStorageItem('leo_users', users);
+    const updated = [...users, admin];
+    setStorageItem('leo_users', updated);
+    return updated;
   }
   return users;
 };
@@ -80,7 +88,7 @@ export const getGlobalParentalPin = (): string => getStorageItem('leo_global_par
 export const setGlobalParentalPin = (pin: string) => setStorageItem('leo_global_parental_pin', pin);
 
 export const generateRandomPin = (length: number = 6) => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
   let result = '';
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
