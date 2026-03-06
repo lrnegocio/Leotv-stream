@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { getMockUsers } from "@/lib/store"
+import { validatePin } from "@/lib/supabase-store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
@@ -24,52 +24,55 @@ export default function LoginPage() {
     }
   }, [])
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    setTimeout(() => {
-      const users = getMockUsers()
-      const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
+    try {
+      const { data, error } = await validatePin(pin)
 
-      if (user) {
-        if (user.isBlocked) {
-          toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso." })
-          setLoading(false)
-          return
-        }
-
-        if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
-          toast({ variant: "destructive", title: "PIN Expirado", description: "Seu acesso expirou. Renove com o suporte." })
-          setLoading(false)
-          return
-        }
-
-        if (rememberMe) {
-          localStorage.setItem("remembered_pin", pin)
-        } else {
-          localStorage.removeItem("remembered_pin")
-        }
-
-        localStorage.setItem("user_session", JSON.stringify({
-          id: user.id,
-          role: user.role,
-          pin: user.pin,
-          deviceId: Math.random().toString(36).substring(7)
-        }))
-
-        if (user.role === 'admin') {
-          toast({ title: "Bem-vindo, Administrador!", description: "Acesso total liberado." })
-          router.push("/admin")
-        } else {
-          toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
-          router.push("/home")
-        }
-      } else {
+      if (error || !data) {
         toast({ variant: "destructive", title: "Erro de Acesso", description: "PIN inválido ou inexistente." })
+        setLoading(false)
+        return
       }
-      setLoading(false)
-    }, 800)
+
+      if (data.is_blocked) {
+        toast({ variant: "destructive", title: "Conta Bloqueada", description: "Seu acesso foi suspenso." })
+        setLoading(false)
+        return
+      }
+
+      if (data.expiry_date && new Date(data.expiry_date) < new Date()) {
+        toast({ variant: "destructive", title: "PIN Expirado", description: "Seu acesso expirou. Renove com o suporte." })
+        setLoading(false)
+        return
+      }
+
+      if (rememberMe) {
+        localStorage.setItem("remembered_pin", pin)
+      } else {
+        localStorage.removeItem("remembered_pin")
+      }
+
+      localStorage.setItem("user_session", JSON.stringify({
+        id: data.id,
+        role: data.role,
+        pin: data.pin,
+        deviceId: Math.random().toString(36).substring(7)
+      }))
+
+      if (data.role === 'admin') {
+        toast({ title: "Bem-vindo, Administrador!", description: "Acesso total liberado." })
+        router.push("/admin")
+      } else {
+        toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
+        router.push("/user/home")
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao conectar com servidor." })
+    }
+    setLoading(false)
   }
 
   return (
