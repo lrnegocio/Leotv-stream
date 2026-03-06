@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -67,7 +66,7 @@ const setLocal = (key: string, data: any) => {
   } catch {}
 }
 
-const withTimeout = (promise: Promise<any>, ms: number = 8000) => {
+const withTimeout = (promise: Promise<any>, ms: number = 5000) => {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
@@ -95,7 +94,9 @@ export async function saveContent(item: ContentItem) {
   if (supabase) {
     try {
       await withTimeout(supabase.from('content').upsert(item));
-    } catch (e) {}
+    } catch (e) {
+      console.error("Erro ao salvar conteúdo no Supabase:", e);
+    }
   }
   const items = getLocal('leo_tv_content');
   const index = items.findIndex((i: any) => i.id === item.id);
@@ -155,7 +156,9 @@ export async function saveUser(user: User) {
   if (supabase) {
     try {
       await withTimeout(supabase.from('users').upsert(user));
-    } catch (e) {}
+    } catch (e) {
+      console.error("Erro ao salvar usuário no Supabase:", e);
+    }
   }
   const users = getLocal('leo_tv_users');
   const index = users.findIndex((u: any) => u.id === user.id);
@@ -181,7 +184,7 @@ export async function getGlobalSettings() {
   if (supabase) {
     try {
       const { data, error } = await withTimeout(supabase.from('settings').select('*').eq('key', 'global').single());
-      if (!error && data) return data.value as { parentalPin: string };
+      if (!error && data && data.value) return data.value as { parentalPin: string };
     } catch (e) {}
   }
   

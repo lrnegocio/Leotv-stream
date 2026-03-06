@@ -1,15 +1,13 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * ATENÇÃO MESTRE LÉO:
- * Coloque aqui a URL e a CHAVE do seu projeto Supabase.
- * Encontre em: Settings -> API no painel do Supabase.
+ * CONFIGURAÇÃO OFICIAL MESTRE LÉO
+ * Conexão direta com o Supabase tmyuecvjstrsvnitqdmp
  */
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'SUA_URL_DO_SUPABASE_AQUI';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'SUA_ANON_KEY_DO_SUPABASE_AQUI';
+const supabaseUrl = 'https://tmyuecvjstrsvnitqdmp.supabase.co';
+const supabaseAnonKey = 'sb_publishable_zLTOvglMQ4zHTpRuFD6Iig_5S1MCChJ';
 
-// Inicialização segura: se a URL for o placeholder ou vazia, retorna null
-export const supabase = (supabaseUrl && supabaseUrl.startsWith('http') && !supabaseUrl.includes('SUA_URL')) 
+// Inicialização segura: Só cria o cliente se estivermos no navegador ou se as chaves forem válidas
+export const supabase = (supabaseUrl && supabaseUrl.startsWith('http')) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;

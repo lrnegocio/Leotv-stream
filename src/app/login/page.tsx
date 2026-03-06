@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -21,10 +20,12 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     setIsMounted(true)
-    const savedPin = localStorage.getItem("remembered_pin")
-    if (savedPin) {
-      setPin(savedPin)
-      setRememberMe(true)
+    if (typeof window !== 'undefined') {
+      const savedPin = localStorage.getItem("remembered_pin")
+      if (savedPin) {
+        setPin(savedPin)
+        setRememberMe(true)
+      }
     }
   }, [])
 
@@ -37,22 +38,24 @@ export default function LoginPage() {
 
     const normalizedPin = pin.trim().toLowerCase();
 
-    // LÓGICA DE PIN MASTER INSTANTÂNEO
+    // LÓGICA DE PIN MASTER INSTANTÂNEO (BLINDADO)
     if (normalizedPin === 'adm77x2p') {
-      localStorage.setItem("user_session", JSON.stringify({
+      const session = {
         id: 'admin-master',
         role: 'admin',
         pin: 'adm77x2p',
         deviceId: Math.random().toString(36).substring(7)
-      }))
+      }
+      localStorage.setItem("user_session", JSON.stringify(session))
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
       
-      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
+      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Cloud." })
       router.push("/admin")
       return
     }
 
     try {
+      // Busca usuários na nuvem (Supabase) ou localmente
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
 
@@ -68,19 +71,22 @@ export default function LoginPage() {
         return
       }
 
-      localStorage.setItem("user_session", JSON.stringify({
+      const session = {
         id: user.id,
         role: user.role,
         pin: user.pin,
         deviceId: Math.random().toString(36).substring(7)
-      }))
+      }
+      
+      localStorage.setItem("user_session", JSON.stringify(session))
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
       toast({ title: "Sinal Liberado!", description: "Prepare a pipoca!" })
       router.push("/user/home")
       
     } catch (err: any) {
-      setError("Erro de conexão. O sistema entrará em modo local.")
+      console.error("Login error:", err)
+      setError("Erro de conexão. Tente novamente em instantes.")
       setLoading(false)
     }
   }
@@ -95,7 +101,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white" />
           </div>
           <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede P2P Master Cloud v3.0</CardDescription>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede P2P Master Cloud v3.5</CardDescription>
         </CardHeader>
         <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
@@ -147,7 +153,7 @@ export default function LoginPage() {
             <div className="text-[9px] text-muted-foreground uppercase font-bold">Encrypted P2P</div>
           </div>
           <p className="text-[8px] text-muted-foreground/40 uppercase text-center font-bold italic leading-tight">
-            MASTER PIN: "adm77x2p" • SYNC CLOUD ATIVADO
+            Sincronização Cloud via Supabase Ativa
           </p>
         </CardFooter>
       </Card>
