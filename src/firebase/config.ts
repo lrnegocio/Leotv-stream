@@ -2,9 +2,10 @@
 
 /**
  * ATENÇÃO MESTRE LÉO: 
- * Para os PINs funcionarem na TV, você precisa:
- * 1. Ir no Console do Firebase -> Configurações do Projeto.
- * 2. Copiar as chaves do seu "App Web" e colar abaixo.
+ * Para que os PINs que você criar no computador funcionem na TV, 
+ * você PRECISA colar as chaves do seu projeto Firebase abaixo.
+ * 
+ * Vá em: Console do Firebase -> Configurações do Projeto -> Seus Aplicativos (Web).
  */
 export const firebaseConfig = {
   apiKey: "COLE_AQUI_SUA_API_KEY",

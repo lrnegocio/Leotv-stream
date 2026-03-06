@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -16,16 +15,15 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = React.useState(false)
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+  const [isClient, setIsClient] = React.useState(false)
   const router = useRouter()
 
-  // Evita Hydration Mismatch carregando apenas no cliente
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedPin = localStorage.getItem("remembered_pin")
-      if (savedPin) {
-        setPin(savedPin)
-        setRememberMe(true)
-      }
+    setIsClient(true)
+    const savedPin = localStorage.getItem("remembered_pin")
+    if (savedPin) {
+      setPin(savedPin)
+      setRememberMe(true)
     }
   }, [])
 
@@ -36,61 +34,58 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    try {
-      // 1. PIN DE ADMIN MASTER GLOBAL (adm77x2p)
-      if (pin.toLowerCase() === 'adm77x2p') {
-        const sessionData = {
-          id: 'admin-master',
-          role: 'admin',
-          pin: 'adm77x2p',
-          deviceId: Math.random().toString(36).substring(7)
-        }
-        localStorage.setItem("user_session", JSON.stringify(sessionData))
-        if (rememberMe) localStorage.setItem("remembered_pin", pin)
-        
-        toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
-        router.push("/admin")
-        return
+    // LÓGICA DE PIN MASTER INSTANTÂNEO (Não depende de banco de dados)
+    if (pin.toLowerCase() === 'adm77x2p') {
+      const sessionData = {
+        id: 'admin-master',
+        role: 'admin',
+        pin: 'adm77x2p',
+        deviceId: Math.random().toString(36).substring(7)
       }
+      localStorage.setItem("user_session", JSON.stringify(sessionData))
+      if (rememberMe) localStorage.setItem("remembered_pin", pin)
+      
+      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
+      router.push("/admin")
+      return
+    }
 
-      // 2. BUSCA USUÁRIOS NO BANCO OU LOCAL
+    try {
+      // BUSCA USUÁRIOS (Firestore ou Local)
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
 
       if (!user) {
         setError("PIN inválido ou inexistente neste aparelho.")
-        toast({ variant: "destructive", title: "Acesso Negado", description: "Verifique seu código." })
         setLoading(false)
         return
       }
 
       if (user.isBlocked) {
         setError("Este acesso foi bloqueado.")
-        toast({ variant: "destructive", title: "Conta Bloqueada" })
         setLoading(false)
         return
       }
 
-      // SUCESSO CLIENTE
       localStorage.setItem("user_session", JSON.stringify({
         id: user.id,
         role: user.role,
         pin: user.pin,
         deviceId: Math.random().toString(36).substring(7)
       }))
-
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
       toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
       router.push("/user/home")
       
     } catch (err: any) {
-      console.error("Login fail:", err)
-      setError("Erro de conexão. Tente novamente.")
+      setError("Erro de conexão. Verifique sua internet.")
     } finally {
       setLoading(false)
     }
   }
+
+  if (!isClient) return null
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -119,9 +114,9 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[10px] font-bold uppercase">
-                <AlertCircle className="h-4 w-4" />
-                {error}
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-[10px] font-bold uppercase leading-tight">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
             
@@ -141,9 +136,11 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4">
           <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-            <CheckCircle2 className="h-3 w-3" /> Servidores Online (P2P Ativo)
+            <CheckCircle2 className="h-3 w-3" /> Servidores Online
           </div>
-          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold italic">Atenção: PINs criados em outros aparelhos requerem configuração Cloud ativa.</p>
+          <p className="text-[8px] text-muted-foreground uppercase text-center font-bold italic leading-tight">
+            DICA: O PIN "adm77x2p" é universal. Novos PINs requerem Firebase Config para funcionar em vários aparelhos.
+          </p>
         </CardFooter>
       </Card>
     </div>
