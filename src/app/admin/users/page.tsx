@@ -25,7 +25,7 @@ export default function UserManagementPage() {
     screens: "1"
   })
 
-  const loadUsers = async () => {
+  const loadUsers = React.useCallback(async () => {
     setLoading(true)
     try {
       const data = await getRemoteUsers()
@@ -33,11 +33,11 @@ export default function UserManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   React.useEffect(() => {
     loadUsers()
-  }, [])
+  }, [loadUsers])
 
   const handleGeneratePin = () => {
     setNewUser({ ...newUser, pin: generateRandomPin() })
@@ -63,7 +63,7 @@ export default function UserManagementPage() {
     }
 
     await saveUser(userData)
-    toast({ title: editingUserId ? "PIN Atualizado" : "PIN Gerado", description: `Sucesso para o código ${userData.pin}.` })
+    toast({ title: editingUserId ? "PIN Atualizado" : "PIN Gerado", description: `Código: ${userData.pin}` })
     
     setIsDialogOpen(false)
     setEditingUserId(null)
@@ -106,54 +106,53 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar Acessos</h1>
-          <p className="text-muted-foreground">Gere PINs, renove tempos de expiração e controle telas.</p>
+          <p className="text-muted-foreground text-xs uppercase font-bold opacity-50">Controle de PINs e Tempos.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="mr-2 h-4 w-4" /> Novo PIN / Cliente
+            <Button className="bg-primary">
+              <Plus className="mr-2 h-4 w-4" /> Novo PIN
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
-              <DialogTitle className="uppercase tracking-tight">{editingUserId ? 'Editar' : 'Gerar Novo'} Acesso</DialogTitle>
+              <DialogTitle className="uppercase tracking-tight sr-only">Gerenciar Acesso</DialogTitle>
+              <h2 className="text-lg font-bold uppercase">{editingUserId ? 'Editar' : 'Gerar Novo'} Acesso</h2>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Código PIN (Aleatório)</Label>
+                <Label>PIN</Label>
                 <div className="flex gap-2">
-                  <Input value={newUser.pin} readOnly placeholder="Clique em gerar" className="bg-black/20 uppercase font-bold" />
+                  <Input value={newUser.pin} readOnly className="bg-black/20 font-bold" />
                   <Button variant="outline" onClick={handleGeneratePin}><RefreshCcw className="h-4 w-4" /></Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label>Plano / Tempo</Label>
+                  <Label>Plano</Label>
                   <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
                     <SelectTrigger className="bg-black/20"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="test">Teste (Horas)</SelectItem>
-                      <SelectItem value="monthly">Mensal (30 dias)</SelectItem>
+                      <SelectItem value="test">Teste</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
                       <SelectItem value="lifetime">Vitalício</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {newUser.tier === 'test' && (
                   <div className="grid gap-2">
-                    <Label>Duração (Horas)</Label>
+                    <Label>Horas</Label>
                     <Input type="number" value={newUser.hours} onChange={e => setNewUser({...newUser, hours: e.target.value})} className="bg-black/20" />
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="grid gap-2">
-                  <Label>Limite de Telas</Label>
-                  <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/20" />
-                </div>
+              <div className="grid gap-2">
+                <Label>Telas</Label>
+                <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/20" />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddUser} className="w-full font-bold uppercase h-12">{editingUserId ? 'Atualizar' : 'Confirmar e Gerar'} PIN</Button>
+              <Button onClick={handleAddUser} className="w-full font-bold uppercase h-12">Confirmar PIN</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -172,29 +171,29 @@ export default function UserManagementPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
       ) : (
-        <div className="bg-card/50 border border-white/5 rounded-xl overflow-hidden shadow-xl">
+        <div className="bg-card/50 border border-white/5 rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="uppercase">PIN / Acesso</TableHead>
-                <TableHead className="uppercase">Plano</TableHead>
-                <TableHead className="uppercase">Expiração</TableHead>
-                <TableHead className="uppercase">Telas</TableHead>
-                <TableHead className="uppercase">Status</TableHead>
-                <TableHead className="text-right uppercase">Ações</TableHead>
+                <TableHead>PIN</TableHead>
+                <TableHead>PLANO</TableHead>
+                <TableHead>EXPIRAÇÃO</TableHead>
+                <TableHead>TELAS</TableHead>
+                <TableHead>STATUS</TableHead>
+                <TableHead className="text-right">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-mono font-bold uppercase text-primary">{user.pin}</TableCell>
+                  <TableCell className="font-mono font-bold text-primary">{user.pin}</TableCell>
                   <TableCell>
                     <Badge variant={user.subscriptionTier === 'lifetime' ? 'default' : 'secondary'}>
-                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'}
+                      {user.subscriptionTier}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'Sem expiração'}
+                  <TableCell className="text-xs">
+                    {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'Sem data'}
                   </TableCell>
                   <TableCell>{user.activeDevices?.length || 0} / {user.maxScreens}</TableCell>
                   <TableCell>
@@ -206,13 +205,13 @@ export default function UserManagementPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)} title={user.isBlocked ? "Desbloquear" : "Bloquear"}>
+                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
                         {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar PIN" className="text-blue-400">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive" title="Deletar PIN">
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

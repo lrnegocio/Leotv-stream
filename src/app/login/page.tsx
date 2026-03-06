@@ -46,8 +46,10 @@ export default function LoginPage() {
         pin: 'adm77x2p',
         deviceId: Math.random().toString(36).substring(7)
       }
-      localStorage.setItem("user_session", JSON.stringify(session))
-      if (rememberMe) localStorage.setItem("remembered_pin", pin)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("user_session", JSON.stringify(session))
+        if (rememberMe) localStorage.setItem("remembered_pin", pin)
+      }
       
       toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Cloud." })
       router.push("/admin")
@@ -55,7 +57,6 @@ export default function LoginPage() {
     }
 
     try {
-      // Busca usuários na nuvem (Supabase) ou localmente
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
 
@@ -78,8 +79,10 @@ export default function LoginPage() {
         deviceId: Math.random().toString(36).substring(7)
       }
       
-      localStorage.setItem("user_session", JSON.stringify(session))
-      if (rememberMe) localStorage.setItem("remembered_pin", pin)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("user_session", JSON.stringify(session))
+        if (rememberMe) localStorage.setItem("remembered_pin", pin)
+      }
 
       toast({ title: "Sinal Liberado!", description: "Prepare a pipoca!" })
       router.push("/user/home")

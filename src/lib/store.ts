@@ -1,10 +1,5 @@
 'use client';
 
-/**
- * @fileOverview Gerenciamento de dados via Supabase com Fallback LocalStorage.
- * Prioriza a nuvem para sincronizar entre PC e TV.
- */
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -66,7 +61,7 @@ const setLocal = (key: string, data: any) => {
   } catch {}
 }
 
-const withTimeout = (promise: Promise<any>, ms: number = 5000) => {
+const withTimeout = (promise: Promise<any>, ms: number = 8000) => {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
@@ -76,27 +71,23 @@ const withTimeout = (promise: Promise<any>, ms: number = 5000) => {
 // --- CONTEÚDO ---
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  if (supabase) {
-    try {
-      const { data, error } = await withTimeout(supabase.from('content').select('*'));
-      if (!error && data) {
-        setLocal('leo_tv_content', data);
-        return data;
-      }
-    } catch (e) {
-      console.warn("Supabase Content Error, usando local.");
+  try {
+    const { data, error } = await withTimeout(supabase.from('content').select('*'));
+    if (!error && data) {
+      setLocal('leo_tv_content', data);
+      return data;
     }
+  } catch (e) {
+    console.warn("Usando cache local para conteúdo.");
   }
   return getLocal('leo_tv_content');
 }
 
 export async function saveContent(item: ContentItem) {
-  if (supabase) {
-    try {
-      await withTimeout(supabase.from('content').upsert(item));
-    } catch (e) {
-      console.error("Erro ao salvar conteúdo no Supabase:", e);
-    }
+  try {
+    await withTimeout(supabase.from('content').upsert(item));
+  } catch (e) {
+    console.error("Erro Supabase Content:", e);
   }
   const items = getLocal('leo_tv_content');
   const index = items.findIndex((i: any) => i.id === item.id);
@@ -105,11 +96,9 @@ export async function saveContent(item: ContentItem) {
 }
 
 export async function removeContent(id: string) {
-  if (supabase) {
-    try {
-      await withTimeout(supabase.from('content').delete().eq('id', id));
-    } catch (e) {}
-  }
+  try {
+    await withTimeout(supabase.from('content').delete().eq('id', id));
+  } catch (e) {}
   const items = getLocal('leo_tv_content').filter((i: any) => i.id !== id);
   setLocal('leo_tv_content', items);
 }
@@ -118,24 +107,18 @@ export async function removeContent(id: string) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   let users: User[] = [];
-  
-  if (supabase) {
-    try {
-      const { data, error } = await withTimeout(supabase.from('users').select('*'));
-      if (!error && data) {
-        users = data;
-        setLocal('leo_tv_users', users);
-      } else {
-        users = getLocal('leo_tv_users');
-      }
-    } catch (e) {
+  try {
+    const { data, error } = await withTimeout(supabase.from('users').select('*'));
+    if (!error && data) {
+      users = data;
+      setLocal('leo_tv_users', users);
+    } else {
       users = getLocal('leo_tv_users');
     }
-  } else {
+  } catch (e) {
     users = getLocal('leo_tv_users');
   }
 
-  // PIN MASTER GLOBAL: Garantia de acesso em qualquer aparelho
   const adminPin = 'adm77x2p';
   if (!users.find(u => u.pin.toLowerCase() === adminPin)) {
     users.push({
@@ -148,17 +131,14 @@ export async function getRemoteUsers(): Promise<User[]> {
       isBlocked: false
     });
   }
-  
   return users;
 }
 
 export async function saveUser(user: User) {
-  if (supabase) {
-    try {
-      await withTimeout(supabase.from('users').upsert(user));
-    } catch (e) {
-      console.error("Erro ao salvar usuário no Supabase:", e);
-    }
+  try {
+    await withTimeout(supabase.from('users').upsert(user));
+  } catch (e) {
+    console.error("Erro Supabase User:", e);
   }
   const users = getLocal('leo_tv_users');
   const index = users.findIndex((u: any) => u.id === user.id);
@@ -167,11 +147,9 @@ export async function saveUser(user: User) {
 }
 
 export async function removeUser(id: string) {
-  if (supabase) {
-    try {
-      await withTimeout(supabase.from('users').delete().eq('id', id));
-    } catch (e) {}
-  }
+  try {
+    await withTimeout(supabase.from('users').delete().eq('id', id));
+  } catch (e) {}
   const users = getLocal('leo_tv_users').filter((u: any) => u.id !== id);
   setLocal('leo_tv_users', users);
 }
@@ -180,30 +158,20 @@ export async function removeUser(id: string) {
 
 export async function getGlobalSettings() {
   const defaultSettings = { parentalPin: '1234' };
-  
-  if (supabase) {
-    try {
-      const { data, error } = await withTimeout(supabase.from('settings').select('*').eq('key', 'global').single());
-      if (!error && data && data.value) return data.value as { parentalPin: string };
-    } catch (e) {}
-  }
+  try {
+    const { data, error } = await withTimeout(supabase.from('settings').select('*').eq('key', 'global').single());
+    if (!error && data && data.value) return data.value as { parentalPin: string };
+  } catch (e) {}
   
   if (!isBrowser) return defaultSettings;
-  
-  try {
-    const localSettings = localStorage.getItem('leo_tv_settings');
-    if (localSettings) return JSON.parse(localSettings);
-  } catch {}
-
-  return defaultSettings;
+  const localSettings = localStorage.getItem('leo_tv_settings');
+  return localSettings ? JSON.parse(localSettings) : defaultSettings;
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
-  if (supabase) {
-    try {
-      await withTimeout(supabase.from('settings').upsert({ key: 'global', value: data }));
-    } catch (e) {}
-  }
+  try {
+    await withTimeout(supabase.from('settings').upsert({ key: 'global', value: data }));
+  } catch (e) {}
   if (isBrowser) localStorage.setItem('leo_tv_settings', JSON.stringify(data));
 }
 
