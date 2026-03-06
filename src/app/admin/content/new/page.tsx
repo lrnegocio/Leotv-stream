@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -12,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
 import { toast } from "@/hooks/use-toast"
-import { addContent, Season, Episode, ContentType } from "@/lib/store"
+import { saveContent, Season, Episode, ContentType } from "@/lib/store"
 import Link from "next/link"
 
 export default function NewContentPage() {
@@ -75,22 +74,19 @@ export default function NewContentPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     
-    addContent({
+    await saveContent({
       id: Math.random().toString(36).substring(7),
       ...formData,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
-      thumbnail: `https://picsum.photos/seed/${formData.title}/200/200` // Gerado internamente
     })
 
-    setTimeout(() => {
-      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
-      router.push("/admin/content")
-    }, 800)
+    toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
+    router.push("/admin/content")
   }
 
   return (

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { getMockUsers, generateRandomPin, addUser, updateUser, User, SubscriptionTier } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [users, setUsers] = React.useState<User[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
   const [newUser, setNewUser] = React.useState({
@@ -24,15 +25,25 @@ export default function UserManagementPage() {
     screens: "1"
   })
 
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const data = await getRemoteUsers()
+      setUsers(data)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   React.useEffect(() => {
-    setUsers(getMockUsers())
+    loadUsers()
   }, [])
 
   const handleGeneratePin = () => {
     setNewUser({ ...newUser, pin: generateRandomPin() })
   }
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     let expiry = undefined
     if (newUser.tier === 'test') {
       expiry = new Date(Date.now() + parseInt(newUser.hours) * 60 * 60 * 1000).toISOString()
@@ -40,52 +51,39 @@ export default function UserManagementPage() {
       expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     }
 
-    if (editingUserId) {
-      const updatedUser = users.find(u => u.id === editingUserId)
-      if (updatedUser) {
-        updatedUser.pin = newUser.pin
-        updatedUser.subscriptionTier = newUser.tier
-        updatedUser.maxScreens = parseInt(newUser.screens)
-        updatedUser.expiryDate = expiry
-        const updated = updateUser(updatedUser)
-        setUsers(updated)
-        toast({ title: "PIN Atualizado", description: `O código ${newUser.pin} foi atualizado com sucesso.` })
-      }
-      setEditingUserId(null)
-    } else {
-      const createdUser: User = {
-        id: Math.random().toString(36).substring(7),
-        pin: newUser.pin || generateRandomPin(),
-        role: 'user',
-        subscriptionTier: newUser.tier,
-        expiryDate: expiry,
-        maxScreens: parseInt(newUser.screens),
-        activeDevices: [],
-        isBlocked: false
-      }
-
-      const updatedUsers = addUser(createdUser)
-      setUsers(updatedUsers)
-      toast({ title: "PIN Gerado", description: `O código ${createdUser.pin} foi criado com sucesso.` })
+    const userData: User = {
+      id: editingUserId || Math.random().toString(36).substring(7),
+      pin: newUser.pin || generateRandomPin(),
+      role: 'user',
+      subscriptionTier: newUser.tier,
+      expiryDate: expiry,
+      maxScreens: parseInt(newUser.screens),
+      activeDevices: [],
+      isBlocked: false
     }
 
+    await saveUser(userData)
+    toast({ title: editingUserId ? "PIN Atualizado" : "PIN Gerado", description: `Sucesso para o código ${userData.pin}.` })
+    
     setIsDialogOpen(false)
+    setEditingUserId(null)
     setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
+    loadUsers()
   }
 
-  const toggleBlock = (userId: string) => {
-    const updatedUsers = users.map(u => 
-      u.id === userId ? { ...u, isBlocked: !u.isBlocked } : u
-    )
-    setUsers(updatedUsers)
-    const user = updatedUsers.find(u => u.id === userId)
-    toast({ title: user?.isBlocked ? "PIN Bloqueado" : "PIN Desbloqueado", description: "Status atualizado com sucesso." })
+  const toggleBlock = async (user: User) => {
+    const updated = { ...user, isBlocked: !user.isBlocked }
+    await saveUser(updated)
+    toast({ title: updated.isBlocked ? "PIN Bloqueado" : "PIN Desbloqueado" })
+    loadUsers()
   }
 
-  const handleDeleteUser = (userId: string) => {
-    const updatedUsers = users.filter(u => u.id !== userId)
-    setUsers(updatedUsers)
-    toast({ title: "PIN Deletado", description: "O acesso foi removido com sucesso." })
+  const handleDeleteUser = async (userId: string) => {
+    if (confirm("Deletar este acesso?")) {
+      await removeUser(userId)
+      toast({ title: "PIN Deletado" })
+      loadUsers()
+    }
   }
 
   const handleEditUser = (user: User) => {
@@ -171,56 +169,60 @@ export default function UserManagementPage() {
         />
       </div>
 
-      <div className="bg-card/50 border border-white/5 rounded-xl overflow-hidden shadow-xl">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="uppercase">PIN / Acesso</TableHead>
-              <TableHead className="uppercase">Plano</TableHead>
-              <TableHead className="uppercase">Expiração</TableHead>
-              <TableHead className="uppercase">Telas</TableHead>
-              <TableHead className="uppercase">Status</TableHead>
-              <TableHead className="text-right uppercase">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-mono font-bold uppercase text-primary">{user.pin}</TableCell>
-                <TableCell>
-                  <Badge variant={user.subscriptionTier === 'lifetime' ? 'default' : 'secondary'}>
-                    {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'Sem expiração'}
-                </TableCell>
-                <TableCell>{user.activeDevices.length} / {user.maxScreens}</TableCell>
-                <TableCell>
-                  {user.isBlocked ? (
-                    <Badge variant="destructive">Bloqueado</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-green-400 border-green-400">Ativo</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => toggleBlock(user.id)} title={user.isBlocked ? "Desbloquear" : "Bloquear"}>
-                      {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar PIN" className="text-blue-400">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive" title="Deletar PIN">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+      {loading ? (
+        <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+      ) : (
+        <div className="bg-card/50 border border-white/5 rounded-xl overflow-hidden shadow-xl">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="uppercase">PIN / Acesso</TableHead>
+                <TableHead className="uppercase">Plano</TableHead>
+                <TableHead className="uppercase">Expiração</TableHead>
+                <TableHead className="uppercase">Telas</TableHead>
+                <TableHead className="uppercase">Status</TableHead>
+                <TableHead className="text-right uppercase">Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-mono font-bold uppercase text-primary">{user.pin}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.subscriptionTier === 'lifetime' ? 'default' : 'secondary'}>
+                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'Sem expiração'}
+                  </TableCell>
+                  <TableCell>{user.activeDevices?.length || 0} / {user.maxScreens}</TableCell>
+                  <TableCell>
+                    {user.isBlocked ? (
+                      <Badge variant="destructive">Bloqueado</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-green-400 border-green-400">Ativo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)} title={user.isBlocked ? "Desbloquear" : "Bloquear"}>
+                        {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} title="Editar PIN" className="text-blue-400">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive" title="Deletar PIN">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }

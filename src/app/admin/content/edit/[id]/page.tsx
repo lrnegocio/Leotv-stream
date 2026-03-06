@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Plus, Trash2, ListOrdered, Layers } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,29 +11,34 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
 import { toast } from "@/hooks/use-toast"
-import { getMockContent, updateContent, Season, Episode, ContentType, ContentItem } from "@/lib/store"
+import { getRemoteContent, saveContent, Season, Episode, ContentItem } from "@/lib/store"
 import Link from "next/link"
 
 export default function EditContentPage() {
   const { id } = useParams()
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
+  const [fetching, setFetching] = React.useState(true)
   const [generating, setGenerating] = React.useState(false)
   
   const [formData, setFormData] = React.useState<ContentItem | null>(null)
 
   React.useEffect(() => {
-    const list = getMockContent()
-    const item = list.find(c => c.id === id)
-    if (item) {
-      setFormData(item)
-    } else {
-      toast({ variant: "destructive", title: "Erro", description: "Conteúdo não encontrado." })
-      router.push("/admin/content")
+    const load = async () => {
+      const list = await getRemoteContent()
+      const item = list.find(c => c.id === id)
+      if (item) {
+        setFormData(item)
+      } else {
+        toast({ variant: "destructive", title: "Erro", description: "Conteúdo não encontrado." })
+        router.push("/admin/content")
+      }
+      setFetching(false)
     }
+    load()
   }, [id, router])
 
-  if (!formData) return null
+  if (fetching || !formData) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
 
   const addEpisode = (seasonId?: string) => {
     const newEp: Episode = {
@@ -72,20 +77,18 @@ export default function EditContentPage() {
       })
       setFormData(prev => prev ? ({ ...prev, description: res.description }) : null)
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua chave no .env." })
+      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua chave." })
     } finally {
       setGenerating(false)
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    updateContent(formData)
-    setTimeout(() => {
-      toast({ title: "Atualizado", description: "Conteúdo salvo com sucesso." })
-      router.push("/admin/content")
-    }, 500)
+    await saveContent(formData)
+    toast({ title: "Atualizado", description: "Conteúdo salvo com sucesso." })
+    router.push("/admin/content")
   }
 
   return (

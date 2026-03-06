@@ -4,32 +4,33 @@ import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Lock, Save, ShieldAlert } from "lucide-react"
-import { getGlobalParentalPin, setGlobalParentalPin } from "@/lib/store"
+import { Lock, Save, ShieldAlert, Loader2 } from "lucide-react"
+import { getGlobalSettings, updateGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const [parentalPin, setParentalPin] = React.useState("")
+  const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    setParentalPin(getGlobalParentalPin())
+    const load = async () => {
+      const settings = await getGlobalSettings()
+      setParentalPin(settings.parentalPin)
+      setLoading(false)
+    }
+    load()
   }, [])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (parentalPin.length < 4) {
-      toast({ 
-        variant: "destructive", 
-        title: "Erro", 
-        description: "A senha parental deve ter 4 dígitos." 
-      })
+      toast({ variant: "destructive", title: "Erro", description: "A senha parental deve ter 4 dígitos." })
       return
     }
-    setGlobalParentalPin(parentalPin)
-    toast({ 
-      title: "Sucesso", 
-      description: "Configurações salvas com sucesso." 
-    })
+    await updateGlobalSettings({ parentalPin })
+    toast({ title: "Sucesso", description: "Configurações salvas com sucesso." })
   }
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

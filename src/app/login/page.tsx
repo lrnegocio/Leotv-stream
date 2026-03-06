@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { getMockUsers, User } from "@/lib/store"
+import { getRemoteUsers, User } from "@/lib/store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
@@ -24,13 +24,12 @@ export default function LoginPage() {
     }
   }, [])
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simula um pequeno delay de rede para efeito visual
-    setTimeout(() => {
-      const users = getMockUsers()
+    try {
+      const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === pin.toLowerCase())
 
       if (!user) {
@@ -45,7 +44,7 @@ export default function LoginPage() {
         return
       }
 
-      // Verifica expiração (exceto Vitalício)
+      // Verifica expiração (exceto Vitalício/Admin)
       if (user.subscriptionTier !== 'lifetime' && user.expiryDate) {
         if (new Date(user.expiryDate) < new Date()) {
           toast({ variant: "destructive", title: "PIN Expirado", description: "Seu tempo de acesso acabou. Entre em contato para renovar." })
@@ -76,8 +75,11 @@ export default function LoginPage() {
         toast({ title: "Acesso Liberado!", description: "Bom entretenimento!" })
         router.push("/user/home")
       }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erro de Rede", description: "Verifique sua conexão com o banco de dados." })
+    } finally {
       setLoading(false)
-    }, 800)
+    }
   }
 
   return (
