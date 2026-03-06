@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock, Search } from "lucide-react"
+import { LogOut, Folder, Tv, Play, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getMockContent, getGlobalParentalPin, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"

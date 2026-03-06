@@ -65,7 +65,7 @@ export const getMockContent = (): ContentItem[] => getStorageItem('leo_content',
 export const getMockUsers = (): User[] => {
   const users = getStorageItem('leo_users', []);
   const adminPin = 'adm77x2p';
-  const adminExists = users.some((u: User) => u.pin === adminPin);
+  const adminExists = users.find((u: User) => u.pin === adminPin);
   
   if (!adminExists) {
     const admin: User = { 
@@ -77,7 +77,7 @@ export const getMockUsers = (): User[] => {
       activeDevices: [],
       isBlocked: false
     };
-    const updated = [...users, admin];
+    const updated = [admin, ...users.filter((u: User) => u.id !== 'admin-master')];
     setStorageItem('leo_users', updated);
     return updated;
   }

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,25 +15,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const getEmbedUrl = (rawUrl: string) => {
-    if (!rawUrl) return ""
+    if (!rawUrl) return null
     
-    // YouTube
-    if (rawUrl.includes("youtube.com/watch?v=")) {
-      const id = rawUrl.split("v=")[1]?.split("&")[0]
-      return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
-    }
-    if (rawUrl.includes("youtu.be/")) {
-      const id = rawUrl.split("youtu.be/")[1]?.split("?")[0]
-      return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
-    }
-    
-    // Dailymotion
-    if (rawUrl.includes("dailymotion.com/video/")) {
-      const id = rawUrl.split("/video/")[1]?.split("?")[0]
-      return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
-    }
+    try {
+      // YouTube
+      if (rawUrl.includes("youtube.com/watch?v=")) {
+        const id = rawUrl.split("v=")[1]?.split("&")[0]
+        return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
+      }
+      if (rawUrl.includes("youtu.be/")) {
+        const id = rawUrl.split("youtu.be/")[1]?.split("?")[0]
+        return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
+      }
+      
+      // Dailymotion
+      if (rawUrl.includes("dailymotion.com/video/")) {
+        const id = rawUrl.split("/video/")[1]?.split("?")[0]
+        return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
+      }
 
-    return rawUrl
+      return rawUrl
+    } catch (e) {
+      return null
+    }
   }
 
   const embedUrl = getEmbedUrl(url)
@@ -49,14 +53,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-xl shadow-2xl border border-white/5">
-      <iframe
-        src={embedUrl}
-        className="h-full w-full border-0 relative z-10"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowFullScreen
-      />
+      {embedUrl ? (
+        <iframe
+          src={embedUrl}
+          className="h-full w-full border-0 relative z-10"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      ) : (
+        <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-muted-foreground p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive/50" />
+          <div className="space-y-1">
+            <p className="font-bold uppercase text-xs tracking-widest">Link de transmissão inválido</p>
+            <p className="text-[10px] uppercase opacity-50">Verifique a URL no painel administrativo</p>
+          </div>
+        </div>
+      )}
       
-      {/* Controles apenas no hover e não bloqueando o iframe */}
       <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
           <h3 className="text-sm font-bold text-white uppercase tracking-tight">{title}</h3>
@@ -75,7 +88,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center">
-          <Button variant="secondary" size="sm" className="bg-white/10 text-white h-8 text-[10px] uppercase font-bold pointer-events-auto" onClick={() => window.open(url, '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-white/10 text-white h-8 text-[10px] uppercase font-bold pointer-events-auto" onClick={() => url && window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-3 w-3" /> Player Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 pointer-events-auto" onClick={toggleFullScreen}>
