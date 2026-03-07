@@ -42,7 +42,6 @@ export interface User {
   isBlocked: boolean;
 }
 
-// Helper para verificar se está no navegador
 const isBrowser = typeof window !== 'undefined';
 
 // --- FUNÇÕES DE CONTEÚDO ---
@@ -50,10 +49,13 @@ const isBrowser = typeof window !== 'undefined';
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) throw error;
+    if (error) {
+      console.error("Erro Supabase Content:", error.message);
+      return [];
+    }
     return data || [];
   } catch (e) {
-    console.error("Erro ao buscar conteúdo:", e);
+    console.error("Erro Crítico Content:", e);
     return [];
   }
 }
@@ -88,13 +90,16 @@ export async function getRemoteUsers(): Promise<User[]> {
 
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    if (error) throw error;
-    users = data || [];
+    if (error) {
+      console.warn("Tabela de usuários não encontrada no Supabase.");
+    } else {
+      users = data || [];
+    }
   } catch (e) {
     console.error("Erro ao buscar usuários no Supabase:", e);
   }
 
-  // Garante que o PIN Master sempre exista na lista para o Login/Admin funcionar
+  // Garante que o PIN Master sempre exista para evitar bloqueio do admin
   if (!users.find(u => u.pin === adminPin)) {
     users.unshift({
       id: 'admin-master-permanent',
@@ -123,10 +128,13 @@ export async function saveUser(user: User) {
       isBlocked: user.isBlocked
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase Save Error:", error.message);
+      return false;
+    }
     return true;
   } catch (e) {
-    console.error("Falha ao salvar PIN no Supabase:", e);
+    console.error("Falha fatal ao salvar PIN:", e);
     return false;
   }
 }

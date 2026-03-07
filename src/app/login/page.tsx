@@ -20,12 +20,10 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     setIsMounted(true)
-    if (typeof window !== 'undefined') {
-      const savedPin = localStorage.getItem("remembered_pin")
-      if (savedPin) {
-        setPin(savedPin)
-        setRememberMe(true)
-      }
+    const savedPin = localStorage.getItem("remembered_pin")
+    if (savedPin) {
+      setPin(savedPin)
+      setRememberMe(true)
     }
   }, [])
 
@@ -38,7 +36,7 @@ export default function LoginPage() {
 
     const normalizedPin = pin.trim().toLowerCase();
 
-    // LÓGICA DE PIN MASTER INSTANTÂNEO (HARDCODED PARA SEGURANÇA)
+    // LÓGICA DE PIN MASTER INSTANTÂNEO
     if (normalizedPin === 'adm77x2p') {
       const session = {
         id: 'admin-master',
@@ -46,10 +44,8 @@ export default function LoginPage() {
         pin: 'adm77x2p',
         deviceId: Math.random().toString(36).substring(7)
       }
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("user_session", JSON.stringify(session))
-        if (rememberMe) localStorage.setItem("remembered_pin", pin)
-      }
+      localStorage.setItem("user_session", JSON.stringify(session))
+      if (rememberMe) localStorage.setItem("remembered_pin", pin)
       
       toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Supabase." })
       router.push("/admin")
@@ -87,10 +83,8 @@ export default function LoginPage() {
         deviceId: Math.random().toString(36).substring(7)
       }
       
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("user_session", JSON.stringify(session))
-        if (rememberMe) localStorage.setItem("remembered_pin", pin)
-      }
+      localStorage.setItem("user_session", JSON.stringify(session))
+      if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
       toast({ title: "Sinal Liberado!", description: "Acesso autorizado com sucesso." })
       router.push("/user/home")
@@ -102,7 +96,11 @@ export default function LoginPage() {
     }
   }
 
-  if (!isMounted) return null
+  if (!isMounted) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">

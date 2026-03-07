@@ -31,7 +31,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro Cloud", description: "Verifique as tabelas no Supabase." })
+      toast({ variant: "destructive", title: "Erro Cloud", description: "Falha ao carregar usuários do Supabase." })
     } finally {
       setLoading(false)
     }
@@ -42,12 +42,12 @@ export default function UserManagementPage() {
   }, [loadUsers])
 
   const handleGeneratePin = () => {
-    setNewUser({ ...newUser, pin: generateRandomPin() })
+    setNewUser(prev => ({ ...prev, pin: generateRandomPin() }))
   }
 
   const handleAddUser = async () => {
     if (!newUser.pin) {
-      toast({ variant: "destructive", title: "Erro", description: "Gere um PIN antes de salvar." })
+      toast({ variant: "destructive", title: "Atenção", description: "Gere um PIN antes de salvar." })
       return
     }
 
@@ -72,27 +72,27 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: editingUserId ? "Atualizado" : "Gerado", description: `PIN ${userData.pin} salvo no Supabase.` })
+      toast({ title: editingUserId ? "Atualizado" : "PIN Gerado", description: `Sincronizado com o Supabase.` })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro Crítico", description: "Falha ao gravar no Supabase. Desative o RLS." })
+      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se as tabelas existem no Supabase." })
     }
   }
 
   const toggleBlock = async (user: User) => {
     const updated = { ...user, isBlocked: !user.isBlocked }
     await saveUser(updated)
-    toast({ title: updated.isBlocked ? "Bloqueado" : "Desbloqueado" })
+    toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Liberado" })
     loadUsers()
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Deletar este acesso permanentemente?")) {
+    if (confirm("Deletar este acesso permanentemente do Supabase?")) {
       await removeUser(userId)
-      toast({ title: "PIN Deletado" })
+      toast({ title: "PIN Excluído" })
       loadUsers()
     }
   }
@@ -117,7 +117,7 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Controle de Acessos</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest opacity-60">Sincronizado com Supabase tmyuecv...</p>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest opacity-60">Sincronizado via Supabase Cloud</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -181,7 +181,7 @@ export default function UserManagementPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
           placeholder="BUSCAR PIN DO CLIENTE..." 
-          className="pl-10 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs tracking-widest" 
+          className="pl-10 pr-4 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs tracking-widest" 
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
