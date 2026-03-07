@@ -44,20 +44,15 @@ export interface User {
 
 const ADMIN_PIN = 'adm77x2p';
 
-// Helper para verificar se está no navegador
-const isBrowser = typeof window !== 'undefined';
-
 // --- FUNÇÕES DE CONTEÚDO ---
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) {
-      console.error("Erro Supabase (Content):", error.message);
-      return [];
-    }
+    if (error) throw error;
     return data || [];
   } catch (e) {
+    console.error("Erro ao buscar conteúdo:", e);
     return [];
   }
 }
@@ -65,12 +60,10 @@ export async function getRemoteContent(): Promise<ContentItem[]> {
 export async function saveContent(item: ContentItem) {
   try {
     const { error } = await supabase.from('content').upsert(item);
-    if (error) {
-      console.error("Erro ao salvar conteúdo:", error.message);
-      return false;
-    }
+    if (error) throw error;
     return true;
   } catch (e) {
+    console.error("Erro ao salvar conteúdo:", e);
     return false;
   }
 }
@@ -91,14 +84,11 @@ export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
     
-    if (error) {
-      console.error("Erro Supabase (Users):", error.message);
-      return [];
-    }
+    if (error) throw error;
 
     let users: User[] = data || [];
     
-    // Garantia do PIN Master Admin no sistema
+    // Garantia do PIN Master Admin no sistema (Local se o banco falhar, mas o banco é prioridade)
     const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
     if (!masterPinExists) {
       users.unshift({
@@ -114,29 +104,39 @@ export async function getRemoteUsers(): Promise<User[]> {
     
     return users;
   } catch (e) {
+    console.error("Erro ao buscar usuários:", e);
     return [];
   }
 }
 
 export async function saveUser(user: User) {
   try {
-    // Garantimos que campos nulos não quebrem o Postgres
+    // Mapeamento explícito para garantir que bate com as aspas duplas do SQL
     const payload = {
-      ...user,
+      id: user.id,
+      pin: user.pin,
+      role: user.role,
+      subscriptionTier: user.subscriptionTier,
       expiryDate: user.expiryDate || null,
-      activeDevices: user.activeDevices || []
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices || [],
+      isBlocked: user.isBlocked || false
     };
 
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
+    console.log("Enviando payload para Supabase:", payload);
+
+    const { error } = await supabase
+      .from('users')
+      .upsert(payload, { onConflict: 'id' });
     
     if (error) {
-      console.error("ERRO CRÍTICO SUPABASE:", error.message, error.details, error.hint);
+      console.error("ERRO DETALHADO DO SUPABASE:", error);
       return false;
     }
     
     return true;
   } catch (e) {
-    console.error("Exceção ao salvar usuário:", e);
+    console.error("Exceção crítica ao salvar usuário:", e);
     return false;
   }
 }
