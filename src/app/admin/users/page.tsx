@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2 } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -17,6 +17,7 @@ export default function UserManagementPage() {
   const [users, setUsers] = React.useState<User[]>([])
   const [loading, setLoading] = React.useState(true)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [isSaving, setIsSaving] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
   const [newUser, setNewUser] = React.useState({
     pin: "",
@@ -31,7 +32,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro de Sincronização", description: "Verifique sua conexão Supabase." })
+      toast({ variant: "destructive", title: "Erro de Sincronização", description: "Falha ao ler dados da nuvem." })
     } finally {
       setLoading(false)
     }
@@ -51,6 +52,8 @@ export default function UserManagementPage() {
       return
     }
 
+    setIsSaving(true)
+    
     let expiry = undefined
     if (newUser.tier === 'test') {
       expiry = new Date(Date.now() + parseInt(newUser.hours) * 60 * 60 * 1000).toISOString()
@@ -72,28 +75,37 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: "PIN Salvo", description: "Sincronizado com a nuvem." })
+      toast({ title: "PIN Salvo", description: "Sincronizado com a nuvem com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se o RLS está desativado no Supabase." })
+      toast({ 
+        variant: "destructive", 
+        title: "Erro ao Salvar", 
+        description: "Verifique se rodou o comando SQL para desativar o RLS no Supabase." 
+      })
     }
+    setIsSaving(false)
   }
 
   const toggleBlock = async (user: User) => {
     const updated = { ...user, isBlocked: !user.isBlocked }
-    await saveUser(updated)
-    toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Liberado" })
-    loadUsers()
+    const success = await saveUser(updated)
+    if (success) {
+      toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Liberado" })
+      loadUsers()
+    }
   }
 
   const handleDeleteUser = async (userId: string) => {
     if (confirm("Deletar este acesso permanentemente?")) {
-      await removeUser(userId)
-      toast({ title: "Removido" })
-      loadUsers()
+      const success = await removeUser(userId)
+      if (success) {
+        toast({ title: "Removido com sucesso" })
+        loadUsers()
+      }
     }
   }
 
@@ -169,8 +181,12 @@ export default function UserManagementPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleSaveUser} className="w-full font-black uppercase h-14 bg-primary text-lg shadow-xl shadow-primary/20">
-                SALVAR NA NUVEM
+              <Button 
+                onClick={handleSaveUser} 
+                className="w-full font-black uppercase h-14 bg-primary text-lg shadow-xl shadow-primary/20"
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SALVAR NA NUVEM'}
               </Button>
             </DialogFooter>
           </DialogContent>

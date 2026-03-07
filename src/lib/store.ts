@@ -44,15 +44,20 @@ export interface User {
 
 const ADMIN_PIN = 'adm77x2p';
 
+// Helper para verificar se está no navegador
+const isBrowser = typeof window !== 'undefined';
+
 // --- FUNÇÕES DE CONTEÚDO ---
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) throw error;
+    if (error) {
+      console.error("Erro Supabase (Content):", error.message);
+      return [];
+    }
     return data || [];
   } catch (e) {
-    console.error("Erro ao buscar conteúdo:", e);
     return [];
   }
 }
@@ -60,10 +65,12 @@ export async function getRemoteContent(): Promise<ContentItem[]> {
 export async function saveContent(item: ContentItem) {
   try {
     const { error } = await supabase.from('content').upsert(item);
-    if (error) throw error;
+    if (error) {
+      console.error("Erro ao salvar conteúdo:", error.message);
+      return false;
+    }
     return true;
   } catch (e) {
-    console.error("Erro ao salvar conteúdo:", e);
     return false;
   }
 }
@@ -81,40 +88,55 @@ export async function removeContent(id: string) {
 // --- FUNÇÕES DE USUÁRIOS (PINS) ---
 
 export async function getRemoteUsers(): Promise<User[]> {
-  let users: User[] = [];
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    if (!error && data) {
-      users = data;
+    
+    if (error) {
+      console.error("Erro Supabase (Users):", error.message);
+      return [];
     }
-  } catch (e) {
-    console.error("Erro ao buscar usuários do Supabase:", e);
-  }
 
-  // Garantia do PIN Master Admin no sistema sempre presente localmente para evitar travamentos
-  const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
-  if (!masterPinExists) {
-    users.unshift({
-      id: 'admin-master-permanent',
-      pin: ADMIN_PIN,
-      role: 'admin',
-      subscriptionTier: 'lifetime',
-      maxScreens: 99,
-      activeDevices: [],
-      isBlocked: false
-    });
+    let users: User[] = data || [];
+    
+    // Garantia do PIN Master Admin no sistema
+    const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
+    if (!masterPinExists) {
+      users.unshift({
+        id: 'admin-master-permanent',
+        pin: ADMIN_PIN,
+        role: 'admin',
+        subscriptionTier: 'lifetime',
+        maxScreens: 99,
+        activeDevices: [],
+        isBlocked: false
+      });
+    }
+    
+    return users;
+  } catch (e) {
+    return [];
   }
-  
-  return users;
 }
 
 export async function saveUser(user: User) {
   try {
-    const { error } = await supabase.from('users').upsert(user);
-    if (error) throw error;
+    // Garantimos que campos nulos não quebrem o Postgres
+    const payload = {
+      ...user,
+      expiryDate: user.expiryDate || null,
+      activeDevices: user.activeDevices || []
+    };
+
+    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
+    
+    if (error) {
+      console.error("ERRO CRÍTICO SUPABASE:", error.message, error.details, error.hint);
+      return false;
+    }
+    
     return true;
   } catch (e) {
-    console.error("Erro ao salvar usuário no Supabase:", e);
+    console.error("Exceção ao salvar usuário:", e);
     return false;
   }
 }
