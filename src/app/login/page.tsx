@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     const normalizedPin = pin.trim().toLowerCase();
 
-    // LÓGICA DE PIN MASTER INSTANTÂNEO (BLINDADO)
+    // LÓGICA DE PIN MASTER INSTANTÂNEO (HARDCODED PARA SEGURANÇA)
     if (normalizedPin === 'adm77x2p') {
       const session = {
         id: 'admin-master',
@@ -51,12 +51,13 @@ export default function LoginPage() {
         if (rememberMe) localStorage.setItem("remembered_pin", pin)
       }
       
-      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Cloud." })
+      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Supabase." })
       router.push("/admin")
       return
     }
 
     try {
+      // Busca usuários do Supabase
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
 
@@ -68,6 +69,13 @@ export default function LoginPage() {
 
       if (user.isBlocked) {
         setError("Este acesso foi suspenso temporariamente.")
+        setLoading(false)
+        return
+      }
+
+      // Verifica expiração
+      if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
+        setError("Este acesso expirou. Renove sua assinatura.")
         setLoading(false)
         return
       }
@@ -84,12 +92,12 @@ export default function LoginPage() {
         if (rememberMe) localStorage.setItem("remembered_pin", pin)
       }
 
-      toast({ title: "Sinal Liberado!", description: "Prepare a pipoca!" })
+      toast({ title: "Sinal Liberado!", description: "Acesso autorizado com sucesso." })
       router.push("/user/home")
       
     } catch (err: any) {
       console.error("Login error:", err)
-      setError("Erro de conexão. Tente novamente em instantes.")
+      setError("Erro de conexão com o banco de dados Supabase.")
       setLoading(false)
     }
   }
@@ -104,7 +112,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white" />
           </div>
           <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede P2P Master Cloud v3.5</CardDescription>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede Cloud Sincronizada v4.0</CardDescription>
         </CardHeader>
         <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
@@ -151,13 +159,10 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Servidores Cloud Online
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Supabase Cloud Online
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Encrypted P2P</div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Encrypted Data</div>
           </div>
-          <p className="text-[8px] text-muted-foreground/40 uppercase text-center font-bold italic leading-tight">
-            Sincronização Cloud via Supabase Ativa
-          </p>
         </CardFooter>
       </Card>
     </div>
