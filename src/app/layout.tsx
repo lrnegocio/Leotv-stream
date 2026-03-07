@@ -1,6 +1,8 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 export const metadata: Metadata = {
   title: 'Léo Tv & Stream',
@@ -35,6 +37,7 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background text-foreground">
         {children}
         <Toaster />
+        <OfflineIndicator />
       </body>
     </html>
   );

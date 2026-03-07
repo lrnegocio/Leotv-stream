@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase-client';
@@ -87,8 +88,12 @@ export async function getRemoteUsers(): Promise<User[]> {
     if (error) throw error;
 
     let users: User[] = (data || []).map(u => ({
-      ...u,
+      id: u.id,
+      pin: u.pin,
+      role: u.role || 'user',
       subscriptionTier: u.subscriptionTier || 'test',
+      expiryDate: u.expiryDate,
+      maxScreens: u.maxScreens || 1,
       activeDevices: u.activeDevices || [],
       isBlocked: !!u.isBlocked
     }));
@@ -116,7 +121,8 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Usamos aspas para garantir que o Supabase encontre as colunas Case-Sensitive
+    // Usamos aspas duplas nos nomes das colunas para garantir que o Supabase/Postgres 
+    // respeite as letras maiúsculas definidas no SQL de criação.
     const payload = {
       id: user.id,
       pin: user.pin,
@@ -127,6 +133,8 @@ export async function saveUser(user: User) {
       "activeDevices": user.activeDevices || [],
       "isBlocked": user.isBlocked || false
     };
+
+    console.log("Enviando payload para Supabase:", payload);
 
     const { error } = await supabase
       .from('users')

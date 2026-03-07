@@ -1,12 +1,13 @@
+
 'use client';
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock, Loader2 } from "lucide-react"
+import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -17,10 +18,13 @@ export default function HomeContent() {
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
+  const [isOnline, setIsOnline] = React.useState(true)
   const router = useRouter()
 
   React.useEffect(() => {
     setIsMounted(true)
+    setIsOnline(navigator.onLine)
+
     const session = localStorage.getItem("user_session")
     if (!session) {
       router.push("/login")
@@ -30,14 +34,32 @@ export default function HomeContent() {
     const load = async () => {
       try {
         const data = await getRemoteContent()
-        setContent(data)
+        if (data && data.length > 0) {
+          setContent(data)
+          // Cache local para modo offline
+          localStorage.setItem("cached_content", JSON.stringify(data))
+        } else {
+          // Tenta carregar do cache se falhar
+          const cached = localStorage.getItem("cached_content")
+          if (cached) setContent(JSON.parse(cached))
+        }
       } catch (err) {
         console.error("HomeContent load error:", err)
+        const cached = localStorage.getItem("cached_content")
+        if (cached) setContent(JSON.parse(cached))
       } finally {
         setLoading(false)
       }
     }
     load()
+
+    const handleStatus = () => setIsOnline(navigator.onLine)
+    window.addEventListener('online', handleStatus)
+    window.addEventListener('offline', handleStatus)
+    return () => {
+      window.removeEventListener('online', handleStatus)
+      window.removeEventListener('offline', handleStatus)
+    }
   }, [router])
 
   const handleLogout = () => {
@@ -56,6 +78,11 @@ export default function HomeContent() {
   })
 
   const openContent = async (item: ContentItem) => {
+    if (!navigator.onLine) {
+      toast({ variant: "destructive", title: "Sem Internet", description: "Conecte-se para assistir." })
+      return
+    }
+
     if (item.isRestricted) {
       const settings = await getGlobalSettings()
       const userInput = prompt("Conteúdo Restrito. Senha Parental:")
@@ -95,12 +122,19 @@ export default function HomeContent() {
       </header>
 
       <main className="p-6 space-y-8 max-w-7xl mx-auto">
+        {!isOnline && (
+          <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-2xl flex items-center gap-4 text-destructive">
+            <WifiOff className="h-6 w-6" />
+            <p className="text-xs font-bold uppercase">Você está em modo offline. O catálogo é uma cópia salva.</p>
+          </div>
+        )}
+
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4">Pastas de Canais</h2>
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 font-headline italic">Pastas de Canais</h2>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
             <Button 
               variant={selectedFolder === null ? "default" : "secondary"} 
-              className="rounded-xl font-bold uppercase text-[10px] min-w-[120px]"
+              className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
               onClick={() => setSelectedFolder(null)}
             >
               <Folder className="mr-2 h-4 w-4" /> Todos
@@ -109,7 +143,7 @@ export default function HomeContent() {
               <Button 
                 key={cat}
                 variant={selectedFolder === cat ? "default" : "secondary"} 
-                className="rounded-xl font-bold uppercase text-[10px] min-w-[120px]"
+                className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
                 onClick={() => setSelectedFolder(cat)}
               >
                 <Folder className="mr-2 h-4 w-4" /> {cat}
@@ -120,25 +154,25 @@ export default function HomeContent() {
 
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.length === 0 ? (
-            <div className="col-span-full py-20 text-center opacity-50">
-              <p className="uppercase text-xs font-bold">Nenhum canal encontrado nesta pasta.</p>
+            <div className="col-span-full py-20 text-center opacity-50 border border-dashed border-white/10 rounded-3xl">
+              <p className="uppercase text-xs font-bold font-headline">Nenhum canal encontrado nesta pasta.</p>
             </div>
           ) : (
             filtered.map(item => (
               <div 
                 key={item.id} 
                 onClick={() => openContent(item)}
-                className="bg-card border border-white/5 rounded-xl p-4 cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden active:scale-95"
+                className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden active:scale-95 shadow-xl"
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-                  <h3 className="font-bold text-sm uppercase truncate group-hover:text-primary transition-colors">{item.title}</h3>
+                  <h3 className="font-bold text-sm uppercase truncate group-hover:text-primary transition-colors font-headline">{item.title}</h3>
                 </div>
                 
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Play className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[8px] font-bold text-muted-foreground uppercase">{item.type === 'channel' ? 'AO VIVO' : 'FILME'}</span>
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full">
+                    <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
+                    <span className="text-[7px] font-black text-muted-foreground uppercase tracking-widest">{item.type === 'channel' ? 'AO VIVO' : 'P2P'}</span>
                   </div>
                   {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
                 </div>
@@ -152,9 +186,10 @@ export default function HomeContent() {
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-          <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-2xl shadow-2xl">
+          <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl shadow-2xl">
             <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
+              <DialogDescription>Player de vídeo P2P Master para o conteúdo {activeVideo.title}</DialogDescription>
             </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -85,7 +86,7 @@ export default function UserManagementPage() {
       toast({ 
         variant: "destructive", 
         title: "Erro ao Salvar", 
-        description: "Verifique o SQL Editor no Supabase e rode o reset das tabelas." 
+        description: "Verifique se você desativou o RLS no supabase (SQL Editor)." 
       })
     }
     setIsSaving(false)
@@ -146,8 +147,8 @@ export default function UserManagementPage() {
               <DialogTitle className="text-lg font-bold uppercase italic text-primary">
                 Configurar Acesso
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground uppercase">
-                Configure os detalhes do PIN de acesso abaixo.
+              <DialogDescription className="sr-only">
+                Formulário para criar ou editar um PIN de acesso ao sistema de streaming.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
