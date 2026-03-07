@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier } from "@/lib/store"
@@ -76,7 +76,7 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: "PIN Salvo", description: "Sincronizado com o Supabase com sucesso." })
+      toast({ title: "PIN Salvo", description: "Sincronizado com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
@@ -85,7 +85,7 @@ export default function UserManagementPage() {
       toast({ 
         variant: "destructive", 
         title: "Erro ao Salvar", 
-        description: "Verifique se você desativou o RLS no Supabase (SQL Editor)." 
+        description: "Verifique o SQL Editor no Supabase e rode o reset das tabelas." 
       })
     }
     setIsSaving(false)
@@ -130,7 +130,7 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Status: Sincronização Cloud Ativa</p>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Sincronização Cloud Ativa</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -144,12 +144,15 @@ export default function UserManagementPage() {
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold uppercase italic text-primary">
-                Configurar Acesso Master
+                Configurar Acesso
               </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground uppercase">
+                Configure os detalhes do PIN de acesso abaixo.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN de Acesso</Label>
+                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN</Label>
                 <div className="flex gap-2">
                   <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14" />
                   <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 h-14">
@@ -177,17 +180,17 @@ export default function UserManagementPage() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold opacity-70">Telas Simultâneas</Label>
+                <Label className="uppercase text-[10px] font-bold opacity-70">Telas</Label>
                 <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5" />
               </div>
             </div>
             <DialogFooter>
               <Button 
                 onClick={handleSaveUser} 
-                className="w-full font-black uppercase h-14 bg-primary text-lg shadow-lg shadow-primary/20"
+                className="w-full font-black uppercase h-14 bg-primary text-lg"
                 disabled={isSaving}
               >
-                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SALVAR NO SUPABASE'}
+                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SALVAR ACESSO'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -197,8 +200,8 @@ export default function UserManagementPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="BUSCAR PIN NA NUVEM..." 
-          className="pl-10 pr-4 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" 
+          placeholder="BUSCAR PIN..." 
+          className="pl-10 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" 
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
@@ -212,17 +215,17 @@ export default function UserManagementPage() {
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="uppercase text-[10px] font-black text-primary">CÓDIGO PIN</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">CATEGORIA</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">TELAS</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">SINAL</TableHead>
-                <TableHead className="text-right uppercase text-[10px] font-black">OPÇÕES</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
+                <TableHead className="text-right uppercase text-[10px] font-black">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 opacity-30">Nenhum PIN cadastrado no banco de dados.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 opacity-30">Nenhum PIN encontrado.</TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
@@ -246,7 +249,7 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)} title={user.isBlocked ? "Desbloquear" : "Bloquear"}>
+                        <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
                           {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400">

@@ -38,7 +38,7 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   expiryDate?: string; 
   maxScreens: number;
-  activeDevices: string[]; 
+  activeDevices?: string[]; 
   isBlocked: boolean;
 }
 
@@ -86,9 +86,14 @@ export async function getRemoteUsers(): Promise<User[]> {
     
     if (error) throw error;
 
-    let users: User[] = data || [];
+    let users: User[] = (data || []).map(u => ({
+      ...u,
+      subscriptionTier: u.subscriptionTier || 'test',
+      activeDevices: u.activeDevices || [],
+      isBlocked: !!u.isBlocked
+    }));
     
-    // Garantia do PIN Master Admin no sistema (Local se o banco falhar, mas o banco é prioridade)
+    // Garantia do PIN Master Admin no sistema
     const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
     if (!masterPinExists) {
       users.unshift({
@@ -111,19 +116,17 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Mapeamento explícito para garantir que bate com as aspas duplas do SQL
+    // Usamos aspas para garantir que o Supabase encontre as colunas Case-Sensitive
     const payload = {
       id: user.id,
       pin: user.pin,
       role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked || false
+      "subscriptionTier": user.subscriptionTier,
+      "expiryDate": user.expiryDate || null,
+      "maxScreens": user.maxScreens,
+      "activeDevices": user.activeDevices || [],
+      "isBlocked": user.isBlocked || false
     };
-
-    console.log("Enviando payload para Supabase:", payload);
 
     const { error } = await supabase
       .from('users')
