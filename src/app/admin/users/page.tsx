@@ -31,7 +31,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro Cloud", description: "Falha ao carregar usuários do Supabase." })
+      toast({ variant: "destructive", title: "Erro de Conexão", description: "Falha ao sincronizar com Supabase." })
     } finally {
       setLoading(false)
     }
@@ -47,7 +47,7 @@ export default function UserManagementPage() {
 
   const handleAddUser = async () => {
     if (!newUser.pin) {
-      toast({ variant: "destructive", title: "Atenção", description: "Gere um PIN antes de salvar." })
+      toast({ variant: "destructive", title: "Erro", description: "O PIN é obrigatório." })
       return
     }
 
@@ -72,13 +72,13 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: editingUserId ? "Atualizado" : "PIN Gerado", description: `Sincronizado com o Supabase.` })
+      toast({ title: "PIN Sincronizado", description: `O acesso agora está ativo na nuvem.` })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se as tabelas existem no Supabase." })
+      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se rodou o comando SQL no Supabase." })
     }
   }
 
@@ -90,9 +90,9 @@ export default function UserManagementPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Deletar este acesso permanentemente do Supabase?")) {
+    if (confirm("Deletar este acesso permanentemente da nuvem?")) {
       await removeUser(userId)
-      toast({ title: "PIN Excluído" })
+      toast({ title: "Removido" })
       loadUsers()
     }
   }
@@ -116,8 +116,8 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold font-headline uppercase">Controle de Acessos</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest opacity-60">Sincronizado via Supabase Cloud</p>
+          <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">Sincronizado via Supabase Cloud</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -125,20 +125,20 @@ export default function UserManagementPage() {
         }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs" onClick={() => handleGeneratePin()}>
-              <Plus className="mr-2 h-4 w-4" /> Gerar Novo PIN
+              <Plus className="mr-2 h-4 w-4" /> Novo Acesso
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold uppercase italic text-primary">
-                {editingUserId ? 'Editar' : 'Novo'} PIN de Cliente
+                Configurar PIN de Cliente
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold">Código PIN Gerado</Label>
+                <Label className="uppercase text-[10px] font-bold">Código PIN</Label>
                 <div className="flex gap-2">
-                  <Input value={newUser.pin} readOnly className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5" />
+                  <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5" />
                   <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 hover:bg-primary/20">
                     <RefreshCcw className="h-4 w-4 text-primary" />
                   </Button>
@@ -180,8 +180,8 @@ export default function UserManagementPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="BUSCAR PIN DO CLIENTE..." 
-          className="pl-10 pr-4 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs tracking-widest" 
+          placeholder="BUSCAR PIN..." 
+          className="pl-10 pr-4 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" 
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
@@ -190,26 +190,26 @@ export default function UserManagementPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
       ) : (
-        <div className="bg-card/30 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-2xl">
+        <div className="bg-card/30 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
           <Table>
             <TableHeader className="bg-black/20">
-              <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="uppercase text-[10px] font-black tracking-widest text-primary">PIN</TableHead>
-                <TableHead className="uppercase text-[10px] font-black tracking-widest">PLANO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black tracking-widest">VENCIMENTO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black tracking-widest">TELAS</TableHead>
-                <TableHead className="uppercase text-[10px] font-black tracking-widest">STATUS</TableHead>
-                <TableHead className="text-right uppercase text-[10px] font-black tracking-widest">AÇÕES</TableHead>
+              <TableRow className="border-white/5">
+                <TableHead className="uppercase text-[10px] font-black text-primary">PIN</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">TELAS</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
+                <TableHead className="text-right uppercase text-[10px] font-black">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 uppercase text-xs font-bold opacity-30 tracking-[0.2em]">Nenhum acesso sincronizado</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 uppercase text-xs font-bold opacity-30">Nenhum acesso sincronizado</TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="border-white/5 hover:bg-white/5 group transition-colors">
+                  <TableRow key={user.id} className="border-white/5 hover:bg-white/5 group">
                     <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{user.pin}</TableCell>
                     <TableCell>
                       <Badge variant={user.subscriptionTier === 'lifetime' ? 'default' : 'secondary'} className="uppercase text-[9px] font-black">
@@ -219,16 +219,16 @@ export default function UserManagementPage() {
                     <TableCell className="text-[10px] font-bold uppercase opacity-60">
                       {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'VITALÍCIO'}
                     </TableCell>
-                    <TableCell className="font-black">{user.activeDevices?.length || 0} / {user.maxScreens}</TableCell>
+                    <TableCell className="font-black">{user.maxScreens}</TableCell>
                     <TableCell>
                       {user.isBlocked ? (
                         <Badge variant="destructive" className="uppercase text-[9px] font-black">SUSPENSO</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/5 uppercase text-[9px] font-black animate-pulse">LIBERADO</Badge>
+                        <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/5 uppercase text-[9px] font-black">LIBERADO</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)} title="Bloquear/Desbloquear">
                           {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                         </Button>

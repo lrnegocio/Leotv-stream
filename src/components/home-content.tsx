@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock } from "lucide-react"
+import { LogOut, Folder, Tv, Play, Lock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -17,10 +16,12 @@ export default function HomeContent() {
   const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [isMounted, setIsMounted] = React.useState(false)
   const router = useRouter()
 
   React.useEffect(() => {
-    const session = typeof window !== 'undefined' ? localStorage.getItem("user_session") : null;
+    setIsMounted(true)
+    const session = localStorage.getItem("user_session")
     if (!session) {
       router.push("/login")
       return
@@ -66,10 +67,10 @@ export default function HomeContent() {
     setActiveVideo(item)
   }
 
-  if (loading) {
+  if (!isMounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     )
   }

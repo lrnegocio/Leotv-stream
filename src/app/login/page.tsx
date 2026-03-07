@@ -47,13 +47,12 @@ export default function LoginPage() {
       localStorage.setItem("user_session", JSON.stringify(session))
       if (rememberMe) localStorage.setItem("remembered_pin", pin)
       
-      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado via Supabase." })
+      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
       router.push("/admin")
       return
     }
 
     try {
-      // Busca usuários do Supabase
       const users = await getRemoteUsers()
       const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
 
@@ -69,7 +68,6 @@ export default function LoginPage() {
         return
       }
 
-      // Verifica expiração
       if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
         setError("Este acesso expirou. Renove sua assinatura.")
         setLoading(false)
@@ -90,7 +88,6 @@ export default function LoginPage() {
       router.push("/user/home")
       
     } catch (err: any) {
-      console.error("Login error:", err)
       setError("Erro de conexão com o banco de dados Supabase.")
       setLoading(false)
     }
@@ -157,9 +154,9 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Supabase Cloud Online
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado via Nuvem
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Encrypted Data</div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v4.0</div>
           </div>
         </CardFooter>
       </Card>

@@ -42,20 +42,17 @@ export interface User {
   isBlocked: boolean;
 }
 
-const isBrowser = typeof window !== 'undefined';
+const ADMIN_PIN = 'adm77x2p';
 
 // --- FUNÇÕES DE CONTEÚDO ---
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) {
-      console.error("Erro Supabase Content:", error.message);
-      return [];
-    }
+    if (error) throw error;
     return data || [];
   } catch (e) {
-    console.error("Erro Crítico Content:", e);
+    console.error("Erro ao buscar conteúdo:", e);
     return [];
   }
 }
@@ -77,7 +74,6 @@ export async function removeContent(id: string) {
     if (error) throw error;
     return true;
   } catch (e) {
-    console.error("Erro ao remover conteúdo:", e);
     return false;
   }
 }
@@ -85,25 +81,21 @@ export async function removeContent(id: string) {
 // --- FUNÇÕES DE USUÁRIOS (PINS) ---
 
 export async function getRemoteUsers(): Promise<User[]> {
-  const adminPin = 'adm77x2p';
   let users: User[] = [];
-
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    if (error) {
-      console.warn("Tabela de usuários não encontrada no Supabase.");
-    } else {
-      users = data || [];
+    if (!error && data) {
+      users = data;
     }
   } catch (e) {
-    console.error("Erro ao buscar usuários no Supabase:", e);
+    console.error("Erro ao buscar usuários do Supabase:", e);
   }
 
-  // Garante que o PIN Master sempre exista para evitar bloqueio do admin
-  if (!users.find(u => u.pin === adminPin)) {
+  // Garantia do PIN Master Admin no sistema
+  if (!users.find(u => u.pin === ADMIN_PIN)) {
     users.unshift({
       id: 'admin-master-permanent',
-      pin: adminPin,
+      pin: ADMIN_PIN,
       role: 'admin',
       subscriptionTier: 'lifetime',
       maxScreens: 99,
@@ -117,24 +109,11 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    const { error } = await supabase.from('users').upsert({
-      id: user.id,
-      pin: user.pin,
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked
-    });
-    
-    if (error) {
-      console.error("Supabase Save Error:", error.message);
-      return false;
-    }
+    const { error } = await supabase.from('users').upsert(user);
+    if (error) throw error;
     return true;
   } catch (e) {
-    console.error("Falha fatal ao salvar PIN:", e);
+    console.error("Erro ao salvar usuário no Supabase:", e);
     return false;
   }
 }
@@ -145,7 +124,6 @@ export async function removeUser(id: string) {
     if (error) throw error;
     return true;
   } catch (e) {
-    console.error("Erro ao remover PIN:", e);
     return false;
   }
 }
@@ -155,7 +133,7 @@ export async function removeUser(id: string) {
 export async function getGlobalSettings() {
   const defaultSettings = { parentalPin: '1234' };
   try {
-    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').single();
+    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
     if (!error && data && data.value) return data.value as { parentalPin: string };
   } catch (e) {}
   return defaultSettings;
