@@ -91,8 +91,9 @@ export async function getRemoteUsers(): Promise<User[]> {
     console.error("Erro ao buscar usuários do Supabase:", e);
   }
 
-  // Garantia do PIN Master Admin no sistema
-  if (!users.find(u => u.pin === ADMIN_PIN)) {
+  // Garantia do PIN Master Admin no sistema sempre presente localmente para evitar travamentos
+  const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
+  if (!masterPinExists) {
     users.unshift({
       id: 'admin-master-permanent',
       pin: ADMIN_PIN,

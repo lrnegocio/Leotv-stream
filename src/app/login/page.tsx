@@ -88,7 +88,7 @@ export default function LoginPage() {
       router.push("/user/home")
       
     } catch (err: any) {
-      setError("Erro de conexão com o banco de dados Supabase.")
+      setError("Erro de conexão com a rede cloud.")
       setLoading(false)
     }
   }
@@ -107,7 +107,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white" />
           </div>
           <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Rede Cloud Sincronizada v4.0</CardDescription>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Conexão Cloud Sincronizada</CardDescription>
         </CardHeader>
         <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
@@ -154,9 +154,9 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado via Nuvem
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado Supabase
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v4.0</div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v4.2</div>
           </div>
         </CardFooter>
       </Card>

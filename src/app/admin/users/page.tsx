@@ -31,7 +31,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro de Conexão", description: "Falha ao sincronizar com Supabase." })
+      toast({ variant: "destructive", title: "Erro de Sincronização", description: "Verifique sua conexão Supabase." })
     } finally {
       setLoading(false)
     }
@@ -45,7 +45,7 @@ export default function UserManagementPage() {
     setNewUser(prev => ({ ...prev, pin: generateRandomPin() }))
   }
 
-  const handleAddUser = async () => {
+  const handleSaveUser = async () => {
     if (!newUser.pin) {
       toast({ variant: "destructive", title: "Erro", description: "O PIN é obrigatório." })
       return
@@ -72,13 +72,13 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: "PIN Sincronizado", description: `O acesso agora está ativo na nuvem.` })
+      toast({ title: "PIN Salvo", description: "Sincronizado com a nuvem." })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se rodou o comando SQL no Supabase." })
+      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Verifique se o RLS está desativado no Supabase." })
     }
   }
 
@@ -90,7 +90,7 @@ export default function UserManagementPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Deletar este acesso permanentemente da nuvem?")) {
+    if (confirm("Deletar este acesso permanentemente?")) {
       await removeUser(userId)
       toast({ title: "Removido" })
       loadUsers()
@@ -117,7 +117,7 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">Sincronizado via Supabase Cloud</p>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">Controle de Acessos Cloud</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -125,13 +125,13 @@ export default function UserManagementPage() {
         }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs" onClick={() => handleGeneratePin()}>
-              <Plus className="mr-2 h-4 w-4" /> Novo Acesso
+              <Plus className="mr-2 h-4 w-4" /> Gerar Novo PIN
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold uppercase italic text-primary">
-                Configurar PIN de Cliente
+                Configurar Acesso
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -158,18 +158,18 @@ export default function UserManagementPage() {
                 </div>
                 {newUser.tier === 'test' && (
                   <div className="grid gap-2">
-                    <Label className="uppercase text-[10px] font-bold">Horas</Label>
+                    <Label className="uppercase text-[10px] font-bold">Duração (Horas)</Label>
                     <Input type="number" value={newUser.hours} onChange={e => setNewUser({...newUser, hours: e.target.value})} className="bg-black/40 border-white/5" />
                   </div>
                 )}
               </div>
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold">Limite de Telas</Label>
+                <Label className="uppercase text-[10px] font-bold">Telas Simultâneas</Label>
                 <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5" />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddUser} className="w-full font-black uppercase h-14 bg-primary text-lg shadow-xl shadow-primary/20">
+              <Button onClick={handleSaveUser} className="w-full font-black uppercase h-14 bg-primary text-lg shadow-xl shadow-primary/20">
                 SALVAR NA NUVEM
               </Button>
             </DialogFooter>
@@ -193,7 +193,7 @@ export default function UserManagementPage() {
         <div className="bg-card/30 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
           <Table>
             <TableHeader className="bg-black/20">
-              <TableRow className="border-white/5">
+              <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="uppercase text-[10px] font-black text-primary">PIN</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
@@ -205,7 +205,7 @@ export default function UserManagementPage() {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 uppercase text-xs font-bold opacity-30">Nenhum acesso sincronizado</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 uppercase text-xs font-bold opacity-30">Nenhum acesso encontrado</TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
@@ -224,7 +224,7 @@ export default function UserManagementPage() {
                       {user.isBlocked ? (
                         <Badge variant="destructive" className="uppercase text-[9px] font-black">SUSPENSO</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/5 uppercase text-[9px] font-black">LIBERADO</Badge>
+                        <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/5 uppercase text-[9px] font-black">ATIVO</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
