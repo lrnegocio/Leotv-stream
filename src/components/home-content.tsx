@@ -1,18 +1,19 @@
-
 'use client';
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-center"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
+import { AiAssistant } from "@/components/ai-assistant"
 
 export default function HomeContent() {
-  const [searchTerm, setSearchTerm] = React.useState("")
+  const searchParams = useSearchParams()
+  const urlQuery = searchParams.get('q') || ""
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [selectedFolder, setSelectedFolder] = React.useState<string | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
@@ -36,15 +37,12 @@ export default function HomeContent() {
         const data = await getRemoteContent()
         if (data && data.length > 0) {
           setContent(data)
-          // Cache local para modo offline
           localStorage.setItem("cached_content", JSON.stringify(data))
         } else {
-          // Tenta carregar do cache se falhar
           const cached = localStorage.getItem("cached_content")
           if (cached) setContent(JSON.parse(cached))
         }
       } catch (err) {
-        console.error("HomeContent load error:", err)
         const cached = localStorage.getItem("cached_content")
         if (cached) setContent(JSON.parse(cached))
       } finally {
@@ -71,8 +69,8 @@ export default function HomeContent() {
   const categories = Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort()
 
   const filtered = content.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         (item.genre && item.genre.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
+                         (item.genre && item.genre.toLowerCase().includes(urlQuery.toLowerCase()))
     const matchesFolder = selectedFolder ? item.genre === selectedFolder : true
     return matchesSearch && matchesFolder
   })
@@ -125,7 +123,7 @@ export default function HomeContent() {
         {!isOnline && (
           <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-2xl flex items-center gap-4 text-destructive">
             <WifiOff className="h-6 w-6" />
-            <p className="text-xs font-bold uppercase">Você está em modo offline. O catálogo é uma cópia salva.</p>
+            <p className="text-xs font-bold uppercase">Modo Offline Ativo.</p>
           </div>
         )}
 
@@ -155,7 +153,7 @@ export default function HomeContent() {
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.length === 0 ? (
             <div className="col-span-full py-20 text-center opacity-50 border border-dashed border-white/10 rounded-3xl">
-              <p className="uppercase text-xs font-bold font-headline">Nenhum canal encontrado nesta pasta.</p>
+              <p className="uppercase text-xs font-bold font-headline">Nenhum resultado encontrado.</p>
             </div>
           ) : (
             filtered.map(item => (
@@ -176,8 +174,6 @@ export default function HomeContent() {
                   </div>
                   {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
                 </div>
-
-                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             ))
           )}
@@ -189,7 +185,7 @@ export default function HomeContent() {
           <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl shadow-2xl">
             <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
-              <DialogDescription>Player de vídeo P2P Master para o conteúdo {activeVideo.title}</DialogDescription>
+              <DialogDescription>Player Léo Stream</DialogDescription>
             </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 
@@ -206,6 +202,7 @@ export default function HomeContent() {
           </DialogContent>
         </Dialog>
       )}
+      <AiAssistant />
     </div>
   )
 }

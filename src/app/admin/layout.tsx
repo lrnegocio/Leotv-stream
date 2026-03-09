@@ -5,6 +5,7 @@ import Link from "next/link"
 import { LayoutDashboard, Film, Users, Settings, LogOut, Tv } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
+import { AiAssistant } from "@/components/ai-assistant"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -85,6 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </main>
       </div>
+      <AiAssistant />
     </SidebarProvider>
   )
 }
