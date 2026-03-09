@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -58,13 +57,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
     }
 
-    // XVideos
+    // XVideos - Aceita IDs alfanuméricos (letras e números)
     if (processedUrl.includes("xvideos.com/video.")) {
       const idPart = processedUrl.split("video.")[1]?.split("/")[0]
       if (idPart) {
-        // Formato: xvideos.com/embedframe/ID
-        const idNumeric = idPart.replace(/\D/g, '');
-        return { embedUrl: `https://www.xvideos.com/embedframe/${idNumeric}`, isVideoFile: false }
+        return { embedUrl: `https://www.xvideos.com/embedframe/${idPart}`, isVideoFile: false }
       }
     }
 
@@ -93,7 +90,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setLoading(true)
     setIsAccelerating(true)
-    // Simulação de aceleração P2P para feedback visual
     const timer = setTimeout(() => setIsAccelerating(false), 2000)
     return () => clearTimeout(timer)
   }, [url])
@@ -118,7 +114,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
-      {/* Overlay de Aceleração Turbo P2P */}
       {(loading || isAccelerating) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-30 transition-opacity">
           <div className="relative">
@@ -152,8 +147,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="h-full w-full border-0 relative z-10"
           title={title}
           loading="eager"
-          // @ts-ignore
-          fetchpriority="high"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           onLoad={() => setLoading(false)}
@@ -162,7 +155,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
       
-      {/* Controles do Player (Otimizados) */}
       <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-black/40 to-transparent">
           <h3 className="text-lg font-black text-white uppercase tracking-tight italic font-headline truncate pr-20">{title}</h3>
