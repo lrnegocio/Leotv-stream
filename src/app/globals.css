@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +46,18 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
   }
+}
+
+@layer utilities {
+  .animate-progress-fast {
+    animation: progress-fast 2s ease-in-out infinite;
+  }
+}
+
+@keyframes progress-fast {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
 }
 
 /* Custom transitions */
