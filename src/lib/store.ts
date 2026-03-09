@@ -1,4 +1,3 @@
-
 'use client';
 
 import { supabase } from './supabase-client';
@@ -41,7 +40,7 @@ export interface User {
   maxScreens: number;
   activeDevices: string[]; 
   isBlocked: boolean;
-  blockedAt?: string; // Data de quando foi bloqueado por segurança
+  blockedAt?: string; 
 }
 
 const ADMIN_PIN = 'adm77x2p';
@@ -54,7 +53,6 @@ export async function getRemoteContent(): Promise<ContentItem[]> {
     if (error) throw error;
     return data || [];
   } catch (e) {
-    console.error("Erro ao buscar conteúdo:", e);
     return [];
   }
 }
@@ -65,7 +63,6 @@ export async function saveContent(item: ContentItem) {
     if (error) throw error;
     return true;
   } catch (e) {
-    console.error("Erro ao salvar conteúdo:", e);
     return false;
   }
 }
@@ -85,7 +82,6 @@ export async function removeContent(id: string) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    
     if (error) throw error;
 
     let users: User[] = (data || []).map(u => ({
@@ -115,62 +111,54 @@ export async function getRemoteUsers(): Promise<User[]> {
     
     return users;
   } catch (e) {
-    console.error("Erro ao buscar usuários:", e);
     return [];
   }
 }
 
 export async function saveUser(user: User) {
   try {
-    const payload = {
-      id: user.id,
-      pin: user.pin,
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked || false,
-      blockedAt: user.blockedAt || null
-    };
-
     const { error } = await supabase
       .from('users')
-      .upsert(payload, { onConflict: 'id' });
-    
-    if (error) return false;
+      .upsert({
+        id: user.id,
+        pin: user.pin,
+        role: user.role,
+        subscriptionTier: user.subscriptionTier,
+        expiryDate: user.expiryDate || null,
+        maxScreens: user.maxScreens,
+        activeDevices: user.activeDevices || [],
+        isBlocked: user.isBlocked,
+        blockedAt: user.blockedAt || null
+      });
+    if (error) throw error;
     return true;
   } catch (e) {
     return false;
   }
 }
 
-/**
- * LÓGICA DE GESTÃO DE TELAS P2P MESTRE
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
-  // Admin bypass
   if (normalizedPin === ADMIN_PIN) {
-    return { user: users.find(u => u.pin === ADMIN_PIN) };
+    const adminUser = users.find(u => u.pin === ADMIN_PIN);
+    return { user: adminUser };
   }
 
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
-
   if (!user) return { error: "PIN INVÁLIDO" };
 
   // 1. Verificação de Auto-Desbloqueio (10 min)
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
-    const now = new Date().getTime();
+    const now = Date.now();
     const diffMins = (now - blockedTime) / (1000 * 60);
 
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
-      user.activeDevices = []; // Reseta aparelhos ao liberar
+      user.activeDevices = [deviceId];
       await saveUser(user);
     } else {
       return { error: `ACESSO BLOQUEADO POR USO SIMULTÂNEO. LIBERA EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
@@ -184,20 +172,19 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // 3. Validação de Telas Simultâneas
+  // 3. Validação de Telas (BLOQUEIO INSTANTÂNEO)
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO INSTANTÂNEO POR PIRATARIA/COMPARTILHAMENTO
+      // BLOQUEIO GLOBAL IMEDIATO
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = [];
+      user.activeDevices = []; 
       await saveUser(user);
       return { error: "BLOQUEIO DE SEGURANÇA: EXCESSO DE TELAS DETECTADO." };
     } else {
-      // Adiciona novo aparelho
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }
@@ -225,13 +212,11 @@ export async function removeUser(id: string) {
   }
 }
 
-// --- CONFIGURAÇÕES ---
-
 export async function getGlobalSettings() {
   const defaultSettings = { parentalPin: '1234' };
   try {
-    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    if (!error && data && data.value) return data.value as { parentalPin: string };
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    if (data && data.value) return data.value as { parentalPin: string };
   } catch (e) {}
   return defaultSettings;
 }

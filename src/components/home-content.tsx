@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -34,34 +33,38 @@ export default function HomeContent() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Verificação periódica de bloqueio (Heartbeat Master)
+    // Verificação de Segurança Master (Heartbeat Rápido)
     const checkSecurity = async () => {
-      const users = await getRemoteUsers();
-      const currentUser = users.find(u => u.id === session.id);
-      
-      if (currentUser && (currentUser.isBlocked || !currentUser.activeDevices.includes(session.deviceId))) {
-        localStorage.removeItem("user_session");
-        router.push("/login");
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Detectado uso simultâneo em outro aparelho." });
-      }
+      try {
+        const users = await getRemoteUsers();
+        const currentUser = users.find(u => u.id === session.id);
+        
+        if (!currentUser) return;
+
+        const isStillAuthorized = !currentUser.isBlocked && 
+                                 currentUser.activeDevices.includes(session.deviceId);
+
+        if (!isStillAuthorized) {
+          localStorage.removeItem("user_session");
+          router.push("/login");
+          toast({ 
+            variant: "destructive", 
+            title: "ACESSO BLOQUEADO", 
+            description: currentUser.isBlocked ? "Detectado uso simultâneo. PIN bloqueado por 10 min." : "Sessão expirada."
+          });
+        }
+      } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 30000); // Checa a cada 30 segundos
+    const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
       try {
         const data = await getRemoteContent()
         if (data && data.length > 0) {
           setContent(data)
-          localStorage.setItem("cached_content", JSON.stringify(data))
-        } else {
-          const cached = localStorage.getItem("cached_content")
-          if (cached) setContent(JSON.parse(cached))
         }
-      } catch (err) {
-        const cached = localStorage.getItem("cached_content")
-        if (cached) setContent(JSON.parse(cached))
-      } finally {
+      } catch (err) {} finally {
         setLoading(false)
       }
     }
@@ -86,7 +89,6 @@ export default function HomeContent() {
     }
     localStorage.removeItem("user_session")
     router.push("/login")
-    toast({ title: "Sessão Encerrada", description: "Até a próxima!" })
   }
 
   const categories = Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort()
@@ -160,7 +162,7 @@ export default function HomeContent() {
               className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
               onClick={() => setSelectedFolder(null)}
             >
-              <Folder className="mr-2 h-4 w-4" /> Todos
+              Todos
             </Button>
             {categories.map(cat => (
               <Button 
@@ -169,7 +171,7 @@ export default function HomeContent() {
                 className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
                 onClick={() => setSelectedFolder(cat)}
               >
-                <Folder className="mr-2 h-4 w-4" /> {cat}
+                {cat}
               </Button>
             ))}
           </div>
