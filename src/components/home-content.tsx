@@ -112,7 +112,9 @@ export default function HomeContent() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <VoiceSearch />
+          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 rounded-xl" />}>
+            <VoiceSearch />
+          </React.Suspense>
         </div>
 
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">

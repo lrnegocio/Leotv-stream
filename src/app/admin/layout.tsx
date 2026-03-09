@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
@@ -71,7 +72,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="hidden md:block">
-                <VoiceSearch />
+                <React.Suspense fallback={<div className="h-10 w-48 bg-white/5 rounded-xl animate-pulse" />}>
+                  <VoiceSearch />
+                </React.Suspense>
               </div>
             </div>
             <div className="flex items-center gap-4">
