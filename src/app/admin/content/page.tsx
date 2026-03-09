@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, ContentItem } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 
 export default function ContentManagementPage() {
@@ -15,7 +15,7 @@ export default function ContentManagementPage() {
   const [items, setItems] = React.useState<ContentItem[]>([])
   const [loading, setLoading] = React.useState(true)
 
-  const loadItems = async () => {
+  const loadItems = React.useCallback(async () => {
     setLoading(true)
     try {
       const data = await getRemoteContent()
@@ -25,11 +25,11 @@ export default function ContentManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   React.useEffect(() => {
     loadItems()
-  }, [])
+  }, [loadItems])
 
   const handleDelete = async (id: string) => {
     if (confirm("Deseja realmente excluir este canal?")) {
@@ -96,11 +96,14 @@ export default function ContentManagementPage() {
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="hover:text-primary"><PlayCircle className="h-4 w-4" /></Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-4xl bg-black border-white/10">
-                        <DialogHeader>
+                      <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden">
+                        <DialogHeader className="p-6 pb-0">
                           <DialogTitle>{item.title}</DialogTitle>
+                          <DialogDescription className="sr-only">Player de visualização de conteúdo</DialogDescription>
                         </DialogHeader>
-                        <VideoPlayer url={item.streamUrl || ""} title={item.title} />
+                        <div className="p-0">
+                          <VideoPlayer url={item.streamUrl || ""} title={item.title} />
+                        </div>
                       </DialogContent>
                     </Dialog>
                     

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Play } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,68 +15,69 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
-  const [isVideoFile, setIsVideoFile] = React.useState(false)
 
-  const getEmbedUrl = (rawUrl: string) => {
-    if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === "") return null
-    
-    try {
-      const trimmed = rawUrl.trim()
-      
-      // Detecção de Arquivo de Vídeo Direto (MP4, HLS, TS)
-      const isDirect = trimmed.includes('.mp4') || trimmed.includes('.m3u8') || trimmed.includes('.ts') || trimmed.includes('.mkv');
-      if (isDirect) {
-        setIsVideoFile(true);
-        return trimmed;
-      }
-
-      setIsVideoFile(false);
-
-      // YouTube
-      if (trimmed.includes("youtube.com/watch?v=")) {
-        const id = trimmed.split("v=")[1]?.split("&")[0]
-        return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
-      }
-      if (trimmed.includes("youtu.be/")) {
-        const id = trimmed.split("youtu.be/")[1]?.split("?")[0]
-        return `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`
-      }
-      
-      // Dailymotion
-      if (trimmed.includes("dailymotion.com/video/")) {
-        const id = trimmed.split("/video/")[1]?.split("?")[0]
-        return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
-      }
-      if (trimmed.includes("dai.ly/")) {
-        const id = trimmed.split("dai.ly/")[1]?.split("?")[0]
-        return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
-      }
-
-      // Pornhub (Adulto)
-      if (trimmed.includes("pornhub.com/view_video.php?viewkey=")) {
-        const id = trimmed.split("viewkey=")[1]?.split("&")[0]
-        return `https://www.pornhub.com/embed/${id}`
-      }
-      if (trimmed.includes("pornhub.com/embed/")) {
-        return trimmed;
-      }
-
-      // VisionCine ou outros links diretos (tentar carregar como iframe)
-      if (trimmed.startsWith('http')) return trimmed;
-      
-      return null;
-    } catch (e) {
-      return null
+  // Memoizar a análise da URL para evitar re-renderizações infinitas e processamento desnecessário
+  const { embedUrl, isVideoFile } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") {
+      return { embedUrl: null, isVideoFile: false }
     }
-  }
+    
+    const trimmed = url.trim()
+    
+    // Detecção de Arquivo de Vídeo Direto (MP4, HLS, TS)
+    const isDirect = trimmed.includes('.mp4') || 
+                    trimmed.includes('.m3u8') || 
+                    trimmed.includes('.ts') || 
+                    trimmed.includes('.mkv') ||
+                    trimmed.includes('.mp3');
 
-  const embedUrl = getEmbedUrl(url)
+    if (isDirect) {
+      return { embedUrl: trimmed, isVideoFile: true }
+    }
+
+    // YouTube
+    if (trimmed.includes("youtube.com/watch?v=")) {
+      const id = trimmed.split("v=")[1]?.split("&")[0]
+      return { embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`, isVideoFile: false }
+    }
+    if (trimmed.includes("youtu.be/")) {
+      const id = trimmed.split("youtu.be/")[1]?.split("?")[0]
+      return { embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1&modestbranding=1&rel=0`, isVideoFile: false }
+    }
+    
+    // Dailymotion
+    if (trimmed.includes("dailymotion.com/video/")) {
+      const id = trimmed.split("/video/")[1]?.split("?")[0]
+      return { embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, isVideoFile: false }
+    }
+    if (trimmed.includes("dai.ly/")) {
+      const id = trimmed.split("dai.ly/")[1]?.split("?")[0]
+      return { embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, isVideoFile: false }
+    }
+
+    // Pornhub (Adulto)
+    if (trimmed.includes("pornhub.com/view_video.php?viewkey=")) {
+      const id = trimmed.split("viewkey=")[1]?.split("&")[0]
+      return { embedUrl: `https://www.pornhub.com/embed/${id}?autoplay=1`, isVideoFile: false }
+    }
+    if (trimmed.includes("pornhub.com/embed/")) {
+      return { embedUrl: trimmed, isVideoFile: false }
+    }
+
+    // Fallback: Tenta carregar como iframe
+    return { embedUrl: trimmed, isVideoFile: false }
+  }, [url])
+
+  // Resetar loading quando a URL mudar
+  React.useEffect(() => {
+    setLoading(true)
+  }, [url])
 
   const toggleFullScreen = () => {
     if (!containerRef.current) return
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch(err => {
-        console.error("Fullscreen error", err);
+        console.error("Erro ao entrar em tela cheia", err)
       })
     } else {
       document.exitFullscreen()
