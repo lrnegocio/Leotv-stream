@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, ContentItem } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 
 export default function ContentManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [items, setItems] = React.useState<ContentItem[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [previewItem, setPreviewItem] = React.useState<ContentItem | null>(null)
 
   const loadItems = React.useCallback(async () => {
     setLoading(true)
@@ -92,21 +93,9 @@ export default function ContentManagementPage() {
 
                 <div className="flex justify-between items-center pt-4 mt-4 border-t border-white/5">
                   <div className="flex gap-1">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="hover:text-primary"><PlayCircle className="h-4 w-4" /></Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden">
-                        <DialogHeader className="p-6 pb-0">
-                          <DialogTitle>{item.title}</DialogTitle>
-                          <DialogDescription className="sr-only">Player de visualização de conteúdo</DialogDescription>
-                        </DialogHeader>
-                        <div className="p-0">
-                          <VideoPlayer url={item.streamUrl || ""} title={item.title} />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                    
+                    <Button variant="ghost" size="icon" className="hover:text-primary" onClick={() => setPreviewItem(item)}>
+                      <PlayCircle className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" asChild>
                       <Link href={`/admin/content/edit/${item.id}`}><Edit2 className="h-4 w-4" /></Link>
                     </Button>
@@ -121,6 +110,21 @@ export default function ContentManagementPage() {
           )}
         </div>
       )}
+
+      {/* Player de Preview Único para Evitar Loops de Renderização */}
+      <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
+        <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>{previewItem?.title}</DialogTitle>
+            <DialogDescription className="sr-only">Player de visualização de conteúdo</DialogDescription>
+          </DialogHeader>
+          {previewItem && (
+            <div className="p-0">
+              <VideoPlayer url={previewItem.streamUrl || ""} title={previewItem.title} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
