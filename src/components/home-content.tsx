@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-center"
+import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
