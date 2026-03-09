@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
@@ -17,7 +18,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!isMounted) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -98,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
           <div className="flex-1 overflow-y-auto p-8 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-background via-background to-black/20">
-            <React.Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+            <React.Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
               {children}
             </React.Suspense>
           </div>

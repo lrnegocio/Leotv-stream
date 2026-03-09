@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -18,6 +19,7 @@ export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   const [generating, setGenerating] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
   
   const [formData, setFormData] = React.useState({
     title: "",
@@ -31,10 +33,14 @@ export default function NewContentPage() {
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
 
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const addEpisode = (seasonId?: string) => {
     const newEp: Episode = {
       id: Math.random().toString(36).substring(7),
-      title: `Episódio ${seasonId ? 'Temporada' : ''}`,
+      title: `Episódio`,
       number: episodes.length + 1,
       streamUrl: ""
     }
@@ -68,7 +74,7 @@ export default function NewContentPage() {
       })
       setFormData(prev => ({ ...prev, description: res.description }))
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua GEMINI_API_KEY no .env." })
+      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua chave de IA." })
     } finally {
       setGenerating(false)
     }
@@ -88,6 +94,8 @@ export default function NewContentPage() {
     toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
     router.push("/admin/content")
   }
+
+  if (!isMounted) return null
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">

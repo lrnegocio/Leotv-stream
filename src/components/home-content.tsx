@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -33,7 +34,7 @@ export default function HomeContent() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Verificação de Segurança Master (Heartbeat Rápido)
+    // Verificação de Segurança Master (Heartbeat Ultra-Rápido: 10s)
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -41,6 +42,7 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
+        // Se o PIN for bloqueado ou se o aparelho não estiver mais na lista ativa (devido a login em outro lugar)
         const isStillAuthorized = !currentUser.isBlocked && 
                                  currentUser.activeDevices.includes(session.deviceId);
 
@@ -50,13 +52,13 @@ export default function HomeContent() {
           toast({ 
             variant: "destructive", 
             title: "ACESSO BLOQUEADO", 
-            description: currentUser.isBlocked ? "Detectado uso simultâneo. PIN bloqueado por 10 min." : "Sessão expirada."
+            description: currentUser.isBlocked ? "Detectado excesso de telas. PIN bloqueado por 10 min." : "Sessão expirada."
           });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 15000); 
+    const interval = setInterval(checkSecurity, 10000); 
 
     const load = async () => {
       try {

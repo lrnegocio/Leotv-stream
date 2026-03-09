@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase-client';
@@ -138,6 +139,7 @@ export async function saveUser(user: User) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
+  // Busca lista fresca de usuários
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
@@ -158,6 +160,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
+      // Ao desbloquear, o novo aparelho assume o controle
       user.activeDevices = [deviceId];
       await saveUser(user);
     } else {
@@ -172,18 +175,18 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // 3. Validação de Telas (BLOQUEIO INSTANTÂNEO)
+  // 3. Validação de Telas (BLOQUEIO INSTANTÂNEO E GLOBAL)
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO GLOBAL IMEDIATO
+      // BLOQUEIO GLOBAL IMEDIATO: Reseta aparelhos e bloqueia o PIN
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 
       await saveUser(user);
-      return { error: "BLOQUEIO DE SEGURANÇA: EXCESSO DE TELAS DETECTADO." };
+      return { error: "BLOQUEIO DE SEGURANÇA: EXCESSO DE TELAS DETECTADO EM OUTRO APARELHO." };
     } else {
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
