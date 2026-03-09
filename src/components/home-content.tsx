@@ -5,7 +5,7 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, getGlobalSettings, ContentItem } from "@/lib/store"
+import { getRemoteContent, getGlobalSettings, ContentItem, removeActiveDevice, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -27,12 +27,27 @@ export default function HomeContent() {
     setIsMounted(true)
     setIsOnline(navigator.onLine)
 
-    const session = localStorage.getItem("user_session")
-    if (!session) {
+    const sessionStr = localStorage.getItem("user_session")
+    if (!sessionStr) {
       router.push("/login")
       return
     }
+    const session = JSON.parse(sessionStr);
     
+    // Verificação periódica de bloqueio (Heartbeat Master)
+    const checkSecurity = async () => {
+      const users = await getRemoteUsers();
+      const currentUser = users.find(u => u.id === session.id);
+      
+      if (currentUser && (currentUser.isBlocked || !currentUser.activeDevices.includes(session.deviceId))) {
+        localStorage.removeItem("user_session");
+        router.push("/login");
+        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Detectado uso simultâneo em outro aparelho." });
+      }
+    };
+
+    const interval = setInterval(checkSecurity, 30000); // Checa a cada 30 segundos
+
     const load = async () => {
       try {
         const data = await getRemoteContent()
@@ -55,13 +70,20 @@ export default function HomeContent() {
     const handleStatus = () => setIsOnline(navigator.onLine)
     window.addEventListener('online', handleStatus)
     window.addEventListener('offline', handleStatus)
+    
     return () => {
+      clearInterval(interval);
       window.removeEventListener('online', handleStatus)
       window.removeEventListener('offline', handleStatus)
     }
   }, [router])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const sessionStr = localStorage.getItem("user_session")
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      await removeActiveDevice(session.id, session.deviceId);
+    }
     localStorage.removeItem("user_session")
     router.push("/login")
     toast({ title: "Sessão Encerrada", description: "Até a próxima!" })

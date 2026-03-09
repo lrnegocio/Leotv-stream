@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { getRemoteUsers } from "@/lib/store"
+import { validateDeviceLogin } from "@/lib/store"
 
 export default function LoginPage() {
   const [pin, setPin] = React.useState("")
@@ -34,61 +35,43 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const normalizedPin = pin.trim().toLowerCase();
-
-    // LÓGICA DE PIN MASTER INSTANTÂNEO
-    if (normalizedPin === 'adm77x2p') {
-      const session = {
-        id: 'admin-master',
-        role: 'admin',
-        pin: 'adm77x2p',
-        deviceId: Math.random().toString(36).substring(7)
-      }
-      localStorage.setItem("user_session", JSON.stringify(session))
-      if (rememberMe) localStorage.setItem("remembered_pin", pin)
-      
-      toast({ title: "Bem-vindo, Mestre!", description: "Acesso administrativo liberado." })
-      router.push("/admin")
-      return
+    // Gera um ID Único para este aparelho se não houver
+    let deviceId = localStorage.getItem("p2p_device_id");
+    if (!deviceId) {
+      deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("p2p_device_id", deviceId);
     }
 
     try {
-      const users = await getRemoteUsers()
-      const user = users.find(u => u.pin.toLowerCase() === normalizedPin)
+      const result = await validateDeviceLogin(pin, deviceId);
 
-      if (!user) {
-        setError("PIN inválido ou inexistente. Verifique com seu fornecedor.")
-        setLoading(false)
-        return
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+        return;
       }
 
-      if (user.isBlocked) {
-        setError("Este acesso foi suspenso temporariamente.")
-        setLoading(false)
-        return
-      }
+      if (result.user) {
+        const session = {
+          id: result.user.id,
+          role: result.user.role,
+          pin: result.user.pin,
+          deviceId: deviceId
+        }
+        
+        localStorage.setItem("user_session", JSON.stringify(session))
+        if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
-      if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
-        setError("Este acesso expirou. Renove sua assinatura.")
-        setLoading(false)
-        return
+        toast({ title: "Sinal Liberado!", description: "Conectado via P2P Mestre." })
+        
+        if (result.user.role === 'admin') {
+          router.push("/admin")
+        } else {
+          router.push("/user/home")
+        }
       }
-
-      const session = {
-        id: user.id,
-        role: user.role,
-        pin: user.pin,
-        deviceId: Math.random().toString(36).substring(7)
-      }
-      
-      localStorage.setItem("user_session", JSON.stringify(session))
-      if (rememberMe) localStorage.setItem("remembered_pin", pin)
-
-      toast({ title: "Sinal Liberado!", description: "Acesso autorizado com sucesso." })
-      router.push("/user/home")
-      
     } catch (err: any) {
-      setError("Erro de conexão com a rede cloud.")
+      setError("Erro de conexão com o servidor Master.")
       setLoading(false)
     }
   }
@@ -107,7 +90,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white" />
           </div>
           <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Conexão Cloud Sincronizada</CardDescription>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Sistema P2P de Alta Performance</CardDescription>
         </CardHeader>
         <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
@@ -156,7 +139,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
               <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado Supabase
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v4.2</div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v5.0</div>
           </div>
         </CardFooter>
       </Card>

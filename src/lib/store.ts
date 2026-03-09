@@ -39,8 +39,9 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   expiryDate?: string; 
   maxScreens: number;
-  activeDevices?: string[]; 
+  activeDevices: string[]; 
   isBlocked: boolean;
+  blockedAt?: string; // Data de quando foi bloqueado por segurança
 }
 
 const ADMIN_PIN = 'adm77x2p';
@@ -95,10 +96,10 @@ export async function getRemoteUsers(): Promise<User[]> {
       expiryDate: u.expiryDate,
       maxScreens: u.maxScreens || 1,
       activeDevices: u.activeDevices || [],
-      isBlocked: !!u.isBlocked
+      isBlocked: !!u.isBlocked,
+      blockedAt: u.blockedAt
     }));
     
-    // Garantia do PIN Master Admin no sistema
     const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
     if (!masterPinExists) {
       users.unshift({
@@ -121,34 +122,96 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Usamos aspas duplas nos nomes das colunas para garantir que o Supabase/Postgres 
-    // respeite as letras maiúsculas definidas no SQL de criação.
     const payload = {
       id: user.id,
       pin: user.pin,
       role: user.role,
-      "subscriptionTier": user.subscriptionTier,
-      "expiryDate": user.expiryDate || null,
-      "maxScreens": user.maxScreens,
-      "activeDevices": user.activeDevices || [],
-      "isBlocked": user.isBlocked || false
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate || null,
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices || [],
+      isBlocked: user.isBlocked || false,
+      blockedAt: user.blockedAt || null
     };
-
-    console.log("Enviando payload para Supabase:", payload);
 
     const { error } = await supabase
       .from('users')
       .upsert(payload, { onConflict: 'id' });
     
-    if (error) {
-      console.error("ERRO DETALHADO DO SUPABASE:", error);
-      return false;
-    }
-    
+    if (error) return false;
     return true;
   } catch (e) {
-    console.error("Exceção crítica ao salvar usuário:", e);
     return false;
+  }
+}
+
+/**
+ * LÓGICA DE GESTÃO DE TELAS P2P MESTRE
+ */
+export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
+  const users = await getRemoteUsers();
+  const normalizedPin = pin.trim().toLowerCase();
+  
+  // Admin bypass
+  if (normalizedPin === ADMIN_PIN) {
+    return { user: users.find(u => u.pin === ADMIN_PIN) };
+  }
+
+  let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
+
+  if (!user) return { error: "PIN INVÁLIDO" };
+
+  // 1. Verificação de Auto-Desbloqueio (10 min)
+  if (user.isBlocked && user.blockedAt) {
+    const blockedTime = new Date(user.blockedAt).getTime();
+    const now = new Date().getTime();
+    const diffMins = (now - blockedTime) / (1000 * 60);
+
+    if (diffMins >= 10) {
+      user.isBlocked = false;
+      user.blockedAt = undefined;
+      user.activeDevices = []; // Reseta aparelhos ao liberar
+      await saveUser(user);
+    } else {
+      return { error: `ACESSO BLOQUEADO POR USO SIMULTÂNEO. LIBERA EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
+    }
+  } else if (user.isBlocked) {
+    return { error: "ACESSO SUSPENSO. CONTATE O SUPORTE." };
+  }
+
+  // 2. Validação de Data de Expiração
+  if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
+    return { error: "SUA ASSINATURA EXPIROU." };
+  }
+
+  // 3. Validação de Telas Simultâneas
+  const deviceList = user.activeDevices || [];
+  const isExistingDevice = deviceList.includes(deviceId);
+
+  if (!isExistingDevice) {
+    if (deviceList.length >= user.maxScreens) {
+      // BLOQUEIO INSTANTÂNEO POR PIRATARIA/COMPARTILHAMENTO
+      user.isBlocked = true;
+      user.blockedAt = new Date().toISOString();
+      user.activeDevices = [];
+      await saveUser(user);
+      return { error: "BLOQUEIO DE SEGURANÇA: EXCESSO DE TELAS DETECTADO." };
+    } else {
+      // Adiciona novo aparelho
+      user.activeDevices = [...deviceList, deviceId];
+      await saveUser(user);
+    }
+  }
+
+  return { user };
+}
+
+export async function removeActiveDevice(userId: string, deviceId: string) {
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    user.activeDevices = (user.activeDevices || []).filter(id => id !== deviceId);
+    await saveUser(user);
   }
 }
 
