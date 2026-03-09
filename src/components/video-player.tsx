@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -57,7 +58,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
     }
 
-    // XVideos - Aceita IDs alfanuméricos (letras e números)
+    // XVideos - Agora aceita IDs alfanuméricos (letras e números)
     if (processedUrl.includes("xvideos.com/video.")) {
       const idPart = processedUrl.split("video.")[1]?.split("/")[0]
       if (idPart) {
