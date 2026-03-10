@@ -32,7 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className="bg-primary p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <Tv className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic">Léo Admin</span>
+              <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic text-[14px]">Léo Admin</span>
             </Link>
           </SidebarHeader>
           <SidebarContent>

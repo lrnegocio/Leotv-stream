@@ -34,7 +34,7 @@ export default function HomeContent() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Verificação de Segurança Master (Heartbeat Ultra-Rápido: 10s)
+    // Verificação de Segurança Master (HEARTBEAT ULTRA-RÁPIDO)
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -42,7 +42,7 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // Se o PIN for bloqueado ou se o aparelho não estiver mais na lista ativa (devido a login em outro lugar)
+        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA (POR LOGIN EM OUTRO LUGAR)
         const isStillAuthorized = !currentUser.isBlocked && 
                                  currentUser.activeDevices.includes(session.deviceId);
 
@@ -52,20 +52,18 @@ export default function HomeContent() {
           toast({ 
             variant: "destructive", 
             title: "ACESSO BLOQUEADO", 
-            description: currentUser.isBlocked ? "Detectado excesso de telas. PIN bloqueado por 10 min." : "Sessão expirada."
+            description: currentUser.isBlocked ? "Detectado uso simultâneo em outro aparelho." : "Sessão expirada."
           });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 10000); 
+    const interval = setInterval(checkSecurity, 10000); // Checa a cada 10 segundos
 
     const load = async () => {
       try {
         const data = await getRemoteContent()
-        if (data && data.length > 0) {
-          setContent(data)
-        }
+        if (data) setContent(data)
       } catch (err) {} finally {
         setLoading(false)
       }

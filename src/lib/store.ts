@@ -160,7 +160,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
-      // Ao desbloquear, o novo aparelho assume o controle
       user.activeDevices = [deviceId];
       await saveUser(user);
     } else {
@@ -175,19 +174,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // 3. Validação de Telas (BLOQUEIO INSTANTÂNEO E GLOBAL)
+  // 3. Validação de Telas (A LÓGICA MESTRE)
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
+    // Novo aparelho tentando entrar
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO GLOBAL IMEDIATO: Reseta aparelhos e bloqueia o PIN
+      // BLOQUEIO GLOBAL INSTANTÂNEO POR EXCESSO
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; 
+      user.activeDevices = []; // Reseta todos para expulsar quem estava online
       await saveUser(user);
-      return { error: "BLOQUEIO DE SEGURANÇA: EXCESSO DE TELAS DETECTADO EM OUTRO APARELHO." };
+      return { error: "ACESSO BLOQUEADO. Detectado uso simultâneo em outro aparelho." };
     } else {
+      // Aparelho autorizado dentro do limite
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }
