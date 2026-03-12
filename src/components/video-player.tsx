@@ -48,6 +48,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     // 3. CONVERSÃO INTELIGENTE PARA EMBED (MAX COMPATIBILIDADE)
+    // Suporte específico para playcnvs.stream e similares (P2P Mestre)
+    if (lowerUrl.includes("playcnvs.stream") || lowerUrl.includes("supercanais") || lowerUrl.includes("canaisplay")) {
+      return { embedUrl: processedUrl, isVideoFile: false }
+    }
+
     // YouTube
     if (processedUrl.includes("youtube.com/watch?v=")) {
       const id = processedUrl.split("v=")[1]?.split("&")[0]
@@ -58,7 +63,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
     }
 
-    // XVideos - Agora aceita IDs alfanuméricos (letras e números)
+    // XVideos
     if (processedUrl.includes("xvideos.com/video.")) {
       const idPart = processedUrl.split("video.")[1]?.split("/")[0]
       if (idPart) {
@@ -72,27 +77,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.pornhub.com/embed/${id}?autoplay=1`, isVideoFile: false }
     }
 
-    // Dailymotion
-    if (processedUrl.includes("dailymotion.com/video/")) {
-      const id = processedUrl.split("/video/")[1]?.split("?")[0]
-      return { embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0`, isVideoFile: false }
-    }
-
-    // Canva
-    if (processedUrl.includes("canva.com/design/")) {
-      if (!processedUrl.includes("/view?embed")) {
-        return { embedUrl: `${processedUrl}/view?embed`, isVideoFile: false }
-      }
-    }
-
     return { embedUrl: processedUrl, isVideoFile: false }
   }, [url])
 
   React.useEffect(() => {
     setLoading(true)
     setIsAccelerating(true)
-    const timer = setTimeout(() => setIsAccelerating(false), 2000)
-    return () => clearTimeout(timer)
+    
+    // Timeout de segurança: se em 5 segundos não carregar, libera o player
+    // Isso evita ficar preso no loading em TVs com internet instável
+    const loadingTimeout = setTimeout(() => {
+      setLoading(false)
+      setIsAccelerating(false)
+    }, 5000)
+
+    const accelTimeout = setTimeout(() => setIsAccelerating(false), 2000)
+    
+    return () => {
+      clearTimeout(loadingTimeout)
+      clearTimeout(accelTimeout)
+    }
   }, [url])
 
   const toggleFullScreen = () => {
@@ -151,7 +155,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           onLoad={() => setLoading(false)}
-          referrerPolicy="no-referrer-when-downgrade"
+          referrerPolicy="no-referrer"
           sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
         />
       )}

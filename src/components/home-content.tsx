@@ -4,7 +4,6 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, removeActiveDevice, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -42,12 +41,12 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA (POR LOGIN EM OUTRO LUGAR EXCEDENDO LIMITE)
-        // Vitalício e Admin têm prioridade, mas ainda respeitam o bloqueio global se houver pirataria.
+        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA
+        // Mestre e Vitalício têm prioridade de conexão
         const isStillAuthorized = !currentUser.isBlocked && 
                                  (currentUser.pin === 'adm77x2p' || 
                                   currentUser.subscriptionTier === 'lifetime' || 
-                                  currentUser.activeDevices.includes(session.deviceId));
+                                  (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId)));
 
         if (!isStillAuthorized) {
           localStorage.removeItem("user_session");
@@ -139,9 +138,7 @@ export default function HomeContent() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 rounded-xl" />}>
-            <VoiceSearch />
-          </React.Suspense>
+          <VoiceSearch />
         </div>
 
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">
