@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Zap } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Zap, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -14,9 +14,9 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isAccelerating, setIsAccelerating] = React.useState(true)
+  const [isMixedContent, setIsMixedContent] = React.useState(false)
 
   const { embedUrl, isVideoFile } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") {
@@ -24,14 +24,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
     
     let processedUrl = url.trim()
+    const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+    const isUrlHttp = processedUrl.startsWith('http://')
 
-    // 1. CORREÇÃO DE PROTOCOLO (HTTP -> HTTPS) - CRÍTICO PARA SMART TV
-    // Navegadores bloqueiam IFRAME HTTP em site HTTPS. Fazemos o upgrade automático.
-    if (processedUrl.startsWith('http://')) {
-      processedUrl = processedUrl.replace('http://', 'https://')
+    // DETECÇÃO DE CONFLITO DE PROTOCOLO (HTTP em site HTTPS)
+    if (isPageHttps && isUrlHttp) {
+      setIsMixedContent(true)
+    } else {
+      setIsMixedContent(false)
     }
 
-    // 2. SUPORTE A TAG IFRAME COMPLETA (EXTRAÇÃO TURBO)
+    // SUPORTE A TAG IFRAME COMPLETA
     if (processedUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = processedUrl.match(/src=["']([^"']+)["']/i)
       if (srcMatch && srcMatch[1]) {
@@ -39,7 +42,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
     
-    // 3. DETECÇÃO DE SINAL DIRETO (HLS / MP4 / TS / MKV)
+    // DETECÇÃO DE SINAL DIRETO
     const lowerUrl = processedUrl.toLowerCase()
     const isDirect = lowerUrl.includes('.mp4') || 
                     lowerUrl.includes('.m3u8') || 
@@ -53,13 +56,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: processedUrl, isVideoFile: true }
     }
 
-    // 4. CONVERSÃO INTELIGENTE PARA EMBED (MAX COMPATIBILIDADE)
-    // Suporte específico para playcnvs.stream e similares (P2P Mestre)
-    if (lowerUrl.includes("playcnvs.stream") || lowerUrl.includes("supercanais") || lowerUrl.includes("canaisplay")) {
-      // Garante que links de "view" ou "s/" sejam tratados como embed puro
-      return { embedUrl: processedUrl, isVideoFile: false }
-    }
-
     // YouTube
     if (processedUrl.includes("youtube.com/watch?v=")) {
       const id = processedUrl.split("v=")[1]?.split("&")[0]
@@ -70,14 +66,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
     }
 
-    // XVideos (Suporte a IDs Alfanuméricos ex: kabopuh3e7b)
-    if (processedUrl.includes("xvideos.com/video")) {
-      const match = processedUrl.match(/video\.?([a-zA-Z0-9]+)/);
-      if (match && match[1]) {
-        return { embedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isVideoFile: false }
-      }
-    }
-
     return { embedUrl: processedUrl, isVideoFile: false }
   }, [url])
 
@@ -85,7 +73,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
     setIsAccelerating(true)
     
-    // Timeout de segurança: libera o player após 4 segundos mesmo se o sinal demorar
     const loadingTimeout = setTimeout(() => {
       setLoading(false)
       setIsAccelerating(false)
@@ -112,6 +99,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     )
   }
 
+  // SE FOR CONFLITO DE PROTOCOLO, OFERECEMOS O BOTÃO EXTERNO
+  if (isMixedContent) {
+    return (
+      <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-card border border-white/5 rounded-3xl p-8 text-center">
+        <div className="p-4 bg-primary/10 rounded-full">
+          <Globe className="h-12 w-12 text-primary animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xl font-black uppercase italic text-primary">Sinal P2P Protegido</h3>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest max-w-sm mx-auto leading-relaxed">
+            Este canal usa um protocolo HTTP que é bloqueado por segurança neste navegador.
+            Clique abaixo para abrir o sinal original em uma nova aba.
+          </p>
+        </div>
+        <Button 
+          size="lg" 
+          className="bg-primary hover:scale-105 transition-all font-black uppercase tracking-tighter italic h-14 px-10 rounded-2xl shadow-2xl shadow-primary/30"
+          onClick={() => window.open(embedUrl, '_blank')}
+        >
+          <ExternalLink className="mr-2 h-5 w-5" /> ABRIR SINAL WANDINHA
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       {(loading || isAccelerating) && (
@@ -131,26 +143,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       
       {isVideoFile ? (
         <video
-          ref={videoRef}
           src={embedUrl}
           controls
           autoPlay
           playsInline
-          preload="auto"
           className="h-full w-full relative z-10 object-contain"
           onLoadedData={() => setLoading(false)}
-          onError={() => setLoading(false)}
         />
       ) : (
         <iframe
           src={embedUrl}
           className="h-full w-full border-0 relative z-10"
           title={title}
-          loading="eager"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           onLoad={() => setLoading(false)}
-          referrerPolicy="no-referrer"
           sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
         />
       )}

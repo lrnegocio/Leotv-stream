@@ -33,7 +33,6 @@ export default function HomeContent() {
     }
     const session = JSON.parse(sessionStr);
     
-    // HEARTBEAT DE SEGURANÇA MESTRE (TRAVA DE TELAS)
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -41,13 +40,13 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA
-        // Mestre e Vitalício têm prioridade de conexão
-        const isAdmin = currentUser.pin.toLowerCase() === 'adm77x2p';
-        const isLifetime = currentUser.subscriptionTier === 'lifetime';
+        // VITALÍCIO E ADMIN TÊM PASSE LIVRE
+        const isMaster = currentUser.pin.toLowerCase() === 'adm77x2p' || currentUser.subscriptionTier === 'lifetime';
+        
+        if (isMaster) return; // Não expulsa o Mestre
+
         const isStillAuthorized = !currentUser.isBlocked && 
-                                 (isAdmin || isLifetime || 
-                                  (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId)));
+                                 (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
 
         if (!isStillAuthorized) {
           localStorage.removeItem("user_session");
@@ -139,7 +138,9 @@ export default function HomeContent() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <VoiceSearch />
+          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 rounded-xl animate-pulse" />}>
+            <VoiceSearch />
+          </React.Suspense>
         </div>
 
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">

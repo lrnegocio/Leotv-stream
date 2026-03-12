@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Plus, Trash2, ListOrdered, Layers } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,11 +15,10 @@ import { toast } from "@/hooks/use-toast"
 import { saveContent, Season, Episode, ContentType } from "@/lib/store"
 import Link from "next/link"
 
-export default function NewContentPage() {
+function NewContentForm() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   const [generating, setGenerating] = React.useState(false)
-  const [isMounted, setIsMounted] = React.useState(false)
   
   const [formData, setFormData] = React.useState({
     title: "",
@@ -32,10 +31,6 @@ export default function NewContentPage() {
 
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
-
-  React.useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   const addEpisode = (seasonId?: string) => {
     const newEp: Episode = {
@@ -95,8 +90,6 @@ export default function NewContentPage() {
     router.push("/admin/content")
   }
 
-  if (!isMounted) return null
-
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="flex items-center gap-4">
@@ -153,7 +146,6 @@ export default function NewContentPage() {
             </div>
           </div>
 
-          {/* Gerenciamento de Links */}
           {formData.type === 'channel' || formData.type === 'movie' ? (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
               <h3 className="font-semibold flex items-center gap-2 text-primary"><Globe className="h-4 w-4" /> Link da Stream</h3>
@@ -235,5 +227,13 @@ export default function NewContentPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function NewContentPage() {
+  return (
+    <React.Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <NewContentForm />
+    </React.Suspense>
   )
 }
