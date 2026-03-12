@@ -46,8 +46,6 @@ export interface User {
 
 const ADMIN_PIN = 'adm77x2p';
 
-// --- FUNÇÕES DE CONTEÚDO ---
-
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
@@ -77,8 +75,6 @@ export async function removeContent(id: string) {
     return false;
   }
 }
-
-// --- FUNÇÕES DE USUÁRIOS (PINS) ---
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
@@ -138,9 +134,6 @@ export async function saveUser(user: User) {
   }
 }
 
-/**
- * VALIDAÇÃO MESTRE LÉO: TRAVA DE TELAS SIMULTÂNEAS
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
@@ -153,7 +146,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // 1. Verificação de Auto-Desbloqueio (10 min)
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
     const now = Date.now();
@@ -162,7 +154,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
-      // Reseta dispositivos ao desbloquear para permitir novo login limpo
       user.activeDevices = [deviceId]; 
       await saveUser(user);
     } else {
@@ -172,26 +163,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "ACESSO SUSPENSO. FALE COM O SUPORTE." };
   }
 
-  // 2. Validação de Expiração
-  if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
+  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // 3. LÓGICA DE TELAS SIMULTÂNEAS
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
-    // Se o cliente já atingiu o limite de telas compradas
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO GLOBAL INSTANTÂNEO
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; // Expulsa todo mundo
+      user.activeDevices = []; 
       await saveUser(user);
       return { error: "BLOQUEADO! Tentativa de login simultâneo excedida." };
     } else {
-      // Adiciona novo aparelho autorizado
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }

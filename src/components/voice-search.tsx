@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -8,14 +9,13 @@ import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
 import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
-export function VoiceSearch() {
+function VoiceSearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [query, setQuery] = React.useState(searchParams.get('q') || "")
   const [isListening, setIsListening] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
 
-  // Sincroniza o input com a URL
   React.useEffect(() => {
     setQuery(searchParams.get('q') || "")
   }, [searchParams])
@@ -25,18 +25,12 @@ export function VoiceSearch() {
     setIsProcessing(true)
     
     try {
-      // Processa o comando com IA para entender se o usuário quer um canal ou categoria
       const result = await voiceSearchContent({ query: searchTerm })
-      
-      // Atualiza a URL para que os componentes de lista (HomeContent ou ContentManagement) filtrem
       const params = new URLSearchParams(searchParams.toString())
       params.set('q', result.searchTerm)
       router.push(`?${params.toString()}`)
-      
       toast({ title: "Sinal Sintonizado", description: `Buscando por: ${result.searchTerm}` })
     } catch (error) {
-      console.error(error)
-      // Se a IA falhar, faz a busca simples
       const params = new URLSearchParams(searchParams.toString())
       params.set('q', searchTerm)
       router.push(`?${params.toString()}`)
@@ -101,5 +95,13 @@ export function VoiceSearch() {
         <Mic className={`h-5 w-5 ${isListening ? "text-white" : "text-primary"}`} />
       </Button>
     </div>
+  )
+}
+
+export function VoiceSearch() {
+  return (
+    <React.Suspense fallback={<div className="h-10 w-full max-w-md bg-white/5 rounded-xl animate-pulse" />}>
+      <VoiceSearchContent />
+    </React.Suspense>
   )
 }

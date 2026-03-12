@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Folder, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, removeActiveDevice, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -42,23 +42,26 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA (POR LOGIN EM OUTRO LUGAR)
+        // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA (POR LOGIN EM OUTRO LUGAR EXCEDENDO LIMITE)
+        // Vitalício e Admin têm prioridade, mas ainda respeitam o bloqueio global se houver pirataria.
         const isStillAuthorized = !currentUser.isBlocked && 
-                                 (currentUser.pin === 'adm77x2p' || currentUser.activeDevices.includes(session.deviceId));
+                                 (currentUser.pin === 'adm77x2p' || 
+                                  currentUser.subscriptionTier === 'lifetime' || 
+                                  currentUser.activeDevices.includes(session.deviceId));
 
         if (!isStillAuthorized) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "SESSÃO ENCERRADA", 
-            description: currentUser.isBlocked ? "Detectado uso simultâneo em outro aparelho." : "Acesso expirado."
+            title: "ACESSO SUSPENSO", 
+            description: currentUser.isBlocked ? "Detectado uso simultâneo além do limite contratado." : "Sessão expirada."
           });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 10000); // Checa a cada 10 segundos
+    const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
       try {
