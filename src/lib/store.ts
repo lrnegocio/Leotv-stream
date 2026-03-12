@@ -138,8 +138,10 @@ export async function saveUser(user: User) {
   }
 }
 
+/**
+ * VALIDAÇÃO MESTRE LÉO: TRAVA DE TELAS SIMULTÂNEAS
+ */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
-  // Busca lista fresca de usuários
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
@@ -149,7 +151,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   }
 
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
-  if (!user) return { error: "PIN INVÁLIDO" };
+  if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
   // 1. Verificação de Auto-Desbloqueio (10 min)
   if (user.isBlocked && user.blockedAt) {
@@ -160,35 +162,36 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
-      user.activeDevices = [deviceId];
+      // Reseta dispositivos ao desbloquear para permitir novo login limpo
+      user.activeDevices = [deviceId]; 
       await saveUser(user);
     } else {
-      return { error: `ACESSO BLOQUEADO POR USO SIMULTÂNEO. LIBERA EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
+      return { error: `ACESSO BLOQUEADO POR USO SIMULTÂNEO. AGUARDE ${Math.ceil(10 - diffMins)} MINUTOS.` };
     }
   } else if (user.isBlocked) {
-    return { error: "ACESSO SUSPENSO. CONTATE O SUPORTE." };
+    return { error: "ACESSO SUSPENSO. FALE COM O SUPORTE." };
   }
 
-  // 2. Validação de Data de Expiração
+  // 2. Validação de Expiração
   if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // 3. Validação de Telas (A LÓGICA MESTRE)
+  // 3. LÓGICA DE TELAS SIMULTÂNEAS
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
-    // Novo aparelho tentando entrar
+    // Se o cliente já atingiu o limite de telas compradas
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO GLOBAL INSTANTÂNEO POR EXCESSO
+      // BLOQUEIO GLOBAL INSTANTÂNEO
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; // Reseta todos para expulsar quem estava online
+      user.activeDevices = []; // Expulsa todo mundo
       await saveUser(user);
-      return { error: "ACESSO BLOQUEADO. Detectado uso simultâneo em outro aparelho." };
+      return { error: "BLOQUEADO! Tentativa de login simultâneo excedida." };
     } else {
-      // Aparelho autorizado dentro do limite
+      // Adiciona novo aparelho autorizado
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }

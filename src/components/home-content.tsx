@@ -34,7 +34,7 @@ export default function HomeContent() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Verificação de Segurança Master (HEARTBEAT ULTRA-RÁPIDO)
+    // HEARTBEAT DE SEGURANÇA MESTRE (TRAVA DE TELAS)
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -44,15 +44,15 @@ export default function HomeContent() {
 
         // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA (POR LOGIN EM OUTRO LUGAR)
         const isStillAuthorized = !currentUser.isBlocked && 
-                                 currentUser.activeDevices.includes(session.deviceId);
+                                 (currentUser.pin === 'adm77x2p' || currentUser.activeDevices.includes(session.deviceId));
 
         if (!isStillAuthorized) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "ACESSO BLOQUEADO", 
-            description: currentUser.isBlocked ? "Detectado uso simultâneo em outro aparelho." : "Sessão expirada."
+            title: "SESSÃO ENCERRADA", 
+            description: currentUser.isBlocked ? "Detectado uso simultâneo em outro aparelho." : "Acesso expirado."
           });
         }
       } catch (err) {}

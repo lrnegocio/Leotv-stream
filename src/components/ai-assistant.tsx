@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -8,17 +9,20 @@ import { Input } from "@/components/ui/input"
 import { adminAssistant } from "@/ai/flows/admin-assistant-flow"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "@/hooks/use-toast"
+import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
+import { useRouter } from "next/navigation"
 
 export function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
   const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([
-    { role: 'model', text: 'Olá Mestre Léo! Sou sua assistente inteligente. Em que posso ajudar com sua rede hoje?' }
+    { role: 'model', text: 'Olá Mestre Léo! Sou sua assistente inteligente. Como posso ajudar com sua rede ou busca de canais hoje?' }
   ])
   const [loading, setLoading] = React.useState(false)
   const [isListening, setIsListening] = React.useState(false)
   const [isSpeaking, setIsSpeaking] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   React.useEffect(() => {
     if (scrollRef.current) {
@@ -36,6 +40,18 @@ export function AiAssistant() {
     setLoading(true)
 
     try {
+      // 1. Checar se é um comando de busca de canal
+      if (text.toLowerCase().includes("assistir") || text.toLowerCase().includes("buscar") || text.toLowerCase().includes("procurar")) {
+        const searchRes = await voiceSearchContent({ query: text })
+        router.push(`/user/home?q=${searchRes.searchTerm}`)
+        const msg = `Sintonizando agora o canal: ${searchRes.searchTerm}. Aproveite, Mestre!`
+        setMessages(prev => [...prev, { role: 'model', text: msg }])
+        speak(msg)
+        setLoading(false)
+        return
+      }
+
+      // 2. Senão, responde perguntas gerais via Gemini (Alexa Style)
       const history = messages.map(m => ({
         role: m.role,
         content: [{ text: m.text }]
@@ -44,9 +60,7 @@ export function AiAssistant() {
       const result = await adminAssistant({ message: text, history })
       const modelMessage = { role: 'model' as const, text: result.response }
       setMessages(prev => [...prev, modelMessage])
-      
-      // Feedback de Voz (Alexa Style)
-      if (!isSpeaking) speak(result.response)
+      speak(result.response)
 
     } catch (error) {
       toast({ variant: "destructive", title: "Erro na IA", description: "Sinal instável, tente novamente." })
@@ -105,7 +119,7 @@ export function AiAssistant() {
                 <CardTitle className="text-sm font-black uppercase italic tracking-tighter text-primary">Léo IA Assistente</CardTitle>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Inteligência Ativa</span>
+                  <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Alexa P2P Ativa</span>
                 </div>
               </div>
             </div>
@@ -153,7 +167,7 @@ export function AiAssistant() {
             </Button>
             <div className="relative flex-1">
               <Input 
-                placeholder="Pergunte algo..." 
+                placeholder="Pergunte à Léo IA..." 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
