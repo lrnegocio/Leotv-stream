@@ -40,11 +40,12 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN TÊM PASSE LIVRE
+        // VITALÍCIO E ADMIN TÊM PASSE LIVRE - NUNCA EXPULSAM
         const isMaster = currentUser.pin.toLowerCase() === 'adm77x2p' || currentUser.subscriptionTier === 'lifetime';
         
-        if (isMaster) return; // Não expulsa o Mestre
+        if (isMaster) return;
 
+        // VERIFICA SE O PIN FOI BLOQUEADO POR USO SIMULTÂNEO
         const isStillAuthorized = !currentUser.isBlocked && 
                                  (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
 
@@ -54,12 +55,13 @@ export default function HomeContent() {
           toast({ 
             variant: "destructive", 
             title: "SESSÃO ENCERRADA", 
-            description: currentUser.isBlocked ? "Bloqueado por uso simultâneo além do limite." : "Acesso expirado."
+            description: currentUser.isBlocked ? "Acesso bloqueado por uso excessivo de telas." : "Acesso expirado."
           });
         }
       } catch (err) {}
     };
 
+    // Heartbeat de segurança a cada 15 segundos
     const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {

@@ -27,11 +27,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
 
-    // DETECÇÃO DE CONFLITO DE PROTOCOLO (HTTP em site HTTPS)
-    if (isPageHttps && isUrlHttp) {
-      setIsMixedContent(true)
-    } else {
-      setIsMixedContent(false)
+    // TENTATIVA MASTER DE COMPATIBILIDADE P2P (playcnvs.stream)
+    // Se for o domínio playcnvs, tentamos converter para https sem o www para ver se o navegador aceita
+    if (processedUrl.includes('playcnvs.stream')) {
+      if (isUrlHttp && isPageHttps) {
+        // Tentamos carregar via https sem o www que costuma ter certificado
+        processedUrl = processedUrl.replace('http://www.', 'https://').replace('http://', 'https://');
+      }
     }
 
     // SUPORTE A TAG IFRAME COMPLETA
@@ -73,10 +75,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
     setIsAccelerating(true)
     
+    // Aumentamos o tempo de espera para sinais P2P demorados
     const loadingTimeout = setTimeout(() => {
       setLoading(false)
       setIsAccelerating(false)
-    }, 4000)
+    }, 6000)
 
     return () => clearTimeout(loadingTimeout)
   }, [url])
@@ -95,31 +98,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-4 bg-black rounded-xl border border-white/5 text-center p-6">
         <AlertCircle className="h-12 w-12 text-destructive/50" />
         <p className="font-bold uppercase text-xs tracking-widest text-white italic">Sinal Master não identificado</p>
-      </div>
-    )
-  }
-
-  // SE FOR CONFLITO DE PROTOCOLO, OFERECEMOS O BOTÃO EXTERNO
-  if (isMixedContent) {
-    return (
-      <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-card border border-white/5 rounded-3xl p-8 text-center">
-        <div className="p-4 bg-primary/10 rounded-full">
-          <Globe className="h-12 w-12 text-primary animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-black uppercase italic text-primary">Sinal P2P Protegido</h3>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest max-w-sm mx-auto leading-relaxed">
-            Este canal usa um protocolo HTTP que é bloqueado por segurança neste navegador.
-            Clique abaixo para abrir o sinal original em uma nova aba.
-          </p>
-        </div>
-        <Button 
-          size="lg" 
-          className="bg-primary hover:scale-105 transition-all font-black uppercase tracking-tighter italic h-14 px-10 rounded-2xl shadow-2xl shadow-primary/30"
-          onClick={() => window.open(embedUrl, '_blank')}
-        >
-          <ExternalLink className="mr-2 h-5 w-5" /> ABRIR SINAL WANDINHA
-        </Button>
       </div>
     )
   }
@@ -158,6 +136,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
           allowFullScreen
           onLoad={() => setLoading(false)}
+          referrerPolicy="no-referrer"
           sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
         />
       )}
@@ -186,7 +165,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex justify-between items-center">
           <div className="flex gap-2 pointer-events-auto">
             <Button variant="secondary" size="sm" className="bg-primary hover:scale-105 transition-all text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl shadow-lg shadow-primary/20" onClick={() => window.open(embedUrl, '_blank')}>
-              <ExternalLink className="mr-2 h-4 w-4" /> Link Original
+              <ExternalLink className="mr-2 h-4 w-4" /> Sinal Original
             </Button>
           </div>
           <div className="flex items-center gap-4 pointer-events-auto">
