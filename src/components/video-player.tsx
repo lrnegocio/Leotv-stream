@@ -25,7 +25,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     let processedUrl = url.trim()
 
-    // 1. SUPORTE A TAG IFRAME COMPLETA (EXTRAÇÃO TURBO)
+    // 1. CORREÇÃO DE PROTOCOLO (HTTP -> HTTPS) - CRÍTICO PARA SMART TV
+    // Navegadores bloqueiam IFRAME HTTP em site HTTPS. Fazemos o upgrade automático.
+    if (processedUrl.startsWith('http://')) {
+      processedUrl = processedUrl.replace('http://', 'https://')
+    }
+
+    // 2. SUPORTE A TAG IFRAME COMPLETA (EXTRAÇÃO TURBO)
     if (processedUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = processedUrl.match(/src=["']([^"']+)["']/i)
       if (srcMatch && srcMatch[1]) {
@@ -33,7 +39,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
     
-    // 2. DETECÇÃO DE SINAL DIRETO (HLS / MP4 / TS / MKV)
+    // 3. DETECÇÃO DE SINAL DIRETO (HLS / MP4 / TS / MKV)
     const lowerUrl = processedUrl.toLowerCase()
     const isDirect = lowerUrl.includes('.mp4') || 
                     lowerUrl.includes('.m3u8') || 
@@ -47,9 +53,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: processedUrl, isVideoFile: true }
     }
 
-    // 3. CONVERSÃO INTELIGENTE PARA EMBED (MAX COMPATIBILIDADE)
+    // 4. CONVERSÃO INTELIGENTE PARA EMBED (MAX COMPATIBILIDADE)
     // Suporte específico para playcnvs.stream e similares (P2P Mestre)
     if (lowerUrl.includes("playcnvs.stream") || lowerUrl.includes("supercanais") || lowerUrl.includes("canaisplay")) {
+      // Garante que links de "view" ou "s/" sejam tratados como embed puro
       return { embedUrl: processedUrl, isVideoFile: false }
     }
 
@@ -63,18 +70,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
     }
 
-    // XVideos
-    if (processedUrl.includes("xvideos.com/video.")) {
-      const idPart = processedUrl.split("video.")[1]?.split("/")[0]
-      if (idPart) {
-        return { embedUrl: `https://www.xvideos.com/embedframe/${idPart}`, isVideoFile: false }
+    // XVideos (Suporte a IDs Alfanuméricos ex: kabopuh3e7b)
+    if (processedUrl.includes("xvideos.com/video")) {
+      const match = processedUrl.match(/video\.?([a-zA-Z0-9]+)/);
+      if (match && match[1]) {
+        return { embedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isVideoFile: false }
       }
-    }
-
-    // Pornhub
-    if (processedUrl.includes("pornhub.com/view_video.php?viewkey=")) {
-      const id = processedUrl.split("viewkey=")[1]?.split("&")[0]
-      return { embedUrl: `https://www.pornhub.com/embed/${id}?autoplay=1`, isVideoFile: false }
     }
 
     return { embedUrl: processedUrl, isVideoFile: false }
@@ -84,19 +85,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
     setIsAccelerating(true)
     
-    // Timeout de segurança: se em 5 segundos não carregar, libera o player
-    // Isso evita ficar preso no loading em TVs com internet instável
+    // Timeout de segurança: libera o player após 4 segundos mesmo se o sinal demorar
     const loadingTimeout = setTimeout(() => {
       setLoading(false)
       setIsAccelerating(false)
-    }, 5000)
+    }, 4000)
 
-    const accelTimeout = setTimeout(() => setIsAccelerating(false), 2000)
-    
-    return () => {
-      clearTimeout(loadingTimeout)
-      clearTimeout(accelTimeout)
-    }
+    return () => clearTimeout(loadingTimeout)
   }, [url])
 
   const toggleFullScreen = () => {
@@ -120,7 +115,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       {(loading || isAccelerating) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-30 transition-opacity">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-30 transition-opacity duration-500">
           <div className="relative">
             <Loader2 className="h-16 w-16 animate-spin text-primary opacity-20" />
             <Zap className="absolute inset-0 m-auto h-8 w-8 text-primary animate-pulse" />

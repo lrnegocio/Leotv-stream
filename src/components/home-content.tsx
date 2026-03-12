@@ -43,9 +43,10 @@ export default function HomeContent() {
 
         // SE BLOQUEADO OU SE ESTE APARELHO FOI REMOVIDO DA LISTA
         // Mestre e Vitalício têm prioridade de conexão
+        const isAdmin = currentUser.pin.toLowerCase() === 'adm77x2p';
+        const isLifetime = currentUser.subscriptionTier === 'lifetime';
         const isStillAuthorized = !currentUser.isBlocked && 
-                                 (currentUser.pin === 'adm77x2p' || 
-                                  currentUser.subscriptionTier === 'lifetime' || 
+                                 (isAdmin || isLifetime || 
                                   (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId)));
 
         if (!isStillAuthorized) {
@@ -53,8 +54,8 @@ export default function HomeContent() {
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "ACESSO SUSPENSO", 
-            description: currentUser.isBlocked ? "Detectado uso simultâneo além do limite contratado." : "Sessão expirada."
+            title: "SESSÃO ENCERRADA", 
+            description: currentUser.isBlocked ? "Bloqueado por uso simultâneo além do limite." : "Acesso expirado."
           });
         }
       } catch (err) {}
