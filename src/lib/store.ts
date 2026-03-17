@@ -61,7 +61,6 @@ export async function saveContent(item: ContentItem) {
     if (error) throw error;
     return true;
   } catch (e) {
-    console.error("Erro no content:", e);
     return false;
   }
 }
@@ -113,7 +112,6 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Tenta salvar o payload completo primeiro
     const payload: any = {
       id: user.id,
       pin: user.pin,
@@ -129,12 +127,10 @@ export async function saveUser(user: User) {
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
-      // Se der erro de coluna não encontrada (blockedAt), tenta sem ela
       if (error.message.includes('column') || error.message.includes('blockedAt')) {
         delete payload.blockedAt;
         const { error: retryError } = await supabase.from('users').upsert(payload);
-        if (retryError) return false;
-        return true;
+        return !retryError;
       }
       return false;
     }
@@ -157,41 +153,36 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // VERIFICA SE ESTÁ BLOQUEADO POR LOGIN DUPLO RECENTE (10 MINUTOS)
+  // VITALÍCIO NÃO EXPIRE
+  const isVitalicio = user.subscriptionTier === 'lifetime';
+  if (!isVitalicio && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+    return { error: "SUA ASSINATURA EXPIROU." };
+  }
+
+  // LOGICA DE BLOQUEIO POR LOGIN DUPLO
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
-    const now = Date.now();
-    const diffMins = (now - blockedTime) / (1000 * 60);
-
+    const diffMins = (Date.now() - blockedTime) / (1000 * 60);
     if (diffMins < 10) {
       return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
     } else {
-      // Desbloqueio Automático
       user.isBlocked = false;
       user.blockedAt = undefined;
-      user.activeDevices = [deviceId]; 
-      await saveUser(user);
     }
-  }
-
-  // VITALÍCIO NÃO EXPIRE
-  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "SUA ASSINATURA EXPIROU." };
   }
 
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
-    // SE JÁ ESTOUROU O LIMITE DE TELAS AO TENTAR ENTRAR COM NOVO APARELHO
     if (deviceList.length >= user.maxScreens) {
+      // ESTOUROU O LIMITE: BLOQUEIA O PIN
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; // Expulsa todos
+      user.activeDevices = []; 
       await saveUser(user);
       return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas." };
     } else {
-      // Apenas adiciona o novo aparelho se tiver vaga
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }

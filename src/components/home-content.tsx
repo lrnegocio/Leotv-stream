@@ -37,27 +37,33 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN SÃO IMORTAIS - Nunca deslogam por segurança
+        // VITALÍCIO E ADMIN SÃO IMORTAIS
         const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
         if (isImmortal) return;
 
-        // VERIFICA SE O PIN FOI BLOQUEADO OU SE ESTÁ EM APARELHO NÃO AUTORIZADO
-        const isAuthorized = !currentUser.isBlocked && 
-                            (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
-
-        if (!isAuthorized) {
+        // VERIFICA BLOQUEIO
+        if (currentUser.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
             title: "SESSÃO ENCERRADA", 
-            description: currentUser.isBlocked ? "Bloqueio por login duplo detectado." : "PIN expirado ou suspenso."
+            description: "Bloqueio por login duplo detectado."
           });
+          return;
+        }
+
+        // VERIFICA SE O APARELHO AINDA É O AUTORIZADO
+        if (currentUser.activeDevices && !currentUser.activeDevices.includes(session.deviceId)) {
+           // Se o aparelho não está na lista, mas não atingiu o limite, o login vai adicionar ele depois.
+           // Se outro aparelho tomou o lugar, ele desloga.
+           localStorage.removeItem("user_session");
+           router.push("/login");
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 10000); 
+    const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
       try {
@@ -112,7 +118,7 @@ function HomeContentInner() {
         <section>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
             <button 
-              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
+              className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
               onClick={() => setSelectedFolder(null)}
             >
               Todos
@@ -120,7 +126,7 @@ function HomeContentInner() {
             {categories.map(cat => (
               <button 
                 key={cat} 
-                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
+                className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
                 onClick={() => setSelectedFolder(cat)}
               >
                 {cat}
