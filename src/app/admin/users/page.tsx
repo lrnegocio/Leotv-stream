@@ -86,7 +86,7 @@ export default function UserManagementPage() {
       toast({ 
         variant: "destructive", 
         title: "Erro ao Salvar", 
-        description: "Verifique se você desativou o RLS no supabase (SQL Editor)." 
+        description: "Verifique se você desativou o RLS ou criou a coluna no Supabase." 
       })
     }
     setIsSaving(false)

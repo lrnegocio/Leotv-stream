@@ -94,7 +94,6 @@ export async function getRemoteUsers(): Promise<User[]> {
       blockedAt: u.blockedAt
     }));
     
-    // Garantir Admin Master fixo
     if (!users.some(u => u.pin === ADMIN_PIN)) {
       users.unshift({
         id: 'admin-master-permanent',
@@ -115,8 +114,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Normalização de dados antes de enviar ao Supabase
-    const payload = {
+    const payload: any = {
       id: user.id,
       pin: user.pin,
       role: user.role,
@@ -131,7 +129,7 @@ export async function saveUser(user: User) {
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
-      console.error("Erro Supabase:", error.message, error.details);
+      console.error("Erro Supabase RLS ou Coluna:", error.message);
       return false;
     }
     return true;
@@ -145,7 +143,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
-  // ADMIN É IMORTAL
   if (normalizedPin === ADMIN_PIN) {
     const adminUser = users.find(u => u.pin === ADMIN_PIN);
     return { user: adminUser };
@@ -154,14 +151,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // VERIFICA SE O PIN ESTÁ BLOQUEADO POR SEGURANÇA (TRAVA DE 10 MINUTOS)
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
     const now = Date.now();
     const diffMins = (now - blockedTime) / (1000 * 60);
 
     if (diffMins >= 10) {
-      // Desbloqueia após 10 minutos
       user.isBlocked = false;
       user.blockedAt = undefined;
       user.activeDevices = [deviceId]; 
@@ -173,7 +168,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
   }
 
-  // VERIFICA VALIDADE (SÓ PARA NÃO VITALÍCIOS)
   if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
@@ -182,31 +176,19 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
-    // SE JÁ ATINGIU O LIMITE DE TELAS COMPRADAS EM TEMPO REAL
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO MASTER POR EXCESSO DE TELAS SIMULTÂNEAS
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 
       await saveUser(user);
-      return { error: "BLOQUEIO! Você tentou usar mais telas do que comprou ao mesmo tempo." };
+      return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas." };
     } else {
-      // ADICIONA O APARELHO COMO TELA ATIVA
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }
   }
 
   return { user };
-}
-
-export async function removeActiveDevice(userId: string, deviceId: string) {
-  const users = await getRemoteUsers();
-  const user = users.find(u => u.id === userId);
-  if (user) {
-    user.activeDevices = (user.activeDevices || []).filter(id => id !== deviceId);
-    await saveUser(user);
-  }
 }
 
 export async function removeUser(id: string) {
