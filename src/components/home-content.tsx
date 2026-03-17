@@ -30,6 +30,7 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
+    // Heartbeat de segurança master otimizado
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -37,28 +38,19 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN SÃO IMORTAIS
-        const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
-        if (isImmortal) return;
+        // VITALÍCIO E ADMIN NÃO SÃO BLOQUEADOS PELO HEARTBEAT
+        if (currentUser.role === 'admin' || currentUser.subscriptionTier === 'lifetime') return;
 
-        // VERIFICA BLOQUEIO
+        // VERIFICA BLOQUEIO EM TEMPO REAL
         if (currentUser.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
             title: "SESSÃO ENCERRADA", 
-            description: "Bloqueio por login duplo detectado."
+            description: "Acesso bloqueado por login duplo detectado."
           });
           return;
-        }
-
-        // VERIFICA SE O APARELHO AINDA É O AUTORIZADO
-        if (currentUser.activeDevices && !currentUser.activeDevices.includes(session.deviceId)) {
-           // Se o aparelho não está na lista, mas não atingiu o limite, o login vai adicionar ele depois.
-           // Se outro aparelho tomou o lugar, ele desloga.
-           localStorage.removeItem("user_session");
-           router.push("/login");
         }
       } catch (err) {}
     };
@@ -78,14 +70,20 @@ function HomeContentInner() {
     return () => clearInterval(interval);
   }, [router])
 
-  const categories = Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort()
+  // Categorias únicas para o filtro
+  const categories = React.useMemo(() => 
+    Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
+  [content]);
 
-  const filtered = content.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
-                         (item.genre && item.genre.toLowerCase().includes(urlQuery.toLowerCase()))
-    const matchesFolder = selectedFolder ? item.genre === selectedFolder : true
-    return matchesSearch && matchesFolder
-  })
+  // Filtro de busca em tempo real ultra rápido
+  const filtered = React.useMemo(() => {
+    return content.filter(item => {
+      const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
+                           (item.genre && item.genre.toLowerCase().includes(urlQuery.toLowerCase()))
+      const matchesFolder = selectedFolder ? item.genre === selectedFolder : true
+      return matchesSearch && matchesFolder
+    })
+  }, [content, urlQuery, selectedFolder]);
 
   if (!isMounted || loading) {
     return (
@@ -104,12 +102,13 @@ function HomeContentInner() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 animate-pulse rounded-xl" />}>
-            <VoiceSearch />
-          </React.Suspense>
+          <VoiceSearch />
         </div>
 
-        <Button variant="ghost" size="icon" onClick={() => router.push("/login")} className="text-destructive">
+        <Button variant="ghost" size="icon" onClick={() => {
+          localStorage.removeItem("user_session");
+          router.push("/login");
+        }} className="text-destructive">
           <LogOut className="h-5 w-5" />
         </Button>
       </header>
@@ -136,26 +135,32 @@ function HomeContentInner() {
         </section>
 
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {filtered.map(item => (
-            <div key={item.id} onClick={async () => {
-              if (item.isRestricted) {
-                const settings = await getGlobalSettings()
-                const pin = prompt("Digite o PIN Parental:")
-                if (pin !== settings.parentalPin) return
-              }
-              setActiveVideo(item)
-            }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group">
-              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-              <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors">{item.title}</h3>
-              <div className="mt-6 flex justify-between items-center">
-                <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full border border-white/5">
-                  <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
-                  <span className="text-[7px] font-black text-muted-foreground uppercase">{item.type}</span>
-                </div>
-                {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
-              </div>
+          {filtered.length === 0 ? (
+            <div className="col-span-full py-20 text-center opacity-20">
+              <p className="font-bold uppercase tracking-widest text-xs">Nenhum canal encontrado</p>
             </div>
-          ))}
+          ) : (
+            filtered.map(item => (
+              <div key={item.id} onClick={async () => {
+                if (item.isRestricted) {
+                  const settings = await getGlobalSettings()
+                  const pin = prompt("Digite o PIN Parental:")
+                  if (pin !== settings.parentalPin) return
+                }
+                setActiveVideo(item)
+              }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group">
+                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
+                <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors">{item.title}</h3>
+                <div className="mt-6 flex justify-between items-center">
+                  <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full border border-white/5">
+                    <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
+                    <span className="text-[7px] font-black text-muted-foreground uppercase">{item.type}</span>
+                  </div>
+                  {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
+                </div>
+              </div>
+            ))
+          )}
         </section>
       </main>
 
