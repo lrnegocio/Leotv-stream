@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Play, Lock, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -29,7 +30,6 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
-    // HEARTBEAT DE SEGURANÇA: Checa a cada 10 segundos se o PIN foi bloqueado ou se o aparelho mudou
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -37,11 +37,11 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN SÃO IMORTAIS - Nunca deslogam
+        // VITALÍCIO E ADMIN SÃO IMORTAIS - Nunca deslogam por segurança
         const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
         if (isImmortal) return;
 
-        // VERIFICA SE O PIN FOI BLOQUEADO POR LOGIN DUPLO REAL
+        // VERIFICA SE O PIN FOI BLOQUEADO OU SE ESTÁ EM APARELHO NÃO AUTORIZADO
         const isAuthorized = !currentUser.isBlocked && 
                             (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
 
@@ -50,13 +50,11 @@ function HomeContentInner() {
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "ACESSO BLOQUEADO", 
-            description: currentUser.isBlocked ? "Login duplo detectado. PIN suspenso por 10 minutos." : "Sessão expirada."
+            title: "SESSÃO ENCERRADA", 
+            description: currentUser.isBlocked ? "Bloqueio por login duplo detectado." : "PIN expirado ou suspenso."
           });
         }
-      } catch (err) {
-        // Ignora erros de rede temporários para não deslogar o cliente
-      }
+      } catch (err) {}
     };
 
     const interval = setInterval(checkSecurity, 10000); 

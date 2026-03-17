@@ -93,7 +93,6 @@ export async function getRemoteUsers(): Promise<User[]> {
       blockedAt: u.blockedAt
     }));
     
-    // Adiciona o admin master se ele não existir na lista
     if (!users.some(u => u.pin === ADMIN_PIN)) {
       users.unshift({
         id: 'admin-master-permanent',
@@ -114,7 +113,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    // Payload básico para evitar erros se a coluna blockedAt não existir
+    // Tenta salvar o payload completo primeiro
     const payload: any = {
       id: user.id,
       pin: user.pin,
@@ -123,33 +122,24 @@ export async function saveUser(user: User) {
       expiryDate: user.expiryDate || null,
       maxScreens: user.maxScreens,
       activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked
+      isBlocked: user.isBlocked,
+      blockedAt: user.blockedAt || null
     };
-
-    // Só tenta enviar blockedAt se ele estiver preenchido, para evitar erro de coluna ausente
-    if (user.blockedAt) {
-      payload.blockedAt = user.blockedAt;
-    }
 
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
-      // Se o erro for especificamente sobre a coluna blockedAt, tenta salvar sem ela
-      if (error.message.includes('blockedAt') || error.message.includes('column')) {
+      // Se der erro de coluna não encontrada (blockedAt), tenta sem ela
+      if (error.message.includes('column') || error.message.includes('blockedAt')) {
         delete payload.blockedAt;
         const { error: retryError } = await supabase.from('users').upsert(payload);
-        if (retryError) {
-          console.error("Erro Supabase:", retryError.message);
-          return false;
-        }
+        if (retryError) return false;
         return true;
       }
-      console.error("Erro Supabase:", error.message);
       return false;
     }
     return true;
   } catch (e) {
-    console.error("Erro saveUser:", e);
     return false;
   }
 }
@@ -158,6 +148,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
+  // ADMIN É IMORTAL
   if (normalizedPin === ADMIN_PIN) {
     const adminUser = users.find(u => u.pin === ADMIN_PIN);
     return { user: adminUser };
@@ -166,28 +157,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // Verifica se está bloqueado e se o tempo de 10 minutos passou
-  if (user.isBlocked) {
-    if (user.blockedAt) {
-      const blockedTime = new Date(user.blockedAt).getTime();
-      const now = Date.now();
-      const diffMins = (now - blockedTime) / (1000 * 60);
+  // VERIFICA SE ESTÁ BLOQUEADO POR LOGIN DUPLO RECENTE (10 MINUTOS)
+  if (user.isBlocked && user.blockedAt) {
+    const blockedTime = new Date(user.blockedAt).getTime();
+    const now = Date.now();
+    const diffMins = (now - blockedTime) / (1000 * 60);
 
-      if (diffMins >= 10) {
-        // Desbloqueio automático após 10 minutos
-        user.isBlocked = false;
-        user.blockedAt = undefined;
-        user.activeDevices = [deviceId]; 
-        await saveUser(user);
-      } else {
-        return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
-      }
+    if (diffMins < 10) {
+      return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
     } else {
-      return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
+      // Desbloqueio Automático
+      user.isBlocked = false;
+      user.blockedAt = undefined;
+      user.activeDevices = [deviceId]; 
+      await saveUser(user);
     }
   }
 
-  // Verifica expiração (Exceto Vitalício)
+  // VITALÍCIO NÃO EXPIRE
   if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
@@ -195,17 +182,16 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
-  // Lógica Inteligente de Login Duplo vs Troca de Aparelho
   if (!isExistingDevice) {
-    // Se tentar entrar com um novo aparelho e já atingiu o limite de telas simultâneas
+    // SE JÁ ESTOUROU O LIMITE DE TELAS AO TENTAR ENTRAR COM NOVO APARELHO
     if (deviceList.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; // Reseta a lista para deslogar todos
+      user.activeDevices = []; // Expulsa todos
       await saveUser(user);
-      return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas (Login Duplo Detectado)." };
+      return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas." };
     } else {
-      // Se ainda tem telas disponíveis, apenas adiciona o novo aparelho
+      // Apenas adiciona o novo aparelho se tiver vaga
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }
