@@ -31,6 +31,7 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
+    // Segurança P2P: Expulsa se bloqueado em tempo real
     const checkSecurity = async () => {
       try {
         if (session.pin === 'adm77x2p' || session.role === 'admin') return;
@@ -39,12 +40,12 @@ function HomeContentInner() {
         if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ variant: "destructive", title: "ACESSO BLOQUEADO" });
+          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Limite de telas ou bloqueio master." });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 30000); 
+    const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
       try {
@@ -62,6 +63,7 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
+  // Busca Live: Filtra conforme o usuário digita/fala
   const filtered = React.useMemo(() => {
     return content.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
@@ -81,40 +83,41 @@ function HomeContentInner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
-      <header className="h-16 border-b border-white/5 bg-card/50 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
+      <header className="h-20 border-b border-white/5 bg-card/50 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <div className="bg-primary p-2 rounded-lg"><Tv className="h-6 w-6 text-white" /></div>
-          <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic hidden sm:block">Léo Stream</span>
+          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20"><Tv className="h-6 w-6 text-white" /></div>
+          <span className="text-2xl font-black text-primary font-headline uppercase tracking-tighter italic hidden sm:block">Léo Stream</span>
         </div>
         
-        <div className="flex-1 max-w-md mx-4">
+        <div className="flex-1 max-w-lg mx-8">
           <VoiceSearch />
         </div>
 
         <Button variant="ghost" size="icon" onClick={() => {
           localStorage.removeItem("user_session");
           router.push("/login");
-        }} className="text-destructive">
-          <LogOut className="h-5 w-5" />
+        }} className="text-destructive hover:bg-destructive/10 h-12 w-12 rounded-xl">
+          <LogOut className="h-6 w-6" />
         </Button>
       </header>
 
-      <main className="p-6 space-y-8 max-w-7xl mx-auto">
-        <section className="relative px-12">
+      <main className="p-8 space-y-10 max-w-7xl mx-auto">
+        {/* CARROSSEL DE CATEGORIAS COM SETAS DE RETORNO */}
+        <section className="relative px-12 group">
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
             <CarouselContent className="-ml-2">
               <CarouselItem className="pl-2 basis-auto">
                 <button 
-                  className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white scale-105 shadow-lg shadow-primary/20' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                  className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/30 border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
                   onClick={() => setSelectedFolder(null)}
                 >
-                  Todos
+                  TODOS OS CANAIS
                 </button>
               </CarouselItem>
               {categories.map(cat => (
                 <CarouselItem key={cat} className="pl-2 basis-auto">
                   <button 
-                    className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white scale-105 shadow-lg shadow-primary/20' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                    className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/30 border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
                     onClick={() => setSelectedFolder(cat)}
                   >
                     {cat}
@@ -122,34 +125,41 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="absolute -left-4 bg-primary/20 hover:bg-primary border-none text-white h-10 w-10" />
-            <CarouselNext className="absolute -right-4 bg-primary/20 hover:bg-primary border-none text-white h-10 w-10" />
+            {/* SETAS DE AVANÇAR E RETROCEDER RESTAURADAS */}
+            <CarouselPrevious className="absolute -left-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all group-hover:-left-4" />
+            <CarouselNext className="absolute -right-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all group-hover:-right-4" />
           </Carousel>
         </section>
 
-        <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <section className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 animate-in fade-in duration-700">
           {filtered.length === 0 ? (
-            <div className="col-span-full py-20 text-center opacity-20">
-              <p className="font-bold uppercase tracking-widest text-xs">Nenhum resultado</p>
+            <div className="col-span-full py-20 text-center opacity-30 border border-dashed border-white/10 rounded-3xl">
+              <p className="font-black uppercase tracking-[0.3em] text-xs">Nenhum sinal localizado</p>
             </div>
           ) : (
             filtered.map(item => (
               <div key={item.id} onClick={async () => {
                 if (item.isRestricted) {
                   const settings = await getGlobalSettings()
-                  const pin = prompt("SENHA PARENTAL:")
-                  if (pin !== settings.parentalPin) return
+                  const pin = prompt("SENHA PARENTAL (4 DÍGITOS):")
+                  if (pin !== settings.parentalPin) {
+                    toast({ variant: "destructive", title: "SENHA INCORRETA" });
+                    return
+                  }
                 }
                 setActiveVideo(item)
-              }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group hover:scale-[1.02] active:scale-95">
-                <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-                <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors mt-1">{item.title}</h3>
-                <div className="mt-6 flex justify-between items-center">
-                  <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full border border-white/5">
-                    <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
-                    <span className="text-[7px] font-black text-muted-foreground uppercase">{item.type}</span>
+              }} className="bg-card/40 backdrop-blur-sm border border-white/5 rounded-3xl p-6 cursor-pointer hover:border-primary/50 transition-all shadow-2xl group hover:scale-[1.03] active:scale-95 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
+                  <Play className="h-4 w-4 text-primary fill-current" />
+                </div>
+                <span className="text-[10px] font-black text-primary uppercase tracking-widest">{item.genre}</span>
+                <h3 className="font-black text-sm uppercase truncate font-headline group-hover:text-primary transition-colors mt-2 tracking-tight italic">{item.title}</h3>
+                <div className="mt-8 flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{item.type}</span>
                   </div>
-                  {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
+                  {item.isRestricted && <Lock className="h-3.5 w-3.5 text-destructive" />}
                 </div>
               </div>
             ))
@@ -159,7 +169,7 @@ function HomeContentInner() {
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-          <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl shadow-2xl">
+          <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-3xl">
             <DialogHeader className="sr-only"><DialogTitle>{activeVideo.title}</DialogTitle></DialogHeader>
             <VideoPlayer url={activeVideo.streamUrl || ""} title={activeVideo.title} />
           </DialogContent>

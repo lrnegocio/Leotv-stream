@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, PlayCircle, Globe } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, PlayCircle, Globe, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -18,63 +18,68 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setIsMounted(true)
   }, [])
 
-  const { embedUrl, isDirectVideo, isMixedContent } = React.useMemo(() => {
+  const { embedUrl, isBlockedContent, isMixedContent } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") {
-      return { embedUrl: null, isDirectVideo: false, isMixedContent: false }
+      return { embedUrl: null, isBlockedContent: true, isMixedContent: false }
     }
     
     let processedUrl = url.trim()
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
-    const mixed = isPageHttps && isUrlHttp
-
-    // FORMATAÇÃO UNIVERSAL MASTER
+    
+    // Lista de domínios que bloqueiam iframe (PHP players, redecanais, etc)
+    const blockedDomains = ['redecanaistv', 'ch.php', 'player3', 'vulcanzz', 'nizcdn']
+    const isKnownBlocked = blockedDomains.some(d => processedUrl.includes(d))
+    
+    // YouTube
     if (processedUrl.includes('youtube.com') || processedUrl.includes('youtu.be')) {
       const id = processedUrl.includes('v=') ? processedUrl.split('v=')[1]?.split('&')[0] : processedUrl.split('youtu.be/')[1]?.split('?')[0]
       processedUrl = `https://www.youtube.com/embed/${id}?autoplay=1`
-    } else if (processedUrl.includes('dailymotion.com')) {
+    } 
+    // Dailymotion
+    else if (processedUrl.includes('dailymotion.com')) {
       const id = processedUrl.split('video/')[1]?.split('?')[0]
       processedUrl = `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
-    } else if (processedUrl.includes('xvideos.com')) {
+    }
+    // XVideos
+    else if (processedUrl.includes('xvideos.com')) {
       const match = processedUrl.match(/video\.([^/]+)/) || processedUrl.match(/video(\d+)/)
       if (match) processedUrl = `https://www.xvideos.com/embedframe/${match[1]}`
-    } else if (processedUrl.includes('pornhub.com')) {
-      const id = processedUrl.split('view_video.php?viewkey=')[1]?.split('&')[0]
-      processedUrl = `https://www.pornhub.com/embed/${id}`
     }
 
-    const lowerUrl = processedUrl.toLowerCase()
-    const isDirect = lowerUrl.includes('.m3u8') || lowerUrl.includes('.mp4') || lowerUrl.includes('.ts')
-
-    return { embedUrl: processedUrl, isDirectVideo: isDirect, isMixedContent: mixed }
+    return { 
+      embedUrl: processedUrl, 
+      isBlockedContent: isKnownBlocked,
+      isMixedContent: isPageHttps && isUrlHttp 
+    }
   }, [url])
 
   React.useEffect(() => {
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 3000)
+    const timer = setTimeout(() => setLoading(false), 2000)
     return () => clearTimeout(timer)
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
-  // FALLBACK PARA CONTEÚDO MISTO (SINAIS HTTP)
-  if (isMixedContent && !embedUrl?.includes('youtube.com') && !embedUrl?.includes('dailymotion.com')) {
+  // CAMADA DE PROTEÇÃO P2P MASTER (Para links que bloqueiam iframe ou são HTTP)
+  if (isBlockedContent || isMixedContent) {
     return (
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black rounded-3xl border border-white/10 text-center p-8">
-        <div className="bg-primary/20 p-4 rounded-full">
-          <Globe className="h-10 w-10 text-primary animate-pulse" />
+        <div className="bg-primary/20 p-6 rounded-full border border-primary/30 shadow-2xl shadow-primary/20">
+          <Globe className="h-12 w-12 text-primary animate-pulse" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-lg font-black uppercase italic text-white">Sinal P2P Master</h3>
-          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest max-w-sm mx-auto">
-            Este canal requer conexão direta. Clique abaixo para sintonizar.
+        <div className="space-y-3">
+          <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Sinal P2P Master</h3>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
+            Este canal requer conexão direta segura.<br/>Clique abaixo para sintonizar no player nativo.
           </p>
         </div>
         <Button 
-          className="h-14 px-10 bg-primary hover:scale-105 transition-all text-lg font-black uppercase italic rounded-2xl"
-          onClick={() => window.open(embedUrl || "", '_blank')}
+          className="h-16 px-12 bg-primary hover:bg-primary/90 hover:scale-105 transition-all text-xl font-black uppercase italic rounded-2xl shadow-2xl shadow-primary/30 border border-white/10"
+          onClick={() => window.open(url, '_blank')}
         >
-          <PlayCircle className="mr-3 h-6 w-6" /> SINTONIZAR AGORA
+          <PlayCircle className="mr-3 h-7 w-7" /> SINTONIZAR AGORA
         </Button>
       </div>
     )
@@ -103,7 +108,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <h3 className="text-lg font-black text-white uppercase italic truncate">{title}</h3>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(embedUrl || "", '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-4 w-4" /> Sinal Direto
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={() => {
