@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Zap, Globe } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Zap, Globe, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -18,22 +18,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isAccelerating, setIsAccelerating] = React.useState(true)
   const [isMixedContent, setIsMixedContent] = React.useState(false)
 
-  const { embedUrl, isVideoFile } = React.useMemo(() => {
+  const { embedUrl, isVideoFile, isHls } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") {
-      return { embedUrl: null, isVideoFile: false }
+      return { embedUrl: null, isVideoFile: false, isHls: false }
     }
     
     let processedUrl = url.trim()
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
-
-    // TENTATIVA MASTER DE COMPATIBILIDADE P2P (playcnvs.stream)
-    // Se for o domínio playcnvs, tentamos converter para https sem o www para ver se o navegador aceita
-    if (processedUrl.includes('playcnvs.stream')) {
-      if (isUrlHttp && isPageHttps) {
-        // Tentamos carregar via https sem o www que costuma ter certificado
-        processedUrl = processedUrl.replace('http://www.', 'https://').replace('http://', 'https://');
-      }
+    
+    // Detecta se é Mixed Content (Site Seguro tentando abrir link não seguro)
+    if (isPageHttps && isUrlHttp) {
+      setIsMixedContent(true)
+    } else {
+      setIsMixedContent(false)
     }
 
     // SUPORTE A TAG IFRAME COMPLETA
@@ -44,42 +42,41 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
     
-    // DETECÇÃO DE SINAL DIRETO
+    // DETECÇÃO DE SINAL DIRETO (M3U8, MP4, ETC)
     const lowerUrl = processedUrl.toLowerCase()
-    const isDirect = lowerUrl.includes('.mp4') || 
-                    lowerUrl.includes('.m3u8') || 
+    const isHlsSignal = lowerUrl.includes('.m3u8')
+    const isDirect = isHlsSignal || 
+                    lowerUrl.includes('.mp4') || 
                     lowerUrl.includes('.ts') || 
                     lowerUrl.includes('.mkv') ||
                     lowerUrl.includes('/hls/') ||
-                    lowerUrl.includes('playlist.m3u8') ||
                     lowerUrl.includes('stream.php');
 
     if (isDirect) {
-      return { embedUrl: processedUrl, isVideoFile: true }
+      return { embedUrl: processedUrl, isVideoFile: true, isHls: isHlsSignal }
     }
 
     // YouTube
     if (processedUrl.includes("youtube.com/watch?v=")) {
       const id = processedUrl.split("v=")[1]?.split("&")[0]
-      return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
+      return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false, isHls: false }
     }
     if (processedUrl.includes("youtu.be/")) {
       const id = processedUrl.split("youtu.be/")[1]?.split("?")[0]
-      return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false }
+      return { embedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`, isVideoFile: false, isHls: false }
     }
 
-    return { embedUrl: processedUrl, isVideoFile: false }
+    return { embedUrl: processedUrl, isVideoFile: false, isHls: false }
   }, [url])
 
   React.useEffect(() => {
     setLoading(true)
     setIsAccelerating(true)
     
-    // Aumentamos o tempo de espera para sinais P2P demorados
     const loadingTimeout = setTimeout(() => {
       setLoading(false)
       setIsAccelerating(false)
-    }, 6000)
+    }, 5000)
 
     return () => clearTimeout(loadingTimeout)
   }, [url])
@@ -98,6 +95,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-4 bg-black rounded-xl border border-white/5 text-center p-6">
         <AlertCircle className="h-12 w-12 text-destructive/50" />
         <p className="font-bold uppercase text-xs tracking-widest text-white italic">Sinal Master não identificado</p>
+      </div>
+    )
+  }
+
+  // Se for HTTP em site HTTPS, a maioria dos navegadores bloqueia. Mostramos o botão de escape master.
+  if (isMixedContent) {
+    return (
+      <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black/95 rounded-3xl border border-white/10 text-center p-8 animate-in fade-in zoom-in duration-500">
+        <div className="bg-primary/20 p-4 rounded-full border border-primary/30">
+          <Globe className="h-10 w-10 text-primary animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-black uppercase italic tracking-tight text-white">Sinal Master Protegido</h3>
+          <p className="text-[10px] text-muted-foreground uppercase leading-tight max-w-sm mx-auto font-bold tracking-widest">
+            Este link (m3u8/http) é bloqueado pelo navegador por segurança. <br/>Clique no botão abaixo para sintonizar direto na fonte.
+          </p>
+        </div>
+        <Button 
+          className="h-14 px-10 bg-primary hover:scale-105 transition-all text-lg font-black uppercase italic shadow-2xl shadow-primary/40 rounded-2xl"
+          onClick={() => window.open(embedUrl, '_blank')}
+        >
+          <PlayCircle className="mr-3 h-6 w-6" /> Sintonizar Agora
+        </Button>
       </div>
     )
   }
@@ -127,6 +147,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline
           className="h-full w-full relative z-10 object-contain"
           onLoadedData={() => setLoading(false)}
+          onError={() => {
+            // Se falhar o vídeo direto (comum em m3u8 no Chrome), avisamos
+            if (isHls) {
+              setLoading(false)
+              setIsAccelerating(false)
+            }
+          }}
         />
       ) : (
         <iframe

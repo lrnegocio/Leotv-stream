@@ -11,7 +11,7 @@ import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
 
-export default function HomeContent() {
+function HomeContentInner() {
   const searchParams = useSearchParams()
   const urlQuery = searchParams.get('q') || ""
   const [content, setContent] = React.useState<ContentItem[]>([])
@@ -40,8 +40,10 @@ export default function HomeContent() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN TÊM PASSE LIVRE - NUNCA EXPULSAM
-        const isMaster = currentUser.pin.toLowerCase() === 'adm77x2p' || currentUser.subscriptionTier === 'lifetime';
+        // VITALÍCIO E ADMIN SÃO IMORTAIS - NUNCA EXPULSAM
+        const isMaster = currentUser.pin.toLowerCase() === 'adm77x2p' || 
+                         currentUser.subscriptionTier === 'lifetime' || 
+                         currentUser.role === 'admin';
         
         if (isMaster) return;
 
@@ -140,9 +142,7 @@ export default function HomeContent() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 rounded-xl animate-pulse" />}>
-            <VoiceSearch />
-          </React.Suspense>
+          <VoiceSearch />
         </div>
 
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">
@@ -235,5 +235,13 @@ export default function HomeContent() {
       )}
       <AiAssistant />
     </div>
+  )
+}
+
+export default function HomeContent() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <HomeContentInner />
+    </React.Suspense>
   )
 }

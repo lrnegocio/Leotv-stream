@@ -8,7 +8,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -86,9 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="hidden md:block">
-                <React.Suspense fallback={<div className="h-10 w-48 bg-white/5 rounded-xl animate-pulse" />}>
-                  <VoiceSearch />
-                </React.Suspense>
+                <VoiceSearch />
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -99,13 +97,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
           <div className="flex-1 overflow-y-auto p-8 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-background via-background to-black/20">
-            <React.Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-              {children}
-            </React.Suspense>
+            {children}
           </div>
         </main>
       </div>
       <AiAssistant />
     </SidebarProvider>
+  )
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+      <AdminLayoutInner>
+        {children}
+      </AdminLayoutInner>
+    </React.Suspense>
   )
 }
