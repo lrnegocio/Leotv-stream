@@ -86,7 +86,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="hidden md:block">
-                <VoiceSearch />
+                <React.Suspense fallback={<div className="h-10 w-48 bg-white/5 animate-pulse rounded-xl" />}>
+                  <VoiceSearch />
+                </React.Suspense>
               </div>
             </div>
             <div className="flex items-center gap-4">

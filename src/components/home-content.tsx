@@ -108,15 +108,15 @@ function HomeContentInner() {
 
   const openContent = async (item: ContentItem) => {
     if (!navigator.onLine) {
-      toast({ variant: "destructive", title: "Sem Internet", description: "Conecte-se para assistir." })
+      toast({ title: "Sem Internet", description: "Verifique seu cabo de rede." })
       return
     }
 
     if (item.isRestricted) {
       const settings = await getGlobalSettings()
-      const userInput = prompt("Conteúdo Restrito. Senha Parental:")
+      const userInput = prompt("Conteúdo Adulto. Digite o PIN Parental:")
       if (userInput !== settings.parentalPin) {
-        toast({ variant: "destructive", title: "Senha Incorreta", description: "Acesso negado." })
+        toast({ variant: "destructive", title: "PIN Incorreto", description: "Acesso negado." })
         return
       }
     }
@@ -142,7 +142,9 @@ function HomeContentInner() {
         </div>
         
         <div className="flex-1 max-w-md mx-4">
-          <VoiceSearch />
+          <React.Suspense fallback={<div className="h-10 w-full bg-white/5 animate-pulse rounded-xl" />}>
+            <VoiceSearch />
+          </React.Suspense>
         </div>
 
         <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">
@@ -154,16 +156,16 @@ function HomeContentInner() {
         {!isOnline && (
           <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-2xl flex items-center gap-4 text-destructive">
             <WifiOff className="h-6 w-6" />
-            <p className="text-xs font-bold uppercase">Modo Offline Ativo.</p>
+            <p className="text-xs font-bold uppercase">Sinal Master Perdido - Verifique a internet.</p>
           </div>
         )}
 
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 font-headline italic">Pastas de Canais</h2>
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 font-headline italic">Pastas</h2>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
             <Button 
               variant={selectedFolder === null ? "default" : "secondary"} 
-              className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
+              className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10"
               onClick={() => setSelectedFolder(null)}
             >
               Todos
@@ -172,7 +174,7 @@ function HomeContentInner() {
               <Button 
                 key={cat}
                 variant={selectedFolder === cat ? "default" : "secondary"} 
-                className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10 shadow-lg"
+                className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10"
                 onClick={() => setSelectedFolder(cat)}
               >
                 {cat}
@@ -184,14 +186,14 @@ function HomeContentInner() {
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.length === 0 ? (
             <div className="col-span-full py-20 text-center opacity-50 border border-dashed border-white/10 rounded-3xl">
-              <p className="uppercase text-xs font-bold font-headline">Nenhum resultado encontrado.</p>
+              <p className="uppercase text-xs font-bold font-headline">Nenhum canal encontrado.</p>
             </div>
           ) : (
             filtered.map(item => (
               <div 
                 key={item.id} 
                 onClick={() => openContent(item)}
-                className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden active:scale-95 shadow-xl"
+                className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all group relative active:scale-95 shadow-xl"
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
