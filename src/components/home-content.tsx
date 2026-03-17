@@ -3,10 +3,10 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, WifiOff } from "lucide-react"
-import { getRemoteContent, getGlobalSettings, ContentItem, removeActiveDevice, getRemoteUsers } from "@/lib/store"
+import { LogOut, Tv, Play, Lock, Loader2 } from "lucide-react"
+import { getRemoteContent, getGlobalSettings, ContentItem, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
@@ -41,7 +41,7 @@ function HomeContentInner() {
         const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
         if (isImmortal) return;
 
-        // VERIFICA SE O PIN FOI BLOQUEADO POR USO SIMULTÂNEO (LOGIN DUPLO)
+        // VERIFICA SE O PIN FOI BLOQUEADO POR LOGIN DUPLO REAL
         const isAuthorized = !currentUser.isBlocked && 
                             (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
 
@@ -111,9 +111,20 @@ function HomeContentInner() {
       <main className="p-6 space-y-8 max-w-7xl mx-auto">
         <section>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
-            <Button variant={selectedFolder === null ? "default" : "secondary"} onClick={() => setSelectedFolder(null)}>Todos</Button>
+            <button 
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
+              onClick={() => setSelectedFolder(null)}
+            >
+              Todos
+            </button>
             {categories.map(cat => (
-              <Button key={cat} variant={selectedFolder === cat ? "default" : "secondary"} onClick={() => setSelectedFolder(cat)}>{cat}</Button>
+              <button 
+                key={cat} 
+                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
+                onClick={() => setSelectedFolder(cat)}
+              >
+                {cat}
+              </button>
             ))}
           </div>
         </section>
@@ -123,14 +134,15 @@ function HomeContentInner() {
             <div key={item.id} onClick={async () => {
               if (item.isRestricted) {
                 const settings = await getGlobalSettings()
-                if (prompt("Digite o PIN Parental:") !== settings.parentalPin) return
+                const pin = prompt("Digite o PIN Parental:")
+                if (pin !== settings.parentalPin) return
               }
               setActiveVideo(item)
-            }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl">
+            }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group">
               <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-              <h3 className="font-bold text-sm uppercase truncate font-headline">{item.title}</h3>
+              <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors">{item.title}</h3>
               <div className="mt-6 flex justify-between items-center">
-                <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full border border-white/5">
                   <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
                   <span className="text-[7px] font-black text-muted-foreground uppercase">{item.type}</span>
                 </div>

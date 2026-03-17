@@ -115,21 +115,23 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    const { error } = await supabase
-      .from('users')
-      .upsert({
-        id: user.id,
-        pin: user.pin,
-        role: user.role,
-        subscriptionTier: user.subscriptionTier,
-        expiryDate: user.expiryDate || null,
-        maxScreens: user.maxScreens,
-        activeDevices: user.activeDevices || [],
-        isBlocked: user.isBlocked,
-        blockedAt: user.blockedAt || null
-      });
+    // Normalização de dados antes de enviar ao Supabase
+    const payload = {
+      id: user.id,
+      pin: user.pin,
+      role: user.role,
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate || null,
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices || [],
+      isBlocked: user.isBlocked,
+      blockedAt: user.blockedAt || null
+    };
+
+    const { error } = await supabase.from('users').upsert(payload);
+    
     if (error) {
-      console.error("Erro Supabase RLS:", error);
+      console.error("Erro Supabase:", error.message, error.details);
       return false;
     }
     return true;
@@ -143,6 +145,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim().toLowerCase();
   
+  // ADMIN É IMORTAL
   if (normalizedPin === ADMIN_PIN) {
     const adminUser = users.find(u => u.pin === ADMIN_PIN);
     return { user: adminUser };
@@ -151,41 +154,42 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // Se o PIN for Vitalício, ignora expiração
-  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "SUA ASSINATURA EXPIROU." };
-  }
-
-  // Lógica de Bloqueio por LOGIN DUPLO REAL
+  // VERIFICA SE O PIN ESTÁ BLOQUEADO POR SEGURANÇA (TRAVA DE 10 MINUTOS)
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
     const now = Date.now();
     const diffMins = (now - blockedTime) / (1000 * 60);
 
     if (diffMins >= 10) {
+      // Desbloqueia após 10 minutos
       user.isBlocked = false;
       user.blockedAt = undefined;
-      user.activeDevices = [deviceId]; // Libera apenas para este novo
+      user.activeDevices = [deviceId]; 
       await saveUser(user);
     } else {
-      return { error: `LOGIN DUPLO DETECTADO. BLOQUEADO POR MAIS ${Math.ceil(10 - diffMins)} MINUTOS.` };
+      return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
     }
   } else if (user.isBlocked) {
     return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
+  }
+
+  // VERIFICA VALIDADE (SÓ PARA NÃO VITALÍCIOS)
+  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+    return { error: "SUA ASSINATURA EXPIROU." };
   }
 
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
-    // SE JÁ ATINGIU O LIMITE DE TELAS COMPRADAS
+    // SE JÁ ATINGIU O LIMITE DE TELAS COMPRADAS EM TEMPO REAL
     if (deviceList.length >= user.maxScreens) {
-      // BLOQUEIO IMEDIATO DE TODOS POR LOGIN DUPLO NÃO CONTRATADO
+      // BLOQUEIO MASTER POR EXCESSO DE TELAS SIMULTÂNEAS
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 
       await saveUser(user);
-      return { error: "BLOQUEIO MASTER! Você tentou usar mais telas do que comprou ao mesmo tempo." };
+      return { error: "BLOQUEIO! Você tentou usar mais telas do que comprou ao mesmo tempo." };
     } else {
       // ADICIONA O APARELHO COMO TELA ATIVA
       user.activeDevices = [...deviceList, deviceId];
