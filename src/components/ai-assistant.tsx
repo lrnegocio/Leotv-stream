@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { adminAssistant } from "@/ai/flows/admin-assistant-flow"
+import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "@/hooks/use-toast"
-import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
 import { useRouter } from "next/navigation"
 
 export function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
   const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([
-    { role: 'model', text: 'Olá Mestre! Sou sua Léo IA. O que vamos assistir ou gerenciar hoje?' }
+    { role: 'model', text: 'Olá Mestre Léo! Sou sua Léo IA. Qual o canal de hoje?' }
   ])
   const [loading, setLoading] = React.useState(false)
   const [isListening, setIsListening] = React.useState(false)
@@ -34,6 +34,7 @@ export function AiAssistant() {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'pt-BR'
     utterance.rate = 1.1
+    utterance.pitch = 1.0
     window.speechSynthesis.speak(utterance)
   }
 
@@ -47,14 +48,25 @@ export function AiAssistant() {
 
     try {
       const lower = text.toLowerCase()
-      if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("procurar") || lower.includes("canal")) {
-        const searchRes = await voiceSearchContent({ query: text })
-        router.push(`/user/home?q=${searchRes.searchTerm}`)
-        const msg = `Com certeza, Mestre! Sintonizando agora o canal: ${searchRes.searchTerm}.`
-        setMessages(prev => [...prev, { role: 'model', text: msg }])
-        speak(msg)
-        setLoading(false)
-        return
+      // Lógica Alexa para Busca de Canais
+      if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("procurar") || lower.includes("canal") || lower.includes("abrir")) {
+        try {
+          const searchRes = await voiceSearchContent({ query: text })
+          router.push(`/user/home?q=${searchRes.searchTerm}`)
+          const msg = `Com certeza, Mestre! Sintonizando agora o canal: ${searchRes.searchTerm}.`
+          setMessages(prev => [...prev, { role: 'model', text: msg }])
+          speak(msg)
+          setLoading(false)
+          return
+        } catch (e) {
+          // Fallback se o flow de busca falhar
+          router.push(`/user/home?q=${text}`)
+          const msg = `Buscando ${text} para você, Mestre.`
+          setMessages(prev => [...prev, { role: 'model', text: msg }])
+          speak(msg)
+          setLoading(false)
+          return
+        }
       }
 
       const history = messages.map(m => ({
@@ -67,7 +79,9 @@ export function AiAssistant() {
       speak(result.response)
 
     } catch (error) {
-      toast({ variant: "destructive", title: "Sinal IA Fraco", description: "Tente novamente." })
+      // Mensagem de erro amigável e tentativa de reconexão
+      toast({ variant: "destructive", title: "Sinal IA Oscilando", description: "O sinal master está instável. Pode repetir?" })
+      setMessages(prev => [...prev, { role: 'model', text: "Desculpe Mestre, meu sinal oscilou. Pode repetir o comando?" }])
     } finally {
       setLoading(false)
     }
@@ -75,12 +89,13 @@ export function AiAssistant() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      toast({ title: "Erro", description: "Navegador não suporta voz." })
+      toast({ title: "Erro de Voz", description: "Use o Google Chrome para suporte a áudio." })
       return
     }
 
     const recognition = new (window as any).webkitSpeechRecognition()
     recognition.lang = 'pt-BR'
+    recognition.continuous = false
     recognition.onstart = () => setIsListening(true)
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript
@@ -94,7 +109,7 @@ export function AiAssistant() {
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
       {!isOpen ? (
-        <Button onClick={() => setIsOpen(true)} className="h-16 w-16 rounded-full bg-primary shadow-2xl hover:scale-110 transition-transform border-4 border-background">
+        <Button onClick={() => setIsOpen(true)} className="h-16 w-16 rounded-full bg-primary shadow-2xl hover:scale-110 transition-transform border-4 border-background shadow-primary/40">
           <Sparkles className="h-8 w-8 text-white" />
         </Button>
       ) : (
@@ -104,7 +119,7 @@ export function AiAssistant() {
               <div className="bg-primary p-2 rounded-xl shadow-lg"><Sparkles className="h-5 w-5 text-white" /></div>
               <div>
                 <CardTitle className="text-sm font-black uppercase italic text-primary">Léo IA Assistente</CardTitle>
-                <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Alexa P2P Ativa</span>
+                <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Sinal Master Ativo</span>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => { setIsOpen(false); window.speechSynthesis?.cancel(); }}>
@@ -116,21 +131,31 @@ export function AiAssistant() {
               <div className="space-y-4 pb-4">
                 {messages.map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm ${
+                    <div className={`max-w-[85%] p-3 rounded-2xl text-[11px] font-medium leading-relaxed shadow-sm ${
                       m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white/5 border border-white/5 text-foreground rounded-tl-none'
                     }`}>{m.text}</div>
                   </div>
                 ))}
-                {loading && <div className="flex justify-start"><div className="bg-white/5 p-3 rounded-2xl border border-white/5"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div></div>}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white/5 p-3 rounded-2xl border border-white/5 flex gap-2 items-center">
+                      <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
           </CardContent>
           <CardFooter className="p-4 border-t border-white/5 gap-2">
-            <Button size="icon" variant={isListening ? "destructive" : "secondary"} className={`rounded-xl ${isListening ? 'animate-pulse' : ''}`} onClick={startListening}>
+            <Button size="icon" variant={isListening ? "destructive" : "secondary"} className={`rounded-xl h-11 w-11 transition-all ${isListening ? 'animate-pulse scale-110' : ''}`} onClick={startListening}>
               <Mic className="h-5 w-5" />
             </Button>
             <div className="relative flex-1">
-              <Input placeholder="Pergunte à Léo IA..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/20 border-white/5 rounded-xl pr-10 h-10 text-xs" />
+              <Input placeholder="Fale com a Léo IA..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/20 border-white/5 rounded-xl pr-10 h-11 text-xs" />
               <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-primary" onClick={() => handleSend()}>
                 <Send className="h-4 w-4" />
               </Button>

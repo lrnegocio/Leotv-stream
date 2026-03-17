@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2 } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import { AiAssistant } from "@/components/ai-assistant"
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
 function HomeContentInner() {
   const searchParams = useSearchParams()
@@ -32,28 +33,18 @@ function HomeContentInner() {
     
     const checkSecurity = async () => {
       try {
-        // Bloqueio imortal para Admin
         if (session.pin === 'adm77x2p' || session.role === 'admin') return;
-
         const users = await getRemoteUsers();
         const currentUser = users.find(u => u.id === session.id);
-        
-        if (!currentUser) return;
-
-        if (currentUser.isBlocked) {
+        if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ 
-            variant: "destructive", 
-            title: "ACESSO BLOQUEADO", 
-            description: "Muitos aparelhos conectados ao mesmo tempo."
-          });
-          return;
+          toast({ variant: "destructive", title: "ACESSO BLOQUEADO" });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 15000); 
+    const interval = setInterval(checkSecurity, 30000); 
 
     const load = async () => {
       try {
@@ -64,7 +55,6 @@ function HomeContentInner() {
       }
     }
     load()
-
     return () => clearInterval(interval);
   }, [router])
 
@@ -110,24 +100,31 @@ function HomeContentInner() {
       </header>
 
       <main className="p-6 space-y-8 max-w-7xl mx-auto">
-        <section>
-          <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
-            <button 
-              className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
-              onClick={() => setSelectedFolder(null)}
-            >
-              Todos
-            </button>
-            {categories.map(cat => (
-              <button 
-                key={cat} 
-                className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white' : 'bg-white/5 text-muted-foreground'}`}
-                onClick={() => setSelectedFolder(cat)}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+        <section className="relative px-12">
+          <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
+            <CarouselContent className="-ml-2">
+              <CarouselItem className="pl-2 basis-auto">
+                <button 
+                  className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white scale-105 shadow-lg shadow-primary/20' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                  onClick={() => setSelectedFolder(null)}
+                >
+                  Todos
+                </button>
+              </CarouselItem>
+              {categories.map(cat => (
+                <CarouselItem key={cat} className="pl-2 basis-auto">
+                  <button 
+                    className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white scale-105 shadow-lg shadow-primary/20' : 'bg-white/5 text-muted-foreground hover:bg-white/10'}`}
+                    onClick={() => setSelectedFolder(cat)}
+                  >
+                    {cat}
+                  </button>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="absolute -left-4 bg-primary/20 hover:bg-primary border-none text-white h-10 w-10" />
+            <CarouselNext className="absolute -right-4 bg-primary/20 hover:bg-primary border-none text-white h-10 w-10" />
+          </Carousel>
         </section>
 
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -144,9 +141,9 @@ function HomeContentInner() {
                   if (pin !== settings.parentalPin) return
                 }
                 setActiveVideo(item)
-              }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group">
+              }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl group hover:scale-[1.02] active:scale-95">
                 <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-                <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors">{item.title}</h3>
+                <h3 className="font-bold text-sm uppercase truncate font-headline group-hover:text-primary transition-colors mt-1">{item.title}</h3>
                 <div className="mt-6 flex justify-between items-center">
                   <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full border border-white/5">
                     <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
