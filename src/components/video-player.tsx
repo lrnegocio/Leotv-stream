@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -28,17 +27,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
     
     let processedUrl = url.trim()
+    
+    // Detecta se o sistema é HTTPS e o link é HTTP (Bloqueio de Mixed Content)
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
     
-    // Detecta se é Mixed Content (Protocolo Incompatível)
     if (isPageHttps && isUrlHttp) {
       setIsMixedContent(true)
     } else {
       setIsMixedContent(false)
     }
 
-    // Limpar URL
+    // Limpar URL caso venha dentro de um iframe
     if (processedUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = processedUrl.match(/src=["']([^"']+)["']/i)
       if (srcMatch && srcMatch[1]) {
@@ -60,7 +60,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 2000)
+    // Força o fim do loading após 4 segundos para evitar tela preta eterna
+    const timer = setTimeout(() => setLoading(false), 4000)
     return () => clearTimeout(timer)
   }, [url])
 
@@ -75,7 +76,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     )
   }
 
-  // SOLUÇÃO PARA HTTP EM SITE HTTPS (CASO DA WANDINHA E M3U8)
+  // SOLUÇÃO PARA SINAL HTTP EM PAINEL HTTPS (CASO WANDINHA E M3U8)
   if (isMixedContent) {
     return (
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black/95 rounded-3xl border border-white/10 text-center p-8">
@@ -85,7 +86,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="space-y-2">
           <h3 className="text-lg font-black uppercase italic tracking-tight text-white">Sinal P2P Protegido</h3>
           <p className="text-[10px] text-muted-foreground uppercase leading-tight max-w-sm mx-auto font-bold tracking-widest">
-            Este canal usa protocolo HTTP que é bloqueado por segurança neste navegador. <br/>Clique abaixo para abrir o sinal original em uma nova aba.
+            Este canal usa protocolo HTTP que é bloqueado por segurança neste navegador moderno. <br/>Clique abaixo para abrir o sinal original em uma aba direta.
           </p>
         </div>
         <Button 
@@ -103,7 +104,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-30">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-[0.3em] animate-pulse">Acelerando P2P Master</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-[0.3em] animate-pulse">Sincronizando P2P Master</span>
         </div>
       )}
       
@@ -130,22 +131,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-transparent">
           <h3 className="text-lg font-black text-white uppercase italic truncate pr-20">{title}</h3>
         </div>
-
-        {onPrev && (
-          <div className="absolute inset-y-0 left-0 flex items-center p-4">
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-black/40 text-white hover:bg-primary pointer-events-auto" onClick={onPrev}>
-              <ChevronLeft className="h-8 w-8" />
-            </Button>
-          </div>
-        )}
-
-        {onNext && (
-          <div className="absolute inset-y-0 right-0 flex items-center p-4">
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-black/40 text-white hover:bg-primary pointer-events-auto" onClick={onNext}>
-              <ChevronRight className="h-8 w-8" />
-            </Button>
-          </div>
-        )}
 
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(embedUrl, '_blank')}>

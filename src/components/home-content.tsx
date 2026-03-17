@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -30,6 +29,7 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
+    // HEARTBEAT DE SEGURANÇA: Checa a cada 10 segundos se o PIN foi bloqueado ou se o aparelho mudou
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -37,7 +37,7 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN SÃO IMORTAIS
+        // VITALÍCIO E ADMIN SÃO IMORTAIS - Nunca deslogam
         const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
         if (isImmortal) return;
 
@@ -51,13 +51,15 @@ function HomeContentInner() {
           toast({ 
             variant: "destructive", 
             title: "ACESSO BLOQUEADO", 
-            description: currentUser.isBlocked ? "Login duplo detectado. PIN suspenso." : "Sessão expirada."
+            description: currentUser.isBlocked ? "Login duplo detectado. PIN suspenso por 10 minutos." : "Sessão expirada."
           });
         }
-      } catch (err) {}
+      } catch (err) {
+        // Ignora erros de rede temporários para não deslogar o cliente
+      }
     };
 
-    const interval = setInterval(checkSecurity, 15000); 
+    const interval = setInterval(checkSecurity, 10000); 
 
     const load = async () => {
       try {

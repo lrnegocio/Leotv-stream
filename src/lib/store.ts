@@ -1,4 +1,3 @@
-
 'use client';
 
 import { supabase } from './supabase-client';
@@ -94,6 +93,7 @@ export async function getRemoteUsers(): Promise<User[]> {
       blockedAt: u.blockedAt
     }));
     
+    // Adiciona o admin master se ele não existir na lista
     if (!users.some(u => u.pin === ADMIN_PIN)) {
       users.unshift({
         id: 'admin-master-permanent',
@@ -114,6 +114,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
+    // Payload básico para evitar erros se a coluna blockedAt não existir
     const payload: any = {
       id: user.id,
       pin: user.pin,
@@ -122,14 +123,28 @@ export async function saveUser(user: User) {
       expiryDate: user.expiryDate || null,
       maxScreens: user.maxScreens,
       activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked,
-      blockedAt: user.blockedAt || null
+      isBlocked: user.isBlocked
     };
+
+    // Só tenta enviar blockedAt se ele estiver preenchido, para evitar erro de coluna ausente
+    if (user.blockedAt) {
+      payload.blockedAt = user.blockedAt;
+    }
 
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
-      console.error("Erro Supabase RLS ou Coluna:", error.message);
+      // Se o erro for especificamente sobre a coluna blockedAt, tenta salvar sem ela
+      if (error.message.includes('blockedAt') || error.message.includes('column')) {
+        delete payload.blockedAt;
+        const { error: retryError } = await supabase.from('users').upsert(payload);
+        if (retryError) {
+          console.error("Erro Supabase:", retryError.message);
+          return false;
+        }
+        return true;
+      }
+      console.error("Erro Supabase:", error.message);
       return false;
     }
     return true;
@@ -151,23 +166,28 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  if (user.isBlocked && user.blockedAt) {
-    const blockedTime = new Date(user.blockedAt).getTime();
-    const now = Date.now();
-    const diffMins = (now - blockedTime) / (1000 * 60);
+  // Verifica se está bloqueado e se o tempo de 10 minutos passou
+  if (user.isBlocked) {
+    if (user.blockedAt) {
+      const blockedTime = new Date(user.blockedAt).getTime();
+      const now = Date.now();
+      const diffMins = (now - blockedTime) / (1000 * 60);
 
-    if (diffMins >= 10) {
-      user.isBlocked = false;
-      user.blockedAt = undefined;
-      user.activeDevices = [deviceId]; 
-      await saveUser(user);
+      if (diffMins >= 10) {
+        // Desbloqueio automático após 10 minutos
+        user.isBlocked = false;
+        user.blockedAt = undefined;
+        user.activeDevices = [deviceId]; 
+        await saveUser(user);
+      } else {
+        return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
+      }
     } else {
-      return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
+      return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
     }
-  } else if (user.isBlocked) {
-    return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
   }
 
+  // Verifica expiração (Exceto Vitalício)
   if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
@@ -175,14 +195,17 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
+  // Lógica Inteligente de Login Duplo vs Troca de Aparelho
   if (!isExistingDevice) {
+    // Se tentar entrar com um novo aparelho e já atingiu o limite de telas simultâneas
     if (deviceList.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; 
+      user.activeDevices = []; // Reseta a lista para deslogar todos
       await saveUser(user);
-      return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas." };
+      return { error: "BLOQUEIO! Tentativa de login excedeu o limite de telas simultâneas (Login Duplo Detectado)." };
     } else {
+      // Se ainda tem telas disponíveis, apenas adiciona o novo aparelho
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }
