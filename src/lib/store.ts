@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase-client';
@@ -92,6 +93,7 @@ export async function saveUser(user: User) {
     const payload: any = { ...user };
     const { error } = await supabase.from('users').upsert(payload);
     if (error) {
+      // Caso a coluna blockedAt ainda não exista, tenta salvar sem ela
       delete payload.blockedAt;
       const { error: retryError } = await supabase.from('users').upsert(payload);
       return !retryError;
@@ -126,13 +128,16 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
   if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-  if (user.role !== 'admin' && user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+  // Imunidade para Admin e Vitalício
+  const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
+
+  if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "ACESSO EXPIRADO." };
   }
 
   const deviceList = user.activeDevices || [];
   if (!deviceList.includes(deviceId)) {
-    if (deviceList.length >= user.maxScreens && user.role !== 'admin') {
+    if (deviceList.length >= user.maxScreens && !isImmune) {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);

@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, PlayCircle, Globe, ShieldAlert } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, PlayCircle, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -27,24 +28,24 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
     
-    // Lista de domínios que bloqueiam iframe (PHP players, redecanais, etc)
-    const blockedDomains = ['redecanaistv', 'ch.php', 'player3', 'vulcanzz', 'nizcdn']
+    // Lista de sites que bloqueiam iframe de forma agressiva (Cloudflare 1106)
+    const blockedDomains = ['redecanaistv', 'ch.php', 'player3', 'vulcanzz', 'nizcdn', 'cafe', 'click']
     const isKnownBlocked = blockedDomains.some(d => processedUrl.includes(d))
     
-    // YouTube
+    // YouTube (Sempre rodar direto)
     if (processedUrl.includes('youtube.com') || processedUrl.includes('youtu.be')) {
       const id = processedUrl.includes('v=') ? processedUrl.split('v=')[1]?.split('&')[0] : processedUrl.split('youtu.be/')[1]?.split('?')[0]
-      processedUrl = `https://www.youtube.com/embed/${id}?autoplay=1`
+      return { embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1`, isBlockedContent: false, isMixedContent: false }
     } 
-    // Dailymotion
+    // Dailymotion (Sempre rodar direto)
     else if (processedUrl.includes('dailymotion.com')) {
       const id = processedUrl.split('video/')[1]?.split('?')[0]
-      processedUrl = `https://www.dailymotion.com/embed/video/${id}?autoplay=1`
+      return { embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, isBlockedContent: false, isMixedContent: false }
     }
-    // XVideos
+    // XVideos (Sempre rodar direto)
     else if (processedUrl.includes('xvideos.com')) {
       const match = processedUrl.match(/video\.([^/]+)/) || processedUrl.match(/video(\d+)/)
-      if (match) processedUrl = `https://www.xvideos.com/embedframe/${match[1]}`
+      if (match) return { embedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isBlockedContent: false, isMixedContent: false }
     }
 
     return { 
@@ -60,9 +61,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return () => clearTimeout(timer)
   }, [url])
 
+  // Função Master para abrir link sem Referrer (Engana Cloudflare 1106)
+  const openSecureLink = () => {
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.opener = null;
+      newWindow.location.href = url;
+    }
+  };
+
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
-  // CAMADA DE PROTEÇÃO P2P MASTER (Para links que bloqueiam iframe ou são HTTP)
   if (isBlockedContent || isMixedContent) {
     return (
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black rounded-3xl border border-white/10 text-center p-8">
@@ -72,12 +81,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="space-y-3">
           <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Sinal P2P Master</h3>
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
-            Este canal requer conexão direta segura.<br/>Clique abaixo para sintonizar no player nativo.
+            Este canal requer conexão segura direta.<br/>Clique abaixo para sintonizar sem bloqueios.
           </p>
         </div>
         <Button 
           className="h-16 px-12 bg-primary hover:bg-primary/90 hover:scale-105 transition-all text-xl font-black uppercase italic rounded-2xl shadow-2xl shadow-primary/30 border border-white/10"
-          onClick={() => window.open(url, '_blank')}
+          onClick={openSecureLink}
         >
           <PlayCircle className="mr-3 h-7 w-7" /> SINTONIZAR AGORA
         </Button>
@@ -108,7 +117,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <h3 className="text-lg font-black text-white uppercase italic truncate">{title}</h3>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(url, '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={openSecureLink}>
             <ExternalLink className="mr-2 h-4 w-4" /> Sinal Direto
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={() => {

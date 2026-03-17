@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -63,7 +64,7 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
-  // Busca Live: Filtra conforme o usuário digita/fala
+  // Busca Live Master: Filtra instantaneamente conforme o usuário digita ou fala
   const filtered = React.useMemo(() => {
     return content.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
@@ -102,7 +103,6 @@ function HomeContentInner() {
       </header>
 
       <main className="p-8 space-y-10 max-w-7xl mx-auto">
-        {/* CARROSSEL DE CATEGORIAS COM SETAS DE RETORNO */}
         <section className="relative px-12 group">
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
             <CarouselContent className="-ml-2">
@@ -125,9 +125,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* SETAS DE AVANÇAR E RETROCEDER RESTAURADAS */}
-            <CarouselPrevious className="absolute -left-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all group-hover:-left-4" />
-            <CarouselNext className="absolute -right-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all group-hover:-right-4" />
+            {/* Setas de Retorno Ativas e Visíveis */}
+            <CarouselPrevious className="absolute -left-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all flex items-center justify-center opacity-100 scale-100 group-hover:-left-8" />
+            <CarouselNext className="absolute -right-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all flex items-center justify-center opacity-100 scale-100 group-hover:-right-8" />
           </Carousel>
         </section>
 

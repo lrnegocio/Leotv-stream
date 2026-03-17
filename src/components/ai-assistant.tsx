@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Sparkles, Mic, Send, X, Loader2, Volume2, ShieldAlert } from "lucide-react"
+import { Sparkles, Mic, Send, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -49,18 +50,24 @@ export function AiAssistant() {
     try {
       const lower = text.toLowerCase()
       
-      // Busca Live via Voz
+      // Busca Inteligente Master via Voz
       if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("canal") || lower.includes("abrir") || lower.includes("procurar")) {
         try {
           const searchRes = await voiceSearchContent({ query: text })
-          router.push(`/user/home?q=${searchRes.searchTerm}`)
+          const urlParams = new URLSearchParams(window.location.search);
+          urlParams.set('q', searchRes.searchTerm);
+          router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
+          
           const msg = `Certo, Mestre! Sintonizando agora: ${searchRes.searchTerm}.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
           return
         } catch (e) {
-          router.push(`/user/home?q=${text}`)
+          const urlParams = new URLSearchParams(window.location.search);
+          urlParams.set('q', text);
+          router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
+          
           const msg = `Buscando sinal de ${text} para você.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
@@ -87,7 +94,7 @@ export function AiAssistant() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      toast({ title: "Voz não suportada", description: "Use o Google Chrome." })
+      toast({ variant: "destructive", title: "Não suportado", description: "Use o Google Chrome." })
       return
     }
 
