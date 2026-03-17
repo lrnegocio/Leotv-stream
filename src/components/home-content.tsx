@@ -32,7 +32,6 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Segurança P2P: Expulsa se bloqueado em tempo real
     const checkSecurity = async () => {
       try {
         if (session.pin === 'adm77x2p' || session.role === 'admin') return;
@@ -41,7 +40,7 @@ function HomeContentInner() {
         if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Limite de telas ou bloqueio master." });
+          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Limite de telas ou bloqueio." });
         }
       } catch (err) {}
     };
@@ -64,7 +63,6 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
-  // Busca Live Master: Filtra instantaneamente conforme o usuário digita ou fala
   const filtered = React.useMemo(() => {
     return content.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
@@ -103,12 +101,12 @@ function HomeContentInner() {
       </header>
 
       <main className="p-8 space-y-10 max-w-7xl mx-auto">
-        <section className="relative px-12 group">
+        <section className="relative px-12">
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
             <CarouselContent className="-ml-2">
               <CarouselItem className="pl-2 basis-auto">
                 <button 
-                  className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/30 border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
+                  className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === null ? 'bg-primary text-white scale-105 shadow-2xl border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
                   onClick={() => setSelectedFolder(null)}
                 >
                   TODOS OS CANAIS
@@ -117,7 +115,7 @@ function HomeContentInner() {
               {categories.map(cat => (
                 <CarouselItem key={cat} className="pl-2 basis-auto">
                   <button 
-                    className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/30 border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
+                    className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${selectedFolder === cat ? 'bg-primary text-white scale-105 shadow-2xl border border-white/10' : 'bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/5'}`}
                     onClick={() => setSelectedFolder(cat)}
                   >
                     {cat}
@@ -125,9 +123,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* Setas de Retorno Ativas e Visíveis */}
-            <CarouselPrevious className="absolute -left-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all flex items-center justify-center opacity-100 scale-100 group-hover:-left-8" />
-            <CarouselNext className="absolute -right-6 bg-primary/20 hover:bg-primary border-white/10 text-white h-12 w-12 transition-all flex items-center justify-center opacity-100 scale-100 group-hover:-right-8" />
+            {/* Setas de Retorno Blindadas e Visíveis */}
+            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-12 w-12 shadow-xl hover:scale-110 transition-transform flex items-center justify-center opacity-100" />
+            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-12 w-12 shadow-xl hover:scale-110 transition-transform flex items-center justify-center opacity-100" />
           </Carousel>
         </section>
 

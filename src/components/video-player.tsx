@@ -28,21 +28,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
     
-    // Lista de sites que bloqueiam iframe de forma agressiva (Cloudflare 1106)
-    const blockedDomains = ['redecanaistv', 'ch.php', 'player3', 'vulcanzz', 'nizcdn', 'cafe', 'click']
+    // Lista Master de sites que bloqueiam iframe (Cloudflare 1106)
+    const blockedDomains = ['redecanaistv', 'ch.php', 'player3', 'vulcanzz', 'nizcdn', 'cafe', 'click', 'php?canal=']
     const isKnownBlocked = blockedDomains.some(d => processedUrl.includes(d))
     
-    // YouTube (Sempre rodar direto)
+    // Fontes Seguras - Rodam DIRETO no painel
     if (processedUrl.includes('youtube.com') || processedUrl.includes('youtu.be')) {
       const id = processedUrl.includes('v=') ? processedUrl.split('v=')[1]?.split('&')[0] : processedUrl.split('youtu.be/')[1]?.split('?')[0]
       return { embedUrl: `https://www.youtube.com/embed/${id}?autoplay=1`, isBlockedContent: false, isMixedContent: false }
     } 
-    // Dailymotion (Sempre rodar direto)
     else if (processedUrl.includes('dailymotion.com')) {
       const id = processedUrl.split('video/')[1]?.split('?')[0]
       return { embedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, isBlockedContent: false, isMixedContent: false }
     }
-    // XVideos (Sempre rodar direto)
     else if (processedUrl.includes('xvideos.com')) {
       const match = processedUrl.match(/video\.([^/]+)/) || processedUrl.match(/video(\d+)/)
       if (match) return { embedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isBlockedContent: false, isMixedContent: false }
@@ -61,13 +59,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return () => clearTimeout(timer)
   }, [url])
 
-  // Função Master para abrir link sem Referrer (Engana Cloudflare 1106)
+  // Função Master Anti-Cloudflare 1106: Abre link sem Referrer
   const openSecureLink = () => {
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.opener = null;
-      newWindow.location.href = url;
-    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener'; // ESSENCIAL para enganar a Cloudflare
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -81,7 +81,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="space-y-3">
           <h3 className="text-xl font-black uppercase italic text-white tracking-tighter">Sinal P2P Master</h3>
           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.2em] max-w-sm mx-auto leading-relaxed">
-            Este canal requer conexão segura direta.<br/>Clique abaixo para sintonizar sem bloqueios.
+            Este canal requer conexão direta segura.<br/>Clique abaixo para sintonizar.
           </p>
         </div>
         <Button 

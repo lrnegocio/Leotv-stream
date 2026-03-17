@@ -47,7 +47,7 @@ export interface User {
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) throw error;
+    if (error) return [];
     return data || [];
   } catch (e) {
     return [];
@@ -57,8 +57,7 @@ export async function getRemoteContent(): Promise<ContentItem[]> {
 export async function saveContent(item: ContentItem) {
   try {
     const { error } = await supabase.from('content').upsert(item);
-    if (error) throw error;
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }
@@ -67,8 +66,7 @@ export async function saveContent(item: ContentItem) {
 export async function removeContent(id: string) {
   try {
     const { error } = await supabase.from('content').delete().eq('id', id);
-    if (error) throw error;
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }
@@ -77,7 +75,7 @@ export async function removeContent(id: string) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    if (error) throw error;
+    if (error) return [];
     return (data || []).map(u => ({
       ...u,
       role: u.role || 'user',
@@ -93,7 +91,6 @@ export async function saveUser(user: User) {
     const payload: any = { ...user };
     const { error } = await supabase.from('users').upsert(payload);
     if (error) {
-      // Caso a coluna blockedAt ainda não exista, tenta salvar sem ela
       delete payload.blockedAt;
       const { error: retryError } = await supabase.from('users').upsert(payload);
       return !retryError;
@@ -128,7 +125,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
   if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-  // Imunidade para Admin e Vitalício
   const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
 
   if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
