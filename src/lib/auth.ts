@@ -1,6 +1,7 @@
-// Removido sistema de backend externo para evitar erros de servidor.
-// Todo o acesso agora é controlado via LocalStorage e PIN fixo de administrador.
+// Sistema de autenticação blindado. 
+// O acesso agora é validado exclusivamente via banco de dados para segurança total.
 export const validateUserPin = (pin: string) => {
-  if (pin === 'adm77x2p') return { role: 'admin' };
+  // A validação real agora ocorre no store.ts via consulta ao banco.
+  // Esta função permanece apenas como interface compatível.
   return { role: 'user' };
 }

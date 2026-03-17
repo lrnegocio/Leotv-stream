@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -33,9 +32,9 @@ export default function AdminDashboard() {
 
   const stats = [
     { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-400" },
-    { title: "Canais P2P", value: content.filter(c => c.type === 'channel').length.toString(), icon: Tv, color: "text-primary" },
+    { title: "Canais Ativos", value: content.filter(c => c.type === 'channel').length.toString(), icon: Tv, color: "text-primary" },
     { title: "Filmes/Séries", value: content.filter(c => c.type !== 'channel').length.toString(), icon: Film, color: "text-secondary" },
-    { title: "Sinal Online", value: "100%", icon: Key, color: "text-green-400" },
+    { title: "Status Geral", value: "100%", icon: Key, color: "text-green-400" },
   ]
 
   return (
@@ -43,7 +42,7 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight uppercase font-headline italic text-primary">Painel Master Léo Tv</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Central de Rede P2P e Acessos.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Central de Rede e Acessos.</p>
         </div>
         <div className="flex gap-3">
           <Button asChild className="bg-primary hover:bg-primary/90 uppercase font-bold text-[10px] h-10 px-6 rounded-xl shadow-lg shadow-primary/20">
@@ -67,7 +66,7 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold tracking-tighter">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
                 <ArrowUpRight className="h-3 w-3 mr-1 text-green-400" />
-                Sincronizado Cloud
+                Sincronizado
               </p>
             </CardContent>
           </Card>
@@ -79,7 +78,7 @@ export default function AdminDashboard() {
           <CardHeader className="flex flex-row items-center justify-between border-b border-white/5">
             <div>
               <CardTitle className="uppercase text-sm font-bold tracking-widest italic text-primary">Acessos Recentes</CardTitle>
-              <p className="text-[9px] text-muted-foreground uppercase font-bold">Últimos códigos criados no Firestore.</p>
+              <p className="text-[9px] text-muted-foreground uppercase font-bold">Últimos códigos criados.</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-bold hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
           </CardHeader>
@@ -117,8 +116,8 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status do Sistema P2P Master Cloud</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Conectado ao Firebase - Sincronização em tempo real ativada.</p>
+                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status do Sistema</h4>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando em alta performance.</p>
               </div>
             </div>
           </CardContent>

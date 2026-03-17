@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -35,7 +34,6 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    // Gera um ID Único para este aparelho se não houver
     let deviceId = localStorage.getItem("p2p_device_id");
     if (!deviceId) {
       deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
@@ -62,7 +60,7 @@ export default function LoginPage() {
         localStorage.setItem("user_session", JSON.stringify(session))
         if (rememberMe) localStorage.setItem("remembered_pin", pin)
 
-        toast({ title: "Sinal Liberado!", description: "Conectado via P2P Mestre." })
+        toast({ title: "Sinal Liberado!", description: "Conectado com sucesso." })
         
         if (result.user.role === 'admin') {
           router.push("/admin")
@@ -71,7 +69,7 @@ export default function LoginPage() {
         }
       }
     } catch (err: any) {
-      setError("Erro de conexão com o servidor Master.")
+      setError("Erro de conexão com o servidor.")
       setLoading(false)
     }
   }
@@ -90,7 +88,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white" />
           </div>
           <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Sistema P2P de Alta Performance</CardDescription>
+          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Sistema de Alta Performance</CardDescription>
         </CardHeader>
         <CardContent className="px-8">
           <form onSubmit={handleLogin} className="space-y-6">
@@ -137,9 +135,9 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sincronizado Supabase
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sinal Ativo
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Léo Tv v5.0</div>
+            <div className="text-[9px] text-muted-foreground uppercase font-bold">Versão 5.0</div>
           </div>
         </CardFooter>
       </Card>

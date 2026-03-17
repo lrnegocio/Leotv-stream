@@ -43,10 +43,6 @@ export interface User {
   blockedAt?: string; 
 }
 
-/**
- * BUSCA CONTEÚDO REMOTO
- * Otimizado com cache de sessão para Smart TVs
- */
 export async function getRemoteContent(): Promise<ContentItem[]> {
   try {
     const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
@@ -77,11 +73,6 @@ export async function removeContent(id: string) {
   }
 }
 
-/**
- * BUSCA USUÁRIOS REMOTOS
- * Removido hardcode de ADMIN_PIN para segurança total.
- * O admin agora deve ser definido diretamente no banco de dados.
- */
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
@@ -120,7 +111,6 @@ export async function saveUser(user: User) {
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
-      // Tenta salvar sem a coluna blockedAt caso ela não exista no banco do usuário
       delete payload.blockedAt;
       const { error: retryError } = await supabase.from('users').upsert(payload);
       return !retryError;
@@ -131,28 +121,20 @@ export async function saveUser(user: User) {
   }
 }
 
-/**
- * VALIDAÇÃO DE LOGIN P2P MASTER
- * Lógica inteligente de troca de aparelhos vs login duplo real.
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const users = await getRemoteUsers();
   const normalizedPin = pin.trim();
   
-  // Busca o usuário pelo PIN no banco (Sem hardcode!)
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
-  // ADMINS E VITALÍCIOS NÃO EXPIRAM
   const isImmortal = user.role === 'admin' || user.subscriptionTier === 'lifetime';
   if (!isImmortal && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "SUA ASSINATURA EXPIROU." };
   }
 
-  // LOGICA DE BLOQUEIO POR LOGIN DUPLO
   if (user.isBlocked) {
-    // Se tiver data de bloqueio, verifica se já passou 10 minutos
     if (user.blockedAt) {
       const blockedTime = new Date(user.blockedAt).getTime();
       const diffMins = (Date.now() - blockedTime) / (1000 * 60);
@@ -163,7 +145,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
         user.blockedAt = undefined;
       }
     } else {
-      // Bloqueio manual do admin
       return { error: "ACESSO BLOQUEADO PELO ADMINISTRADOR." };
     }
   }
@@ -173,7 +154,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   if (!isExistingDevice) {
     if (deviceList.length >= user.maxScreens && user.role !== 'admin') {
-      // ESTOUROU O LIMITE: BLOQUEIA O PIN NA HORA
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 

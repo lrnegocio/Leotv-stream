@@ -30,7 +30,6 @@ function HomeContentInner() {
     }
     const session = JSON.parse(sessionStr);
     
-    // Heartbeat de segurança master otimizado
     const checkSecurity = async () => {
       try {
         const users = await getRemoteUsers();
@@ -38,17 +37,15 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN NÃO SÃO BLOQUEADOS PELO HEARTBEAT
         if (currentUser.role === 'admin' || currentUser.subscriptionTier === 'lifetime') return;
 
-        // VERIFICA BLOQUEIO EM TEMPO REAL
         if (currentUser.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
             title: "SESSÃO ENCERRADA", 
-            description: "Acesso bloqueado por login duplo detectado."
+            description: "Acesso bloqueado por login simultâneo."
           });
           return;
         }
@@ -70,12 +67,10 @@ function HomeContentInner() {
     return () => clearInterval(interval);
   }, [router])
 
-  // Categorias únicas para o filtro
   const categories = React.useMemo(() => 
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
-  // Filtro de busca em tempo real ultra rápido
   const filtered = React.useMemo(() => {
     return content.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
