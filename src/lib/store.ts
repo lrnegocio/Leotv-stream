@@ -62,6 +62,7 @@ export async function saveContent(item: ContentItem) {
     if (error) throw error;
     return true;
   } catch (e) {
+    console.error("Erro no content:", e);
     return false;
   }
 }
@@ -93,8 +94,8 @@ export async function getRemoteUsers(): Promise<User[]> {
       blockedAt: u.blockedAt
     }));
     
-    const masterPinExists = users.some(u => u.pin === ADMIN_PIN);
-    if (!masterPinExists) {
+    // Garantir Admin Master fixo
+    if (!users.some(u => u.pin === ADMIN_PIN)) {
       users.unshift({
         id: 'admin-master-permanent',
         pin: ADMIN_PIN,
@@ -127,9 +128,13 @@ export async function saveUser(user: User) {
         isBlocked: user.isBlocked,
         blockedAt: user.blockedAt || null
       });
-    if (error) throw error;
+    if (error) {
+      console.error("Erro Supabase RLS:", error);
+      return false;
+    }
     return true;
   } catch (e) {
+    console.error("Erro saveUser:", e);
     return false;
   }
 }
@@ -146,6 +151,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let user = users.find(u => u.pin.toLowerCase() === normalizedPin);
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
 
+  // Se o PIN for Vitalício, ignora expiração
+  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+    return { error: "SUA ASSINATURA EXPIROU." };
+  }
+
+  // Lógica de Bloqueio por LOGIN DUPLO REAL
   if (user.isBlocked && user.blockedAt) {
     const blockedTime = new Date(user.blockedAt).getTime();
     const now = Date.now();
@@ -154,30 +165,29 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (diffMins >= 10) {
       user.isBlocked = false;
       user.blockedAt = undefined;
-      user.activeDevices = [deviceId]; 
+      user.activeDevices = [deviceId]; // Libera apenas para este novo
       await saveUser(user);
     } else {
-      return { error: `ACESSO BLOQUEADO POR USO SIMULTÂNEO. AGUARDE ${Math.ceil(10 - diffMins)} MINUTOS.` };
+      return { error: `LOGIN DUPLO DETECTADO. BLOQUEADO POR MAIS ${Math.ceil(10 - diffMins)} MINUTOS.` };
     }
   } else if (user.isBlocked) {
-    return { error: "ACESSO SUSPENSO. FALE COM O SUPORTE." };
-  }
-
-  if (user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "SUA ASSINATURA EXPIROU." };
+    return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
   }
 
   const deviceList = user.activeDevices || [];
   const isExistingDevice = deviceList.includes(deviceId);
 
   if (!isExistingDevice) {
+    // SE JÁ ATINGIU O LIMITE DE TELAS COMPRADAS
     if (deviceList.length >= user.maxScreens) {
+      // BLOQUEIO IMEDIATO DE TODOS POR LOGIN DUPLO NÃO CONTRATADO
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 
       await saveUser(user);
-      return { error: "BLOQUEADO! Tentativa de login simultâneo excedida." };
+      return { error: "BLOQUEIO MASTER! Você tentou usar mais telas do que comprou ao mesmo tempo." };
     } else {
+      // ADICIONA O APARELHO COMO TELA ATIVA
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);
     }

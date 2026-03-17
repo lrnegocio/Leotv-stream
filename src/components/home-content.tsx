@@ -19,13 +19,10 @@ function HomeContentInner() {
   const [activeVideo, setActiveVideo] = React.useState<ContentItem | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [isOnline, setIsOnline] = React.useState(true)
   const router = useRouter()
 
   React.useEffect(() => {
     setIsMounted(true)
-    setIsOnline(navigator.onLine)
-
     const sessionStr = localStorage.getItem("user_session")
     if (!sessionStr) {
       router.push("/login")
@@ -40,30 +37,26 @@ function HomeContentInner() {
         
         if (!currentUser) return;
 
-        // VITALÍCIO E ADMIN SÃO IMORTAIS - NUNCA EXPULSAM
-        const isMaster = currentUser.pin.toLowerCase() === 'adm77x2p' || 
-                         currentUser.subscriptionTier === 'lifetime' || 
-                         currentUser.role === 'admin';
-        
-        if (isMaster) return;
+        // VITALÍCIO E ADMIN SÃO IMORTAIS
+        const isImmortal = currentUser.subscriptionTier === 'lifetime' || currentUser.role === 'admin';
+        if (isImmortal) return;
 
-        // VERIFICA SE O PIN FOI BLOQUEADO POR USO SIMULTÂNEO
-        const isStillAuthorized = !currentUser.isBlocked && 
-                                 (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
+        // VERIFICA SE O PIN FOI BLOQUEADO POR USO SIMULTÂNEO (LOGIN DUPLO)
+        const isAuthorized = !currentUser.isBlocked && 
+                            (currentUser.activeDevices && currentUser.activeDevices.includes(session.deviceId));
 
-        if (!isStillAuthorized) {
+        if (!isAuthorized) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "SESSÃO ENCERRADA", 
-            description: currentUser.isBlocked ? "Acesso bloqueado por uso excessivo de telas." : "Acesso expirado."
+            title: "ACESSO BLOQUEADO", 
+            description: currentUser.isBlocked ? "Login duplo detectado. PIN suspenso." : "Sessão expirada."
           });
         }
       } catch (err) {}
     };
 
-    // Heartbeat de segurança a cada 15 segundos
     const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
@@ -76,26 +69,8 @@ function HomeContentInner() {
     }
     load()
 
-    const handleStatus = () => setIsOnline(navigator.onLine)
-    window.addEventListener('online', handleStatus)
-    window.addEventListener('offline', handleStatus)
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('online', handleStatus)
-      window.removeEventListener('offline', handleStatus)
-    }
+    return () => clearInterval(interval);
   }, [router])
-
-  const handleLogout = async () => {
-    const sessionStr = localStorage.getItem("user_session")
-    if (sessionStr) {
-      const session = JSON.parse(sessionStr);
-      await removeActiveDevice(session.id, session.deviceId);
-    }
-    localStorage.removeItem("user_session")
-    router.push("/login")
-  }
 
   const categories = Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort()
 
@@ -105,23 +80,6 @@ function HomeContentInner() {
     const matchesFolder = selectedFolder ? item.genre === selectedFolder : true
     return matchesSearch && matchesFolder
   })
-
-  const openContent = async (item: ContentItem) => {
-    if (!navigator.onLine) {
-      toast({ title: "Sem Internet", description: "Verifique seu cabo de rede." })
-      return
-    }
-
-    if (item.isRestricted) {
-      const settings = await getGlobalSettings()
-      const userInput = prompt("Conteúdo Adulto. Digite o PIN Parental:")
-      if (userInput !== settings.parentalPin) {
-        toast({ variant: "destructive", title: "PIN Incorreto", description: "Acesso negado." })
-        return
-      }
-    }
-    setActiveVideo(item)
-  }
 
   if (!isMounted || loading) {
     return (
@@ -135,10 +93,8 @@ function HomeContentInner() {
     <div className="min-h-screen bg-background text-foreground pb-20">
       <header className="h-16 border-b border-white/5 bg-card/50 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <div className="bg-primary p-2 rounded-lg">
-            <Tv className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic hidden sm:block">Léo Tv</span>
+          <div className="bg-primary p-2 rounded-lg"><Tv className="h-6 w-6 text-white" /></div>
+          <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic hidden sm:block">Léo Stream</span>
         </div>
         
         <div className="flex-1 max-w-md mx-4">
@@ -147,91 +103,49 @@ function HomeContentInner() {
           </React.Suspense>
         </div>
 
-        <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive hover:bg-destructive/10">
+        <Button variant="ghost" size="icon" onClick={() => router.push("/login")} className="text-destructive">
           <LogOut className="h-5 w-5" />
         </Button>
       </header>
 
       <main className="p-6 space-y-8 max-w-7xl mx-auto">
-        {!isOnline && (
-          <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-2xl flex items-center gap-4 text-destructive">
-            <WifiOff className="h-6 w-6" />
-            <p className="text-xs font-bold uppercase">Sinal Master Perdido - Verifique a internet.</p>
-          </div>
-        )}
-
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground mb-4 font-headline italic">Pastas</h2>
           <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
-            <Button 
-              variant={selectedFolder === null ? "default" : "secondary"} 
-              className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10"
-              onClick={() => setSelectedFolder(null)}
-            >
-              Todos
-            </Button>
+            <Button variant={selectedFolder === null ? "default" : "secondary"} onClick={() => setSelectedFolder(null)}>Todos</Button>
             {categories.map(cat => (
-              <Button 
-                key={cat}
-                variant={selectedFolder === cat ? "default" : "secondary"} 
-                className="rounded-xl font-bold uppercase text-[10px] min-w-[120px] h-10"
-                onClick={() => setSelectedFolder(cat)}
-              >
-                {cat}
-              </Button>
+              <Button key={cat} variant={selectedFolder === cat ? "default" : "secondary"} onClick={() => setSelectedFolder(cat)}>{cat}</Button>
             ))}
           </div>
         </section>
 
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {filtered.length === 0 ? (
-            <div className="col-span-full py-20 text-center opacity-50 border border-dashed border-white/10 rounded-3xl">
-              <p className="uppercase text-xs font-bold font-headline">Nenhum canal encontrado.</p>
-            </div>
-          ) : (
-            filtered.map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => openContent(item)}
-                className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all group relative active:scale-95 shadow-xl"
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
-                  <h3 className="font-bold text-sm uppercase truncate group-hover:text-primary transition-colors font-headline">{item.title}</h3>
+          {filtered.map(item => (
+            <div key={item.id} onClick={async () => {
+              if (item.isRestricted) {
+                const settings = await getGlobalSettings()
+                if (prompt("Digite o PIN Parental:") !== settings.parentalPin) return
+              }
+              setActiveVideo(item)
+            }} className="bg-card border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-primary/50 transition-all shadow-xl">
+              <span className="text-[9px] font-bold text-primary uppercase tracking-widest">{item.genre}</span>
+              <h3 className="font-bold text-sm uppercase truncate font-headline">{item.title}</h3>
+              <div className="mt-6 flex justify-between items-center">
+                <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                  <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
+                  <span className="text-[7px] font-black text-muted-foreground uppercase">{item.type}</span>
                 </div>
-                
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full">
-                    <Play className="h-2.5 w-2.5 text-muted-foreground fill-current" />
-                    <span className="text-[7px] font-black text-muted-foreground uppercase tracking-widest">{item.type === 'channel' ? 'AO VIVO' : 'P2P'}</span>
-                  </div>
-                  {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
-                </div>
+                {item.isRestricted && <Lock className="h-3 w-3 text-destructive" />}
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </section>
       </main>
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl shadow-2xl">
-            <DialogHeader className="sr-only">
-              <DialogTitle>{activeVideo.title}</DialogTitle>
-              <DialogDescription>Player Léo Stream</DialogDescription>
-            </DialogHeader>
-            <VideoPlayer 
-              url={activeVideo.streamUrl || ""} 
-              title={activeVideo.title} 
-              onNext={() => {
-                const idx = filtered.findIndex(i => i.id === activeVideo.id)
-                if (idx < filtered.length - 1) setActiveVideo(filtered[idx + 1])
-              }}
-              onPrev={() => {
-                const idx = filtered.findIndex(i => i.id === activeVideo.id)
-                if (idx > 0) setActiveVideo(filtered[idx - 1])
-              }}
-            />
+            <DialogHeader className="sr-only"><DialogTitle>{activeVideo.title}</DialogTitle></DialogHeader>
+            <VideoPlayer url={activeVideo.streamUrl || ""} title={activeVideo.title} />
           </DialogContent>
         </Dialog>
       )}

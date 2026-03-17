@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, Zap, Globe, PlayCircle } from "lucide-react"
+import { Maximize, ExternalLink, ChevronLeft, ChevronRight, AlertCircle, Loader2, PlayCircle, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -22,23 +22,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
   }, [])
 
-  const { embedUrl, isDirectVideo, isHttp } = React.useMemo(() => {
+  const { embedUrl, isDirectVideo } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") {
-      return { embedUrl: null, isDirectVideo: false, isHttp: false }
+      return { embedUrl: null, isDirectVideo: false }
     }
     
     let processedUrl = url.trim()
     const isPageHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
     const isUrlHttp = processedUrl.startsWith('http://')
     
-    // Detecta se é Mixed Content (Bloqueio de Navegador)
+    // Detecta se é Mixed Content (Protocolo Incompatível)
     if (isPageHttps && isUrlHttp) {
       setIsMixedContent(true)
     } else {
       setIsMixedContent(false)
     }
 
-    // SUPORTE A TAG IFRAME
+    // Limpar URL
     if (processedUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = processedUrl.match(/src=["']([^"']+)["']/i)
       if (srcMatch && srcMatch[1]) {
@@ -50,30 +50,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isDirect = lowerUrl.includes('.m3u8') || 
                     lowerUrl.includes('.mp4') || 
                     lowerUrl.includes('.ts') || 
-                    lowerUrl.includes('.mkv') ||
                     lowerUrl.includes('stream.php');
 
     return { 
       embedUrl: processedUrl, 
-      isDirectVideo: isDirect, 
-      isHttp: isUrlHttp 
+      isDirectVideo: isDirect
     }
   }, [url])
 
   React.useEffect(() => {
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 3000)
+    const timer = setTimeout(() => setLoading(false), 2000)
     return () => clearTimeout(timer)
   }, [url])
-
-  const toggleFullScreen = () => {
-    if (!containerRef.current) return
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {})
-    } else {
-      document.exitFullscreen()
-    }
-  }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -86,7 +75,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     )
   }
 
-  // SOLUÇÃO PARA HTTP EM SITE HTTPS (M3U8 / SINAL DIRETO)
+  // SOLUÇÃO PARA HTTP EM SITE HTTPS (CASO DA WANDINHA E M3U8)
   if (isMixedContent) {
     return (
       <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black/95 rounded-3xl border border-white/10 text-center p-8">
@@ -94,9 +83,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Globe className="h-10 w-10 text-primary animate-pulse" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-lg font-black uppercase italic tracking-tight text-white">Sinal P2P Master Ativo</h3>
+          <h3 className="text-lg font-black uppercase italic tracking-tight text-white">Sinal P2P Protegido</h3>
           <p className="text-[10px] text-muted-foreground uppercase leading-tight max-w-sm mx-auto font-bold tracking-widest">
-            Este sinal usa protocolo HTTP que o navegador bloqueia por segurança. <br/>Clique no botão abaixo para sintonizar diretamente na fonte.
+            Este canal usa protocolo HTTP que é bloqueado por segurança neste navegador. <br/>Clique abaixo para abrir o sinal original em uma nova aba.
           </p>
         </div>
         <Button 
@@ -123,7 +112,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={embedUrl}
           controls
           autoPlay
-          playsInline
           className="h-full w-full relative z-10 object-contain"
           onLoadedData={() => setLoading(false)}
         />
@@ -160,12 +148,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         )}
 
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
-          <div className="flex gap-2 pointer-events-auto">
-            <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl" onClick={() => window.open(embedUrl, '_blank')}>
-              <ExternalLink className="mr-2 h-4 w-4" /> Link Direto
-            </Button>
-          </div>
-          <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={toggleFullScreen}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(embedUrl, '_blank')}>
+            <ExternalLink className="mr-2 h-4 w-4" /> Link Direto
+          </Button>
+          <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={() => {
+            if (!document.fullscreenElement) {
+              containerRef.current?.requestFullscreen();
+            } else {
+              document.exitFullscreen();
+            }
+          }}>
             <Maximize className="h-6 w-6" />
           </Button>
         </div>
