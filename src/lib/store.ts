@@ -77,17 +77,10 @@ export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
     if (error) throw error;
-
     return (data || []).map(u => ({
-      id: u.id,
-      pin: u.pin,
+      ...u,
       role: u.role || 'user',
-      subscriptionTier: u.subscriptionTier || 'test',
-      expiryDate: u.expiryDate,
-      maxScreens: u.maxScreens || 1,
-      activeDevices: u.activeDevices || [],
-      isBlocked: !!u.isBlocked,
-      blockedAt: u.blockedAt
+      isBlocked: !!u.isBlocked
     }));
   } catch (e) {
     return [];
@@ -96,22 +89,9 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 export async function saveUser(user: User) {
   try {
-    const payload: any = {
-      id: user.id,
-      pin: user.pin,
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked,
-      blockedAt: user.blockedAt || null
-    };
-
+    const payload: any = { ...user };
     const { error } = await supabase.from('users').upsert(payload);
-    
     if (error) {
-      // Tenta salvar sem a coluna blockedAt caso ela não exista no schema
       delete payload.blockedAt;
       const { error: retryError } = await supabase.from('users').upsert(payload);
       return !retryError;
@@ -125,7 +105,7 @@ export async function saveUser(user: User) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // PIN MESTRE BLINDADO (adm77x2p)
+  // PIN MESTRE BLINDADO (adm77x2p) - NÃO REMOVER
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: {
@@ -144,42 +124,22 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
+  if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-  // Usuários imortais
-  const isImmortal = user.role === 'admin' || user.subscriptionTier === 'lifetime';
-  if (!isImmortal && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+  if (user.role !== 'admin' && user.subscriptionTier !== 'lifetime' && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "ACESSO EXPIRADO." };
   }
 
-  if (user.isBlocked) {
-    if (user.blockedAt) {
-      const blockedTime = new Date(user.blockedAt).getTime();
-      const diffMins = (Date.now() - blockedTime) / (1000 * 60);
-      if (diffMins < 10) {
-        return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. AGUARDE ${Math.ceil(10 - diffMins)} MINUTOS.` };
-      } else {
-        user.isBlocked = false;
-        user.blockedAt = undefined;
-      }
-    } else {
-      return { error: "ACESSO BLOQUEADO PELO ADMINISTRADOR." };
-    }
-  }
-
   const deviceList = user.activeDevices || [];
-  const isExistingDevice = deviceList.includes(deviceId);
-
-  if (!isExistingDevice) {
+  if (!deviceList.includes(deviceId)) {
     if (deviceList.length >= user.maxScreens && user.role !== 'admin') {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
-      user.activeDevices = []; 
       await saveUser(user);
-      return { error: "LOGIN DUPLO DETECTADO! Acesso suspenso temporariamente." };
-    } else {
-      user.activeDevices = [...deviceList, deviceId];
-      await saveUser(user);
+      return { error: "LIMITE DE TELAS EXCEDIDO! Acesso suspenso." };
     }
+    user.activeDevices = [...deviceList, deviceId];
+    await saveUser(user);
   }
 
   return { user };
@@ -188,27 +148,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 export async function removeUser(id: string) {
   try {
     const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) throw error;
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }
 }
 
 export async function getGlobalSettings() {
-  const defaultSettings = { parentalPin: '1234' };
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    if (data && data.value) return data.value as { parentalPin: string };
+    if (data?.value) return data.value as { parentalPin: string };
   } catch (e) {}
-  return defaultSettings;
+  return { parentalPin: '1234' };
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
   try {
     const { error } = await supabase.from('settings').upsert({ key: 'global', value: data });
-    if (error) throw error;
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }
@@ -217,8 +174,6 @@ export async function updateGlobalSettings(data: { parentalPin: string }) {
 export const generateRandomPin = (length: number = 6) => {
   const chars = '0123456789';
   let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
   return result;
 };

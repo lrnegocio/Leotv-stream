@@ -15,19 +15,14 @@ function VoiceSearchContent() {
   const [isListening, setIsListening] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
 
-  // Sincroniza o estado local com a URL
   React.useEffect(() => {
     setQuery(searchParams.get('q') || "")
   }, [searchParams])
 
-  // Busca em tempo real "Live Search"
   const triggerSearch = React.useCallback((value: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set('q', value)
-    } else {
-      params.delete('q')
-    }
+    if (value) params.set('q', value)
+    else params.delete('q')
     router.replace(`?${params.toString()}`, { scroll: false })
   }, [router, searchParams])
 
@@ -39,13 +34,20 @@ function VoiceSearchContent() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      toast({ variant: "destructive", title: "Não suportado", description: "Use o Chrome para voz." })
+      toast({ variant: "destructive", title: "Não suportado", description: "Use o Google Chrome para voz." })
       return
     }
 
     const recognition = new (window as any).webkitSpeechRecognition()
     recognition.lang = 'pt-BR'
-    recognition.onstart = () => setIsListening(true)
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      toast({ title: "Ouvindo...", description: "Fale o nome do canal ou filme." })
+    }
+
     recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript
       setQuery(transcript)
@@ -53,14 +55,19 @@ function VoiceSearchContent() {
       try {
         const result = await voiceSearchContent({ query: transcript })
         triggerSearch(result.searchTerm)
-        toast({ title: "Sinal Sintonizado", description: `Buscando por: ${result.searchTerm}` })
+        toast({ title: "Sinal Localizado", description: `Buscando: ${result.searchTerm}` })
       } catch (e) {
         triggerSearch(transcript)
       } finally {
         setIsProcessing(false)
       }
     }
-    recognition.onerror = () => setIsListening(false)
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false)
+      toast({ variant: "destructive", title: "Erro de Voz", description: "Tente falar novamente mais alto." })
+    }
+
     recognition.onend = () => setIsListening(false)
     recognition.start()
   }
@@ -70,7 +77,7 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busque canais..."
+          placeholder="Busca Inteligente Master..."
           className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest"
           value={query}
           onChange={handleInputChange}
@@ -80,17 +87,12 @@ function VoiceSearchContent() {
             variant="ghost" 
             size="icon" 
             className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-50 hover:opacity-100" 
-            onClick={() => {
-              setQuery("")
-              triggerSearch("")
-            }}
+            onClick={() => { setQuery(""); triggerSearch(""); }}
           >
             <X className="h-3 w-3" />
           </Button>
         )}
-        {isProcessing && (
-          <Loader2 className="absolute right-10 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
-        )}
+        {isProcessing && <Loader2 className="absolute right-10 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />}
       </div>
       <Button
         variant={isListening ? "destructive" : "secondary"}
