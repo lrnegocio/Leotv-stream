@@ -111,6 +111,7 @@ export async function saveUser(user: User) {
     const { error } = await supabase.from('users').upsert(payload);
     
     if (error) {
+      // Tenta salvar sem a coluna blockedAt caso ela não exista no schema
       delete payload.blockedAt;
       const { error: retryError } = await supabase.from('users').upsert(payload);
       return !retryError;
@@ -122,16 +123,32 @@ export async function saveUser(user: User) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
-  const users = await getRemoteUsers();
   const normalizedPin = pin.trim();
   
+  // PIN MESTRE BLINDADO (adm77x2p)
+  if (normalizedPin === 'adm77x2p') {
+    return { 
+      user: {
+        id: 'master-leo',
+        pin: 'adm77x2p',
+        role: 'admin',
+        subscriptionTier: 'lifetime',
+        maxScreens: 999,
+        activeDevices: [deviceId],
+        isBlocked: false
+      }
+    };
+  }
+
+  const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "CÓDIGO PIN INVÁLIDO" };
+  if (!user) return { error: "CÓDIGO INVÁLIDO" };
 
+  // Usuários imortais
   const isImmortal = user.role === 'admin' || user.subscriptionTier === 'lifetime';
   if (!isImmortal && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "SUA ASSINATURA EXPIROU." };
+    return { error: "ACESSO EXPIRADO." };
   }
 
   if (user.isBlocked) {
@@ -139,7 +156,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       const blockedTime = new Date(user.blockedAt).getTime();
       const diffMins = (Date.now() - blockedTime) / (1000 * 60);
       if (diffMins < 10) {
-        return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. LIBERADO EM ${Math.ceil(10 - diffMins)} MINUTOS.` };
+        return { error: `ACESSO SUSPENSO POR LOGIN DUPLO. AGUARDE ${Math.ceil(10 - diffMins)} MINUTOS.` };
       } else {
         user.isBlocked = false;
         user.blockedAt = undefined;
@@ -158,7 +175,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       user.blockedAt = new Date().toISOString();
       user.activeDevices = []; 
       await saveUser(user);
-      return { error: "LOGIN DUPLO DETECTADO! Este PIN foi bloqueado por exceder o limite de telas." };
+      return { error: "LOGIN DUPLO DETECTADO! Acesso suspenso temporariamente." };
     } else {
       user.activeDevices = [...deviceList, deviceId];
       await saveUser(user);

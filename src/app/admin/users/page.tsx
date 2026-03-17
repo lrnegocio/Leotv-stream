@@ -1,5 +1,4 @@
-
-"use client"
+'use client';
 
 import * as React from "react"
 import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2 } from "lucide-react"
@@ -34,7 +33,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar PINs da nuvem." })
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar lista." })
     } finally {
       setLoading(false)
     }
@@ -50,7 +49,7 @@ export default function UserManagementPage() {
 
   const handleSaveUser = async () => {
     if (!newUser.pin) {
-      toast({ variant: "destructive", title: "Erro", description: "O PIN é obrigatório." })
+      toast({ variant: "destructive", title: "Erro", description: "O código é obrigatório." })
       return
     }
 
@@ -77,7 +76,7 @@ export default function UserManagementPage() {
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: "PIN Salvo", description: "Sincronizado com sucesso." })
+      toast({ title: "PIN Salvo", description: "Atualizado com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
@@ -85,8 +84,8 @@ export default function UserManagementPage() {
     } else {
       toast({ 
         variant: "destructive", 
-        title: "Erro ao Salvar", 
-        description: "Verifique se você desativou o RLS ou criou a coluna no Supabase." 
+        title: "Erro", 
+        description: "Falha ao salvar no servidor." 
       })
     }
     setIsSaving(false)
@@ -96,16 +95,16 @@ export default function UserManagementPage() {
     const updated = { ...user, isBlocked: !user.isBlocked }
     const success = await saveUser(updated)
     if (success) {
-      toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Liberado" })
+      toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Ativo" })
       loadUsers()
     }
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Deletar este acesso permanentemente?")) {
+    if (confirm("Remover este acesso permanentemente?")) {
       const success = await removeUser(userId)
       if (success) {
-        toast({ title: "Removido com sucesso" })
+        toast({ title: "Removido" })
         loadUsers()
       }
     }
@@ -131,7 +130,7 @@ export default function UserManagementPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Sincronização Cloud Ativa</p>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Controle de Acessos</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -139,7 +138,7 @@ export default function UserManagementPage() {
         }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs" onClick={() => handleGeneratePin()}>
-              <Plus className="mr-2 h-4 w-4" /> Gerar Novo PIN
+              <Plus className="mr-2 h-4 w-4" /> Novo PIN
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
@@ -148,7 +147,7 @@ export default function UserManagementPage() {
                 Configurar Acesso
               </DialogTitle>
               <DialogDescription className="sr-only">
-                Formulário para criar ou editar um PIN de acesso ao sistema de streaming.
+                Formulário para criar ou editar um PIN de acesso.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -175,7 +174,7 @@ export default function UserManagementPage() {
                 </div>
                 {newUser.tier === 'test' && (
                   <div className="grid gap-2">
-                    <Label className="uppercase text-[10px] font-bold opacity-70">Duração (Horas)</Label>
+                    <Label className="uppercase text-[10px] font-bold opacity-70">Horas</Label>
                     <Input type="number" value={newUser.hours} onChange={e => setNewUser({...newUser, hours: e.target.value})} className="bg-black/40 border-white/5" />
                   </div>
                 )}
@@ -215,7 +214,7 @@ export default function UserManagementPage() {
           <Table>
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="uppercase text-[10px] font-black text-primary">CÓDIGO PIN</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-primary">PIN</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">TELAS</TableHead>
@@ -226,7 +225,7 @@ export default function UserManagementPage() {
             <TableBody>
               {filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 opacity-30">Nenhum PIN encontrado.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 opacity-30">Vazio.</TableCell>
                 </TableRow>
               ) : (
                 filteredUsers.map((user) => (
@@ -243,7 +242,7 @@ export default function UserManagementPage() {
                     <TableCell className="font-black">{user.maxScreens}</TableCell>
                     <TableCell>
                       {user.isBlocked ? (
-                        <Badge variant="destructive" className="uppercase text-[9px]">BLOQUEADO</Badge>
+                        <Badge variant="destructive" className="uppercase text-[9px]">SUSPENSO</Badge>
                       ) : (
                         <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
                       )}

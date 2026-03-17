@@ -32,20 +32,21 @@ function HomeContentInner() {
     
     const checkSecurity = async () => {
       try {
+        // Bloqueio imortal para Admin
+        if (session.pin === 'adm77x2p' || session.role === 'admin') return;
+
         const users = await getRemoteUsers();
         const currentUser = users.find(u => u.id === session.id);
         
         if (!currentUser) return;
-
-        if (currentUser.role === 'admin' || currentUser.subscriptionTier === 'lifetime') return;
 
         if (currentUser.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
           toast({ 
             variant: "destructive", 
-            title: "SESSÃO ENCERRADA", 
-            description: "Acesso bloqueado por login simultâneo."
+            title: "ACESSO BLOQUEADO", 
+            description: "Muitos aparelhos conectados ao mesmo tempo."
           });
           return;
         }
@@ -132,14 +133,14 @@ function HomeContentInner() {
         <section className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.length === 0 ? (
             <div className="col-span-full py-20 text-center opacity-20">
-              <p className="font-bold uppercase tracking-widest text-xs">Nenhum canal encontrado</p>
+              <p className="font-bold uppercase tracking-widest text-xs">Nenhum resultado</p>
             </div>
           ) : (
             filtered.map(item => (
               <div key={item.id} onClick={async () => {
                 if (item.isRestricted) {
                   const settings = await getGlobalSettings()
-                  const pin = prompt("Digite o PIN Parental:")
+                  const pin = prompt("SENHA PARENTAL:")
                   if (pin !== settings.parentalPin) return
                 }
                 setActiveVideo(item)

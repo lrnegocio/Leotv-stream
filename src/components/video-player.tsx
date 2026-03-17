@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, AlertCircle, Loader2, PlayCircle, Globe } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, PlayCircle, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -57,22 +57,22 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
-  // FALLBACK PARA CONTEÚDO MISTO (SINAIS HTTP ANTIGOS)
-  if (isMixedContent && !embedUrl.includes('youtube.com') && !embedUrl.includes('dailymotion.com')) {
+  // FALLBACK PARA CONTEÚDO MISTO (SINAIS HTTP)
+  if (isMixedContent && !embedUrl?.includes('youtube.com') && !embedUrl?.includes('dailymotion.com')) {
     return (
-      <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black/95 rounded-3xl border border-white/10 text-center p-8">
+      <div className="aspect-video w-full flex flex-col items-center justify-center gap-6 bg-black rounded-3xl border border-white/10 text-center p-8">
         <div className="bg-primary/20 p-4 rounded-full">
           <Globe className="h-10 w-10 text-primary animate-pulse" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-lg font-black uppercase italic text-white">Sinal Master Protegido</h3>
+          <h3 className="text-lg font-black uppercase italic text-white">Sinal P2P Master</h3>
           <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest max-w-sm mx-auto">
-            Este sinal usa protocolo HTTP. Clique abaixo para sintonizar diretamente no seu navegador.
+            Este canal requer conexão direta. Clique abaixo para sintonizar.
           </p>
         </div>
         <Button 
           className="h-14 px-10 bg-primary hover:scale-105 transition-all text-lg font-black uppercase italic rounded-2xl"
-          onClick={() => window.open(embedUrl, '_blank')}
+          onClick={() => window.open(embedUrl || "", '_blank')}
         >
           <PlayCircle className="mr-3 h-6 w-6" /> SINTONIZAR AGORA
         </Button>
@@ -104,7 +104,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto" onClick={() => window.open(embedUrl || "", '_blank')}>
-            <ExternalLink className="mr-2 h-4 w-4" /> Link Direto
+            <ExternalLink className="mr-2 h-4 w-4" /> Sinal Direto
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
