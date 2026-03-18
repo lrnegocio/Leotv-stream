@@ -21,7 +21,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
   }, [])
 
-  // PROCESSADOR DE SINAL MASTER 23.0: CONVERSÃO DE PROTOCOLOS E BYPASS DE BLOQUEIOS
+  // MOTOR DE SINAL MASTER 24.0: SINTONIZAÇÃO INDIVIDUAL POR PROTOCOLO
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
-    // 1. Inteligência YouTube Master (Fim do Erro 153)
+    // 1. INTELIGÊNCIA YOUTUBE MASTER (FIM DO ERRO 153)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       let videoId = ""
       try {
@@ -49,17 +49,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       } catch (e) {}
       
       if (videoId) {
-        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`
+        // Formato oficial com origem para liberar o sinal 153
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`
       }
     }
 
-    // 2. Motor M3U8 Master (Fim do Erro 404 e Carregamento Infinito)
+    // 2. MOTOR M3U8 MASTER (FIM DO CARREGAMENTO INFINITO E ERRO HTTPS)
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('hls')) {
-      // Usando um player HLS estável e compatível
+      // Player estável que aceita sinais HTTP e HTTPS
       return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
     }
 
-    // 3. Inteligência XVideos (Sinal Adulto Direto)
+    // 3. INTELIGÊNCIA XVIDEOS (SINAL DIRETO)
     if (targetUrl.includes('xvideos.com')) {
       if (targetUrl.includes('embedframe')) return targetUrl
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
@@ -68,21 +69,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Inteligência Dailymotion (Fim da Tela Branca)
+    // 4. INTELIGÊNCIA DAILYMOTION (FIM DA TELA BRANCA)
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
-      if (targetUrl.includes('embed/video/')) return targetUrl
       let id = ""
       const idMatch = targetUrl.match(/video\/([^?]+)/) || targetUrl.match(/dai\.ly\/([^?]+)/)
       if (idMatch && idMatch[1]) id = idMatch[1]
-      if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&origin=${encodeURIComponent(origin)}`
+      if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0&origin=${encodeURIComponent(origin)}`
     }
 
     return targetUrl
   }, [url])
 
-  // POLÍTICA DE REFERRER: Essencial para burlar bloqueios de IP (Cloudflare)
+  // POLÍTICA DE REFERRER MASTER: ESSENCIAL PARA BURLAR BLOQUEIOS
   const referrerPolicy = React.useMemo(() => {
-    if (processedUrl.includes('youtube.com')) return "no-referrer-when-downgrade"
+    // YouTube e Dailymotion precisam saber de onde vem o sinal para não dar erro 153
+    if (processedUrl.includes('youtube.com') || processedUrl.includes('dailymotion.com')) {
+      return "no-referrer-when-downgrade"
+    }
+    // Outros sinais preferem anonimato total
     return "no-referrer"
   }, [processedUrl])
 
@@ -111,32 +115,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CAMADA DE NAVEGAÇÃO MASTER: SETAS DE CANAL (z-[100] PRIORIDADE MÁXIMA) */}
+      {/* CAMADA DE NAVEGAÇÃO MASTER: SETAS DE CANAL (PRIORIDADE MÁXIMA z-[100]) */}
       <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-2 sm:px-4">
-        <button 
-          className="h-20 w-10 sm:h-24 sm:w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
-          onClick={(e) => { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            if (onPrev) onPrev();
-          }}
-        >
-          <ChevronLeft className="h-8 w-8 sm:h-10 sm:w-10" />
-        </button>
+        {onPrev && (
+          <button 
+            className="h-20 w-10 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              onPrev();
+            }}
+          >
+            <ChevronLeft className="h-10 w-10 sm:h-12 sm:w-12" />
+          </button>
+        )}
 
-        <button 
-          className="h-20 w-10 sm:h-24 sm:w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
-          onClick={(e) => { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            if (onNext) onNext();
-          }}
-        >
-          <ChevronRight className="h-8 w-8 sm:h-10 sm:w-10" />
-        </button>
+        {onNext && (
+          <button 
+            className="h-20 w-10 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              onNext();
+            }}
+          >
+            <ChevronRight className="h-10 w-10 sm:h-12 sm:w-12" />
+          </button>
+        )}
       </div>
 
-      {/* PLAYER ABERTO (SEM SANDBOX PARA COMPATIBILIDADE TOTAL COM REI DOS CANAIS) */}
+      {/* PLAYER ABERTO (SEM SANDBOX PARA COMPATIBILIDADE TOTAL) */}
       <iframe
         key={processedUrl}
         src={processedUrl}
