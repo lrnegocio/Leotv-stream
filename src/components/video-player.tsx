@@ -22,42 +22,33 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 29.0: CONVERSÃO CIRÚRGICA SEM SANDBOX
+  // MOTOR DE SINAL MASTER 30.0: ESTRATÉGIA SINAL FANTASMA
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
     const targetUrl = url.trim()
 
-    // 1. YOUTUBE MASTER: Conversão obrigatória para embed (Único modo que funciona em iframes)
-    if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
-      let videoId = ""
-      if (targetUrl.includes('v=')) {
-        videoId = targetUrl.split('v=')[1]?.split('&')[0]
-      } else {
-        videoId = targetUrl.split('/').pop()?.split('?')[0] || ""
-      }
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
+    // 1. EXTRAÇÃO DE IFRAME (Se o mestre colar a tag inteira, pegamos só o link)
+    if (targetUrl.includes('<iframe') && targetUrl.includes('src="')) {
+      const match = targetUrl.match(/src="([^"]+)"/)
+      if (match && match[1]) return match[1]
     }
 
-    // 2. M3U8 MASTER: Motor Universal para evitar carregamento infinito
-    if (targetUrl.toLowerCase().endsWith('.m3u8')) {
-      return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
-    }
-
-    // 3. PORNHUB MASTER: Conversão para Embed
+    // 2. PORNHUB MASTER: Conversão para Embed (Apenas onde funciona melhor)
     if (targetUrl.includes('pornhub.com') && targetUrl.includes('view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
-      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1`
+      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}`
     }
 
-    // 4. XVIDEOS MASTER: Conversão para Embed
+    // 3. XVIDEOS MASTER: Conversão para Embed
     if (targetUrl.includes('xvideos.com') && !targetUrl.includes('embedframe')) {
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`
     }
 
-    // 5. SINAL FANTASMA: Dailymotion e outros links diretos
+    // 4. SINAL FANTASMA (YouTube, Dailymotion, M3U8): USA O LINK ORIGINAL SEM ALTERAÇÃO
+    // Como ordenado pelo Mestre Léo, não mexemos no YouTube para evitar Erro 153
     return targetUrl
   }, [url])
 
@@ -71,7 +62,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       
       {/* CAMADA DE NAVEGAÇÃO MASTER: PRIORIDADE ABSOLUTA DE CLIQUE (z-[9999]) */}
-      <div className="absolute inset-y-0 left-0 z-[9999] flex items-center px-4">
+      <div className="absolute inset-y-0 left-0 z-[9999] flex items-center px-4 pointer-events-none">
         {onPrev && (
           <button 
             type="button"
@@ -87,7 +78,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         )}
       </div>
 
-      <div className="absolute inset-y-0 right-0 z-[9999] flex items-center px-4">
+      <div className="absolute inset-y-0 right-0 z-[9999] flex items-center px-4 pointer-events-none">
         {onNext && (
           <button 
             type="button"
@@ -110,7 +101,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PLAYER ABERTO: SEM ATRIBUTO SANDBOX PARA FUNCIONAR TUDO DIRETO NO PAINEL */}
+      {/* PLAYER LIBERADO: SEM ATRIBUTO SANDBOX PARA FUNCIONAR TUDO DIRETO NO PAINEL */}
       <iframe
         key={processedUrl}
         src={processedUrl}
