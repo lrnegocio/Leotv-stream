@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,30 +15,20 @@ interface VideoPlayerProps {
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
-  const [errorTimeout, setErrorTimeout] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    setErrorTimeout(false)
-
-    // MOTOR DE SINTONIZAÇÃO TURBO: Se em 6 segundos não abrir, libera a opção externa
-    const timer = setTimeout(() => {
-      setLoading(false)
-      setErrorTimeout(true)
-    }, 6000)
-
-    return () => clearTimeout(timer)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 28.0: CONVERSÃO CIRÚRGICA
+  // MOTOR DE SINAL MASTER 29.0: CONVERSÃO CIRÚRGICA SEM SANDBOX
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
     const targetUrl = url.trim()
 
-    // 1. YOUTUBE MASTER: CONVERSÃO OBRIGATÓRIA PARA PLAYER (SEM ERRO 153)
+    // 1. YOUTUBE MASTER: Conversão obrigatória para embed (Único modo que funciona em iframes)
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       let videoId = ""
       if (targetUrl.includes('v=')) {
@@ -46,48 +36,42 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       } else {
         videoId = targetUrl.split('/').pop()?.split('?')[0] || ""
       }
-      if (videoId) return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
     }
 
-    // 2. PORNHUB MASTER: CONVERSÃO OBRIGATÓRIA PARA PLAYER
+    // 2. M3U8 MASTER: Motor Universal para evitar carregamento infinito
+    if (targetUrl.toLowerCase().endsWith('.m3u8')) {
+      return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
+    }
+
+    // 3. PORNHUB MASTER: Conversão para Embed
     if (targetUrl.includes('pornhub.com') && targetUrl.includes('view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
-      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}`
+      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1`
     }
 
-    // 3. XVIDEOS MASTER: CONVERSÃO OBRIGATÓRIA PARA PLAYER
+    // 4. XVIDEOS MASTER: Conversão para Embed
     if (targetUrl.includes('xvideos.com') && !targetUrl.includes('embedframe')) {
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`
     }
 
-    // 4. M3U8 MASTER: MOTOR DE SINAL UNIVERSAL
-    if (targetUrl.toLowerCase().endsWith('.m3u8')) {
-      return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
-    }
-
-    // 5. SINAL FANTASMA: Dailymotion e Outros (LINK ORIGINAL COMO O MESTRE MANDOU)
+    // 5. SINAL FANTASMA: Dailymotion e outros links diretos
     return targetUrl
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
   const openSecureLink = () => {
-    const link = document.createElement('a');
-    link.href = processedUrl;
-    link.target = '_blank';
-    link.rel = 'noreferrer noopener';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open(processedUrl, '_blank', 'noreferrer,noopener');
   };
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO MASTER (z-[9999]): PRIORIDADE ABSOLUTA DE CLIQUE */}
-      <div className="absolute inset-0 z-[9999] pointer-events-none flex items-center justify-between px-4 sm:px-6">
+      {/* CAMADA DE NAVEGAÇÃO MASTER: PRIORIDADE ABSOLUTA DE CLIQUE (z-[9999]) */}
+      <div className="absolute inset-y-0 left-0 z-[9999] flex items-center px-4">
         {onPrev && (
           <button 
             type="button"
@@ -101,7 +85,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             <ChevronLeft className="h-10 w-10 sm:h-12 sm:w-12" />
           </button>
         )}
+      </div>
 
+      <div className="absolute inset-y-0 right-0 z-[9999] flex items-center px-4">
         {onNext && (
           <button 
             type="button"
@@ -124,18 +110,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {errorTimeout && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[55] p-8 text-center">
-          <AlertTriangle className="h-12 w-12 text-primary mb-4" />
-          <h4 className="text-sm font-black uppercase text-white mb-2 tracking-tighter italic">Sinal com Proteção Externa</h4>
-          <p className="text-[10px] text-muted-foreground uppercase font-bold max-w-xs mb-6">Este sinal requer conexão direta segura para evitar bloqueios do servidor.</p>
-          <Button onClick={openSecureLink} className="bg-primary text-white font-black uppercase h-12 px-8 rounded-2xl shadow-xl">
-            SINTONIZAR AGORA <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* PLAYER ABERTO (SEM SANDBOX CONFORME AS ORDENS DO MESTRE) */}
+      {/* PLAYER ABERTO: SEM ATRIBUTO SANDBOX PARA FUNCIONAR TUDO DIRETO NO PAINEL */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -144,13 +119,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         referrerPolicy="no-referrer"
-        onLoad={() => {
-          setLoading(false);
-          setErrorTimeout(false);
-        }}
+        onLoad={() => setLoading(false)}
       />
       
-      {/* OVERLAY DE INTERFACE DO PLAYER (z-40 para ficar abaixo das setas) */}
+      {/* OVERLAY DE INTERFACE DO PLAYER */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-transparent">
           <div className="flex items-center gap-2">
@@ -160,7 +132,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center px-8">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-lg" onClick={openSecureLink}>
-            <ExternalLink className="mr-2 h-4 w-4" /> Sinal Externo
+            <ExternalLink className="mr-2 h-4 w-4" /> Link Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
