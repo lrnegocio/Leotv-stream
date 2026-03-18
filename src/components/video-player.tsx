@@ -22,19 +22,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 31.0 - SINAL FANTASMA
+  // MOTOR DE SINAL MASTER 32.0 - SINAL FANTASMA DEFINITIVO
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
     const targetUrl = url.trim()
 
-    // 1. EXTRAÇÃO DE IFRAME (Se o mestre colar a tag inteira, pegamos só o link)
+    // 1. EXTRAÇÃO DE IFRAME (Se colar a tag, pegamos só o link)
     if (targetUrl.includes('<iframe') && targetUrl.includes('src="')) {
       const match = targetUrl.match(/src="([^"]+)"/)
       if (match && match[1]) return match[1]
     }
 
-    // 2. YOUTUBE MASTER: Único formato que o Google permite (sem Error 153)
+    // 2. YOUTUBE MASTER: Único formato que o Google permite em iframes (sem Error 153)
     if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/')) {
       const videoId = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
@@ -51,11 +51,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     // 4. XVIDEOS MASTER: Conversão para Embed
     if (targetUrl.includes('xvideos.com') && !targetUrl.includes('embedframe')) {
-      const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
+      const match = targetUrl.match(/video-?([^/]+)\//)
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`
     }
 
     // 5. SINAL FANTASMA: Dailymotion, M3U8 e Links Diretos (NÃO ALTERA NADA)
+    // Isso garante que o servidor do canal não bloqueie o acesso.
     return targetUrl
   }, [url])
 
@@ -73,28 +74,28 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         {onPrev && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_40px_rgba(var(--primary),0.4)] opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.5)] opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onPrev();
             }}
           >
-            <ChevronLeft className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronLeft className="h-14 w-14 sm:h-20 sm:w-20" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_40px_rgba(var(--primary),0.4)] opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.5)] opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onNext();
             }}
           >
-            <ChevronRight className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronRight className="h-14 w-14 sm:h-20 sm:w-20" />
           </button>
         )}
       </div>
