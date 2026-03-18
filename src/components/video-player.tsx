@@ -21,13 +21,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
   }, [])
 
-  // PROCESSADOR DE SINAL MASTER 22.0: CONVERSÃO DE PROTOCOLOS E BYPASS DE ERROS
+  // PROCESSADOR DE SINAL MASTER 23.0: CONVERSÃO DE PROTOCOLOS E BYPASS DE BLOQUEIOS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
     let targetUrl = url.trim()
     
-    // 1. Inteligência YouTube Master (Remoção de Erro 153)
+    // Limpeza de iFrame (Pega apenas o src se o usuário colar o código todo)
+    if (targetUrl.includes('<iframe')) {
+      const match = targetUrl.match(/src="([^"]+)"/)
+      if (match && match[1]) targetUrl = match[1]
+    }
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+
+    // 1. Inteligência YouTube Master (Fim do Erro 153)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       let videoId = ""
       try {
@@ -41,18 +49,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       } catch (e) {}
       
       if (videoId) {
-        // Usar servidor de compatibilidade com origin para liberar o sinal
-        const origin = typeof window !== 'undefined' ? window.location.origin : ''
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`
       }
     }
 
-    // 2. Detecção de M3U8 (Sinal de Stream Direto - Sem Carregamento Infinito)
+    // 2. Motor M3U8 Master (Fim do Erro 404 e Carregamento Infinito)
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('hls')) {
-      return `https://p2p-player.vercel.app/?url=${encodeURIComponent(targetUrl)}`
+      // Usando um player HLS estável e compatível
+      return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
     }
 
-    // 3. Inteligência XVideos
+    // 3. Inteligência XVideos (Sinal Adulto Direto)
     if (targetUrl.includes('xvideos.com')) {
       if (targetUrl.includes('embedframe')) return targetUrl
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
@@ -61,25 +68,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Inteligência Dailymotion
-    if (targetUrl.includes('dailymotion.com')) {
+    // 4. Inteligência Dailymotion (Fim da Tela Branca)
+    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       if (targetUrl.includes('embed/video/')) return targetUrl
-      const idMatch = targetUrl.match(/video\/([^?]+)/)
-      if (idMatch && idMatch[1]) {
-        return `https://www.dailymotion.com/embed/video/${idMatch[1]}?autoplay=1`
-      }
-    }
-
-    // 5. Limpeza de iFrame (Pega apenas o src se o usuário colar o código todo)
-    if (targetUrl.includes('<iframe')) {
-      const match = targetUrl.match(/src="([^"]+)"/)
-      if (match && match[1]) return match[1]
+      let id = ""
+      const idMatch = targetUrl.match(/video\/([^?]+)/) || targetUrl.match(/dai\.ly\/([^?]+)/)
+      if (idMatch && idMatch[1]) id = idMatch[1]
+      if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&origin=${encodeURIComponent(origin)}`
     }
 
     return targetUrl
   }, [url])
 
-  // POLÍTICA DE REFERRER DINÂMICA: YouTube precisa de origem, RedeCanais precisa de sigilo
+  // POLÍTICA DE REFERRER: Essencial para burlar bloqueios de IP (Cloudflare)
   const referrerPolicy = React.useMemo(() => {
     if (processedUrl.includes('youtube.com')) return "no-referrer-when-downgrade"
     return "no-referrer"
@@ -110,36 +111,32 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CAMADA DE NAVEGAÇÃO MASTER (z-[100] para garantir o clique) */}
-      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-24 w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95"
+      {/* CAMADA DE NAVEGAÇÃO MASTER: SETAS DE CANAL (z-[100] PRIORIDADE MÁXIMA) */}
+      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-2 sm:px-4">
+        <button 
+          className="h-20 w-10 sm:h-24 sm:w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onPrev) onPrev();
           }}
         >
-          <ChevronLeft className="h-10 w-10" />
-        </Button>
+          <ChevronLeft className="h-8 w-8 sm:h-10 sm:w-10" />
+        </button>
 
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-24 w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95"
+        <button 
+          className="h-20 w-10 sm:h-24 sm:w-12 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onNext) onNext();
           }}
         >
-          <ChevronRight className="h-10 w-10" />
-        </Button>
+          <ChevronRight className="h-8 w-8 sm:h-10 sm:w-10" />
+        </button>
       </div>
 
-      {/* PLAYER ABERTO (SEM SANDBOX PARA COMPATIBILIDADE TOTAL) */}
+      {/* PLAYER ABERTO (SEM SANDBOX PARA COMPATIBILIDADE TOTAL COM REI DOS CANAIS) */}
       <iframe
         key={processedUrl}
         src={processedUrl}
