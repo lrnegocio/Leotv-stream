@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,62 +15,46 @@ interface VideoPlayerProps {
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
+  const [errorTimeout, setErrorTimeout] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
-    // Motor de sintonização rápida: libera o loader em 3s caso o site demore
-    const timer = setTimeout(() => setLoading(false), 3000)
+    setLoading(true)
+    setErrorTimeout(false)
+
+    // MOTOR DE SINTONIZAÇÃO TURBO: Se em 4 segundos não abrir, libera o botão externo
+    const timer = setTimeout(() => {
+      setLoading(false)
+      setErrorTimeout(true)
+    }, 4000)
+
     return () => clearTimeout(timer)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 26.0: ESTRATÉGIA FANTASMA
+  // MOTOR DE SINAL MASTER 27.0: ESTRATÉGIA FANTASMA (RESPEITANDO AS ORDENS)
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
-    let targetUrl = url.trim()
-    
-    // 1. LIMPEZA DE IFRAME (Extrai apenas o link real se colarem o código todo)
-    if (targetUrl.includes('<iframe')) {
-      const match = targetUrl.match(/src="([^"]+)"/)
-      if (match && match[1]) targetUrl = match[1]
-    }
+    const targetUrl = url.trim()
 
-    // 2. ORDEM DO MESTRE: YOUTUBE, DAILYMOTION E M3U8 -> LINK ORIGINAL (SEM ALTERAR NADA)
-    if (
-      targetUrl.includes('youtube.com') || 
-      targetUrl.includes('youtu.be') || 
-      targetUrl.includes('dailymotion.com') || 
-      targetUrl.includes('dai.ly') ||
-      targetUrl.toLowerCase().includes('.m3u8')
-    ) {
-      return targetUrl
-    }
-
-    // 3. PORNHUB MASTER (CONVERSÃO PARA EMBED OBRIGATÓRIA)
-    if (targetUrl.includes('pornhub.com')) {
+    // 1. PORNHUB MASTER: CONVERSÃO OBRIGATÓRIA PARA EMBED
+    if (targetUrl.includes('pornhub.com') && targetUrl.includes('view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
-      if (viewkey) {
-        return `https://www.pornhub.com/embed/${viewkey}`
-      }
+      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}`
     }
 
-    // 4. XVIDEOS MASTER (EMBED FUNCIONANDO)
-    if (targetUrl.includes('xvideos.com')) {
-      if (targetUrl.includes('embedframe')) return targetUrl
+    // 2. XVIDEOS MASTER: CONVERSÃO OBRIGATÓRIA PARA EMBED
+    if (targetUrl.includes('xvideos.com') && !targetUrl.includes('embedframe')) {
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
-      if (match && match[1]) {
-        return `https://www.xvideos.com/embedframe/${match[1]}`
-      }
+      if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`
     }
 
-    // 5. PLAYCNVS E OUTROS SINAIS GERAIS -> LINK ORIGINAL
+    // 3. SINAL FANTASMA: YOUTUBE, DAILYMOTION E M3U8 -> LINK ORIGINAL (ORDEM DO MESTRE)
+    // Se o mestre colou, o sistema carrega ORIGINAL para evitar erros de embed bloqueado.
     return targetUrl
   }, [url])
-
-  // POLÍTICA DE SINAL MASTER: SEM SANDBOX E SEM REFERRER PARA LIBERAR O SINAL
-  const referrerPolicy = "no-referrer"
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -86,6 +70,38 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
+      
+      {/* CAMADA DE NAVEGAÇÃO MASTER (z-[100]): PRIORIDADE ABSOLUTA DE CLIQUE */}
+      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-4 sm:px-8">
+        {onPrev && (
+          <button 
+            type="button"
+            className="h-20 w-12 sm:h-24 sm:w-16 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.3)]"
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              onPrev();
+            }}
+          >
+            <ChevronLeft className="h-10 w-10 sm:h-14 sm:w-14" />
+          </button>
+        )}
+
+        {onNext && (
+          <button 
+            type="button"
+            className="h-20 w-12 sm:h-24 sm:w-16 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.3)]"
+            onClick={(e) => { 
+              e.preventDefault(); 
+              e.stopPropagation(); 
+              onNext();
+            }}
+          >
+            <ChevronRight className="h-10 w-10 sm:h-14 sm:w-14" />
+          </button>
+        )}
+      </div>
+
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -93,34 +109,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CAMADA DE NAVEGAÇÃO MASTER (z-[100]): PRIORIDADE MÁXIMA DE CLIQUE */}
-      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-4 sm:px-8">
-        {onPrev && (
-          <button 
-            className="h-20 w-12 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
-            onClick={(e) => { 
-              e.preventDefault(); 
-              e.stopPropagation(); 
-              onPrev();
-            }}
-          >
-            <ChevronLeft className="h-10 w-10 sm:h-12 sm:w-12" />
-          </button>
-        )}
-
-        {onNext && (
-          <button 
-            className="h-20 w-12 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
-            onClick={(e) => { 
-              e.preventDefault(); 
-              e.stopPropagation(); 
-              onNext();
-            }}
-          >
-            <ChevronRight className="h-10 w-10 sm:h-12 sm:w-12" />
-          </button>
-        )}
-      </div>
+      {errorTimeout && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[55] p-8 text-center">
+          <AlertTriangle className="h-12 w-12 text-primary mb-4" />
+          <h4 className="text-sm font-black uppercase text-white mb-2 tracking-tighter italic">Sinal com Proteção Externa</h4>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold max-w-xs mb-6">Este sinal requer conexão direta segura para evitar bloqueios do servidor.</p>
+          <Button onClick={openSecureLink} className="bg-primary text-white font-black uppercase h-12 px-8 rounded-2xl shadow-xl">
+            SINTONIZAR AGORA <ExternalLink className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       {/* PLAYER ABERTO (SEM SANDBOX PARA COMPATIBILIDADE TOTAL) */}
       <iframe
@@ -130,11 +128,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
-        referrerPolicy={referrerPolicy as any}
+        referrerPolicy="no-referrer"
         onLoad={() => setLoading(false)}
       />
       
-      {/* OVERLAY DE INTERFACE DO PLAYER */}
+      {/* OVERLAY DE INTERFACE DO PLAYER (z-40 para ficar abaixo das setas) */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-transparent">
           <div className="flex items-center gap-2">
@@ -143,7 +141,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center px-8">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-lg shadow-primary/20" onClick={openSecureLink}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-lg" onClick={openSecureLink}>
             <ExternalLink className="mr-2 h-4 w-4" /> Sinal Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10" onClick={() => {
