@@ -34,18 +34,17 @@ function HomeContentInner() {
     
     const checkSecurity = async () => {
       try {
-        if (session.pin === 'adm77x2p' || session.role === 'admin') return;
         const users = await getRemoteUsers();
         const currentUser = users.find(u => u.id === session.id);
         if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Sua conta foi bloqueada." });
+          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Sua conta foi bloqueada por login simultâneo." });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 30000); 
+    const interval = setInterval(checkSecurity, 15000); 
 
     const load = async () => {
       try {
@@ -63,6 +62,7 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
+  // Busca Live Master: Filtra instantaneamente conforme o urlQuery muda
   const filtered = React.useMemo(() => {
     const query = urlQuery.toLowerCase().trim()
     return content.filter(item => {
@@ -74,19 +74,19 @@ function HomeContentInner() {
     })
   }, [content, urlQuery, selectedFolder]);
 
-  const handleNextChannel = () => {
+  const handleNextChannel = React.useCallback(() => {
     if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
     const nextIndex = (currentIndex + 1) % filtered.length;
     setActiveVideo(filtered[nextIndex]);
-  };
+  }, [activeVideo, filtered]);
 
-  const handlePrevChannel = () => {
+  const handlePrevChannel = React.useCallback(() => {
     if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
     const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
     setActiveVideo(filtered[prevIndex]);
-  };
+  }, [activeVideo, filtered]);
 
   if (!isMounted || loading) {
     return (
@@ -117,7 +117,7 @@ function HomeContentInner() {
       </header>
 
       <main className="p-8 space-y-10 max-w-7xl mx-auto">
-        <section className="relative px-12">
+        <section className="relative px-16">
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
             <CarouselContent className="-ml-2">
               <CarouselItem className="pl-2 basis-auto">
@@ -139,8 +139,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="absolute -left-6 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
-            <CarouselNext className="absolute -right-6 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
+            {/* SETAS DE CATEGORIA ROBUSTAS - SEMPRE VISÍVEIS */}
+            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20 rounded-full" />
+            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20 rounded-full" />
           </Carousel>
         </section>
 

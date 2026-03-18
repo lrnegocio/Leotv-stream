@@ -49,8 +49,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setLoading(true)
-    // Carregamento Instantâneo Turbo
-    const timer = setTimeout(() => setLoading(false), 150)
+    const timer = setTimeout(() => setLoading(false), 200)
     return () => clearTimeout(timer)
   }, [url])
 
@@ -69,13 +68,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-50">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[100]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal Master</span>
         </div>
       )}
 
-      {/* IFRAME TOTALMENTE ABERTO - SEM SANDBOX PARA EVITAR ERROS DE BLOQUEIO */}
+      {/* PLAYER TOTALMENTE LIBERADO - SEM ATRIBUTO SANDBOX PARA EVITAR ERROS */}
       <iframe
         key={url}
         src={embedUrl || ""}
@@ -83,40 +82,46 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
+        referrerPolicy="no-referrer"
         onLoad={() => setLoading(false)}
       />
       
-      {/* Camada de Setas de Troca de Canal - Z-INDEX 50 PARA GARANTIR O CLIQUE */}
-      <div className="absolute inset-0 z-50 flex items-center justify-between px-4 pointer-events-none">
-        <div className="flex items-center justify-start h-full w-1/4 pointer-events-none group-hover:opacity-100 opacity-0 transition-opacity">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-transform active:scale-90"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev?.(); }}
-          >
-            <ChevronLeft className="h-10 w-10" />
-          </Button>
-        </div>
-        <div className="flex items-center justify-end h-full w-1/4 pointer-events-none group-hover:opacity-100 opacity-0 transition-opacity">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-transform active:scale-90"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext?.(); }}
-          >
-            <ChevronRight className="h-10 w-10" />
-          </Button>
-        </div>
+      {/* Camada de Troca de Canal - Z-INDEX MÁXIMO PARA GARANTIR O CLIQUE NO CONTROLE REMOTO */}
+      <div className="absolute inset-0 z-[9999] pointer-events-none flex items-center justify-between px-6">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-all active:scale-90"
+          onClick={(e) => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            if (onPrev) onPrev();
+          }}
+        >
+          <ChevronLeft className="h-10 w-10" />
+        </Button>
+
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-all active:scale-90"
+          onClick={(e) => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            if (onNext) onNext();
+          }}
+        >
+          <ChevronRight className="h-10 w-10" />
+        </Button>
       </div>
 
       <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-transparent">
           <h3 className="text-lg font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
         </div>
-        <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center">
+        <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 via-transparent flex justify-between items-center px-8">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-10 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-lg" onClick={openSecureLink}>
-            <ExternalLink className="mr-2 h-4 w-4" /> Sinal Direto
+            <ExternalLink className="mr-2 h-4 w-4" /> Sinal Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
