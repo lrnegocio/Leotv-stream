@@ -40,12 +40,12 @@ function HomeContentInner() {
         if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Limite de telas ou bloqueio." });
+          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Sua conta foi bloqueada." });
         }
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 15000); 
+    const interval = setInterval(checkSecurity, 30000); 
 
     const load = async () => {
       try {
@@ -64,9 +64,11 @@ function HomeContentInner() {
   [content]);
 
   const filtered = React.useMemo(() => {
+    const query = urlQuery.toLowerCase().trim()
     return content.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(urlQuery.toLowerCase()) || 
-                           (item.genre && item.genre.toLowerCase().includes(urlQuery.toLowerCase()))
+      const matchesSearch = !query || 
+                           item.title.toLowerCase().includes(query) || 
+                           (item.genre && item.genre.toLowerCase().includes(query))
       const matchesFolder = selectedFolder ? item.genre === selectedFolder : true
       return matchesSearch && matchesFolder
     })
@@ -137,8 +139,8 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="absolute -left-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
-            <CarouselNext className="absolute -right-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
+            <CarouselPrevious className="absolute -left-6 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
+            <CarouselNext className="absolute -right-6 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
           </Carousel>
         </section>
 
