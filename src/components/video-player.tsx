@@ -47,10 +47,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return { embedUrl: processedUrl }
   }, [url])
 
+  // Reset loading state when URL changes
   React.useEffect(() => {
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 200)
-    return () => clearTimeout(timer)
   }, [url])
 
   const openSecureLink = () => {
@@ -68,13 +67,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[100]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-50">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal Master</span>
         </div>
       )}
 
-      {/* PLAYER TOTALMENTE LIBERADO - SEM SANDBOX PARA FUNCIONAR DIRETO */}
+      {/* PLAYER TOTALMENTE LIBERADO - SEM SANDBOX PARA FUNCIONAR DIRETO NO PAINEL */}
       <iframe
         key={url}
         src={embedUrl || ""}
@@ -86,36 +85,37 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         onLoad={() => setLoading(false)}
       />
       
-      {/* Camada de Troca de Canal Master - Z-INDEX MÁXIMO E CLIQUE LIBERADO */}
-      <div className="absolute inset-0 z-[1000] pointer-events-none flex items-center justify-between px-4">
+      {/* CAMADA DE TROCA DE CANAL - PRIORIDADE MÁXIMA (z-[9999]) */}
+      <div className="absolute inset-0 z-[9999] pointer-events-none flex items-center justify-between px-4">
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-20 w-20 rounded-full bg-black/40 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
+          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onPrev) onPrev();
           }}
         >
-          <ChevronLeft className="h-12 w-12" />
+          <ChevronLeft className="h-10 w-10" />
         </Button>
 
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-20 w-20 rounded-full bg-black/40 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
+          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onNext) onNext();
           }}
         >
-          <ChevronRight className="h-12 w-12" />
+          <ChevronRight className="h-10 w-10" />
         </Button>
       </div>
 
-      <div className="absolute inset-0 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+      {/* CONTROLES DO RODAPÉ (OPACIDADE NO HOVER) */}
+      <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90 via-transparent">
           <h3 className="text-lg font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
         </div>

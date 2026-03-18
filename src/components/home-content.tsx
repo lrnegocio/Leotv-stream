@@ -44,7 +44,7 @@ function HomeContentInner() {
       } catch (err) {}
     };
 
-    const interval = setInterval(checkSecurity, 15000); 
+    const interval = setInterval(checkSecurity, 30000); 
 
     const load = async () => {
       try {
@@ -74,6 +74,7 @@ function HomeContentInner() {
     })
   }, [content, urlQuery, selectedFolder]);
 
+  // Funções de troca de canal no player
   const handleNextChannel = React.useCallback(() => {
     if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
