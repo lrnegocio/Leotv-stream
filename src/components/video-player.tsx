@@ -21,7 +21,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
   }, [])
 
-  // MOTOR DE SINAL MASTER 24.0: SINTONIZAÇÃO INDIVIDUAL POR PROTOCOLO
+  // MOTOR DE SINAL MASTER 25.0: SINTONIZAÇÃO CIRÚRGICA
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
@@ -33,34 +33,35 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (match && match[1]) targetUrl = match[1]
     }
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    // 1. ESTRATÉGIA FANTASMA (Dailymotion): NÃO ALTERA NADA PARA NÃO SER BLOQUEADO
+    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
+      return targetUrl
+    }
 
-    // 1. INTELIGÊNCIA YOUTUBE MASTER (FIM DO ERRO 153)
+    // 2. INTELIGÊNCIA YOUTUBE MASTER (FIM DO ERRO 153)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       let videoId = ""
-      try {
-        if (targetUrl.includes('v=')) {
-          videoId = targetUrl.split('v=')[1].split('&')[0]
-        } else if (targetUrl.includes('youtu.be/')) {
-          videoId = targetUrl.split('youtu.be/')[1].split('?')[0]
-        } else if (targetUrl.includes('embed/')) {
-          videoId = targetUrl.split('embed/')[1].split('?')[0]
-        }
-      } catch (e) {}
+      if (targetUrl.includes('v=')) {
+        videoId = targetUrl.split('v=')[1].split('&')[0]
+      } else if (targetUrl.includes('youtu.be/')) {
+        videoId = targetUrl.split('youtu.be/')[1].split('?')[0]
+      } else if (targetUrl.includes('embed/')) {
+        videoId = targetUrl.split('embed/')[1].split('?')[0]
+      }
       
       if (videoId) {
-        // Formato oficial com origem para liberar o sinal 153
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`
+        // Formato mais estável para evitar erro 153
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
       }
     }
 
-    // 2. MOTOR M3U8 MASTER (FIM DO CARREGAMENTO INFINITO E ERRO HTTPS)
+    // 3. MOTOR M3U8 MASTER (FIM DO CARREGAMENTO INFINITO)
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('hls')) {
-      // Player estável que aceita sinais HTTP e HTTPS
+      // Player universal que aceita HTTP e HTTPS
       return `https://m3u8-player.com/embed.php?url=${encodeURIComponent(targetUrl)}`
     }
 
-    // 3. INTELIGÊNCIA XVIDEOS (SINAL DIRETO)
+    // 4. INTELIGÊNCIA XVIDEOS (SINAL DIRETO)
     if (targetUrl.includes('xvideos.com')) {
       if (targetUrl.includes('embedframe')) return targetUrl
       const match = targetUrl.match(/video\.([^/]+)\//) || targetUrl.match(/video-([^/]+)\//)
@@ -69,26 +70,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. INTELIGÊNCIA DAILYMOTION (FIM DA TELA BRANCA)
-    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
-      let id = ""
-      const idMatch = targetUrl.match(/video\/([^?]+)/) || targetUrl.match(/dai\.ly\/([^?]+)/)
-      if (idMatch && idMatch[1]) id = idMatch[1]
-      if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0&origin=${encodeURIComponent(origin)}`
-    }
-
     return targetUrl
   }, [url])
 
   // POLÍTICA DE REFERRER MASTER: ESSENCIAL PARA BURLAR BLOQUEIOS
   const referrerPolicy = React.useMemo(() => {
-    // YouTube e Dailymotion precisam saber de onde vem o sinal para não dar erro 153
-    if (processedUrl.includes('youtube.com') || processedUrl.includes('dailymotion.com')) {
-      return "no-referrer-when-downgrade"
-    }
-    // Outros sinais preferem anonimato total
+    // Para sinais externos, o anonimato ajuda a evitar o Erro 1106 da Cloudflare
     return "no-referrer"
-  }, [processedUrl])
+  }, [])
 
   React.useEffect(() => {
     setLoading(true)
@@ -115,31 +104,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CAMADA DE NAVEGAÇÃO MASTER: SETAS DE CANAL (PRIORIDADE MÁXIMA z-[100]) */}
-      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-2 sm:px-4">
+      {/* CAMADA DE NAVEGAÇÃO MASTER (z-[100]): PRIORIDADE MÁXIMA DE CLIQUE */}
+      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-4">
         {onPrev && (
           <button 
-            className="h-20 w-10 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
+            className="h-24 w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onPrev();
             }}
           >
-            <ChevronLeft className="h-10 w-10 sm:h-12 sm:w-12" />
+            <ChevronLeft className="h-12 w-12" />
           </button>
         )}
 
         {onNext && (
           <button 
-            className="h-20 w-10 sm:h-24 sm:w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
+            className="h-24 w-14 rounded-full bg-black/40 text-white/50 hover:text-white hover:bg-primary/80 pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-2xl"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onNext();
             }}
           >
-            <ChevronRight className="h-10 w-10 sm:h-12 sm:w-12" />
+            <ChevronRight className="h-12 w-12" />
           </button>
         )}
       </div>
