@@ -90,12 +90,7 @@ export async function saveUser(user: User) {
   try {
     const payload: any = { ...user };
     const { error } = await supabase.from('users').upsert(payload);
-    if (error) {
-      delete payload.blockedAt;
-      const { error: retryError } = await supabase.from('users').upsert(payload);
-      return !retryError;
-    }
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }
@@ -137,7 +132,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE TELAS EXCEDIDO! Acesso suspenso." };
+      return { error: "LIMITE DE TELAS EXCEDIDO." };
     }
     user.activeDevices = [...deviceList, deviceId];
     await saveUser(user);

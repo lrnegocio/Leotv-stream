@@ -39,7 +39,7 @@ function HomeContentInner() {
         if (currentUser?.isBlocked) {
           localStorage.removeItem("user_session");
           router.push("/login");
-          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Sua conta foi bloqueada por login simultâneo." });
+          toast({ variant: "destructive", title: "ACESSO SUSPENSO", description: "Conta bloqueada." });
         }
       } catch (err) {}
     };
@@ -62,7 +62,7 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
-  // Busca Live Master: Filtra instantaneamente conforme o urlQuery muda
+  // Busca Live Master: Filtragem instantânea conforme o urlQuery muda
   const filtered = React.useMemo(() => {
     const query = urlQuery.toLowerCase().trim()
     return content.filter(item => {
@@ -74,7 +74,6 @@ function HomeContentInner() {
     })
   }, [content, urlQuery, selectedFolder]);
 
-  // Funções de troca de canal no player
   const handleNextChannel = React.useCallback(() => {
     if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
@@ -140,23 +139,23 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* SETAS DE CATEGORIA MASTER - SEMPRE VISÍVEIS E GRANDES */}
-            <CarouselPrevious className="absolute -left-6 sm:-left-12 bg-primary text-white border-none h-14 w-14 shadow-3xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
-            <CarouselNext className="absolute -right-6 sm:-right-12 bg-primary text-white border-none h-14 w-14 shadow-3xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
+            {/* SETAS DE CATEGORIA MASTER: SEMPRE VISÍVEIS E GRANDES */}
+            <CarouselPrevious className="absolute -left-6 sm:-left-12 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
+            <CarouselNext className="absolute -right-6 sm:-right-12 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
           </Carousel>
         </section>
 
         <section className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 animate-in fade-in duration-700">
           {filtered.length === 0 ? (
             <div className="col-span-full py-20 text-center opacity-30 border border-dashed border-white/10 rounded-3xl">
-              <p className="font-black uppercase tracking-[0.3em] text-xs">Nenhum sinal localizado</p>
+              <p className="font-black uppercase tracking-[0.3em] text-xs">Nenhum canal localizado</p>
             </div>
           ) : (
             filtered.map(item => (
               <div key={item.id} onClick={async () => {
                 if (item.isRestricted) {
                   const settings = await getGlobalSettings()
-                  const pin = prompt("SENHA PARENTAL (4 DÍGITOS):")
+                  const pin = prompt("SENHA PARENTAL:")
                   if (pin !== settings.parentalPin) {
                     toast({ variant: "destructive", title: "SENHA INCORRETA" });
                     return
@@ -174,7 +173,6 @@ function HomeContentInner() {
                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{item.type}</span>
                   </div>
-                  {item.isRestricted && <Lock className="h-3.5 w-3.5 text-destructive" />}
                 </div>
               </div>
             ))
