@@ -137,9 +137,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* Setas de Navegação Super Visíveis */}
-            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20" />
-            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20" />
+            {/* Setas de Navegação Gigantes e Visíveis */}
+            <CarouselPrevious className="absolute -left-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
+            <CarouselNext className="absolute -right-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
           </Carousel>
         </section>
 
