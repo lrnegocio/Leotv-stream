@@ -73,14 +73,14 @@ function HomeContentInner() {
   }, [content, urlQuery, selectedFolder]);
 
   const handleNextChannel = () => {
-    if (!activeVideo) return;
+    if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
     const nextIndex = (currentIndex + 1) % filtered.length;
     setActiveVideo(filtered[nextIndex]);
   };
 
   const handlePrevChannel = () => {
-    if (!activeVideo) return;
+    if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
     const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
     setActiveVideo(filtered[prevIndex]);
@@ -137,7 +137,6 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* Setas de Navegação Gigantes e Visíveis */}
             <CarouselPrevious className="absolute -left-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
             <CarouselNext className="absolute -right-6 bg-primary text-white border-none h-16 w-16 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-20 z-20 rounded-full" />
           </Carousel>
