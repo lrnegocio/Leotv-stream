@@ -62,7 +62,7 @@ function HomeContentInner() {
     Array.from(new Set(content.map(c => c.genre || "GERAL"))).sort(),
   [content]);
 
-  // Busca Live Master: Filtragem instantânea conforme o urlQuery muda
+  // Busca Live Master: Filtragem instantânea
   const filtered = React.useMemo(() => {
     const query = urlQuery.toLowerCase().trim()
     return content.filter(item => {
@@ -74,6 +74,7 @@ function HomeContentInner() {
     })
   }, [content, urlQuery, selectedFolder]);
 
+  // TROCA DE CANAL MASTER: LÓGICA DE NAVEGAÇÃO
   const handleNextChannel = React.useCallback(() => {
     if (!activeVideo || filtered.length <= 1) return;
     const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
@@ -139,9 +140,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* SETAS DE CATEGORIA MASTER: SEMPRE VISÍVEIS E GRANDES */}
-            <CarouselPrevious className="absolute -left-6 sm:-left-12 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
-            <CarouselNext className="absolute -right-6 sm:-right-12 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
+            {/* SETAS DE CATEGORIA MASTER: SEMPRE VISÍVEIS E GIGANTES */}
+            <CarouselPrevious className="absolute -left-6 sm:-left-12 bg-primary/20 text-white border-white/10 h-14 w-14 shadow-2xl hover:bg-primary hover:scale-110 transition-all flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
+            <CarouselNext className="absolute -right-6 sm:-right-12 bg-primary/20 text-white border-white/10 h-14 w-14 shadow-2xl hover:bg-primary hover:scale-110 transition-all flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
           </Carousel>
         </section>
 
