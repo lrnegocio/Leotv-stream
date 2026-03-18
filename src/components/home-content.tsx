@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, getRemoteUsers } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -72,6 +72,20 @@ function HomeContentInner() {
     })
   }, [content, urlQuery, selectedFolder]);
 
+  const handleNextChannel = () => {
+    if (!activeVideo) return;
+    const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
+    const nextIndex = (currentIndex + 1) % filtered.length;
+    setActiveVideo(filtered[nextIndex]);
+  };
+
+  const handlePrevChannel = () => {
+    if (!activeVideo) return;
+    const currentIndex = filtered.findIndex(i => i.id === activeVideo.id);
+    const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+    setActiveVideo(filtered[prevIndex]);
+  };
+
   if (!isMounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -123,9 +137,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* Setas de Retorno Blindadas e Visíveis */}
-            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-12 w-12 shadow-xl hover:scale-110 transition-transform flex items-center justify-center opacity-100" />
-            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-12 w-12 shadow-xl hover:scale-110 transition-transform flex items-center justify-center opacity-100" />
+            {/* Setas de Navegação Super Visíveis */}
+            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20" />
+            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20" />
           </Carousel>
         </section>
 
@@ -169,7 +183,12 @@ function HomeContentInner() {
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-3xl">
             <DialogHeader className="sr-only"><DialogTitle>{activeVideo.title}</DialogTitle></DialogHeader>
-            <VideoPlayer url={activeVideo.streamUrl || ""} title={activeVideo.title} />
+            <VideoPlayer 
+              url={activeVideo.streamUrl || ""} 
+              title={activeVideo.title} 
+              onNext={handleNextChannel}
+              onPrev={handlePrevChannel}
+            />
           </DialogContent>
         </Dialog>
       )}
