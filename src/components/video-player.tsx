@@ -74,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PLAYER TOTALMENTE LIBERADO - SEM ATRIBUTO SANDBOX PARA EVITAR ERROS */}
+      {/* PLAYER TOTALMENTE LIBERADO - SEM SANDBOX PARA FUNCIONAR DIRETO */}
       <iframe
         key={url}
         src={embedUrl || ""}
@@ -82,36 +82,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
-        referrerPolicy="no-referrer"
+        referrerPolicy="no-referrer-when-downgrade"
         onLoad={() => setLoading(false)}
       />
       
-      {/* Camada de Troca de Canal - Z-INDEX MÁXIMO PARA GARANTIR O CLIQUE NO CONTROLE REMOTO */}
-      <div className="absolute inset-0 z-[9999] pointer-events-none flex items-center justify-between px-6">
+      {/* Camada de Troca de Canal Master - Z-INDEX MÁXIMO E CLIQUE LIBERADO */}
+      <div className="absolute inset-0 z-[1000] pointer-events-none flex items-center justify-between px-4">
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-all active:scale-90"
+          className="h-20 w-20 rounded-full bg-black/40 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onPrev) onPrev();
           }}
         >
-          <ChevronLeft className="h-10 w-10" />
+          <ChevronLeft className="h-12 w-12" />
         </Button>
 
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-16 w-16 rounded-full bg-black/60 text-white hover:bg-primary hover:text-white pointer-events-auto border border-white/10 shadow-2xl transition-all active:scale-90"
+          className="h-20 w-20 rounded-full bg-black/40 text-white hover:bg-primary hover:scale-110 pointer-events-auto border border-white/10 shadow-3xl transition-all active:scale-90"
           onClick={(e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
             if (onNext) onNext();
           }}
         >
-          <ChevronRight className="h-10 w-10" />
+          <ChevronRight className="h-12 w-12" />
         </Button>
       </div>
 

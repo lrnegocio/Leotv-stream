@@ -117,7 +117,7 @@ function HomeContentInner() {
       </header>
 
       <main className="p-8 space-y-10 max-w-7xl mx-auto">
-        <section className="relative px-16">
+        <section className="relative px-12 sm:px-16">
           <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
             <CarouselContent className="-ml-2">
               <CarouselItem className="pl-2 basis-auto">
@@ -139,9 +139,9 @@ function HomeContentInner() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* SETAS DE CATEGORIA ROBUSTAS - SEMPRE VISÍVEIS */}
-            <CarouselPrevious className="absolute -left-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20 rounded-full" />
-            <CarouselNext className="absolute -right-4 bg-primary text-white border-none h-14 w-14 shadow-2xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-20 rounded-full" />
+            {/* SETAS DE CATEGORIA MASTER - SEMPRE VISÍVEIS E GRANDES */}
+            <CarouselPrevious className="absolute -left-6 sm:-left-12 bg-primary text-white border-none h-14 w-14 shadow-3xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
+            <CarouselNext className="absolute -right-6 sm:-right-12 bg-primary text-white border-none h-14 w-14 shadow-3xl hover:scale-110 transition-transform flex items-center justify-center opacity-100 disabled:opacity-30 z-30 rounded-full" />
           </Carousel>
         </section>
 
