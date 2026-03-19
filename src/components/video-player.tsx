@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -16,47 +16,59 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
+  const [showMuteNotice, setShowMuteNotice] = React.useState(true)
 
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
+    // Esconde o aviso de mudo após 5 segundos
+    const timer = setTimeout(() => setShowMuteNotice(false), 5000)
+    return () => clearTimeout(timer)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 32.0 - SINAL FANTASMA DEFINITIVO
+  // MOTOR DE SINAL MASTER 33.0 - AUTOPLAY FANTASMA
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
-    const targetUrl = url.trim()
+    let targetUrl = url.trim()
 
-    // 1. EXTRAÇÃO DE IFRAME (Se colar a tag, pegamos só o link)
+    // 1. EXTRAÇÃO DE IFRAME (Caso cole a tag inteira)
     if (targetUrl.includes('<iframe') && targetUrl.includes('src="')) {
       const match = targetUrl.match(/src="([^"]+)"/)
-      if (match && match[1]) return match[1]
+      if (match && match[1]) targetUrl = match[1]
     }
 
-    // 2. YOUTUBE MASTER: Único formato que o Google permite em iframes (sem Error 153)
-    if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/')) {
+    // 2. YOUTUBE MASTER: Único formato que aceita Autoplay sem Erro 153
+    if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/') || targetUrl.includes('youtube.com/embed/')) {
       const videoId = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('/').pop()?.split('?')[0]
-      if (videoId) return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`
+      if (videoId) {
+        // Autoplay + Mute (Obrigatório para o Chrome não bloquear o play automático)
+        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&controls=1`
+      }
     }
 
-    // 3. PORNHUB MASTER: Conversão para Embed
-    if (targetUrl.includes('pornhub.com') && targetUrl.includes('view_video.php')) {
+    // 3. PORNHUB MASTER: Conversão para Embed com Autoplay
+    if (targetUrl.includes('pornhub.com')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
-      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}`
+      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1`
     }
 
-    // 4. XVIDEOS MASTER: Conversão para Embed
-    if (targetUrl.includes('xvideos.com') && !targetUrl.includes('embedframe')) {
+    // 4. XVIDEOS MASTER: Conversão para Embed com Autoplay
+    if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video-?([^/]+)\//)
-      if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`
+      if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1`
     }
 
-    // 5. SINAL FANTASMA: Dailymotion, M3U8 e Links Diretos (NÃO ALTERA NADA)
-    // Isso garante que o servidor do canal não bloqueie o acesso.
+    // 5. SINAL FANTASMA: Dailymotion, M3U8 e outros
+    // Mantém o link original como pedido, mas tenta injetar autoplay se for link comum
+    if (!targetUrl.includes('autoplay=')) {
+      const connector = targetUrl.includes('?') ? '&' : '?'
+      return `${targetUrl}${connector}autoplay=1&mute=1`
+    }
+
     return targetUrl
   }, [url])
 
@@ -69,33 +81,33 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-2xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO MASTER: PRIORIDADE ABSOLUTA (z-[99999]) */}
-      <div className="absolute inset-0 z-[99999] pointer-events-none flex items-center justify-between px-4">
+      {/* CAMADA DE NAVEGAÇÃO MASTER: PRIORIDADE ABSOLUTA (z-[999999]) */}
+      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-2 sm:px-6">
         {onPrev && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.5)] opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onPrev();
             }}
           >
-            <ChevronLeft className="h-14 w-14 sm:h-20 sm:w-20" />
+            <ChevronLeft className="h-10 w-10 sm:h-16 sm:w-16" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(var(--primary),0.5)] opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
               onNext();
             }}
           >
-            <ChevronRight className="h-14 w-14 sm:h-20 sm:w-20" />
+            <ChevronRight className="h-10 w-10 sm:h-16 sm:w-16" />
           </button>
         )}
       </div>
@@ -103,11 +115,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal Master...</span>
+          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Canal Master...</span>
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR TUDO DIRETO NO PAINEL */}
+      {/* AVISO DE MUDO PARA AUTOPLAY */}
+      {showMuteNotice && !loading && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-4 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+          <Volume2 className="h-4 w-4 text-primary animate-bounce" />
+          <span className="text-[10px] font-bold text-white uppercase">Sinal Iniciado. Ative o som no player!</span>
+        </div>
+      )}
+
+      {/* PLAYER LIBERADO: SEM SANDBOX E COM AUTOPLAY ATIVO */}
       <iframe
         key={processedUrl}
         src={processedUrl}
