@@ -21,29 +21,33 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     setLoading(true)
     const timer = setTimeout(() => setLoading(false), 2000)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
+    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
     return () => {
       clearTimeout(timer)
       clearTimeout(muteTimer)
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 60.0 - AUTOPLAY E FIM DOS POPUPS
+  // MOTOR DE SINAL MASTER 70.0 - AUTOPLAY E COMPATIBILIDADE UNIVERSAL
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube Master: Único formato que roda interno é o embed
-    if (targetUrl.includes('youtube.com/watch?v=')) {
-      const id = targetUrl.split('v=')[1]?.split('&')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
-    }
-    if (targetUrl.includes('youtu.be/')) {
-      const id = targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
+    // 1. YouTube Master (Embed Blindado)
+    if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
+      const id = targetUrl.includes('v=') 
+        ? targetUrl.split('v=')[1]?.split('&')[0] 
+        : targetUrl.split('youtu.be/')[1]?.split('?')[0];
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
 
-    // 2. XVideos Master: Suporte a links com ponto (video.id)
+    // 2. Dailymotion Master (Conversão para Embed)
+    if (targetUrl.includes('dailymotion.com/video/')) {
+      const id = targetUrl.split('video/')[1]?.split('?')[0];
+      return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=1`
+    }
+
+    // 3. XVideos Master (Suporte a video.ID e video-ID)
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
@@ -51,16 +55,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 3. Pornhub Master
+    // 4. Pornhub Master
     if (targetUrl.includes('pornhub.com/view_video.php')) {
-      const urlParams = new URLSearchParams(targetUrl.split('?')[1])
-      const viewkey = urlParams.get('viewkey')
+      const viewkey = new URLSearchParams(targetUrl.split('?')[1]).get('viewkey')
       if (viewkey) {
         return `https://www.pornhub.com/embed/${viewkey}?autoplay=1&mute=1`
       }
     }
 
-    // 4. Sinal Fantasma: Link Original + Forçar Autoplay
+    // 5. Sinal Fantasma (M3U8 / PlayCNVS / Outros) + Forçar Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -70,25 +73,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - Z-INDEX MÁXIMO PARA TROCA DE CANAL */}
-      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-8">
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE MÁXIMA PARA TROCA DE CANAL */}
+      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-10">
         {onPrev && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev(); }}
           >
-            <ChevronLeft className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronLeft className="h-12 w-12 sm:h-14 sm:w-14" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext(); }}
           >
-            <ChevronRight className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronRight className="h-12 w-12 sm:h-14 sm:w-14" />
           </button>
         )}
       </div>
@@ -101,9 +104,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {showMuteNotice && !loading && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-          <Volume2 className="h-5 w-5 text-primary animate-bounce" />
-          <span className="text-[11px] font-black text-white uppercase tracking-tight">Toque para Ativar o Som</span>
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
+          <Volume2 className="h-4 w-4 text-primary animate-bounce" />
+          <span className="text-[10px] font-black text-white uppercase tracking-tight">Toque no Player para Ativar Som</span>
         </div>
       )}
 
@@ -127,7 +130,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto" onClick={() => window.open(url, '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto shadow-xl" onClick={() => window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-5 w-5" /> Abrir Sinal Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {

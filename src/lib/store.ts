@@ -44,45 +44,46 @@ export interface User {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA MASTER 5.0
- * Este motor varre o banco de dados inteiro em blocos de 1000 registros.
- * Garante que 100% dos seus canais apareçam no painel, sem limites da Vercel/Supabase.
+ * MOTOR DE BUSCA INFINITA MASTER 7.0
+ * Garante que 100% dos canais apareçam, ignorando a trava de 1.000 do Supabase/Vercel.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
-  let to = 999;
+  let step = 1000;
   let finished = false;
 
-  while (!finished) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .range(from, to)
-      .order(orderBy, { ascending: true });
+  try {
+    while (!finished) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .range(from, from + step - 1)
+        .order(orderBy, { ascending: true });
 
-    if (error) {
-      console.error(`Erro crítico ao buscar ${table}:`, error);
-      break;
-    }
-
-    if (data && data.length > 0) {
-      allData = [...allData, ...data];
-      if (data.length < 1000) {
-        finished = true;
-      } else {
-        from += 1000;
-        to += 1000;
+      if (error) {
+        console.error(`Erro crítico no motor de busca ${table}:`, error);
+        break;
       }
-    } else {
-      finished = true;
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        if (data.length < step) {
+          finished = true;
+        } else {
+          from += step;
+        }
+      } else {
+        finished = true;
+      }
     }
+  } catch (e) {
+    console.error("Erro fatal na conexão master:", e);
   }
   return allData;
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  // Retorna a biblioteca completa organizada de A a Z
   return await fetchAllRecords('content', 'title');
 }
 
