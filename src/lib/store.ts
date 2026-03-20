@@ -45,9 +45,10 @@ export interface User {
 
 /**
  * MOTOR DE BUSCA PAGINADA MASTER - BYPASS LIMITE 1000 SUPABASE
- * Busca todos os registros do banco em blocos de 1000 até completar a lista.
+ * Busca todos os registros do banco em blocos de 1000 até completar a lista inteira.
+ * Isso garante que o painel mostre 1000, 2000, 5000 canais ou mais.
  */
-async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
+async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
   let to = 999;
@@ -81,11 +82,12 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  return await fetchAllRecords('content', 'title');
+  // Busca por ID para garantir que a ordenação seja estável na paginação
+  return await fetchAllRecords('content', 'id');
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  const data = await fetchAllRecords('users', 'pin');
+  const data = await fetchAllRecords('users', 'id');
   return data.map(u => ({
     ...u,
     role: u.role || 'user',
