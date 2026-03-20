@@ -45,7 +45,7 @@ export interface User {
 
 /**
  * MOTOR DE BUSCA PAGINADA MASTER - BYPASS LIMITE 1000 SUPABASE
- * Busca todos os registros do banco em blocos de 1000.
+ * Busca todos os registros do banco em blocos de 1000 até completar a lista.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
