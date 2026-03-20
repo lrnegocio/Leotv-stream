@@ -44,9 +44,9 @@ export interface User {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA MASTER - BYPASS LIMITE 1000 VERCEL/SUPABASE
+ * MOTOR DE BUSCA PERPÉTUA MASTER 5.0
  * Este motor varre o banco de dados inteiro em blocos de 1000 registros.
- * Garante que 100% dos seus canais apareçam no painel, sem limites.
+ * Garante que 100% dos seus canais apareçam no painel, sem limites da Vercel/Supabase.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
@@ -59,8 +59,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
       .from(table)
       .select('*')
       .range(from, to)
-      .order(orderBy, { ascending: true })
-      .order('id', { ascending: true }); // Ordenação secundária para garantir unicidade na paginação
+      .order(orderBy, { ascending: true });
 
     if (error) {
       console.error(`Erro crítico ao buscar ${table}:`, error);

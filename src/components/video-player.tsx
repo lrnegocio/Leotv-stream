@@ -20,7 +20,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 1500)
+    const timer = setTimeout(() => setLoading(false), 2000)
     const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
     return () => {
       clearTimeout(timer)
@@ -28,22 +28,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 45.0 - AUTOPLAY TOTAL E FIM DOS POPUPS
+  // MOTOR DE SINAL MASTER 60.0 - AUTOPLAY E FIM DOS POPUPS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube Master: Conversão GHOST para Embed (Evita Erro 153 e Permite Autoplay)
+    // 1. YouTube Master: Único formato que roda interno é o embed
     if (targetUrl.includes('youtube.com/watch?v=')) {
       const id = targetUrl.split('v=')[1]?.split('&')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
     }
     if (targetUrl.includes('youtu.be/')) {
       const id = targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
     }
 
-    // 2. XVideos Master: Suporte Total a links com ponto e hífem
+    // 2. XVideos Master: Suporte a links com ponto (video.id)
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
@@ -60,7 +60,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Sinal Fantasma / M3U8 / Dailymotion: Link Original + Forçar Autoplay
+    // 4. Sinal Fantasma: Link Original + Forçar Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -70,7 +70,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE Z-INDEX MÁXIMA PARA TROCA DE CANAL */}
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA - Z-INDEX MÁXIMO PARA TROCA DE CANAL */}
       <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-8">
         {onPrev && (
           <button 
@@ -96,14 +96,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal Master...</span>
+          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Iniciando Sinal Direto...</span>
         </div>
       )}
 
       {showMuteNotice && !loading && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
           <Volume2 className="h-5 w-5 text-primary animate-bounce" />
-          <span className="text-[11px] font-black text-white uppercase tracking-tight">Ative o Som!</span>
+          <span className="text-[11px] font-black text-white uppercase tracking-tight">Toque para Ativar o Som</span>
         </div>
       )}
 
@@ -115,7 +115,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         title={title}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
-        referrerPolicy="no-referrer"
         onLoad={() => setLoading(false)}
       />
       
@@ -129,7 +128,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-5 w-5" /> Abrir Externamente
+            <ExternalLink className="mr-2 h-5 w-5" /> Abrir Sinal Externo
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
