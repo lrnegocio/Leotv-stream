@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, ShieldAlert } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -16,29 +16,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [showMuteNotice, setShowMuteNotice] = React.useState(true)
-  const [isDelayed, setIsDelayed] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    setIsDelayed(false)
     
-    // Motor de Sintonização Master: Se o link demorar > 4s, libera o botão externo
-    const timer = setTimeout(() => {
-      setIsDelayed(true)
-      setLoading(false)
-    }, 4000)
-
-    // Esconde o aviso de mudo
+    // Aviso de mudo para autoplay sumir depois de 5 segundos
     const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
     
     return () => {
-      clearTimeout(timer)
       clearTimeout(muteTimer)
     }
   }, [url])
 
-  // MOTOR DE SINAL FANTASMA 35.0 - AUTOPLAY TOTAL E RESPEITO AOS LINKS ORIGINAIS
+  // MOTOR DE SINAL FANTASMA 35.0 TURBO - AUTOPLAY TOTAL E FIM DO ERRO 153
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
@@ -50,15 +41,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (match && match[1]) targetUrl = match[1]
     }
 
-    // 2. ORDEM DO MESTRE: YouTube e Dailymotion usam o LINK ORIGINAL
-    // Não alteramos para embed para evitar erros de domínio e Erro 153.
-    // Apenas injetamos o Autoplay Master se não tiver.
-    if (targetUrl.includes('youtube.com') || targetUrl.includes('dailymotion.com') || targetUrl.includes('.m3u8')) {
-      const connector = targetUrl.includes('?') ? '&' : '?'
-      return `${targetUrl}${connector}autoplay=1&mute=1`
+    // 2. YOUTUBE MASTER: Conversão cirúrgica para evitar Erro 153 e Conexão Recusada
+    if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/')) {
+      let videoId = ""
+      if (targetUrl.includes('v=')) {
+        videoId = targetUrl.split('v=')[1].split('&')[0]
+      } else {
+        videoId = targetUrl.split('/').pop()?.split('?')[0] || ""
+      }
+      // Servidor youtube-nocookie é o mais estável para painéis
+      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&enablejsapi=1`
     }
 
-    // 3. PORNHUB / XVIDEOS: Conversão para Embed (Únicos que funcionam melhor assim)
+    // 3. PORNHUB / XVIDEOS: Conversão para Embed
     if (targetUrl.includes('pornhub.com')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
@@ -69,9 +64,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
     }
 
-    // 4. SINAL GERAL: Autoplay Master Muted
+    // 4. SINAL GERAL: Adiciona Autoplay Master em tudo
+    const connector = targetUrl.includes('?') ? '&' : '?'
     if (!targetUrl.includes('autoplay=')) {
-      const connector = targetUrl.includes('?') ? '&' : '?'
       return `${targetUrl}${connector}autoplay=1&mute=1`
     }
 
@@ -79,10 +74,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
-
-  const openSecureLink = () => {
-    window.open(processedUrl, '_blank', 'noreferrer,noopener');
-  };
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
@@ -92,7 +83,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         {onPrev && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
@@ -106,7 +97,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         {onNext && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/30 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
             onClick={(e) => { 
               e.preventDefault(); 
               e.stopPropagation(); 
@@ -125,27 +116,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* TELA DE SINAL EXTERNO (CASO O SITE BLOQUEIE O IFRAME) */}
-      {isDelayed && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 backdrop-blur-3xl z-[55] p-8 text-center animate-in fade-in duration-500">
-          <ShieldAlert className="h-16 w-16 text-primary mb-6 animate-bounce" />
-          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white mb-2">Sinal com Proteção Externa</h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-xs mb-8">Este sinal requer conexão direta segura para evitar bloqueios do servidor.</p>
-          <Button onClick={openSecureLink} className="h-16 px-12 bg-primary text-white font-black text-xl rounded-2xl shadow-2xl shadow-primary/40 hover:scale-110 transition-transform">
-            SINTONIZAR AGORA
-          </Button>
-        </div>
-      )}
-
       {/* AVISO DE MUDO PARA AUTOPLAY */}
-      {showMuteNotice && !loading && !isDelayed && (
+      {showMuteNotice && !loading && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
           <Volume2 className="h-5 w-5 text-primary animate-bounce" />
           <span className="text-[11px] font-black text-white uppercase tracking-tight">Play Automático Master. Ative o som!</span>
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR TODOS OS SINAIS */}
+      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR TODOS OS SINAIS DIRETO NO PLAYER */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -166,8 +145,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto shadow-2xl shadow-primary/20 hover:scale-110 transition-transform" onClick={openSecureLink}>
-            <ExternalLink className="mr-2 h-5 w-5" /> Sintonizar Externo
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto shadow-2xl shadow-primary/20 hover:scale-110 transition-transform" onClick={() => window.open(processedUrl, '_blank')}>
+            <ExternalLink className="mr-2 h-5 w-5" /> Abrir Fora
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();

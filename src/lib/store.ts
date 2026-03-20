@@ -54,9 +54,9 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
   let finished = false;
 
   while (!finished) {
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from(table)
-      .select('*')
+      .select('*', { count: 'exact' })
       .range(from, to)
       .order(orderBy, { ascending: true });
 
@@ -67,7 +67,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
 
     if (data && data.length > 0) {
       allData = [...allData, ...data];
-      // Se veio menos de 1000, é porque chegamos no fim
       if (data.length < 1000) {
         finished = true;
       } else {
