@@ -44,8 +44,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE BUSCA PAGINADA - BYPASS LIMITE 1000
- * Busca todos os registros do banco, não importa a quantidade.
+ * MOTOR DE BUSCA PAGINADA MASTER - BYPASS LIMITE 1000 SUPABASE
+ * Busca todos os registros do banco em blocos, garantindo que nenhum canal suma.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
@@ -67,6 +67,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
 
     if (data && data.length > 0) {
       allData = [...allData, ...data];
+      // Se veio menos de 1000, é porque chegamos no fim
       if (data.length < 1000) {
         finished = true;
       } else {
