@@ -45,7 +45,7 @@ export interface User {
 
 /**
  * MOTOR DE BUSCA PAGINADA MASTER - BYPASS LIMITE 1000 SUPABASE
- * Busca todos os registros do banco em blocos, garantindo que nenhum canal suma.
+ * Esta função busca TODOS os registros do banco, não importa a quantidade.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
@@ -54,9 +54,9 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
   let finished = false;
 
   while (!finished) {
-    const { data, error, count } = await supabase
+    const { data, error } = await supabase
       .from(table)
-      .select('*', { count: 'exact' })
+      .select('*')
       .range(from, to)
       .order(orderBy, { ascending: true });
 

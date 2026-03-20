@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Play } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -20,28 +20,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    
-    // Aviso de mudo para autoplay sumir depois de 5 segundos
     const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
-    
-    return () => {
-      clearTimeout(muteTimer)
-    }
+    return () => clearTimeout(muteTimer)
   }, [url])
 
-  // MOTOR DE SINAL FANTASMA 35.0 TURBO - AUTOPLAY TOTAL E FIM DO ERRO 153
+  // MOTOR DE SINAL GHOST 36.0 - AUTOPLAY E FIM DOS POPUPS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
-    
     let targetUrl = url.trim()
 
-    // 1. EXTRAÇÃO DE IFRAME (Limpeza)
-    if (targetUrl.includes('<iframe') && targetUrl.includes('src="')) {
-      const match = targetUrl.match(/src="([^"]+)"/)
-      if (match && match[1]) targetUrl = match[1]
-    }
-
-    // 2. YOUTUBE MASTER: Conversão cirúrgica para evitar Erro 153 e Conexão Recusada
+    // 1. YOUTUBE MASTER: Único formato que roda direto sem Erro 153
     if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/')) {
       let videoId = ""
       if (targetUrl.includes('v=')) {
@@ -49,28 +37,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       } else {
         videoId = targetUrl.split('/').pop()?.split('?')[0] || ""
       }
-      // Servidor youtube-nocookie é o mais estável para painéis
-      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&enablejsapi=1`
+      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0`
     }
 
-    // 3. PORNHUB / XVIDEOS: Conversão para Embed
-    if (targetUrl.includes('pornhub.com')) {
+    // 2. PORNHUB / XVIDEOS: Conversão para Player
+    if (targetUrl.includes('pornhub.com/view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
       if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1&mute=1`
     }
-    if (targetUrl.includes('xvideos.com')) {
+    if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video-?([^/]+)\//)
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
     }
 
-    // 4. SINAL GERAL: Adiciona Autoplay Master em tudo
+    // 3. SINAL FANTASMA (DAILYMOTION / M3U8 / OUTROS): Link Original + Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
-    if (!targetUrl.includes('autoplay=')) {
-      return `${targetUrl}${connector}autoplay=1&mute=1`
-    }
-
-    return targetUrl
+    return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -78,33 +61,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO MASTER: PRIORIDADE ABSOLUTA (z-[999999]) */}
-      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-2 sm:px-6">
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA (z-[999999]) - CLIQUE BLINDADO */}
+      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-10">
         {onPrev && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
-            onClick={(e) => { 
-              e.preventDefault(); 
-              e.stopPropagation(); 
-              onPrev();
-            }}
+            className="h-20 w-20 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev(); }}
           >
-            <ChevronLeft className="h-10 w-10 sm:h-16 sm:w-16" />
+            <ChevronLeft className="h-12 w-12" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-[0_0_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100"
-            onClick={(e) => { 
-              e.preventDefault(); 
-              e.stopPropagation(); 
-              onNext();
-            }}
+            className="h-20 w-20 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext(); }}
           >
-            <ChevronRight className="h-10 w-10 sm:h-16 sm:w-16" />
+            <ChevronRight className="h-12 w-12" />
           </button>
         )}
       </div>
@@ -112,19 +87,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Canal Master...</span>
+          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal Master...</span>
         </div>
       )}
 
-      {/* AVISO DE MUDO PARA AUTOPLAY */}
       {showMuteNotice && !loading && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
           <Volume2 className="h-5 w-5 text-primary animate-bounce" />
-          <span className="text-[11px] font-black text-white uppercase tracking-tight">Play Automático Master. Ative o som!</span>
+          <span className="text-[11px] font-black text-white uppercase tracking-tight">Sinal com Play Automático. Ative o som!</span>
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR TODOS OS SINAIS DIRETO NO PLAYER */}
+      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR TUDO DIRETO NO PLAYER */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -140,12 +114,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-8 bg-gradient-to-b from-black/95 via-transparent">
           <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
-            <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter drop-shadow-lg">{title}</h3>
+            <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+            <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
           </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto shadow-2xl shadow-primary/20 hover:scale-110 transition-transform" onClick={() => window.open(processedUrl, '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto" onClick={() => window.open(processedUrl, '_blank')}>
             <ExternalLink className="mr-2 h-5 w-5" /> Abrir Fora
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
