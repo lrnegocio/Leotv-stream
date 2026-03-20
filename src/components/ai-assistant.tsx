@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Sparkles, Mic, Send, X, Loader2 } from "lucide-react"
+import { Sparkles, Mic, Send, X, Loader2, Cpu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,7 +15,7 @@ export function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
   const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([
-    { role: 'model', text: 'Oi Mestre Léo! Léo IA ativa. O que vamos assistir?' }
+    { role: 'model', text: 'Mestre Léo, App Prototyper ativo. Sistema operando em alta performance. Como posso ajudar na gestão da rede hoje?' }
   ])
   const [loading, setLoading] = React.useState(false)
   const [isListening, setIsListening] = React.useState(false)
@@ -58,7 +57,7 @@ export function AiAssistant() {
           urlParams.set('q', searchRes.searchTerm);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Certo, Mestre! Sintonizando agora: ${searchRes.searchTerm}.`
+          const msg = `Comando recebido, Mestre. Sintonizando canal: ${searchRes.searchTerm}.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -68,7 +67,7 @@ export function AiAssistant() {
           urlParams.set('q', text);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Buscando sinal de ${text} para você.`
+          const msg = `Iniciando busca profunda por ${text} na biblioteca.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -86,7 +85,7 @@ export function AiAssistant() {
       speak(result.response)
 
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: "Sinal instável. Pode repetir o comando, Mestre?" }])
+      setMessages(prev => [...prev, { role: 'model', text: "Erro de conexão com o núcleo. Pode repetir, Mestre?" }])
     } finally {
       setLoading(false)
     }
@@ -94,7 +93,7 @@ export function AiAssistant() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      toast({ variant: "destructive", title: "Não suportado", description: "Use o Google Chrome." })
+      toast({ variant: "destructive", title: "Não suportado", description: "Use o Google Chrome para comandos de voz." })
       return
     }
 
@@ -116,18 +115,18 @@ export function AiAssistant() {
       {!isOpen ? (
         <Button onClick={() => setIsOpen(true)} className="h-16 w-16 rounded-full bg-primary shadow-[0_0_30px_rgba(var(--primary),0.4)] hover:scale-110 transition-transform border-4 border-background overflow-hidden relative group">
           <div className="absolute inset-0 bg-primary animate-pulse opacity-20" />
-          <Sparkles className="h-8 w-8 text-white relative z-10" />
+          <Cpu className="h-8 w-8 text-white relative z-10" />
         </Button>
       ) : (
         <Card className="w-[380px] h-[550px] flex flex-col bg-card/95 backdrop-blur-3xl border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] animate-in zoom-in-95 duration-300">
           <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-6">
             <div className="flex items-center gap-4">
-              <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/20"><Sparkles className="h-5 w-5 text-white" /></div>
+              <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/20"><Cpu className="h-5 w-5 text-white" /></div>
               <div>
-                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tighter">Léo IA Assistente</CardTitle>
+                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tighter">App Prototyper IA</CardTitle>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Sinal Master Ativo</span>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Núcleo Operacional Ativo</span>
                 </div>
               </div>
             </div>
@@ -164,7 +163,7 @@ export function AiAssistant() {
               <Mic className={`h-6 w-6 ${isListening ? 'text-white' : 'text-primary'}`} />
             </Button>
             <div className="relative flex-1">
-              <Input placeholder="Fale com a Léo IA..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/40 border-white/5 rounded-2xl pr-12 h-12 text-xs font-bold" />
+              <Input placeholder="Comando para o Prototyper..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/40 border-white/5 rounded-2xl pr-12 h-12 text-xs font-bold" />
               <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 text-primary hover:bg-transparent" onClick={() => handleSend()}>
                 <Send className="h-5 w-5" />
               </Button>
