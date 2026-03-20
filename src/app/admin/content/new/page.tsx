@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -34,7 +33,7 @@ function NewContentForm() {
 
   const addEpisode = (seasonId?: string) => {
     const newEp: Episode = {
-      id: Math.random().toString(36).substring(7),
+      id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
       title: `Episódio`,
       number: episodes.length + 1,
       streamUrl: ""
@@ -49,7 +48,7 @@ function NewContentForm() {
 
   const addSeason = () => {
     const newSeason: Season = {
-      id: Math.random().toString(36).substring(7),
+      id: "sea_" + Date.now() + Math.random().toString(36).substring(2, 7),
       number: seasons.length + 1,
       episodes: []
     }
@@ -79,8 +78,11 @@ function NewContentForm() {
     e.preventDefault()
     setLoading(true)
     
+    // GERAÇÃO DE ID MASTER - EVITA SUBSTITUIÇÃO DE CANAIS
+    const newId = "canal_" + Date.now() + Math.random().toString(36).substring(2, 10);
+
     await saveContent({
-      id: Math.random().toString(36).substring(7),
+      id: newId,
       ...formData,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,

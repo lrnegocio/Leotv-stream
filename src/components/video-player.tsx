@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -26,7 +25,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return () => clearTimeout(timer)
   }, [url])
 
-  // MOTOR DE SINAL MASTER 33.0 - AUTOPLAY FANTASMA
+  // MOTOR DE SINAL MASTER 34.0 - AUTOPLAY TOTAL E FIM DOS POPUPS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     
@@ -38,32 +37,28 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (match && match[1]) targetUrl = match[1]
     }
 
-    // 2. YOUTUBE MASTER: Único formato que aceita Autoplay sem Erro 153
+    // 2. YOUTUBE MASTER: Autoplay + Mute (Obrigatório para o Google liberar o Play Automático)
     if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/') || targetUrl.includes('youtube.com/embed/')) {
       const videoId = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('/').pop()?.split('?')[0]
       if (videoId) {
-        // Autoplay + Mute (Obrigatório para o Chrome não bloquear o play automático)
-        return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&controls=1`
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&controls=1`
       }
     }
 
-    // 3. PORNHUB MASTER: Conversão para Embed com Autoplay
+    // 3. PORNHUB / XVIDEOS MASTER: Conversão para Embed com Autoplay
     if (targetUrl.includes('pornhub.com')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
       if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1`
     }
-
-    // 4. XVIDEOS MASTER: Conversão para Embed com Autoplay
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video-?([^/]+)\//)
       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1`
     }
 
-    // 5. SINAL FANTASMA: Dailymotion, M3U8 e outros
-    // Mantém o link original como pedido, mas tenta injetar autoplay se for link comum
+    // 4. SINAL FANTASMA: Injeção de Autoplay para evitar o clique inicial (onde ficam os popups)
     if (!targetUrl.includes('autoplay=')) {
       const connector = targetUrl.includes('?') ? '&' : '?'
       return `${targetUrl}${connector}autoplay=1&mute=1`

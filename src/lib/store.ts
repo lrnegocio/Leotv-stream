@@ -1,4 +1,3 @@
-
 'use client';
 
 import { supabase } from './supabase-client';
@@ -44,14 +43,54 @@ export interface User {
   blockedAt?: string; 
 }
 
-export async function getRemoteContent(): Promise<ContentItem[]> {
-  try {
-    const { data, error } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (error) return [];
-    return data || [];
-  } catch (e) {
-    return [];
+/**
+ * MOTOR DE BUSCA PAGINADA - BYPASS LIMITE 1000
+ * Busca todos os registros do banco, não importa a quantidade.
+ */
+async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
+  let allData: any[] = [];
+  let from = 0;
+  let to = 999;
+  let finished = false;
+
+  while (!finished) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .range(from, to)
+      .order(orderBy, { ascending: true });
+
+    if (error) {
+      console.error(`Erro ao buscar ${table}:`, error);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      if (data.length < 1000) {
+        finished = true;
+      } else {
+        from += 1000;
+        to += 1000;
+      }
+    } else {
+      finished = true;
+    }
   }
+  return allData;
+}
+
+export async function getRemoteContent(): Promise<ContentItem[]> {
+  return await fetchAllRecords('content', 'title');
+}
+
+export async function getRemoteUsers(): Promise<User[]> {
+  const data = await fetchAllRecords('users', 'pin');
+  return data.map(u => ({
+    ...u,
+    role: u.role || 'user',
+    isBlocked: !!u.isBlocked
+  }));
 }
 
 export async function saveContent(item: ContentItem) {
@@ -72,24 +111,9 @@ export async function removeContent(id: string) {
   }
 }
 
-export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    const { data, error } = await supabase.from('users').select('*').order('pin', { ascending: true });
-    if (error) return [];
-    return (data || []).map(u => ({
-      ...u,
-      role: u.role || 'user',
-      isBlocked: !!u.isBlocked
-    }));
-  } catch (e) {
-    return [];
-  }
-}
-
 export async function saveUser(user: User) {
   try {
-    const payload: any = { ...user };
-    const { error } = await supabase.from('users').upsert(payload);
+    const { error } = await supabase.from('users').upsert(user);
     return !error;
   } catch (e) {
     return false;
@@ -99,7 +123,6 @@ export async function saveUser(user: User) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // PIN MESTRE BLINDADO (adm77x2p) - NÃO REMOVER DA MEMÓRIA
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: {
