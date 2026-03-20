@@ -20,32 +20,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 2000)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
+    const timer = setTimeout(() => setLoading(false), 1500)
+    const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
     return () => {
       clearTimeout(timer)
       clearTimeout(muteTimer)
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 42.0 - SUPORTE TOTAL A SINAIS P2P E AUTOPLAY
+  // MOTOR DE SINAL MASTER 45.0 - AUTOPLAY TOTAL E FIM DOS POPUPS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube Master: Conversão para embed (necessário para rodar em painéis) com Autoplay
+    // 1. YouTube Master: Conversão GHOST para Embed (Evita Erro 153 e Permite Autoplay)
     if (targetUrl.includes('youtube.com/watch?v=')) {
       const id = targetUrl.split('v=')[1]?.split('&')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
     if (targetUrl.includes('youtu.be/')) {
       const id = targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
 
-    // 2. XVideos Master: Suporte a link com ponto no ID
+    // 2. XVideos Master: Suporte Total a links com ponto e hífem
     if (targetUrl.includes('xvideos.com/video')) {
-      // Padrão: video.ID ou video-ID
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
         return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
@@ -61,7 +60,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Sinal Fantasma / M3U8 / Dailymotion / PlayCNVS: Link Original + Forçar Autoplay
+    // 4. Sinal Fantasma / M3U8 / Dailymotion: Link Original + Forçar Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -71,25 +70,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - SEMPRE POR CIMA DO VÍDEO NO Z-INDEX MÁXIMO */}
-      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-2 sm:px-6">
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE Z-INDEX MÁXIMA PARA TROCA DE CANAL */}
+      <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-8">
         {onPrev && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-2 sm:border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev(); }}
           >
-            <ChevronLeft className="h-10 w-10 sm:h-14 sm:w-14" />
+            <ChevronLeft className="h-12 w-12 sm:h-16 sm:w-16" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-2 sm:border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
+            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-primary/20 hover:bg-primary text-white pointer-events-auto border-4 border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext(); }}
           >
-            <ChevronRight className="h-10 w-10 sm:h-14 sm:w-14" />
+            <ChevronRight className="h-12 w-12 sm:h-16 sm:w-16" />
           </button>
         )}
       </div>

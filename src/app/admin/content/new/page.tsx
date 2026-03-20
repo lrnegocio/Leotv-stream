@@ -78,8 +78,8 @@ function NewContentForm() {
     e.preventDefault()
     setLoading(true)
     
-    // GERAÇÃO DE ID MASTER - EVITA SUBSTITUIÇÃO DE CANAIS
-    const newId = "canal_" + Date.now() + Math.random().toString(36).substring(2, 10);
+    // GERAÇÃO DE ID MASTER DE ALTA SEGURANÇA - EVITA SUBSTITUIÇÃO DE CANAIS
+    const newId = "canal_" + Date.now() + "_" + Math.random().toString(36).substring(2, 12);
 
     await saveContent({
       id: newId,

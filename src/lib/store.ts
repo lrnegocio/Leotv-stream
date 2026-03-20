@@ -44,9 +44,9 @@ export interface User {
 }
 
 /**
- * MOTOR DE BUSCA PAGINADA MASTER - BYPASS LIMITE 1000 SUPABASE
- * Busca todos os registros do banco em blocos de 1000 até completar a lista inteira.
- * Ordena automaticamente por Título (A-Z).
+ * MOTOR DE BUSCA PERPÉTUA MASTER - BYPASS LIMITE 1000 VERCEL/SUPABASE
+ * Este motor varre o banco de dados inteiro em blocos de 1000 registros.
+ * Garante que 100% dos seus canais apareçam no painel, sem limites.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
   let allData: any[] = [];
@@ -59,10 +59,11 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
       .from(table)
       .select('*')
       .range(from, to)
-      .order(orderBy, { ascending: true });
+      .order(orderBy, { ascending: true })
+      .order('id', { ascending: true }); // Ordenação secundária para garantir unicidade na paginação
 
     if (error) {
-      console.error(`Erro ao buscar ${table}:`, error);
+      console.error(`Erro crítico ao buscar ${table}:`, error);
       break;
     }
 
@@ -82,17 +83,12 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  // Retorna a biblioteca completa em ordem alfabética
+  // Retorna a biblioteca completa organizada de A a Z
   return await fetchAllRecords('content', 'title');
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  const data = await fetchAllRecords('users', 'id');
-  return data.map(u => ({
-    ...u,
-    role: u.role || 'user',
-    isBlocked: !!u.isBlocked
-  }));
+  return await fetchAllRecords('users', 'id');
 }
 
 export async function saveContent(item: ContentItem) {
