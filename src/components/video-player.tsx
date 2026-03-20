@@ -20,38 +20,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
-    return () => clearTimeout(muteTimer)
+    const timer = setTimeout(() => setLoading(false), 3000)
+    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(muteTimer)
+    }
   }, [url])
 
-  // MOTOR DE SINAL GHOST 36.0 - AUTOPLAY E FIM DOS POPUPS
+  // MOTOR DE SINAL MASTER 37.0 - RESPEITO TOTAL ÀS ORDENS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YOUTUBE MASTER: Único formato que roda direto sem Erro 153
-    if (targetUrl.includes('youtube.com/watch') || targetUrl.includes('youtu.be/')) {
-      let videoId = ""
-      if (targetUrl.includes('v=')) {
-        videoId = targetUrl.split('v=')[1].split('&')[0]
-      } else {
-        videoId = targetUrl.split('/').pop()?.split('?')[0] || ""
+    // 1. XVideos e Pornhub: Convertem para EMBED (como ordenado)
+    if (targetUrl.includes('xvideos.com/video')) {
+      const match = targetUrl.match(/video-?([^/]+)\//)
+      if (match && match[1]) {
+        return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
       }
-      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0`
     }
-
-    // 2. PORNHUB / XVIDEOS: Conversão para Player
     if (targetUrl.includes('pornhub.com/view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
-      if (viewkey) return `https://www.pornhub.com/embed/${viewkey}?autoplay=1&mute=1`
-    }
-    if (targetUrl.includes('xvideos.com/video')) {
-      const match = targetUrl.match(/video-?([^/]+)\//)
-      if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
+      if (viewkey) {
+        return `https://www.pornhub.com/embed/${viewkey}?autoplay=1&mute=1`
+      }
     }
 
-    // 3. SINAL FANTASMA (DAILYMOTION / M3U8 / OUTROS): Link Original + Autoplay
+    // 2. YouTube, Dailymotion e M3U8: Mantém LINK ORIGINAL (Sinal Fantasma)
+    // Adiciona apenas autoplay e mute para forçar o início sem clique
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -94,7 +92,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {showMuteNotice && !loading && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
           <Volume2 className="h-5 w-5 text-primary animate-bounce" />
-          <span className="text-[11px] font-black text-white uppercase tracking-tight">Sinal com Play Automático. Ative o som!</span>
+          <span className="text-[11px] font-black text-white uppercase tracking-tight">Play Automático Ativo. Ajuste o som!</span>
         </div>
       )}
 
@@ -119,7 +117,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
-          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto" onClick={() => window.open(processedUrl, '_blank')}>
+          <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto" onClick={() => window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-5 w-5" /> Abrir Fora
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
