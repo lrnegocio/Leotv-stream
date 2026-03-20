@@ -28,12 +28,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 39.0 - BLINDAGEM SUPREMA
+  // MOTOR DE SINAL MASTER - PRESERVAÇÃO DE LINKS COM AUTOPLAY
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube Master: Conversão limpa para embed (Fim do Erro 153)
+    // 1. YouTube Master: Conversão para embed com autoplay
     if (targetUrl.includes('youtube.com/watch?v=')) {
       const id = targetUrl.split('v=')[1]?.split('&')[0];
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
@@ -43,7 +43,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
     }
 
-    // 2. XVideos Master: Identifica ID com ponto ou traço
+    // 2. XVideos Master: Embed oficial com autoplay
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
@@ -51,7 +51,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 3. Pornhub Master: Converte para Embed
+    // 3. Pornhub Master: Embed oficial com autoplay
     if (targetUrl.includes('pornhub.com/view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
@@ -60,7 +60,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Sinal Fantasma (Dailymotion, M3U8, PlayCNVS): Link Original com Autoplay
+    // 4. Sinal Fantasma (Dailymotion, M3U8, PlayCNVS): Link Original + Parâmetros de Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -107,7 +107,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR SINAIS P2P E SITES DE CANAIS */}
+      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR SINAIS P2P E AUTOPLAY */}
       <iframe
         key={processedUrl}
         src={processedUrl}
