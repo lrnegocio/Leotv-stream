@@ -28,12 +28,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER - AUTOPLAY E MUTE OBRIGATÓRIOS
+  // MOTOR DE SINAL MASTER 42.0 - SUPORTE TOTAL A SINAIS P2P E AUTOPLAY
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube Master: Conversão para embed com Autoplay
+    // 1. YouTube Master: Conversão para embed (necessário para rodar em painéis) com Autoplay
     if (targetUrl.includes('youtube.com/watch?v=')) {
       const id = targetUrl.split('v=')[1]?.split('&')[0];
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
@@ -43,15 +43,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`
     }
 
-    // 2. XVideos Master: Embed oficial com Autoplay (ID com ponto suportado)
+    // 2. XVideos Master: Suporte a link com ponto no ID
     if (targetUrl.includes('xvideos.com/video')) {
+      // Padrão: video.ID ou video-ID
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
         return `https://www.xvideos.com/embedframe/${match[1]}?autoplay=1&mute=1`
       }
     }
 
-    // 3. Pornhub Master: Embed oficial com Autoplay
+    // 3. Pornhub Master
     if (targetUrl.includes('pornhub.com/view_video.php')) {
       const urlParams = new URLSearchParams(targetUrl.split('?')[1])
       const viewkey = urlParams.get('viewkey')
@@ -60,7 +61,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. Sinal Fantasma / M3U8 / PlayCNVS: Link Original + Forçar Autoplay
+    // 4. Sinal Fantasma / M3U8 / Dailymotion / PlayCNVS: Link Original + Forçar Autoplay
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -70,7 +71,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - SEMPRE POR CIMA DO VÍDEO */}
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA - SEMPRE POR CIMA DO VÍDEO NO Z-INDEX MÁXIMO */}
       <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-2 sm:px-6">
         {onPrev && (
           <button 
@@ -107,7 +108,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR SINAIS P2P E AUTOPLAY */}
+      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR SINAIS P2P E AUTOPLAY TOTAL */}
       <iframe
         key={processedUrl}
         src={processedUrl}

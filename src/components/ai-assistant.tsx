@@ -15,7 +15,7 @@ export function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
   const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([
-    { role: 'model', text: 'Mestre Léo, App Prototyper ativo. Sistema operando em alta performance. Como posso ajudar na gestão da rede hoje?' }
+    { role: 'model', text: 'Mestre Léo, App Prototyper ativo. Sistema operando em alta performance e biblioteca organizada de A a Z. Como posso ajudar na gestão da rede hoje?' }
   ])
   const [loading, setLoading] = React.useState(false)
   const [isListening, setIsListening] = React.useState(false)
@@ -85,7 +85,7 @@ export function AiAssistant() {
       speak(result.response)
 
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: "Erro de conexão com o núcleo. Pode repetir, Mestre?" }])
+      setMessages(prev => [...prev, { role: 'model', text: "Mestre Léo, houve um erro no núcleo de dados. Pode repetir?" }])
     } finally {
       setLoading(false)
     }

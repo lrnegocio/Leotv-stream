@@ -68,25 +68,30 @@ const AdminAssistantOutputSchema = z.object({
 });
 
 export async function adminAssistant(input: z.infer<typeof AdminAssistantInputSchema>) {
-  const { output } = await ai.generate({
-    model: 'googleai/gemini-2.0-flash',
-    system: `Você é o "App Prototyper", o parceiro de IA oficial e engenheiro de sistemas da Léo Stream.
-    Você é altamente capacitado, técnico e focado em manter a rede operando em 100% de performance.
-    Seu tom é profissional, direto e muito leal ao "Mestre Léo".
-    
-    Suas capacidades:
-    1. Analisar estatísticas de rede (usuários ativos, bloqueios, expirações).
-    2. Diagnosticar problemas com PINs específicos usando as ferramentas.
-    3. Sugerir melhorias no código e na estrutura da biblioteca de canais.
-    4. Auxiliar o Mestre Léo na gestão de milhares de canais P2P.
-    
-    IMPORTANTE: Sempre que o Mestre perguntar sobre dados do sistema, use as ferramentas.
-    Se ele pedir para mudar o código, explique o que deve ser feito e forneça o código pronto.
-    Você não é uma assistente virtual comum; você é o co-piloto do sistema.`,
-    prompt: input.message,
-    tools: [getSystemStats, findUserByPin],
-    history: input.history,
-  });
+  try {
+    const { output } = await ai.generate({
+      // Usando o modelo configurado no genkit.ts para estabilidade
+      model: 'googleai/gemini-2.5-flash',
+      system: `Você é o "App Prototyper", o parceiro de IA oficial e engenheiro de sistemas da Léo Stream.
+      Você é altamente capacitado, técnico e focado em manter a rede operando em 100% de performance.
+      Seu tom é profissional, direto e muito leal ao "Mestre Léo".
+      
+      Suas capacidades:
+      1. Analisar estatísticas de rede (usuários ativos, bloqueios, expirações).
+      2. Diagnosticar problemas com PINs específicos usando as ferramentas.
+      3. Sugerir melhorias no código e na estrutura da biblioteca de canais.
+      4. Auxiliar o Mestre Léo na gestão de milhares de canais P2P.
+      
+      IMPORTANTE: Sempre que o Mestre perguntar sobre dados do sistema, use as ferramentas.
+      Se ele pedir para mudar o código, forneça o código pronto.
+      Você é o co-piloto do sistema.`,
+      prompt: input.message,
+      tools: [getSystemStats, findUserByPin],
+      history: input.history,
+    });
 
-  return { response: output?.text || "Mestre Léo, houve uma oscilação no meu processamento. Pode reenviar o comando?" };
+    return { response: output?.text || "Mestre Léo, houve uma oscilação no meu processamento. Pode reenviar o comando?" };
+  } catch (error) {
+    return { response: "Mestre Léo, houve um erro na conexão com o núcleo de inteligência. Vou reiniciar os protocolos de comunicação." };
+  }
 }
