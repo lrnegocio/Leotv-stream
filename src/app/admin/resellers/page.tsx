@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Key, Loader2, ShieldCheck, ShieldAlert, User } from "lucide-react"
+import { Plus, Search, Key, Loader2, ShieldCheck, ShieldAlert, User, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteResellers, removeReseller, saveReseller, Reseller } from "@/lib/store"
@@ -16,9 +16,14 @@ export default function ResellersPage() {
 
   const load = React.useCallback(async () => {
     setLoading(true)
-    const data = await getRemoteResellers()
-    setResellers(data)
-    setLoading(false)
+    try {
+      const data = await getRemoteResellers()
+      setResellers(data)
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro de Conexão", description: "Verifique o Supabase." })
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   React.useEffect(() => { load() }, [load])
@@ -30,7 +35,7 @@ export default function ResellersPage() {
       toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
       load()
     } else {
-      toast({ variant: "destructive", title: "Erro ao atualizar", description: "Verifique o banco de dados." })
+      toast({ variant: "destructive", title: "Erro no Banco", description: "A coluna 'isBlocked' existe no Supabase?" })
     }
   }
 
@@ -42,7 +47,7 @@ export default function ResellersPage() {
           toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
           load()
         } else {
-          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Não foi possível remover no Supabase." })
+          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Tabela 'resellers' existe no Supabase?" })
         }
       } catch (err) {
         toast({ variant: "destructive", title: "Erro Fatal", description: "Falha na conexão com o servidor." })
