@@ -1,4 +1,3 @@
-
 'use client';
 
 import { supabase } from './supabase-client';
@@ -63,8 +62,7 @@ export interface Reseller {
 
 /**
  * MOTOR DE BUSCA PERPÉTUA - MESTRE LÉO
- * Esta função garante que o sistema busque TODOS os registros,
- * mesmo que passem de 1.000, 2.000 ou 10.000 canais.
+ * Varre o banco em blocos de 1.000 para trazer TODOS os 1.045+ registros.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -100,7 +98,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  // Busca todos os canais de A a Z sem limite de 1000
   return await fetchAllRecords('content', 'title');
 }
 
@@ -136,10 +133,6 @@ export async function saveUser(user: User) {
     activatedAt: user.activatedAt || null,
     blockedAt: user.blockedAt || null
   });
-  
-  if (error) {
-    console.error("Erro fatal ao salvar PIN/Usuário:", error.message);
-  }
   return !error;
 }
 
@@ -149,25 +142,7 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  const dataToSave = {
-    id: reseller.id,
-    name: reseller.name,
-    username: reseller.username,
-    password: reseller.password || "",
-    cpf: reseller.cpf || "",
-    birthDate: reseller.birthDate || "",
-    phone: reseller.phone || "",
-    email: reseller.email || "",
-    credits: reseller.credits || 0,
-    totalSold: reseller.totalSold || 0,
-    isBlocked: reseller.isBlocked || false
-  };
-
-  const { error } = await supabase.from('resellers').upsert(dataToSave);
-  
-  if (error) {
-    console.error("Erro fatal ao salvar revenda:", error.message);
-  }
+  const { error } = await supabase.from('resellers').upsert(reseller);
   return !error;
 }
 
@@ -187,13 +162,12 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const resellers = await getRemoteResellers();
   const reseller = resellers.find(r => r.id === resellerId);
 
-  if (!user || !reseller) return { error: "Dados não localizados no núcleo." };
-  if (reseller.credits < 1) return { error: "Seu estoque de créditos está vazio!" };
+  if (!user || !reseller) return { error: "Dados não localizados." };
+  if (reseller.credits < 1) return { error: "Sem créditos!" };
 
   const now = new Date();
   let baseDate = now;
 
-  // Lógica de Renovação Acumulativa: Soma 30 dias à data atual de validade
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
@@ -223,7 +197,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   if (successUser && successReseller) {
     return { success: true, user: updatedUser, reseller: updatedReseller };
   }
-  return { error: "Erro crítico de sincronia com o banco de dados." };
+  return { error: "Erro de sincronia." };
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
@@ -236,8 +210,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "PIN INVÁLIDO. Verifique o código enviado pelo seu revendedor." };
-  if (user.isBlocked) return { error: "ESTE PIN FOI SUSPENSO PELO SISTEMA." };
+  if (!user) return { error: "PIN INVÁLIDO." };
+  if (user.isBlocked) return { error: "PIN SUSPENSO." };
 
   if (user.resellerId) {
     const resellers = await getRemoteResellers();
@@ -252,12 +226,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
         u.pin !== normalizedPin && 
         u.activeDevices?.includes(deviceId)
       );
-      
-      if (alreadyUsed) {
-        user.isBlocked = true;
-        await saveUser(user);
-        return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS DE 6H." };
-      }
+      if (alreadyUsed) return { error: "APARELHO JÁ USOU O TESTE GRÁTIS." };
       
       user.activatedAt = new Date().toISOString();
       user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
@@ -270,7 +239,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   }
 
   if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO. FALE COM SEU REVENDEDOR PARA RENOVAR." };
+    return { error: "SINAL EXPIRADO." };
   }
   
   return { user };
@@ -279,18 +248,14 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 export async function validateResellerLogin(username: string, pass: string) {
   const resellers = await getRemoteResellers();
   const res = resellers.find(r => r.username === username && r.password === pass);
-  if (!res) return { error: "USUÁRIO OU SENHA DE REVENDA INVÁLIDOS." };
-  if (res.isBlocked) return { error: "SEU PAINEL DE REVENDA FOI SUSPENSO PELO ADMIN." };
+  if (!res) return { error: "LOGIN INVÁLIDO." };
+  if (res.isBlocked) return { error: "PAINEL SUSPENSO." };
   return { reseller: res };
 }
 
 export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return data?.value || { parentalPin: '1234' };
-  } catch (e) {
-    return { parentalPin: '1234' };
-  }
+  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+  return data?.value || { parentalPin: '1234' };
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
