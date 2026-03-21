@@ -62,7 +62,7 @@ export interface Reseller {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v59.0
+ * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v60.0
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -130,12 +130,12 @@ export async function saveReseller(reseller: Reseller) {
     id: reseller.id,
     name: reseller.name,
     username: reseller.username,
-    password: reseller.password,
-    cpf: reseller.cpf,
-    birthDate: reseller.birthDate,
-    phone: reseller.phone,
-    email: reseller.email,
-    credits: reseller.credits,
+    password: reseller.password || "",
+    cpf: reseller.cpf || "",
+    birthDate: reseller.birthDate || "",
+    phone: reseller.phone || "",
+    email: reseller.email || "",
+    credits: reseller.credits || 0,
     totalSold: reseller.totalSold || 0,
     isBlocked: reseller.isBlocked || false
   };
@@ -143,10 +143,7 @@ export async function saveReseller(reseller: Reseller) {
   const { error } = await supabase.from('resellers').upsert(dataToSave);
   
   if (error) {
-    console.error("ERRO FATAL SUPABASE:", error.message);
-    if (error.message.includes('column') && error.message.includes('isBlocked')) {
-      alert("ATENÇÃO MESTRE LÉO: Você PRECISA rodar o comando SQL no seu Supabase para criar a coluna de BLOQUEIO (isBlocked)!");
-    }
+    console.error("ERRO AO SALVAR REVENDA:", error.message);
     return false;
   }
   return true;
@@ -154,14 +151,16 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    const { data: users } = await supabase.from('users').select('id').eq('resellerId', id);
-    if (users && users.length > 0) {
-      const deleteUsers = confirm(`Este parceiro tem ${users.length} clientes. Excluir tudo?`);
-      if (!deleteUsers) return false;
-      await supabase.from('users').delete().eq('resellerId', id);
-    }
+    // Primeiro tenta remover usuários vinculados se houver
+    await supabase.from('users').delete().eq('resellerId', id);
+    // Depois remove o revendedor
     const { error } = await supabase.from('resellers').delete().eq('id', id);
-    return !error;
+    
+    if (error) {
+      console.error("ERRO AO REMOVER REVENDA:", error.message);
+      return false;
+    }
+    return true;
   } catch (err) {
     return false;
   }

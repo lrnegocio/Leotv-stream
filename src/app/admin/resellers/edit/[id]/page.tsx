@@ -74,7 +74,7 @@ export default function EditResellerPage() {
           <div className="space-y-2 col-span-full">
             <Label className="uppercase text-[10px] font-black opacity-60">Nome Completo</Label>
             <Input 
-              value={formData.name} 
+              value={formData.name || ""} 
               onChange={e => setFormData({...formData, name: e.target.value})} 
               className="h-12 bg-black/40 border-white/5 font-bold uppercase" 
               required 
@@ -86,7 +86,7 @@ export default function EditResellerPage() {
               <User className="h-3 w-3" /> Usuário de Login
             </Label>
             <Input 
-              value={formData.username} 
+              value={formData.username || ""} 
               onChange={e => setFormData({...formData, username: e.target.value})} 
               className="h-12 bg-primary/5 border-primary/20 font-black text-primary" 
               placeholder="EX: REVENDALEO"
@@ -111,7 +111,7 @@ export default function EditResellerPage() {
           <div className="space-y-2">
             <Label className="uppercase text-[10px] font-black opacity-60">CPF</Label>
             <Input 
-              value={formData.cpf} 
+              value={formData.cpf || ""} 
               onChange={e => setFormData({...formData, cpf: e.target.value})} 
               className="h-12 bg-black/40 border-white/5 font-bold" 
             />
@@ -120,7 +120,7 @@ export default function EditResellerPage() {
           <div className="space-y-2">
             <Label className="uppercase text-[10px] font-black opacity-60">WhatsApp</Label>
             <Input 
-              value={formData.phone} 
+              value={formData.phone || ""} 
               onChange={e => setFormData({...formData, phone: e.target.value})} 
               className="h-12 bg-black/40 border-white/5 font-bold" 
             />
@@ -130,7 +130,7 @@ export default function EditResellerPage() {
             <Label className="uppercase text-[10px] font-black opacity-60">E-mail Oficial</Label>
             <Input 
               type="email"
-              value={formData.email} 
+              value={formData.email || ""} 
               onChange={e => setFormData({...formData, email: e.target.value})} 
               className="h-12 bg-black/40 border-white/5 font-bold" 
             />
