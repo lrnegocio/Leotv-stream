@@ -41,6 +41,7 @@ export default function LoginPage() {
         localStorage.removeItem("p2p_saved_pin")
       }
 
+      // Gera ou recupera o ID único deste aparelho (Hardware ID Fake)
       let deviceId = localStorage.getItem("p2p_device_id") || "dev_" + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("p2p_device_id", deviceId);
       

@@ -105,8 +105,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 export async function saveContent(item: ContentItem) {
-  // BLINDAGEM DE SALVAMENTO MASTER: 
-  // Constrói o payload garantindo que tipos complexos (JSONB) sejam enviados corretamente
   const payload: any = {
     id: item.id,
     title: item.title,
@@ -117,7 +115,6 @@ export async function saveContent(item: ContentItem) {
     imageUrl: item.imageUrl || null,
   };
 
-  // Lógica À La Carte para Canais vs Séries
   if (item.type === 'series') {
     payload.episodes = item.episodes || [];
     payload.seasons = [];
@@ -132,8 +129,7 @@ export async function saveContent(item: ContentItem) {
     payload.seasons = [];
   }
   
-  // Upsert com tratamento de erro detalhado
-  const { error } = await supabase.from('content').upsert([payload], { onConflict: 'id' });
+  const { error } = await supabase.from('content').upsert(payload);
   
   if (error) {
     console.error("FALHA CRÍTICA NO SUPABASE:", error.message, "| Detalhes:", error.details);
@@ -249,16 +245,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
+  // LOGICA DE HARDWARE BINDING MASTER:
+  // Se o aparelho não está vinculado, tenta vincular.
   if (!isThisDeviceLinked) {
+    // Se já atingiu o limite de aparelhos diferentes vinculados, BLOQUEIA O PIN.
     if (devices.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
       return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
+    // Vincula este novo aparelho permanentemente ao PIN.
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
   } else {
+    // Apenas atualiza o último acesso do aparelho já vinculado.
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
@@ -276,6 +277,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 }
 
 export async function logoutDevice(userId: string, deviceId: string) {
+  // Na lógica de hardware binding, o logout não desvincula o aparelho, apenas encerra a sessão.
   return true; 
 }
 
