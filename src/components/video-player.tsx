@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2 } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -20,17 +19,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 2500)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
-    return () => {
-      clearTimeout(timer)
-      clearTimeout(muteTimer)
+    if (url) {
+      setLoading(true)
+      const timer = setTimeout(() => setLoading(false), 2500)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(muteTimer)
+      }
     }
   }, [url])
 
   const processedUrl = React.useMemo(() => {
-    if (!url || typeof url !== 'string') return ""
+    if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
 
     // BLINDAGEM ADULTA: Converte link do xvideos em player limpo
@@ -55,6 +56,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
+
+  if (!processedUrl) {
+    return (
+      <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
+        <Tv className="h-16 w-16 text-primary/20 mb-4" />
+        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic">SINAL P2P NÃO DISPONÍVEL NESTE CONTEÚDO</span>
+      </div>
+    )
+  }
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl">

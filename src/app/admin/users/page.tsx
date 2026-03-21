@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -45,7 +44,7 @@ export default function UserManagementPage() {
   }, [loadUsers])
 
   const handleGeneratePin = () => {
-    setNewUser(prev => ({ ...prev, pin: generateRandomPin() }))
+    setNewUser(prev => ({ ...prev, pin: generateRandomPin(11) }))
   }
 
   const handleSaveUser = async () => {

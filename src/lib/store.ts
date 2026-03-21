@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -115,14 +114,10 @@ export async function saveContent(item: ContentItem) {
     imageUrl: item.imageUrl || null,
   };
 
-  // Lógica Inteligente: Se for série, remove o link principal e foca nos episódios
-  if (item.type === 'series') {
+  // Lógica Inteligente Master: Se for série, remove o link principal e foca nos episódios
+  if (item.type === 'series' || item.type === 'multi-season') {
     payload.episodes = item.episodes || [];
-    payload.seasons = [];
-    payload.streamUrl = null;
-  } else if (item.type === 'multi-season') {
     payload.seasons = item.seasons || [];
-    payload.episodes = [];
     payload.streamUrl = null;
   } else {
     payload.streamUrl = item.streamUrl || null;
@@ -228,7 +223,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 
 /**
  * LOGICA DE HARDWARE BINDING MASTER - MESTRE LÉO
- * O PIN se "casa" com o aparelho. Bloqueia se tentar usar em outro fora do limite.
+ * O PIN se "casa" com o aparelho. Bloqueia se atingir o limite de telas simultâneas registradas.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
@@ -242,30 +237,30 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "CÓDIGO DE ACESSO INVÁLIDO." };
-  if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O SUPORTE PARA DESBLOQUEIO." };
+  if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O SUPORTE." };
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
+    return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR." };
   }
 
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
-  // VÍNCULO DE HARDWARE:
+  // VÍNCULO DE HARDWARE INTELIGENTE:
   if (!isThisDeviceLinked) {
-    // Se o cliente já usou todos os aparelhos que comprou, BLOQUEIA O PIN NA HORA
+    // Só bloqueia se tentar registrar um NOVO aparelho e já estiver no limite
     if (devices.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
+      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
     }
     // Vincula o novo aparelho permanentemente
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
   } else {
-    // Apenas atualiza o último acesso
+    // Apenas atualiza o último acesso do aparelho já vinculado
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
@@ -295,11 +290,11 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   const users = await fetchAllRecords('users');
   const user = users.find(u => u.pin === pin);
   
-  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
+  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO";
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE PARA CONTINUAR";
+    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO";
   }
 
   const content = await fetchAllRecords('content', 'title');
@@ -312,7 +307,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const category = (item.genre || "GERAL").toUpperCase();
       const logo = item.imageUrl || "";
       m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
-    } else if (item.type === 'series' && item.episodes) {
+    } else if ((item.type === 'series' || item.type === 'multi-season') && item.episodes) {
       item.episodes.forEach((ep: Episode) => {
         m3u += `#EXTINF:-1 group-title="${item.title.toUpperCase()}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
       });
@@ -345,12 +340,12 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
   
   return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀
 
-🔑 *SEU PIN:* \`${pin}\`
+🔑 *SEU CÓDIGO:* \`${pin}\`
 📅 *PLANO:* ${planoText}
 🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
 
 📺 *SERVIDOR SMART TV:* 
 ${playlistUrl}
 
-⚠️ _Nota: Este PIN ficará vinculado aos seus primeiros ${screens} aparelhos. O uso em outros causará bloqueio automático._`;
+⚠️ _Nota: Este código ficará vinculado aos seus primeiros ${screens} aparelhos. O uso em outros causará bloqueio automático._`;
 }
