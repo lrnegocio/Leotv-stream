@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -176,18 +176,29 @@ function NewContentForm() {
             </div>
           </div>
 
-          {formData.type === 'channel' || formData.type === 'movie' ? (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-              <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link da Stream (Sinal Direto)</h3>
-              <Input 
-                value={formData.streamUrl} 
-                onChange={e => setFormData({...formData, streamUrl: e.target.value})}
-                placeholder="https://sua-stream.m3u8" 
-                required
-                className="h-12 bg-black/40 border-white/5 font-mono text-xs"
-              />
-            </div>
-          ) : formData.type === 'series' ? (
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link da Stream (Sinal Direto)</h3>
+            <Input 
+              value={formData.streamUrl} 
+              onChange={e => setFormData({...formData, streamUrl: e.target.value})}
+              placeholder="https://sua-stream.m3u8" 
+              required
+              className="h-12 bg-black/40 border-white/5 font-mono text-xs"
+            />
+          </div>
+
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><LinkIcon className="h-4 w-4" /> URL da Capa (Manual)</h3>
+            <Input 
+              value={formData.imageUrl} 
+              onChange={e => setFormData({...formData, imageUrl: e.target.value})}
+              placeholder="https://exemplo.com/capa.jpg" 
+              className="h-12 bg-black/40 border-white/5 font-mono text-xs"
+            />
+            <p className="text-[8px] text-muted-foreground uppercase font-bold italic">Cole aqui o link da imagem se você não quiser usar a IA abaixo.</p>
+          </div>
+
+          {formData.type === 'series' ? (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Lista de Episódios</h3>
@@ -207,7 +218,7 @@ function NewContentForm() {
                 ))}
               </div>
             </div>
-          ) : (
+          ) : formData.type === 'multi-season' ? (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><Layers className="h-4 w-4" /> Temporadas</h3>
@@ -233,7 +244,7 @@ function NewContentForm() {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -242,10 +253,10 @@ function NewContentForm() {
             <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-dashed border-white/10 flex flex-col items-center justify-center group">
               {formData.imageUrl ? (
                 <>
-                  <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" />
+                  <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateImage} disabled={generatingImage}>
-                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Trocar Imagem"}
+                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Gerar com IA"}
                     </Button>
                   </div>
                 </>

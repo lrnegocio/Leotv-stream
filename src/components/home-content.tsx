@@ -75,15 +75,15 @@ export default function HomeContent() {
     }
 
     const load = async () => {
+      // Motor de Busca Perpétua ativado para 1000+ canais
       const data = await getRemoteContent()
-      // Garante ordem alfabética
       setContent(data.sort((a, b) => a.title.localeCompare(b.title)))
       setLoading(false)
     }
     load()
   }, [router, handleLogout])
 
-  // Trava de Expiração Real-Time (Corta o sinal se o tempo acabar enquanto assiste)
+  // Trava de Expiração Real-Time (Corta o sinal a cada 5 segundos se o tempo acabar)
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -103,7 +103,7 @@ export default function HomeContent() {
     item.genre.toLowerCase().includes(searchQuery)
   )
 
-  // Agrupa por Categorias Únicas (Pastas)
+  // Agrupa por Categorias Únicas (Pastas Master)
   const categories = Array.from(new Set(filteredContent.map(item => item.genre))).sort()
 
   const handleNavigate = (direction: 'next' | 'prev') => {
@@ -125,7 +125,10 @@ export default function HomeContent() {
       <header className="h-20 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
-          <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter hidden lg:block">Léo Stream Master</span>
+          <div className="hidden lg:block">
+            <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Stream Master</span>
+            <span className="text-[8px] font-bold uppercase opacity-40">{content.length} CANAIS NO AR</span>
+          </div>
         </div>
         <div className="flex-1 max-w-xl mx-4">
           <VoiceSearch />

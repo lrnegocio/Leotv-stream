@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Layers } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Link as LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -39,33 +40,6 @@ export default function EditContentPage() {
   }, [id, router])
 
   if (fetching || !formData) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
-
-  const addEpisode = (seasonId?: string) => {
-    const newEp: Episode = {
-      id: Math.random().toString(36).substring(7),
-      title: `Episódio`,
-      number: (formData.episodes?.length || 0) + 1,
-      streamUrl: ""
-    }
-    
-    if (seasonId) {
-      const updatedSeasons = formData.seasons?.map(s => 
-        s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s
-      )
-      setFormData({ ...formData, seasons: updatedSeasons })
-    } else {
-      setFormData({ ...formData, episodes: [...(formData.episodes || []), newEp] })
-    }
-  }
-
-  const addSeason = () => {
-    const newSeason: Season = {
-      id: Math.random().toString(36).substring(7),
-      number: (formData.seasons?.length || 0) + 1,
-      episodes: []
-    }
-    setFormData({ ...formData, seasons: [...(formData.seasons || []), newSeason] })
-  }
 
   const generateAI = async () => {
     if (!formData.title) return
@@ -142,34 +116,15 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          {(formData.type === 'channel' || formData.type === 'movie') && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-              <h3 className="font-semibold flex items-center gap-2"><Globe className="h-4 w-4" /> Link Principal</h3>
-              <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} />
-            </div>
-          )}
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><Globe className="h-4 w-4" /> Link Principal</h3>
+            <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} />
+          </div>
 
-          {formData.type === 'series' && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Episódios</h3>
-                <Button type="button" size="sm" onClick={() => addEpisode()}>+ EP</Button>
-              </div>
-              {formData.episodes?.map((ep, idx) => (
-                <div key={ep.id} className="flex gap-2 bg-black/20 p-3 rounded-lg border border-white/5">
-                  <Input className="flex-1" value={ep.streamUrl} onChange={e => {
-                    const newEps = [...(formData.episodes || [])];
-                    newEps[idx].streamUrl = e.target.value;
-                    setFormData({ ...formData, episodes: newEps });
-                  }} />
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => {
-                    const newEps = formData.episodes?.filter(item => item.id !== ep.id);
-                    setFormData({ ...formData, episodes: newEps });
-                  }}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL da Capa</h3>
+            <Input value={formData.imageUrl || ""} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://exemplo.com/imagem.jpg" />
+          </div>
         </div>
 
         <div className="space-y-6">

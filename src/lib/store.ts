@@ -61,6 +61,11 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
+/**
+ * MOTOR DE BUSCA PERPÉTUA - MESTRE LÉO
+ * Esta função garante que o sistema busque TODOS os registros,
+ * mesmo que passem de 1.000, 2.000 ou 10.000 canais.
+ */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -95,6 +100,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
+  // Busca todos os canais de A a Z sem limite de 1000
   return await fetchAllRecords('content', 'title');
 }
 
@@ -187,6 +193,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
+  // Lógica de Renovação Acumulativa: Soma 30 dias à data atual de validade
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
