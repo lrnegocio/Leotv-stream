@@ -11,9 +11,7 @@
         "description": { "type": "string", "description": "Sinopse ou descrição" },
         "genre": { "type": "string", "description": "Categoria/Pasta" },
         "isRestricted": { "type": "boolean", "description": "Se requer senha parental" },
-        "streamUrl": { "type": "string", "description": "Link da stream m3u8 ou youtube" },
-        "seasons": { "type": "array", "description": "Lista de temporadas" },
-        "episodes": { "type": "array", "description": "Lista de episódios diretos" }
+        "streamUrl": { "type": "string", "description": "Link da stream m3u8 ou youtube" }
       },
       "required": ["title", "type", "genre"]
     },
@@ -26,10 +24,25 @@
         "role": { "type": "string", "enum": ["admin", "user"], "description": "Nível de acesso" },
         "subscriptionTier": { "type": "string", "enum": ["test", "monthly", "lifetime"], "description": "Tipo de plano" },
         "expiryDate": { "type": "string", "format": "date-time", "description": "Data de expiração" },
-        "maxScreens": { "type": "number", "description": "Limite de telas simultâneas" },
-        "isBlocked": { "type": "boolean", "description": "Se o acesso está suspenso" }
+        "resellerId": { "type": "string", "description": "ID do revendedor que gerou o PIN" },
+        "activatedAt": { "type": "string", "format": "date-time", "description": "Data do primeiro login" }
       },
       "required": ["pin", "role"]
+    },
+    "Reseller": {
+      "title": "Revendedor",
+      "description": "Cadastro de parceiro de vendas",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "cpf": { "type": "string" },
+        "birthDate": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "credits": { "type": "number", "description": "Quantidade de PINs disponíveis para gerar" },
+        "totalSold": { "type": "number", "description": "Total de PINs já vendidos" }
+      },
+      "required": ["name", "email", "cpf"]
     }
   },
   "auth": {
@@ -38,15 +51,15 @@
   "firestore": {
     "/content/{contentId}": {
       "schema": "ContentItem",
-      "description": "Coleção de canais e filmes da biblioteca"
+      "description": "Biblioteca de canais"
     },
     "/users/{userId}": {
       "schema": "User",
-      "description": "Coleção de clientes e PINs cadastrados"
+      "description": "PINs de clientes"
     },
-    "/settings/global": {
-      "schema": "object",
-      "description": "Configurações globais como senha parental"
+    "/resellers/{resellerId}": {
+      "schema": "Reseller",
+      "description": "Cadastro de revendedores"
     }
   }
 }

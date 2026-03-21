@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase-client';
@@ -40,14 +41,26 @@ export interface User {
   maxScreens: number;
   activeDevices: string[]; 
   isBlocked: boolean;
-  blockedAt?: string; 
+  resellerId?: string;
+  activatedAt?: string;
+}
+
+export interface Reseller {
+  id: string;
+  name: string;
+  cpf: string;
+  birthDate: string;
+  phone: string;
+  email: string;
+  credits: number;
+  totalSold: number;
 }
 
 /**
- * MOTOR DE BUSCA INFINITA MASTER 7.0
- * Garante que 100% dos canais apareçam, ignorando a trava de 1.000 do Supabase/Vercel.
+ * MOTOR DE BUSCA PERPÉTUA MASTER 9.0
+ * Busca sem limites no Supabase/Vercel usando paginação recursiva.
  */
-async function fetchAllRecords(table: string, orderBy: string = 'title'): Promise<any[]> {
+async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
   let step = 1000;
@@ -61,25 +74,16 @@ async function fetchAllRecords(table: string, orderBy: string = 'title'): Promis
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) {
-        console.error(`Erro crítico no motor de busca ${table}:`, error);
-        break;
-      }
-
+      if (error) break;
       if (data && data.length > 0) {
         allData = [...allData, ...data];
-        if (data.length < step) {
-          finished = true;
-        } else {
-          from += step;
-        }
+        if (data.length < step) finished = true;
+        else from += step;
       } else {
         finished = true;
       }
     }
-  } catch (e) {
-    console.error("Erro fatal na conexão master:", e);
-  }
+  } catch (e) {}
   return allData;
 }
 
@@ -91,33 +95,44 @@ export async function getRemoteUsers(): Promise<User[]> {
   return await fetchAllRecords('users', 'id');
 }
 
+export async function getRemoteResellers(): Promise<Reseller[]> {
+  return await fetchAllRecords('resellers', 'name');
+}
+
 export async function saveContent(item: ContentItem) {
-  try {
-    const { error } = await supabase.from('content').upsert(item);
-    return !error;
-  } catch (e) {
-    return false;
-  }
+  const { error } = await supabase.from('content').upsert(item);
+  return !error;
 }
 
 export async function removeContent(id: string) {
-  try {
-    const { error } = await supabase.from('content').delete().eq('id', id);
-    return !error;
-  } catch (e) {
-    return false;
-  }
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
 }
 
 export async function saveUser(user: User) {
-  try {
-    const { error } = await supabase.from('users').upsert(user);
-    return !error;
-  } catch (e) {
-    return false;
-  }
+  const { error } = await supabase.from('users').upsert(user);
+  return !error;
 }
 
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
+}
+
+export async function saveReseller(reseller: Reseller) {
+  const { error } = await supabase.from('resellers').upsert(reseller);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
+}
+
+/**
+ * MOTOR DE VALIDAÇÃO MASTER
+ * Gerencia a ativação de PINs de revenda no primeiro login (30 dias de vida).
+ */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
@@ -141,6 +156,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
   if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
+  // Lógica de Ativação Master para Revendas (30 dias a partir do 1º login)
+  if (!user.activatedAt && user.subscriptionTier === 'monthly') {
+    user.activatedAt = new Date().toISOString();
+    user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await saveUser(user);
+  }
+
   const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
 
   if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
@@ -151,7 +173,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!deviceList.includes(deviceId)) {
     if (deviceList.length >= user.maxScreens && !isImmune) {
       user.isBlocked = true;
-      user.blockedAt = new Date().toISOString();
       await saveUser(user);
       return { error: "LIMITE DE TELAS EXCEDIDO." };
     }
@@ -162,30 +183,14 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   return { user };
 }
 
-export async function removeUser(id: string) {
-  try {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  } catch (e) {
-    return false;
-  }
-}
-
 export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    if (data?.value) return data.value as { parentalPin: string };
-  } catch (e) {}
-  return { parentalPin: '1234' };
+  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+  return data?.value || { parentalPin: '1234' };
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
-  try {
-    const { error } = await supabase.from('settings').upsert({ key: 'global', value: data });
-    return !error;
-  } catch (e) {
-    return false;
-  }
+  const { error } = await supabase.from('settings').upsert({ key: 'global', value: data });
+  return !error;
 }
 
 export const generateRandomPin = (length: number = 6) => {

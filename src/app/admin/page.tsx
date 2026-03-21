@@ -1,15 +1,17 @@
+
 'use client';
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Loader2 } from "lucide-react"
+import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getRemoteUsers, getRemoteContent, User, ContentItem } from "@/lib/store"
+import { getRemoteUsers, getRemoteContent, getRemoteResellers, User, ContentItem, Reseller } from "@/lib/store"
 
 export default function AdminDashboard() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [users, setUsers] = React.useState<User[]>([])
+  const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
@@ -17,8 +19,10 @@ export default function AdminDashboard() {
       try {
         const u = await getRemoteUsers()
         const c = await getRemoteContent()
+        const r = await getRemoteResellers()
         setUsers(u)
         setContent(c)
+        setResellers(r)
       } catch (err) {
       } finally {
         setLoading(false)
@@ -35,9 +39,9 @@ export default function AdminDashboard() {
 
   const stats = [
     { title: "Clientes", value: users.length.toString(), icon: Users, color: "text-blue-400" },
+    { title: "Revendedores", value: resellers.length.toString(), icon: Briefcase, color: "text-emerald-400" },
     { title: "Canais", value: content.filter(c => c.type === 'channel').length.toString(), icon: Tv, color: "text-primary" },
     { title: "Filmes/Séries", value: content.filter(c => c.type !== 'channel').length.toString(), icon: Film, color: "text-secondary" },
-    { title: "Status", value: "Ativo", icon: Key, color: "text-green-400" },
   ]
 
   return (
@@ -80,8 +84,8 @@ export default function AdminDashboard() {
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-2xl overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-white/5">
             <div>
-              <CardTitle className="uppercase text-sm font-bold tracking-widest italic text-primary">Acessos Recentes</CardTitle>
-              <p className="text-[9px] text-muted-foreground uppercase font-bold">Lista de códigos ativos.</p>
+              <CardTitle className="uppercase text-sm font-bold tracking-widest italic text-primary">Clientes Ativos por PIN</CardTitle>
+              <p className="text-[9px] text-muted-foreground uppercase font-bold">Monitoramento de acesso.</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-bold hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
           </CardHeader>
@@ -95,7 +99,7 @@ export default function AdminDashboard() {
                   <div className="flex-1">
                     <p className="font-black uppercase tracking-[0.2em] text-sm text-primary group-hover:scale-105 origin-left transition-transform">{user.pin}</p>
                     <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
-                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.maxScreens} Telas
+                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.activatedAt ? 'ATIVADO' : 'ESTOQUE'}
                     </p>
                   </div>
                   <div className="text-right">
@@ -103,7 +107,7 @@ export default function AdminDashboard() {
                       {user.isBlocked ? 'SUSPENSO' : 'ATIVO'}
                     </p>
                     <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">
-                      {user.expiryDate ? new Date(user.expiryDate).toLocaleDateString('pt-BR') : 'ILIMITADO'}
+                      {user.expiryDate ? new Date(user.expiryDate).toLocaleDateString('pt-BR') : 'SEM VALIDADE'}
                     </p>
                   </div>
                 </div>
@@ -119,8 +123,8 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status Master</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando em alta performance.</p>
+                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status Master de Revendas</h4>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando em alta performance e estoque blindado.</p>
               </div>
             </div>
           </CardContent>

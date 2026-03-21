@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 70.0 - AUTOPLAY E COMPATIBILIDADE UNIVERSAL
+  // MOTOR DE SINAL MASTER 8.0 - AUTOPLAY TOTAL E EMBEDS BLINDADOS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
@@ -63,7 +63,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 5. Sinal Fantasma (M3U8 / PlayCNVS / Outros) + Forçar Autoplay
+    // 5. Sinal Geral com Autoplay Forçado (mute=1 é obrigatório para autoplay)
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -99,14 +99,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Iniciando Sinal Direto...</span>
+          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal...</span>
         </div>
       )}
 
       {showMuteNotice && !loading && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-full border border-primary/30 flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-          <Volume2 className="h-4 w-4 text-primary animate-bounce" />
-          <span className="text-[10px] font-black text-white uppercase tracking-tight">Toque no Player para Ativar Som</span>
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-4 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+          <Volume2 className="h-3 w-3 text-primary" />
+          <span className="text-[8px] font-black text-white uppercase tracking-tight">Ative o Som se Desejar</span>
         </div>
       )}
 

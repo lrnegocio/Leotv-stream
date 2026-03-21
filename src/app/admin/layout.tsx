@@ -1,11 +1,11 @@
+
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2 } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, UserPlus, Briefcase } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
-import { AiAssistant } from "@/components/ai-assistant"
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = React.useState(false)
@@ -62,6 +62,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
+                  <Link href="/admin/resellers">
+                    <Briefcase className="h-5 w-5 text-emerald-400" />
+                    <span className="font-bold uppercase text-xs tracking-widest">Revendedores</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
                   <Link href="/admin/settings">
                     <Settings className="h-5 w-5 text-orange-400" />
                     <span className="font-bold uppercase text-xs tracking-widest">Configurações</span>
@@ -85,9 +93,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="hidden md:block">
-                <React.Suspense fallback={<div className="h-10 w-48 bg-white/5 animate-pulse rounded-xl" />}>
-                  <VoiceSearch />
-                </React.Suspense>
+                <VoiceSearch />
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -102,17 +108,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
-      <AiAssistant />
     </SidebarProvider>
   )
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-      <AdminLayoutInner>
-        {children}
-      </AdminLayoutInner>
-    </React.Suspense>
+    <AdminLayoutInner>{children}</AdminLayoutInner>
   )
 }
