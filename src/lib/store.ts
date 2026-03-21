@@ -127,7 +127,6 @@ export async function saveUser(user: User) {
     activatedAt: user.activatedAt || null,
     blockedAt: user.blockedAt || null
   });
-  if (error) console.error("Erro ao salvar usuário:", error.message);
   return !error;
 }
 
@@ -138,7 +137,6 @@ export async function removeUser(id: string) {
 
 export async function saveReseller(reseller: Reseller) {
   const { error } = await supabase.from('resellers').upsert(reseller);
-  if (error) console.error("Erro ao salvar revenda:", error.message);
   return !error;
 }
 
@@ -148,14 +146,10 @@ export async function saveReseller(reseller: Reseller) {
  */
 export async function removeReseller(id: string) {
   try {
-    // 1. Limpa os usuários vinculados
     await supabase.from('users').delete().eq('resellerId', id);
-    // 2. Apaga o revendedor
     const { error } = await supabase.from('resellers').delete().eq('id', id);
-    if (error) console.error("Erro ao excluir revenda:", error.message);
     return !error;
   } catch (err) {
-    console.error("Falha fatal na exclusão:", err);
     return false;
   }
 }
@@ -261,7 +255,12 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === pin);
   
-  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU EXPIRADO";
+  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
+
+  const now = new Date();
+  if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
+    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE COM SEU REVENDEDOR";
+  }
 
   const content = await getRemoteContent();
   let m3u = "#EXTM3U\n";
