@@ -168,7 +168,7 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    await supabase.from('users').delete().eq('resellerId', id);
+    const { error: usersError } = await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
@@ -276,29 +276,32 @@ export async function validateResellerLogin(username: string, pass: string) {
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
-  const users = await fetchAllRecords('users');
-  const user = users.find(u => u.pin === pin);
+  const { data: userData } = await supabase.from('users').select('*').eq('pin', pin).single();
   
-  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO";
+  if (!userData || userData.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
 
   const now = new Date();
-  if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO";
+  if (userData.expiryDate && new Date(userData.expiryDate) < now && userData.subscriptionTier !== 'lifetime') {
+    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE SEU PIN";
   }
 
-  const content = await fetchAllRecords('content', 'title');
+  const { data: contentData } = await supabase.from('content').select('*').order('title');
+  if (!contentData) return "#EXTM3U\n#EXTINF:-1,BIBLIOTECA VAZIA";
+
   let m3u = "#EXTM3U\n";
 
-  content.forEach(item => {
+  contentData.forEach(item => {
     if (item.type === 'channel' || item.type === 'movie') {
       const streamUrl = item.streamUrl || "";
+      if (!streamUrl) return;
       const title = item.title.toUpperCase();
       const category = (item.genre || "GERAL").toUpperCase();
       const logo = item.imageUrl || "";
       m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
     } else if ((item.type === 'series' || item.type === 'multi-season') && item.episodes) {
       item.episodes.forEach((ep: Episode) => {
-        m3u += `#EXTINF:-1 group-title="${item.title.toUpperCase()}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
+        if (!ep.streamUrl) return;
+        m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ""}" group-title="${item.title.toUpperCase()}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
       });
     }
   });

@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Mic, Search, Loader2, X } from "lucide-react"
+import { Mic, Search, Loader2, X, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
@@ -23,7 +24,7 @@ function VoiceSearchContent() {
     const params = new URLSearchParams(window.location.search)
     if (value) params.set('q', value)
     else params.delete('q')
-    // Substituição imediata na URL para filtro em tempo real sem recarregar
+    // Substituição ultra rápida na URL
     router.replace(`?${params.toString()}`, { scroll: false })
   }, [router])
 
@@ -45,7 +46,7 @@ function VoiceSearchContent() {
 
     recognition.onstart = () => {
       setIsListening(true)
-      toast({ title: "Ouvindo...", description: "Fale o canal desejado." })
+      toast({ title: "Ouvindo...", description: "Fale o canal ou filme desejado." })
     }
 
     recognition.onresult = async (event: any) => {
@@ -55,6 +56,7 @@ function VoiceSearchContent() {
       try {
         const result = await voiceSearchContent({ query: transcript })
         triggerSearch(result.searchTerm)
+        toast({ title: "Sintonizando...", description: `Buscando por: ${result.searchTerm}` })
       } catch (e) {
         triggerSearch(transcript)
       } finally {
@@ -72,7 +74,7 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busca Instantânea Master..."
+          placeholder="Busca Instantânea Turbo..."
           className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest"
           value={query}
           onChange={handleInputChange}
@@ -92,7 +94,7 @@ function VoiceSearchContent() {
       <Button
         variant={isListening ? "destructive" : "secondary"}
         size="icon"
-        className={`rounded-xl h-10 w-10 border border-white/5 ${isListening ? "animate-pulse scale-110" : "hover:bg-primary/10"}`}
+        className={`rounded-xl h-10 w-10 border border-white/5 shadow-lg ${isListening ? "animate-pulse scale-110 bg-destructive text-white" : "hover:bg-primary/10"}`}
         onClick={startListening}
       >
         <Mic className={`h-5 w-5 ${isListening ? "text-white" : "text-primary"}`} />

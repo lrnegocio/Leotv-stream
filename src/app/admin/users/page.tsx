@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, ShieldAlert } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, ShieldAlert, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -111,6 +112,14 @@ export default function UserManagementPage() {
       screens: user.maxScreens.toString()
     })
     setIsDialogOpen(true)
+  }
+
+  const sendWhatsAppAccess = (user: User) => {
+    const baseUrl = window.location.origin;
+    const msg = getBeautifulMessage(user.pin, user.subscriptionTier, baseUrl, user.maxScreens);
+    const encodedMsg = encodeURIComponent(msg);
+    const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+    window.open(waUrl, '_blank');
   }
 
   const filteredUsers = users.filter(u => 
@@ -230,6 +239,9 @@ export default function UserManagementPage() {
                       </TableCell>
                       <TableCell className="text-right px-8">
                         <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar WhatsApp">
+                             <Send className="h-5 w-5" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} title={u.isBlocked ? "Reativar Sinal" : "Suspender Sinal"}>
                             {u.isBlocked ? <UserCheck className="h-5 w-5 text-green-400" /> : <UserX className="h-5 w-5 text-destructive" />}
                           </Button>

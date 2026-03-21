@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv, Play } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv, Play, SkipBack, SkipForward } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -33,7 +33,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     // BLINDAGEM ADULTA: Converte link do xvideos em player limpo
     if (targetUrl.includes('xvideos.com/video')) {
-      // Pega o ID entre 'video.' ou 'video-' e a próxima barra
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
       if (videoId) {
         return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1`;
@@ -95,11 +94,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <h3 className="text-lg font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <h3 className="text-lg font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
+            </div>
           </div>
         </div>
+
+        {/* SETAS DE NAVEGAÇÃO MASTER */}
+        <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
+          <Button variant="ghost" size="icon" onClick={onPrev} className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}>
+            <SkipBack className="h-6 w-6" />
+          </Button>
+        </div>
+        <div className="absolute inset-y-0 right-0 flex items-center pr-6 z-50">
+          <Button variant="ghost" size="icon" onClick={onNext} className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}>
+            <SkipForward className="h-6 w-6" />
+          </Button>
+        </div>
+
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-10 px-4 text-[9px] font-black rounded-xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
             <ExternalLink className="mr-2 h-3 w-3" /> ABRIR EXTERNO
