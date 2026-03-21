@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -22,7 +21,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 3000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 2000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -31,7 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
 
-    // BLINDAGEM ADULTA: Converte link do xvideos em player limpo
+    // Conversão Master Xvideos
     if (targetUrl.includes('xvideos.com/video')) {
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
       if (videoId) {
@@ -102,14 +101,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
 
-        {/* SETAS DE NAVEGAÇÃO MASTER */}
+        {/* SETAS DE NAVEGAÇÃO MASTER RESTAURADAS */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
-          <Button variant="ghost" size="icon" onClick={onPrev} className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
+            className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}
+          >
             <SkipBack className="h-6 w-6" />
           </Button>
         </div>
         <div className="absolute inset-y-0 right-0 flex items-center pr-6 z-50">
-          <Button variant="ghost" size="icon" onClick={onNext} className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
+            className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}
+          >
             <SkipForward className="h-6 w-6" />
           </Button>
         </div>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -24,7 +23,6 @@ function VoiceSearchContent() {
     const params = new URLSearchParams(window.location.search)
     if (value) params.set('q', value)
     else params.delete('q')
-    // Substituição ultra rápida na URL
     router.replace(`?${params.toString()}`, { scroll: false })
   }, [router])
 
@@ -56,7 +54,6 @@ function VoiceSearchContent() {
       try {
         const result = await voiceSearchContent({ query: transcript })
         triggerSearch(result.searchTerm)
-        toast({ title: "Sintonizando...", description: `Buscando por: ${result.searchTerm}` })
       } catch (e) {
         triggerSearch(transcript)
       } finally {
@@ -74,7 +71,7 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busca Instantânea Turbo..."
+          placeholder="Busca Instantânea Master..."
           className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest"
           value={query}
           onChange={handleInputChange}

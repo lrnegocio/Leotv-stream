@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -276,7 +275,7 @@ export async function validateResellerLogin(username: string, pass: string) {
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
-  const { data: userData } = await supabase.from('users').select('*').eq('pin', pin).single();
+  const { data: userData, error: userError } = await supabase.from('users').select('*').eq('pin', pin).single();
   
   if (!userData || userData.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
 
@@ -301,7 +300,8 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     } else if ((item.type === 'series' || item.type === 'multi-season') && item.episodes) {
       item.episodes.forEach((ep: Episode) => {
         if (!ep.streamUrl) return;
-        m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ""}" group-title="${item.title.toUpperCase()}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
+        const category = item.title.toUpperCase();
+        m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ""}" group-title="${category}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
       });
     }
   });
