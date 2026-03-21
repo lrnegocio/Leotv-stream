@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -34,7 +33,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar lista." })
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar lista de acessos." })
     } finally {
       setLoading(false)
     }
@@ -63,23 +62,23 @@ export default function UserManagementPage() {
       pin: newUser.pin,
       role: 'user',
       subscriptionTier: newUser.tier,
-      expiryDate: editingUser?.expiryDate,
-      maxScreens: parseInt(newUser.screens),
+      expiryDate: editingUser?.expiryDate || "",
+      maxScreens: parseInt(newUser.screens) || 1,
       activeDevices: editingUser?.activeDevices || [],
       isBlocked: editingUser?.isBlocked || false,
-      activatedAt: editingUser?.activatedAt
+      activatedAt: editingUser?.activatedAt || ""
     }
 
     const success = await saveUser(userData)
     
     if (success) {
-      toast({ title: "PIN Salvo", description: "Atualizado com sucesso." })
+      toast({ title: "PIN SALVO", description: "Configurações aplicadas com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
       setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao salvar." })
+      toast({ variant: "destructive", title: "Erro de Gravação", description: "Verifique seu banco Supabase." })
     }
     setIsSaving(false)
   }
@@ -88,16 +87,16 @@ export default function UserManagementPage() {
     const updated = { ...user, isBlocked: !user.isBlocked }
     const success = await saveUser(updated)
     if (success) {
-      toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Ativo" })
+      toast({ title: updated.isBlocked ? "Acesso Suspenso" : "Acesso Reativado" })
       loadUsers()
     }
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm("Remover este acesso permanentemente?")) {
+    if (confirm("ATENÇÃO: Deseja realmente excluir este acesso?")) {
       const success = await removeUser(userId)
       if (success) {
-        toast({ title: "Removido" })
+        toast({ title: "Excluído com Sucesso" })
         loadUsers()
       }
     }
@@ -122,99 +121,99 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Controle de Acessos e Testes</p>
+          <h1 className="text-3xl font-bold font-headline uppercase italic text-primary tracking-tighter">Gerenciar Clientes</h1>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic">Controle de PINs e Ativações Master</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
           if (!open) { setEditingUserId(null); setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" }); }
         }}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs" onClick={() => handleGeneratePin()}>
-              <Plus className="mr-2 h-4 w-4" /> Novo PIN
+            <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs h-12 rounded-xl px-6">
+              <Plus className="mr-2 h-4 w-4" /> Gerar Novo PIN
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
+          <DialogContent className="sm:max-w-[425px] bg-card border-white/10 rounded-3xl">
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold uppercase italic text-primary">Configurar Acesso</DialogTitle>
+              <DialogTitle className="text-lg font-bold uppercase italic text-primary">Configuração de Acesso</DialogTitle>
               <DialogDescription className="sr-only">Formulário de PIN</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN</Label>
+                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN (6 Dígitos)</Label>
                 <div className="flex gap-2">
-                  <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14" />
-                  <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 h-14">
+                  <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
+                  <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 h-14 rounded-xl">
                     <RefreshCcw className="h-4 w-4 text-primary" />
                   </Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label className="uppercase text-[10px] font-bold opacity-70">Plano</Label>
+                  <Label className="uppercase text-[10px] font-bold opacity-70">Tipo de Plano</Label>
                   <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
-                    <SelectTrigger className="bg-black/40 border-white/5"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-black/40 border-white/5 h-12 rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="test">Teste Grátis (6h)</SelectItem>
                       <SelectItem value="monthly">Mensal (30 dias)</SelectItem>
-                      <SelectItem value="lifetime">Vitalício</SelectItem>
+                      <SelectItem value="lifetime">Vitalício (Eterno)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label className="uppercase text-[10px] font-bold opacity-70">Telas</Label>
-                  <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5" />
+                  <Label className="uppercase text-[10px] font-bold opacity-70">Telas Simultâneas</Label>
+                  <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5 h-12 rounded-xl" />
                 </div>
               </div>
               {newUser.tier === 'test' && (
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex gap-3">
                   <ShieldAlert className="h-5 w-5 text-emerald-500 shrink-0" />
-                  <p className="text-[9px] font-bold uppercase text-emerald-500">O teste será ativado no 1º login e valerá por 6 horas. Bloqueio automático por aparelho ativado.</p>
+                  <p className="text-[9px] font-bold uppercase text-emerald-500">O teste ativa no 1º login e dura 6 horas. Bloqueio automático por aparelho.</p>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button onClick={handleSaveUser} className="w-full font-black uppercase h-14 bg-primary text-lg" disabled={isSaving}>
-                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SALVAR ACESSO'}
+              <Button onClick={handleSaveUser} className="w-full font-black uppercase h-14 bg-primary text-lg rounded-2xl" disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'CONFIRMAR E SALVAR'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="BUSCAR PIN..." className="pl-10 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      <div className="relative group">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <Input placeholder="BUSCAR PIN POR CÓDIGO..." className="pl-12 bg-card/50 border-white/5 h-14 uppercase font-bold text-xs rounded-2xl" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
       ) : (
-        <div className="bg-card/30 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="bg-card/30 border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl">
           <Table>
             <TableHeader className="bg-black/20">
-              <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="uppercase text-[10px] font-black text-primary">PIN</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
+              <TableRow className="border-white/5 hover:bg-transparent h-14">
+                <TableHead className="uppercase text-[10px] font-black text-primary px-8">CÓDIGO PIN</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">NÍVEL DE PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
-                <TableHead className="text-right uppercase text-[10px] font-black">AÇÕES</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">STATUS ATUAL</TableHead>
+                <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES RÁPIDAS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-30">Vazio.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase text-xs">Nenhum cliente localizado.</TableCell></TableRow>
               ) : (
                 filteredUsers.map((u) => {
                   const now = new Date();
-                  const isExpired = u.expiryDate && new Date(u.expiryDate) < now;
+                  const isExpired = u.expiryDate && new Date(u.expiryDate) < now && u.subscriptionTier !== 'lifetime';
                   
                   return (
-                    <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors">
-                      <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{u.pin}</TableCell>
+                    <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-20">
+                      <TableCell className="font-mono font-black text-xl text-primary tracking-[0.2em] px-8">{u.pin}</TableCell>
                       <TableCell>
-                        <Badge variant={u.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
-                          {u.subscriptionTier === 'test' ? 'TESTE 6H' : u.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
+                        <Badge variant={u.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-black px-3 py-1 rounded-full">
+                          {u.subscriptionTier === 'test' ? 'TESTE 6H' : u.subscriptionTier === 'monthly' ? 'MENSAL' : 'VITALÍCIO'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-[10px] font-bold uppercase opacity-60">
@@ -222,20 +221,20 @@ export default function UserManagementPage() {
                       </TableCell>
                       <TableCell>
                         {u.isBlocked ? (
-                          <Badge variant="destructive" className="uppercase text-[9px]">SUSPENSO</Badge>
+                          <Badge variant="destructive" className="uppercase text-[9px] font-black">SUSPENSO</Badge>
                         ) : isExpired ? (
-                          <Badge variant="destructive" className="uppercase text-[9px] bg-red-600 border-red-600">EXPIRADO</Badge>
+                          <Badge variant="destructive" className="uppercase text-[9px] font-black bg-orange-600 border-orange-600">EXPIRADO</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
+                          <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px] font-black">SINAL ATIVO</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)}>
-                            {u.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
+                      <TableCell className="text-right px-8">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} title={u.isBlocked ? "Reativar Sinal" : "Suspender Sinal"}>
+                            {u.isBlocked ? <UserCheck className="h-5 w-5 text-green-400" /> : <UserX className="h-5 w-5 text-destructive" />}
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u.id)} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
