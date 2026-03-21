@@ -105,6 +105,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 export async function saveContent(item: ContentItem) {
+  // BLINDAGEM DE SÉRIES: Garante que os campos complexos sejam passados
   const { error } = await supabase.from('content').upsert(item);
   return !error;
 }
@@ -199,7 +200,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 
 /**
  * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE (VINCULAÇÃO DE APARELHO)
- * PIN agora se casa com os aparelhos que logam primeiro. Excedeu as telas? BLOQUEIA TUDO.
+ * O PIN se casa com o aparelho. Excedeu as telas em novo aparelho? BLOQUEIA TUDO.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
@@ -258,9 +259,7 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const users = await getRemoteUsers();
   const user = users.find(u => u.id === userId);
   if (!user) return false;
-  
-  // No Hardware Binding estrito, não removemos o dispositivo no logout, apenas registramos a saída
-  // Para liberar vaga para outro aparelho, você deve limpar no Admin.
+  const now = new Date();
   user.activeDevices = (user.activeDevices || []).map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   return await saveUser(user);
 }

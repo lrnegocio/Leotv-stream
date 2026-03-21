@@ -55,9 +55,9 @@ export default function EditContentPage() {
     }
     
     if (seasonId) {
-      setSeasons(seasons.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
+      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
     } else {
-      setEpisodes([...episodes, newEp])
+      setEpisodes(prev => [...prev, newEp])
     }
   }
 
@@ -67,7 +67,7 @@ export default function EditContentPage() {
       number: seasons.length + 1,
       episodes: []
     }
-    setSeasons([...seasons, newSeason])
+    setSeasons(prev => [...prev, newSeason])
   }
 
   const generateAI = async () => {
@@ -89,11 +89,15 @@ export default function EditContentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    
+    // BLINDAGEM DE SÉRIES: Garante que episodes/seasons sejam salvos e streamUrl seja limpo para séries
     await saveContent({
       ...formData,
+      streamUrl: (formData.type === 'channel' || formData.type === 'movie') ? formData.streamUrl : undefined,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
     })
+    
     toast({ title: "Atualizado", description: "Conteúdo salvo com sucesso." })
     router.push("/admin/content")
   }
@@ -183,7 +187,7 @@ export default function EditContentPage() {
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-9 bg-black/40 border-white/5 font-mono text-xs flex-1" />
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setEpisodes(episodes.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
@@ -206,7 +210,7 @@ export default function EditContentPage() {
                     {season.episodes.map((ep, eIdx) => (
                       <div key={ep.id} className="flex gap-2 items-center">
                         <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
-                        <Input placeholder={`Link Ep ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                        <Input placeholder={`Link do Ep ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);

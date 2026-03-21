@@ -45,9 +45,9 @@ function NewContentForm() {
     }
     
     if (seasonId) {
-      setSeasons(seasons.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
+      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
     } else {
-      setEpisodes([...episodes, newEp])
+      setEpisodes(prev => [...prev, newEp])
     }
   }
 
@@ -57,7 +57,7 @@ function NewContentForm() {
       number: seasons.length + 1,
       episodes: []
     }
-    setSeasons([...seasons, newSeason])
+    setSeasons(prev => [...prev, newSeason])
   }
 
   const generateAI = async () => {
@@ -105,9 +105,11 @@ function NewContentForm() {
     
     const newId = "canal_" + Date.now() + "_" + Math.random().toString(36).substring(2, 12);
 
+    // BLINDAGEM DE SÉRIES: Limpa streamUrl global se for série e injeta episódios
     await saveContent({
       id: newId,
       ...formData,
+      streamUrl: (formData.type === 'channel' || formData.type === 'movie') ? formData.streamUrl : undefined,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
     })
@@ -116,7 +118,6 @@ function NewContentForm() {
     router.push("/admin/content")
   }
 
-  const isStreamRequired = formData.type === 'channel' || formData.type === 'movie';
   const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
 
   return (
@@ -186,7 +187,7 @@ function NewContentForm() {
                 value={formData.streamUrl} 
                 onChange={e => setFormData({...formData, streamUrl: e.target.value})}
                 placeholder="https://sua-stream.m3u8" 
-                required={isStreamRequired}
+                required
                 className="h-12 bg-black/40 border-white/5 font-mono text-xs"
               />
             </div>
@@ -217,7 +218,7 @@ function NewContentForm() {
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-9 bg-black/40 border-white/5 font-mono text-xs" /></div>
-                    <Button variant="ghost" size="icon" className="text-destructive h-9" onClick={() => setEpisodes(episodes.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="text-destructive h-9" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
