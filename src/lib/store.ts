@@ -61,7 +61,7 @@ export interface Reseller {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v56.0
+ * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v57.0
  * Varre o Supabase em blocos de 1000 canais de forma sequencial para evitar Timeout na Vercel.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
@@ -130,7 +130,7 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  // Envio explícito de campos para garantir compatibilidade com o banco
+  // Envio explícito e blindado de campos para garantir compatibilidade com o banco
   const dataToSave = {
     id: reseller.id,
     name: reseller.name,
@@ -141,13 +141,18 @@ export async function saveReseller(reseller: Reseller) {
     phone: reseller.phone,
     email: reseller.email,
     credits: reseller.credits,
-    totalSold: reseller.totalSold,
-    isBlocked: reseller.isBlocked
+    totalSold: reseller.totalSold || 0,
+    isBlocked: reseller.isBlocked || false
   };
 
   const { error } = await supabase.from('resellers').upsert(dataToSave);
+  
   if (error) {
     console.error("Erro fatal ao salvar revenda:", error.message);
+    // Se o erro for de coluna ausente, avisar o mestre léo
+    if (error.message.includes('column') && error.message.includes('not found')) {
+      alert("ATENÇÃO MESTRE LÉO: Você precisa rodar o comando SQL no Supabase para criar a coluna de BLOQUEIO!");
+    }
     return false;
   }
   return true;
@@ -165,7 +170,6 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Login Master Léo
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: { 
@@ -186,14 +190,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!user) return { error: "CÓDIGO PIN INVÁLIDO." };
   if (user.isBlocked) return { error: "ACESSO SUSPENSO PELO ADMIN." };
 
-  // Verifica se o revendedor deste PIN está bloqueado
   if (user.resellerId) {
     const resellers = await getRemoteResellers();
     const res = resellers.find(r => r.id === user.resellerId);
     if (res?.isBlocked) return { error: "SINAL TEMPORARIAMENTE INDISPONÍVEL (REVENDA)." };
   }
 
-  // Lógica Anti-Fraude de Aparelho (Teste 6h)
   if (user.subscriptionTier === 'test' && !user.activatedAt) {
     const alreadyUsed = users.some(u => 
       u.subscriptionTier === 'test' && 
@@ -214,7 +216,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
   }
 
-  // Ativação Mensal Automática
   if (user.subscriptionTier === 'monthly' && !user.activatedAt) {
     user.activatedAt = new Date().toISOString();
     user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -222,7 +223,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
   }
 
-  // Verificação de Expiração em Tempo Real
   if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
     user.isBlocked = true;
     await saveUser(user);

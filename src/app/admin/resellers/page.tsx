@@ -29,13 +29,22 @@ export default function ResellersPage() {
   React.useEffect(() => { load() }, [load])
 
   const toggleBlock = async (res: Reseller) => {
-    const updated = { ...res, isBlocked: !res.isBlocked }
+    const updated: Reseller = { 
+      ...res, 
+      isBlocked: !res.isBlocked 
+    }
+    
     const success = await saveReseller(updated)
+    
     if (success) {
       toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
-      load()
+      await load() // Recarrega a lista para garantir a visualização correta
     } else {
-      toast({ variant: "destructive", title: "Erro no Banco", description: "A coluna 'isBlocked' existe no Supabase?" })
+      toast({ 
+        variant: "destructive", 
+        title: "Erro no Banco", 
+        description: "Você rodou o comando SQL para adicionar a coluna 'isBlocked'?" 
+      })
     }
   }
 
@@ -45,9 +54,9 @@ export default function ResellersPage() {
         const success = await removeReseller(id)
         if (success) {
           toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
-          load()
+          await load()
         } else {
-          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Tabela 'resellers' existe no Supabase?" })
+          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Falha ao remover no Supabase." })
         }
       } catch (err) {
         toast({ variant: "destructive", title: "Erro Fatal", description: "Falha na conexão com o servidor." })
