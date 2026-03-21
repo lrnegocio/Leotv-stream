@@ -75,7 +75,11 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) break;
+      if (error) {
+        console.error(`Erro ao buscar bloco ${from} da tabela ${table}:`, error);
+        break;
+      }
+      
       if (data && data.length > 0) {
         allData = [...allData, ...data];
         if (data.length < step) finished = true;
@@ -85,13 +89,13 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
       }
     }
   } catch (e) {
-    console.error(`Erro na busca da tabela ${table}:`, e);
+    console.error(`Erro fatal na busca da tabela ${table}:`, e);
   }
   return allData;
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  // Retorna canais em ordem alfabética (A-Z)
+  // Retorna canais em ordem alfabética (A-Z) para organização master
   return await fetchAllRecords('content', 'title');
 }
 
@@ -124,7 +128,14 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  const { error } = await supabase.from('resellers').upsert(reseller);
+  // Garante campos numéricos antes de salvar para evitar erro de tipo no Postgres
+  const sanitized = {
+    ...reseller,
+    credits: Number(reseller.credits) || 0,
+    totalSold: Number(reseller.totalSold) || 0
+  };
+  const { error } = await supabase.from('resellers').upsert(sanitized);
+  if (error) console.error("Erro ao salvar revendedor:", error);
   return !error;
 }
 
@@ -136,7 +147,7 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // LOGIN MASTER ADMIN
+  // LOGIN MASTER ADMIN (SINAL IMUNE)
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: {
@@ -155,11 +166,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
-  if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
+  if (user.isBlocked) return { error: "ACESSO SUSPENSO POR SEGURANÇA." };
 
   // LÓGICA DE TESTE GRÁTIS (6 HORAS) COM ANTI-FRAUDE DE DISPOSITIVO
   if (user.subscriptionTier === 'test') {
-    // ANTI-FRAUDE: Verifica se este aparelho já usou OUTRO teste grátis antes
+    // ANTI-FRAUDE: Verifica se este aparelho já usou OUTRO teste grátis antes na base
     const alreadyUsedATest = users.some(u => 
       u.subscriptionTier === 'test' && 
       u.pin !== normalizedPin && 
@@ -170,7 +181,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);
-      return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS. ADQUIRA UM PLANO." };
+      return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS. ADQUIRA UM PLANO MENSAL." };
     }
 
     // Ativação do Teste no 1º Uso
@@ -183,7 +194,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   }
 
   // Lógica de Ativação Master para Vendas (30 dias)
-  // Se for venda (monthly), libera mesmo que tenha usado teste antes
+  // Se for venda (monthly), libera o aparelho mesmo que ele tenha usado teste antes
   if (!user.activatedAt && (user.subscriptionTier === 'monthly')) {
     user.activatedAt = new Date().toISOString();
     user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -193,16 +204,18 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
 
-  // Verifica expiração
+  // Verifica expiração em tempo real
   if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "ACESSO EXPIRADO. CONTATE SEU REVENDEDOR." };
+    user.isBlocked = true;
+    await saveUser(user);
+    return { error: "ACESSO EXPIRADO. CONTATE SEU REVENDEDOR PARA RENOVAR." };
   }
 
-  // Controle de Telas
+  // Controle de Telas Simultâneas
   const deviceList = user.activeDevices || [];
   if (!deviceList.includes(deviceId)) {
     if (deviceList.length >= user.maxScreens && !isImmune) {
-      return { error: "LIMITE DE TELAS EXCEDIDO." };
+      return { error: "LIMITE DE TELAS EXCEDIDO. DESCONECTE OUTRO APARELHO." };
     }
     user.activeDevices = [...deviceList, deviceId];
     await saveUser(user);

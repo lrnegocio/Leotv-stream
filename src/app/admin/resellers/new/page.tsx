@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Save, Loader2, UserPlus } from "lucide-react"
+import { ChevronLeft, Save, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,19 +28,24 @@ export default function NewResellerPage() {
     setLoading(true)
     
     const newReseller: Reseller = {
-      id: "rev_" + Date.now(),
+      id: "rev_" + Date.now() + Math.random().toString(36).substring(7),
       ...formData,
       totalSold: 0
     }
 
-    const success = await saveReseller(newReseller)
-    if (success) {
-      toast({ title: "Revendedor Cadastrado", description: "Parceiro adicionado com sucesso." })
-      router.push("/admin/resellers")
-    } else {
-      toast({ variant: "destructive", title: "Erro ao salvar" })
+    try {
+      const success = await saveReseller(newReseller)
+      if (success) {
+        toast({ title: "PARCEIRO CADASTRADO", description: "O revendedor foi salvo e o estoque liberado." })
+        router.push("/admin/resellers")
+      } else {
+        toast({ variant: "destructive", title: "ERRO DE SISTEMA", description: "Verifique se a tabela 'resellers' existe e se o RLS está desativado." })
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "ERRO FATAL", description: "Falha na conexão com o Supabase." })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -49,17 +54,18 @@ export default function NewResellerPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/resellers"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-bold font-headline uppercase">Novo Parceiro</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic">Novo Parceiro Master</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-6 p-8 bg-card/50 border border-white/5 rounded-3xl shadow-2xl">
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2 col-span-2">
-            <Label className="uppercase text-[10px] font-black opacity-60">Nome Completo</Label>
+            <Label className="uppercase text-[10px] font-black opacity-60">Nome Completo do Revendedor</Label>
             <Input 
               value={formData.name} 
               onChange={e => setFormData({...formData, name: e.target.value})} 
-              className="h-12 bg-black/40 border-white/5 font-bold" 
+              className="h-12 bg-black/40 border-white/5 font-bold uppercase" 
+              placeholder="NOME DO PARCEIRO"
               required 
             />
           </div>
@@ -84,7 +90,7 @@ export default function NewResellerPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label className="uppercase text-[10px] font-black opacity-60">Telefone Contato</Label>
+            <Label className="uppercase text-[10px] font-black opacity-60">WhatsApp para Contato</Label>
             <Input 
               value={formData.phone} 
               onChange={e => setFormData({...formData, phone: e.target.value})} 
@@ -94,30 +100,32 @@ export default function NewResellerPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label className="uppercase text-[10px] font-black opacity-60">E-mail</Label>
+            <Label className="uppercase text-[10px] font-black opacity-60">E-mail Oficial</Label>
             <Input 
               type="email"
               value={formData.email} 
               onChange={e => setFormData({...formData, email: e.target.value})} 
               className="h-12 bg-black/40 border-white/5 font-bold" 
+              placeholder="contato@parceiro.com"
               required 
             />
           </div>
           <div className="space-y-2 col-span-2">
-            <Label className="uppercase text-[10px] font-black text-primary">Carga Inicial de PINs (Créditos)</Label>
+            <Label className="uppercase text-[10px] font-black text-primary">Carga Inicial de Créditos (PINs Perpétuos)</Label>
             <Input 
               type="number"
               value={formData.credits} 
-              onChange={e => setFormData({...formData, credits: parseInt(e.target.value)})} 
+              onChange={e => setFormData({...formData, credits: parseInt(e.target.value) || 0})} 
               className="h-14 bg-primary/10 border-primary/20 text-center text-2xl font-black text-primary" 
               required 
             />
+            <p className="text-[9px] font-bold uppercase opacity-40 text-center">Os créditos não expiram enquanto não forem ativados por um cliente.</p>
           </div>
         </div>
 
         <Button type="submit" className="h-16 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-2xl mt-4" disabled={loading}>
           {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />}
-          CADASTRAR E GERAR CRÉDITOS
+          CADASTRAR E ABASTECER ESTOQUE
         </Button>
       </form>
     </div>

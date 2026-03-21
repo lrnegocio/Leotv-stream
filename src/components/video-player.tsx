@@ -29,7 +29,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 35.0 TURBO - AUTOPLAY TOTAL E EMBEDS BLINDADOS
+  // MOTOR DE SINAL MASTER 39.0 TURBO - AUTOPLAY TOTAL E EMBEDS BLINDADOS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
@@ -64,8 +64,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 5. Sinal Geral com Autoplay Forçado
-    // O mute=1 é essencial para que o navegador permita o autoplay sem interação do usuário
+    // 5. Sinal Geral com Autoplay Master
+    // O mute=1 e autoplay=1 são essenciais para que o navegador permita o início sem clique
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
