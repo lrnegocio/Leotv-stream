@@ -105,17 +105,20 @@ function NewContentForm() {
     
     const newId = "canal_" + Date.now() + "_" + Math.random().toString(36).substring(2, 12);
 
-    // BLINDAGEM DE SÉRIES: Limpa streamUrl global se for série e injeta episódios
-    await saveContent({
+    const success = await saveContent({
       id: newId,
       ...formData,
-      streamUrl: (formData.type === 'channel' || formData.type === 'movie') ? formData.streamUrl : undefined,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
     })
 
-    toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
-    router.push("/admin/content")
+    if (success) {
+      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
+      router.push("/admin/content")
+    } else {
+      setLoading(false)
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Certifique-se de que criou as colunas JSONB no Supabase." })
+    }
   }
 
   const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
@@ -145,9 +148,8 @@ function NewContentForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Tipo de Conteúdo</Label>
-                <div className="bg-black/40 rounded-md">
                 <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
-                  <SelectTrigger className="h-12 border-white/5 bg-transparent font-bold"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger className="h-12 border-white/5 bg-black/40 font-bold"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="channel">Canal ao Vivo</SelectItem>
                     <SelectItem value="movie">Filme Único</SelectItem>
@@ -155,7 +157,6 @@ function NewContentForm() {
                     <SelectItem value="multi-season">Série (Temporadas + Episódios)</SelectItem>
                   </SelectContent>
                 </Select>
-                </div>
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Categoria (Pasta)</Label>
@@ -172,11 +173,10 @@ function NewContentForm() {
               <div className="flex justify-between items-center">
                 <Label className="uppercase text-[10px] font-black opacity-60">Descrição / Sinopse</Label>
                 <Button type="button" variant="outline" size="sm" onClick={generateAI} disabled={generating} className="h-8 border-primary/20 text-primary">
-                  {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
-                  IA: Gerar Texto
+                  {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />} IA
                 </Button>
               </div>
-              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5 font-medium" />
+              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
             </div>
           </div>
 
@@ -194,7 +194,7 @@ function NewContentForm() {
           )}
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><LinkIcon className="h-4 w-4" /> URL da Capa (Manual)</h3>
+            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><LinkIcon className="h-4 w-4" /> URL da Capa</h3>
             <Input 
               value={formData.imageUrl} 
               onChange={e => setFormData({...formData, imageUrl: e.target.value})}
@@ -211,14 +211,14 @@ function NewContentForm() {
               </div>
               <div className="space-y-3">
                 {episodes.map((ep, idx) => (
-                  <div key={ep.id} className="flex gap-2 items-end bg-black/20 p-3 rounded-lg border border-white/5">
-                    <div className="w-16"><Label className="text-[8px] uppercase font-black opacity-50">Nº</Label><Input type="number" defaultValue={idx+1} className="h-9 bg-black/40 border-white/5" /></div>
-                    <div className="flex-1"><Label className="text-[8px] uppercase font-black opacity-50">Link do Episódio</Label><Input placeholder="URL" value={ep.streamUrl} onChange={e => {
+                  <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-3 rounded-lg border border-white/5">
+                    <span className="text-[10px] opacity-40">EP {idx + 1}</span>
+                    <Input placeholder="URL do Episódio" value={ep.streamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
-                    }} className="h-9 bg-black/40 border-white/5 font-mono text-xs" /></div>
-                    <Button variant="ghost" size="icon" className="text-destructive h-9" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                    }} className="h-9 bg-black/40 border-white/5 font-mono text-xs flex-1" />
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
@@ -240,8 +240,8 @@ function NewContentForm() {
                   <div className="space-y-2">
                     {season.episodes.map((ep, eIdx) => (
                       <div key={ep.id} className="flex gap-2 items-center">
-                         <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
-                        <Input placeholder={`Link do Episódio ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                        <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
+                        <Input placeholder={`URL do EP ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
@@ -262,28 +262,21 @@ function NewContentForm() {
 
         <div className="space-y-6">
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-            <h3 className="font-bold uppercase text-xs flex items-center gap-2 tracking-widest text-primary"><ImageIcon className="h-4 w-4" /> Capa do Conteúdo</h3>
+            <h3 className="font-bold uppercase text-xs flex items-center gap-2 tracking-widest text-primary"><ImageIcon className="h-4 w-4" /> Capa</h3>
             <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-dashed border-white/10 flex flex-col items-center justify-center group">
               {formData.imageUrl ? (
                 <>
                   <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateImage} disabled={generatingImage}>
-                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Regerar com IA"}
+                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Regerar"}
                     </Button>
                   </div>
                 </>
               ) : (
-                <div className="text-center p-6 space-y-4">
-                  <div className="mx-auto w-12 h-12 bg-white/5 rounded-full flex items-center justify-center">
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase opacity-40">Nenhuma capa definida</p>
-                  <Button type="button" onClick={handleGenerateImage} disabled={generatingImage} className="w-full bg-primary/20 text-primary hover:bg-primary/30 h-10 uppercase text-[9px] font-black">
-                    {generatingImage ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                    IA: Gerar Capa 4K
-                  </Button>
-                </div>
+                <Button type="button" onClick={handleGenerateImage} disabled={generatingImage} className="bg-primary/20 text-primary hover:bg-primary/30 h-10 uppercase text-[9px] font-black">
+                  {generatingImage ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />} IA: Gerar Capa
+                </Button>
               )}
             </div>
           </div>
@@ -291,20 +284,13 @@ function NewContentForm() {
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
             <h3 className="font-bold uppercase text-xs flex items-center gap-2"><Lock className="h-4 w-4" /> Segurança</h3>
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="uppercase text-[10px] font-black">Conteúdo Restrito</Label>
-                <p className="text-[8px] text-muted-foreground uppercase font-bold">Bloqueia com senha parental</p>
-              </div>
-              <Switch 
-                checked={formData.isRestricted} 
-                onCheckedChange={val => setFormData({...formData, isRestricted: val})} 
-              />
+              <Label className="uppercase text-[10px] font-black">Conteúdo Restrito</Label>
+              <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
             </div>
           </div>
 
-          <Button type="submit" className="w-full h-16 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] transition-transform" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />}
-            SALVAR NO SISTEMA
+          <Button type="submit" className="w-full h-16 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-2xl" disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} SALVAR
           </Button>
         </div>
       </form>

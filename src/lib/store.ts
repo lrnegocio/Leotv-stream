@@ -105,15 +105,22 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 export async function saveContent(item: ContentItem) {
-  // BLINDAGEM DE SALVAMENTO: Garante que os dados de episódios sejam enviados corretamente
+  // BLINDAGEM DE SALVAMENTO: Garante que os dados de episódios sejam enviados como arrays limpos
   const payload = {
     ...item,
-    episodes: item.type === 'series' ? item.episodes : null,
-    seasons: item.type === 'multi-season' ? item.seasons : null,
+    // Se for canal ou filme, remove as listas
+    episodes: (item.type === 'series') ? (item.episodes || []) : null,
+    seasons: (item.type === 'multi-season') ? (item.seasons || []) : null,
+    // Se for série, remove o link principal para não dar conflito
+    streamUrl: (item.type === 'channel' || item.type === 'movie') ? item.streamUrl : null,
   };
+  
   const { error } = await supabase.from('content').upsert(payload);
-  if (error) console.error("Erro ao salvar conteúdo:", error);
-  return !error;
+  if (error) {
+    console.error("Erro ao salvar conteúdo no Supabase:", error);
+    return false;
+  }
+  return true;
 }
 
 export async function removeContent(id: string) {
@@ -206,8 +213,8 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * VALIDAÇÃO DE LOGIN SIMULTÂNEO INTELIGENTE (SMART LOGIN)
- * Não bloqueia na troca de aparelho, apenas se usar MAIS telas do que comprou ao mesmo tempo.
+ * VALIDAÇÃO DE LOGIN POR HARDWARE BINDING (VÍNCULO DE APARELHO)
+ * O PIN se "casa" com o aparelho. Se exceder a quantidade de telas, bloqueia o PIN.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
@@ -228,27 +235,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
   }
 
-  // LÓGICA SMART LOGIN: Filtra aparelhos que deram sinal nos últimos 30 minutos
-  const devices = user.activeDevices || [];
-  const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000);
-  
-  const activeNow = devices.filter(d => new Date(d.lastActive) > thirtyMinsAgo);
-  const isThisDeviceActive = activeNow.some(d => d.id === deviceId);
+  // LÓGICA HARDWARE BINDING: O PIN salva os IDs dos aparelhos permanentemente
+  let devices = user.activeDevices || [];
+  const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
-  if (!isThisDeviceActive) {
-    // Se tentar adicionar um novo aparelho e já estourou o limite de telas simultâneas
-    if (activeNow.length >= user.maxScreens) {
-      // Bloqueio Preventivo Master
+  if (!isThisDeviceLinked) {
+    // Se for um aparelho NOVO e já atingiu o limite de telas vinculadas
+    if (devices.length >= user.maxScreens) {
+      // Bloqueio Master por tentativa de login em aparelho não autorizado
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE TELAS SIMULTÂNEAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
+      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
-    // Adiciona ou atualiza este aparelho na lista
-    const updatedDevices = [...devices.filter(d => d.id !== deviceId), { id: deviceId, lastActive: now.toISOString() }];
-    user.activeDevices = updatedDevices;
+    // Vincula este novo aparelho
+    devices.push({ id: deviceId, lastActive: now.toISOString() });
+    user.activeDevices = devices;
   } else {
-    // Apenas atualiza o timestamp de atividade
+    // Atualiza apenas a última atividade do aparelho já vinculado
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
@@ -271,9 +275,8 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const user = users.find(u => u.id === userId);
   if (!user) return false;
   
-  // Remove o aparelho da lista de ativos para liberar a vaga instantaneamente
-  user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
-  return await saveUser(user);
+  // O hardware binding é permanente. O logout apenas encerra a sessão visual.
+  return true; 
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
@@ -299,12 +302,18 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   let m3u = "#EXTM3U\n";
 
   content.forEach(item => {
-    const streamUrl = item.streamUrl || "";
-    const title = item.title.toUpperCase();
-    const category = (item.genre || "GERAL").toUpperCase();
-    const logo = item.imageUrl || "";
-
-    m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
+    // Só adiciona itens que tenham URL (canal/filme) ou episódios (série)
+    if (item.type === 'channel' || item.type === 'movie') {
+      const streamUrl = item.streamUrl || "";
+      const title = item.title.toUpperCase();
+      const category = (item.genre || "GERAL").toUpperCase();
+      const logo = item.imageUrl || "";
+      m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
+    } else if (item.type === 'series' && item.episodes) {
+      item.episodes.forEach((ep: Episode) => {
+        m3u += `#EXTINF:-1 group-title="${item.title.toUpperCase()}",${item.title.toUpperCase()} EP ${ep.number}\n${ep.streamUrl}\n`;
+      });
+    }
   });
 
   return m3u;
@@ -336,10 +345,10 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 
 🔑 *SEU PIN:* \`${pin}\`
 📅 *PLANO:* ${planoText}
-🖥️ *LIMITE:* ${screens} tela(s) simultâneas
+🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
 
 📺 *SERVIDOR SMART TV:* 
 ${playlistUrl}
 
-⚠️ _Nota: O bloqueio só ocorre se usar mais de ${screens} aparelhos ao mesmo tempo. Troca de aparelho é liberada._`;
+⚠️ _Nota: Este PIN ficará vinculado aos seus primeiros ${screens} aparelhos. O uso em outros causará bloqueio automático._`;
 }
