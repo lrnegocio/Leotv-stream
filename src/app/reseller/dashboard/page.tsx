@@ -110,7 +110,8 @@ export default function ResellerDashboard() {
   const sendAccess = (pin: string, tier: string, screens: number) => {
     const baseUrl = window.location.origin;
     const msg = getBeautifulMessage(pin, tier, baseUrl, screens);
-    const waUrl = `https://wa.me/?text=${msg}`;
+    const encodedMsg = encodeURIComponent(msg);
+    const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
     window.open(waUrl, '_blank');
   }
 

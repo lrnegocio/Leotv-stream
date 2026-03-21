@@ -60,7 +60,7 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // MONITOR DE EXPIRAÇÃO REAL-TIME
+  // MONITOR DE EXPIRAÇÃO REAL-TIME COM DESIGN AGRESSIVO
   React.useEffect(() => {
     const interval = setInterval(() => {
       if (!user?.expiryDate) return;
@@ -79,9 +79,10 @@ export default function HomeContent() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       
       if (user.subscriptionTier === 'lifetime') {
-        setTimeLeft("ACESSO VITALÍCIO");
+        setTimeLeft("ACESSO VITALÍCIO ATIVO");
       } else {
-        setTimeLeft(`${days}d ${hours}h ${minutes}m RESTANTES`);
+        const warning = diff < (1000 * 60 * 60 * 24) ? "RENOVE LOGO! " : "";
+        setTimeLeft(`${warning}${days}d ${hours}h ${minutes}m RESTANTES`);
       }
     }, 5000)
     return () => clearInterval(interval)
@@ -141,9 +142,9 @@ export default function HomeContent() {
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <div className="hidden lg:block">
             <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Master Elite</span>
-            <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-primary/20">
-               <Timer className="h-3 w-3 text-primary animate-pulse" />
-               <span className="text-[9px] font-black uppercase text-primary tracking-widest">{timeLeft}</span>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${timeLeft.includes("RENOVE") ? "bg-destructive/10 border-destructive text-destructive" : "bg-black/40 border-primary/20 text-primary"}`}>
+               <Timer className="h-3 w-3 animate-pulse" />
+               <span className="text-[9px] font-black uppercase tracking-widest">{timeLeft}</span>
             </div>
           </div>
         </div>

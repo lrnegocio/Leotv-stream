@@ -30,6 +30,11 @@ export interface ContentItem {
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
 
+export interface ActiveDevice {
+  id: string;
+  lastActive: string;
+}
+
 export interface User {
   id: string;
   pin: string; 
@@ -37,7 +42,7 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   expiryDate?: string; 
   maxScreens: number;
-  activeDevices: string[]; 
+  activeDevices: ActiveDevice[]; 
   isBlocked: boolean;
   resellerId?: string;
   activatedAt?: string;
@@ -137,7 +142,6 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // Primeiro remove usuários vinculados para evitar erro de Foreign Key
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -194,7 +198,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const normalizedPin = pin.trim();
   
   if (normalizedPin === 'adm77x2p') {
-    return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [deviceId], isBlocked: false } };
+    return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
   
   const users = await getRemoteUsers();
@@ -208,30 +212,41 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
   }
 
-  let activeDevices = user.activeDevices || [];
-  
-  // LOGIN DUPLO INTELIGENTE: Bloqueia apenas se exceder telas SIMULTÂNEAS
-  if (!activeDevices.includes(deviceId)) {
+  // LIMPEZA INTELIGENTE DE DISPOSITIVOS STALE (Inativos por mais de 30 minutos)
+  let activeDevices = (user.activeDevices || []).filter(device => {
+    const lastActive = new Date(device.lastActive);
+    const diffMinutes = (now.getTime() - lastActive.getTime()) / (1000 * 60);
+    return diffMinutes < 30 || device.id === deviceId; // Mantém se for o atual ou ativo nos últimos 30min
+  });
+
+  const isAlreadyRegistered = activeDevices.find(d => d.id === deviceId);
+
+  if (!isAlreadyRegistered) {
+    // Só bloqueia se realmente estiver excedendo as telas simultâneas ativas
     if (activeDevices.length >= user.maxScreens) {
       user.isBlocked = true;
-      user.blockedAt = new Date().toISOString();
+      user.blockedAt = now.toISOString();
       await saveUser(user);
       return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
-    activeDevices.push(deviceId);
-    user.activeDevices = activeDevices;
-    
-    if (!user.activatedAt) {
-      user.activatedAt = new Date().toISOString();
-      if (user.subscriptionTier === 'test') {
-        user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-      } else if (user.subscriptionTier === 'monthly') {
-        user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      }
-    }
-    await saveUser(user);
+    activeDevices.push({ id: deviceId, lastActive: now.toISOString() });
+  } else {
+    // Atualiza o timestamp do dispositivo atual
+    activeDevices = activeDevices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
 
+  user.activeDevices = activeDevices;
+  
+  if (!user.activatedAt) {
+    user.activatedAt = now.toISOString();
+    if (user.subscriptionTier === 'test') {
+      user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+    } else if (user.subscriptionTier === 'monthly') {
+      user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
+  }
+  
+  await saveUser(user);
   return { user };
 }
 
@@ -239,7 +254,7 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const users = await getRemoteUsers();
   const user = users.find(u => u.id === userId);
   if (user) {
-    user.activeDevices = (user.activeDevices || []).filter(id => id !== deviceId);
+    user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
     await saveUser(user);
   }
 }
@@ -253,7 +268,7 @@ export async function validateResellerLogin(username: string, pass: string) {
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
-  const users = await getRemoteUsers();
+  const users = await fetchAllRecords('users');
   const user = users.find(u => u.pin === pin);
   
   if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
@@ -263,7 +278,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE COM SEU REVENDEDOR";
   }
 
-  const content = await getRemoteContent();
+  const content = await fetchAllRecords('content', 'title');
   let m3u = "#EXTM3U\n";
 
   content.forEach(item => {
@@ -297,5 +312,16 @@ export const generateRandomPin = (length: number = 6) => {
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀%0A%0A🔑 *SEU PIN:* \`${pin}\`%0A📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias'}%0A🖥️ *TELAS:* ${screens} simultânea(s)%0A%0A📺 *SERVIDOR IPTV (SMART TV):* %0A${playlistUrl}%0A%0A📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
+  const planoText = tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias';
+  
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀
+
+🔑 *SEU PIN:* \`${pin}\`
+📅 *PLANO:* ${planoText}
+🖥️ *TELAS:* ${screens} simultânea(s)
+
+📺 *SERVIDOR IPTV (SMART TV):* 
+${playlistUrl}
+
+📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
 }
