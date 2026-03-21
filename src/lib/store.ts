@@ -61,10 +61,6 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-/**
- * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v62.0 Master
- * Varre o banco em blocos de 1.000 para carregar milhares de registros alfabeticamente.
- */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -137,9 +133,6 @@ export async function saveUser(user: User) {
   
   if (error) {
     console.error("Erro fatal ao salvar PIN/Usuário:", error.message);
-    if (error.message.includes('resellerId')) {
-      alert("ATENÇÃO MESTRE LÉO: Você precisa rodar o comando SQL no Supabase para criar a coluna de REVENDEDOR!");
-    }
   }
   return !error;
 }
@@ -168,16 +161,12 @@ export async function saveReseller(reseller: Reseller) {
   
   if (error) {
     console.error("Erro fatal ao salvar revenda:", error.message);
-    if (error.message.includes('isBlocked')) {
-      alert("ATENÇÃO MESTRE LÉO: Rode o comando SQL no Supabase para criar a coluna de BLOQUEIO!");
-    }
   }
   return !error;
 }
 
 export async function removeReseller(id: string) {
   try {
-    // Limpa os usuários antes de excluir a revenda (Integridade Master)
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -186,10 +175,6 @@ export async function removeReseller(id: string) {
   }
 }
 
-/**
- * RENOVAÇÃO ACUMULATIVA MASTER v62.0
- * Soma 30 dias ao tempo restante ou a partir de agora se expirado.
- */
 export async function renewUserSubscription(userId: string, resellerId: string) {
   const users = await getRemoteUsers();
   const user = users.find(u => u.id === userId);
@@ -202,7 +187,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
-  // Se o PIN já tem validade e ainda não expirou, somamos no tempo que resta (Acumulativo)
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
@@ -216,7 +200,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
     ...user,
     subscriptionTier: 'monthly',
     expiryDate: newExpiry.toISOString(),
-    isBlocked: false, // Desbloqueia automaticamente na renovação
+    isBlocked: false, 
     activatedAt: user.activatedAt || now.toISOString() 
   };
 
@@ -238,7 +222,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Acesso de Emergência Mestre
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [deviceId], isBlocked: false } };
   }
@@ -255,10 +238,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (res?.isBlocked) return { error: "SINAL SUSPENSO (REVENDA BLOQUEADA)." };
   }
 
-  // Lógica de Ativação e Anti-Fraude Master
   if (!user.activatedAt) {
     if (user.subscriptionTier === 'test') {
-      // Bloqueia reuso de teste grátis no mesmo equipamento
       const alreadyUsed = users.some(u => 
         u.subscriptionTier === 'test' && 
         u.pin !== normalizedPin && 
@@ -281,7 +262,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
   }
 
-  // Verificação de Expiração em Tempo Real
   if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
     return { error: "SINAL EXPIRADO. FALE COM SEU REVENDEDOR PARA RENOVAR." };
   }

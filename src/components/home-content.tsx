@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,7 +7,7 @@ import { LogOut, Tv, Play, Lock, Loader2, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, getGlobalSettings, ContentItem, User } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
@@ -105,6 +106,10 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-3xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{activeVideo.title}</DialogTitle>
+              <DialogDescription>Player de conteúdo em alta performance</DialogDescription>
+            </DialogHeader>
             <VideoPlayer url={activeVideo.streamUrl || ""} title={activeVideo.title} />
           </DialogContent>
         </Dialog>
