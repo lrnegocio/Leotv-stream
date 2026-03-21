@@ -105,8 +105,14 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 export async function saveContent(item: ContentItem) {
-  // BLINDAGEM DE SÉRIES: Garante que os campos complexos sejam passados
-  const { error } = await supabase.from('content').upsert(item);
+  // BLINDAGEM DE SALVAMENTO: Garante que os dados de episódios sejam enviados corretamente
+  const payload = {
+    ...item,
+    episodes: item.type === 'series' ? item.episodes : null,
+    seasons: item.type === 'multi-season' ? item.seasons : null,
+  };
+  const { error } = await supabase.from('content').upsert(payload);
+  if (error) console.error("Erro ao salvar conteúdo:", error);
   return !error;
 }
 
@@ -145,6 +151,7 @@ export async function saveReseller(reseller: Reseller) {
 export async function removeReseller(id: string) {
   try {
     // BLINDAGEM DE EXCLUSÃO PROFUNDA: Remove todos os usuários (PINs) vinculados ao revendedor antes de removê-lo
+    // Isso evita o erro 500 de Chave Estrangeira (Foreign Key Violation)
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -199,8 +206,8 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE (VINCULAÇÃO DE APARELHO)
- * O PIN se casa com o aparelho. Excedeu as telas em novo aparelho? BLOQUEIA TUDO.
+ * VALIDAÇÃO DE LOGIN SIMULTÂNEO INTELIGENTE (SMART LOGIN)
+ * Não bloqueia na troca de aparelho, apenas se usar MAIS telas do que comprou ao mesmo tempo.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
@@ -221,24 +228,28 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
   }
 
-  // BINDING DE HARDWARE: O PIN se casa permanentemente com os aparelhos que logam primeiro
-  const registeredDevices = user.activeDevices || [];
-  const isDeviceRegistered = registeredDevices.some(d => d.id === deviceId);
+  // LÓGICA SMART LOGIN: Filtra aparelhos que deram sinal nos últimos 30 minutos
+  const devices = user.activeDevices || [];
+  const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000);
+  
+  const activeNow = devices.filter(d => new Date(d.lastActive) > thirtyMinsAgo);
+  const isThisDeviceActive = activeNow.some(d => d.id === deviceId);
 
-  if (!isDeviceRegistered) {
-    if (registeredDevices.length >= user.maxScreens) {
-      // TENTATIVA DE LOGIN EM NOVO APARELHO SEM VAGAS -> BLOQUEIO PERMANENTE DO PIN
+  if (!isThisDeviceActive) {
+    // Se tentar adicionar um novo aparelho e já estourou o limite de telas simultâneas
+    if (activeNow.length >= user.maxScreens) {
+      // Bloqueio Preventivo Master
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
+      return { error: "LIMITE DE TELAS SIMULTÂNEAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
     }
-    // Vincula este aparelho permanentemente ao PIN
-    registeredDevices.push({ id: deviceId, lastActive: now.toISOString() });
-    user.activeDevices = registeredDevices;
+    // Adiciona ou atualiza este aparelho na lista
+    const updatedDevices = [...devices.filter(d => d.id !== deviceId), { id: deviceId, lastActive: now.toISOString() }];
+    user.activeDevices = updatedDevices;
   } else {
-    // Aparelho já vinculado, apenas atualiza atividade
-    user.activeDevices = registeredDevices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
+    // Apenas atualiza o timestamp de atividade
+    user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
   // Ativação no primeiro uso
@@ -259,8 +270,9 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const users = await getRemoteUsers();
   const user = users.find(u => u.id === userId);
   if (!user) return false;
-  const now = new Date();
-  user.activeDevices = (user.activeDevices || []).map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
+  
+  // Remove o aparelho da lista de ativos para liberar a vaga instantaneamente
+  user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
   return await saveUser(user);
 }
 
@@ -324,10 +336,10 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 
 🔑 *SEU PIN:* \`${pin}\`
 📅 *PLANO:* ${planoText}
-🖥️ *LIMITE:* ${screens} tela(s) vinculadas
+🖥️ *LIMITE:* ${screens} tela(s) simultâneas
 
-📺 *SERVIDORES PARA SMART TV:* 
+📺 *SERVIDOR SMART TV:* 
 ${playlistUrl}
 
-⚠️ _Nota: Este código foi vinculado permanentemente ao seu aparelho atual. Se tentar usar em outros sem ter telas disponíveis, o PIN será bloqueado automaticamente._`;
+⚠️ _Nota: O bloqueio só ocorre se usar mais de ${screens} aparelhos ao mesmo tempo. Troca de aparelho é liberada._`;
 }

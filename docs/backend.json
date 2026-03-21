@@ -6,12 +6,16 @@
       "description": "Filme, série ou canal de TV",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "title": { "type": "string", "description": "Nome do canal ou filme" },
         "type": { "type": "string", "enum": ["movie", "series", "multi-season", "channel"], "description": "Tipo de mídia" },
         "description": { "type": "string", "description": "Sinopse ou descrição" },
         "genre": { "type": "string", "description": "Categoria/Pasta" },
         "isRestricted": { "type": "boolean", "description": "Se requer senha parental" },
-        "streamUrl": { "type": "string", "description": "Link da stream m3u8 ou youtube" }
+        "streamUrl": { "type": "string", "description": "Link da stream m3u8 ou youtube" },
+        "imageUrl": { "type": "string", "description": "URL da capa" },
+        "episodes": { "type": "array", "description": "Lista de episódios para séries simples" },
+        "seasons": { "type": "array", "description": "Lista de temporadas para séries complexas" }
       },
       "required": ["title", "type", "genre"]
     },
@@ -20,12 +24,14 @@
       "description": "Perfil de acesso via PIN",
       "type": "object",
       "properties": {
-        "pin": { "type": "string", "description": "Código de acesso único" },
+        "pin": { "type": "string", "description": "Código de acesso único de 11 dígitos" },
         "role": { "type": "string", "enum": ["admin", "user"], "description": "Nível de acesso" },
         "subscriptionTier": { "type": "string", "enum": ["test", "monthly", "lifetime"], "description": "Tipo de plano" },
         "expiryDate": { "type": "string", "format": "date-time", "description": "Data de expiração" },
         "resellerId": { "type": "string", "description": "ID do revendedor que gerou o PIN" },
-        "activatedAt": { "type": "string", "format": "date-time", "description": "Data do primeiro login" }
+        "activatedAt": { "type": "string", "format": "date-time", "description": "Data do primeiro login" },
+        "maxScreens": { "type": "number", "description": "Limite de telas simultâneas" },
+        "isBlocked": { "type": "boolean" }
       },
       "required": ["pin", "role"]
     },
@@ -35,14 +41,14 @@
       "type": "object",
       "properties": {
         "name": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
         "cpf": { "type": "string" },
-        "birthDate": { "type": "string" },
-        "phone": { "type": "string" },
         "email": { "type": "string" },
-        "credits": { "type": "number", "description": "Quantidade de PINs disponíveis para gerar" },
-        "totalSold": { "type": "number", "description": "Total de PINs já vendidos" }
+        "credits": { "type": "number", "description": "Quantidade de PINs disponíveis" },
+        "totalSold": { "type": "number" }
       },
-      "required": ["name", "email", "cpf"]
+      "required": ["name", "username", "password"]
     }
   },
   "auth": {
