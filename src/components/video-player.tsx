@@ -22,9 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      // PERFORMANCE TURBO: Removido o delay artificial de 2.5s. 
-      // O carregamento agora depende apenas da velocidade da internet/servidor.
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 4000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 3000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -34,10 +32,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
 
     // BLINDAGEM ADULTA: Converte link do xvideos em player limpo
-    if (targetUrl.includes('xvideos.com/video.')) {
-      const parts = targetUrl.split('video.');
-      if (parts[1]) {
-        const videoId = parts[1].split('/')[0];
+    if (targetUrl.includes('xvideos.com/video')) {
+      // Pega o ID entre 'video.' ou 'video-' e a próxima barra
+      const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
+      if (videoId) {
         return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1`;
       }
     }
@@ -51,7 +49,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const connector = targetUrl.includes('?') ? '&' : '?'
-    // Adicionando parâmetros de performance e autoplay
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1&controls=1`
   }, [url])
 
@@ -62,7 +59,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic text-center px-8">
-          SINAL P2P NÃO DISPONÍVEL NESTE CONTEÚDO OU LINK INVÁLIDO
+          SINAL P2P NÃO DISPONÍVEL OU EPISÓDIO SEM LINK
         </span>
       </div>
     )
@@ -71,29 +68,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl">
       
-      {/* NAVEGAÇÃO MASTER */}
-      <div className="absolute inset-0 z-[1000] pointer-events-none flex items-center justify-between px-4 sm:px-12">
-        {onPrev && (
-          <button 
-            type="button"
-            className="h-12 w-12 sm:h-20 sm:w-20 rounded-full bg-black/40 hover:bg-primary text-white pointer-events-auto border border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center opacity-0 group-hover:opacity-100"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev(); }}
-          >
-            <ChevronLeft className="h-8 w-8 sm:h-12 sm:w-12" />
-          </button>
-        )}
-        
-        {onNext && (
-          <button 
-            type="button"
-            className="h-12 w-12 sm:h-20 sm:w-20 rounded-full bg-black/40 hover:bg-primary text-white pointer-events-auto border border-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-90 flex items-center justify-center opacity-0 group-hover:opacity-100"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext(); }}
-          >
-            <ChevronRight className="h-8 w-8 sm:h-12 sm:w-12" />
-          </button>
-        )}
-      </div>
-
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />

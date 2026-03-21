@@ -1,10 +1,11 @@
+
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2 } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, ListOrdered } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, removeContent, ContentItem } from "@/lib/store"
+import { getRemoteContent, removeContent, ContentItem, Episode } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -15,6 +16,7 @@ export default function ContentManagementPage() {
   const [items, setItems] = React.useState<ContentItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [previewItem, setPreviewItem] = React.useState<ContentItem | null>(null)
+  const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string} | null>(null)
 
   const loadItems = React.useCallback(async () => {
     setLoading(true)
@@ -44,6 +46,14 @@ export default function ContentManagementPage() {
     i.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
     i.genre.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handlePreview = (item: ContentItem) => {
+    if (item.type === 'series' || item.type === 'multi-season') {
+      setPreviewItem(item)
+    } else {
+      setActiveEpisode({ url: item.streamUrl || "", title: item.title })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -93,7 +103,7 @@ export default function ContentManagementPage() {
 
                 <div className="flex justify-between items-center pt-4 mt-4 border-t border-white/5">
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="hover:text-primary" onClick={() => setPreviewItem(item)}>
+                    <Button variant="ghost" size="icon" className="hover:text-primary" onClick={() => handlePreview(item)}>
                       <PlayCircle className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" asChild>
@@ -111,16 +121,48 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Player de Preview Único para Evitar Loops de Renderização */}
+      {/* Seletor de Episódios para Preview no Admin */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
-        <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle>{previewItem?.title}</DialogTitle>
-            <DialogDescription className="sr-only">Player de visualização de conteúdo</DialogDescription>
+        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="uppercase font-black italic text-primary">{previewItem?.title}</DialogTitle>
+            <DialogDescription className="uppercase text-[10px] font-bold opacity-60">Escolha um episódio para testar o sinal</DialogDescription>
           </DialogHeader>
-          {previewItem && (
+          <div className="grid sm:grid-cols-2 gap-3 mt-4 max-h-[400px] overflow-y-auto pr-2">
+            {previewItem?.episodes?.map((ep, idx) => (
+              <Button 
+                key={ep.id} 
+                variant="outline" 
+                onClick={() => { setActiveEpisode({ url: ep.streamUrl, title: `${previewItem.title} - EP ${ep.number}` }); }}
+                className="h-14 justify-start bg-black/20 border-white/5 hover:border-primary rounded-xl"
+              >
+                <ListOrdered className="h-4 w-4 mr-3 text-primary" />
+                <span className="font-bold uppercase text-[10px]">EP {ep.number}</span>
+              </Button>
+            ))}
+            {previewItem?.seasons?.map(s => (
+               s.episodes.map(ep => (
+                <Button 
+                  key={ep.id} 
+                  variant="outline" 
+                  onClick={() => { setActiveEpisode({ url: ep.streamUrl, title: `${previewItem.title} - T${s.number} EP ${ep.number}` }); }}
+                  className="h-14 justify-start bg-black/20 border-white/5 hover:border-primary rounded-xl"
+                >
+                  <ListOrdered className="h-4 w-4 mr-3 text-secondary" />
+                  <span className="font-bold uppercase text-[10px]">T{s.number} - EP {ep.number}</span>
+                </Button>
+               ))
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Player de Preview Master */}
+      <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
+        <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
+          {activeEpisode && (
             <div className="p-0">
-              <VideoPlayer url={previewItem.streamUrl || ""} title={previewItem.title} />
+              <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />
             </div>
           )}
         </DialogContent>
