@@ -90,18 +90,27 @@ export default function EditContentPage() {
     e.preventDefault()
     setLoading(true)
     
-    // BLINDAGEM DE SÉRIES: Garante que episodes/seasons sejam salvos e streamUrl seja limpo para séries
-    await saveContent({
+    // BLINDAGEM DE SALVAMENTO: Garante que os dados sejam validados pelo banco antes de redirecionar
+    const success = await saveContent({
       ...formData,
-      streamUrl: (formData.type === 'channel' || formData.type === 'movie') ? formData.streamUrl : undefined,
       episodes: formData.type === 'series' ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
     })
     
-    toast({ title: "Atualizado", description: "Conteúdo salvo com sucesso." })
-    router.push("/admin/content")
+    if (success) {
+      toast({ title: "Atualizado", description: "Conteúdo salvo com sucesso na biblioteca." })
+      router.push("/admin/content")
+    } else {
+      setLoading(false)
+      toast({ 
+        variant: "destructive", 
+        title: "ERRO AO ATUALIZAR", 
+        description: "O banco de dados recusou o salvamento. Verifique as colunas JSONB no Supabase." 
+      })
+    }
   }
 
+  // Interface Inteligente: Link Principal só para canais e filmes
   const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
 
   return (

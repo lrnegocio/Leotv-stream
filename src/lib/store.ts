@@ -106,7 +106,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   // BLINDAGEM DE SALVAMENTO MASTER: 
-  // Garante que os dados de episódios sejam enviados no formato JSON correto
+  // Constrói o payload garantindo que tipos complexos (JSONB) sejam enviados corretamente
   const payload: any = {
     id: item.id,
     title: item.title,
@@ -117,27 +117,26 @@ export async function saveContent(item: ContentItem) {
     imageUrl: item.imageUrl || null,
   };
 
-  // Se for série, remove o link principal e ativa os arrays de episódios
+  // Lógica À La Carte para Canais vs Séries
   if (item.type === 'series') {
     payload.episodes = item.episodes || [];
-    payload.seasons = null;
+    payload.seasons = [];
     payload.streamUrl = null;
   } else if (item.type === 'multi-season') {
     payload.seasons = item.seasons || [];
-    payload.episodes = null;
+    payload.episodes = [];
     payload.streamUrl = null;
   } else {
-    // Para Canais e Filmes, usa o link direto
     payload.streamUrl = item.streamUrl || null;
-    payload.episodes = null;
-    payload.seasons = null;
+    payload.episodes = [];
+    payload.seasons = [];
   }
   
-  const { error } = await supabase.from('content').upsert(payload);
+  // Upsert com tratamento de erro detalhado
+  const { error } = await supabase.from('content').upsert([payload], { onConflict: 'id' });
   
   if (error) {
-    // Log detalhado para o Mestre Léo identificar se faltam as colunas
-    console.error("FALHA CRÍTICA SUPABASE:", error.message, error.details);
+    console.error("FALHA CRÍTICA NO SUPABASE:", error.message, "| Detalhes:", error.details);
     return false;
   }
   return true;
@@ -177,7 +176,6 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // Remove dependências antes para evitar erro de Foreign Key
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -278,9 +276,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 }
 
 export async function logoutDevice(userId: string, deviceId: string) {
-  const users = await getRemoteUsers();
-  const user = users.find(u => u.id === userId);
-  if (!user) return false;
   return true; 
 }
 
