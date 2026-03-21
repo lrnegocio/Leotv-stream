@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -29,7 +28,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 39.0 TURBO - AUTOPLAY TOTAL E EMBEDS BLINDADOS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
@@ -42,7 +40,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
 
-    // 2. Dailymotion Master (Conversão para Embed)
+    // 2. Dailymotion Master (Embed Obrigatório para funcionar em sites)
     if (targetUrl.includes('dailymotion.com/video/')) {
       const id = targetUrl.split('video/')[1]?.split('?')[0];
       return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=1`
@@ -64,8 +62,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 5. Sinal Geral com Autoplay Master
-    // O mute=1 e autoplay=1 são essenciais para que o navegador permita o início sem clique
+    // 5. Autoplay Master para links Gerais
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -75,7 +72,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE MÁXIMA PARA TROCA DE CANAL (z-999999) */}
+      {/* Camada de Navegação Master (z-999999) */}
       <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-10">
         {onPrev && (
           <button 
@@ -112,7 +109,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PLAYER LIBERADO: SEM SANDBOX PARA FUNCIONAR SINAIS P2P E AUTOPLAY TOTAL */}
+      {/* Player Sem Sandbox para rodar P2P e Sites de Canais direto */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -123,7 +120,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         onLoad={() => setLoading(false)}
       />
       
-      {/* OVERLAY DE INTERFACE MASTER */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-8 bg-gradient-to-b from-black/95 via-transparent">
           <div className="flex items-center gap-3">
