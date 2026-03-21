@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -41,7 +40,6 @@ export default function ResellersPage() {
       toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
       await load()
     } else {
-      // O erro detalhado já é disparado pelo store.ts via alert
       toast({ variant: "destructive", title: "Erro", description: "Falha ao alterar status no banco." })
     }
   }

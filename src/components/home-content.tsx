@@ -31,17 +31,8 @@ export default function HomeContent() {
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
   const handleLogout = React.useCallback(async () => {
-    const session = localStorage.getItem("user_session")
-    if (session) {
-      const u = JSON.parse(session)
-      const deviceId = localStorage.getItem("p2p_device_id")
-      if (deviceId) {
-        await logoutDevice(u.id, deviceId)
-      }
-    }
     localStorage.removeItem("user_session")
     router.push("/login")
-    toast({ variant: "destructive", title: "SINAL ENCERRADO", description: "Vaga liberada para outro aparelho." })
   }, [router])
 
   React.useEffect(() => {
@@ -60,7 +51,7 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // MONITOR DE EXPIRAÇÃO REAL-TIME COM DESIGN AGRESSIVO
+  // MONITOR DE EXPIRAÇÃO REAL-TIME AGRESSIVO
   React.useEffect(() => {
     const interval = setInterval(() => {
       if (!user?.expiryDate) return;
@@ -79,10 +70,10 @@ export default function HomeContent() {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       
       if (user.subscriptionTier === 'lifetime') {
-        setTimeLeft("ACESSO VITALÍCIO ATIVO");
+        setTimeLeft("SINAL VITALÍCIO ATIVO");
       } else {
-        const warning = diff < (1000 * 60 * 60 * 24) ? "RENOVE LOGO! " : "";
-        setTimeLeft(`${warning}${days}d ${hours}h ${minutes}m RESTANTES`);
+        const warning = diff < (1000 * 60 * 60 * 24) ? "RENOVE JÁ! " : "";
+        setTimeLeft(`${warning}${days}d ${hours}h ${minutes}m`);
       }
     }, 5000)
     return () => clearInterval(interval)
@@ -90,15 +81,23 @@ export default function HomeContent() {
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery) || (item.genre && item.genre.toLowerCase().includes(searchQuery));
+      const titleMatch = item.title.toLowerCase().includes(searchQuery);
+      const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
+      const matchesSearch = titleMatch || genreMatch;
+      
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
   }, [content, searchQuery, showAdult])
 
-  const categories = React.useMemo(() => {
-    const cats = Array.from(new Set(filteredContent.map(item => (item.genre || "GERAL").toUpperCase()))).sort()
-    return cats
+  // AGRUPAMENTO DE PASTAS SEM DUPLICIDADE COM CONTADORES
+  const categoriesWithCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredContent.forEach(item => {
+      const cat = (item.genre || "GERAL").toUpperCase();
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
   }, [filteredContent])
 
   const handleVideoClick = (item: ContentItem) => {
@@ -141,9 +140,9 @@ export default function HomeContent() {
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <div className="hidden lg:block">
-            <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Master Elite</span>
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${timeLeft.includes("RENOVE") ? "bg-destructive/10 border-destructive text-destructive" : "bg-black/40 border-primary/20 text-primary"}`}>
-               <Timer className="h-3 w-3 animate-pulse" />
+            <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Stream</span>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${timeLeft.includes("RENOVE") ? "bg-destructive/10 border-destructive text-destructive animate-pulse" : "bg-black/40 border-primary/20 text-primary"}`}>
+               <Timer className="h-3 w-3" />
                <span className="text-[9px] font-black uppercase tracking-widest">{timeLeft}</span>
             </div>
           </div>
@@ -166,10 +165,10 @@ export default function HomeContent() {
       </header>
 
       <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
-        {categories.length === 0 ? (
-          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum sinal localizado...</div>
+        {categoriesWithCounts.length === 0 ? (
+          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum canal encontrado...</div>
         ) : (
-          categories.map(category => {
+          categoriesWithCounts.map(([category, count]) => {
             const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
             return (
               <section key={category} className="space-y-6">
@@ -179,7 +178,7 @@ export default function HomeContent() {
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
                   <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                    {categoryItems.length} CANAIS
+                    {count} CANAIS
                   </span>
                 </div>
                 
@@ -204,7 +203,7 @@ export default function HomeContent() {
                         </div>
                         <div className="flex items-center gap-2">
                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                           <span className="text-[7px] font-bold uppercase opacity-50 tracking-widest text-white">SINAL BLINDADO</span>
+                           <span className="text-[7px] font-bold uppercase opacity-50 tracking-widest text-white">SINAL ONLINE</span>
                         </div>
                       </div>
                     </div>
@@ -219,8 +218,8 @@ export default function HomeContent() {
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase italic text-primary text-center">Conteúdo Restrito</DialogTitle>
-            <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">Senha Parental de 4 dígitos necessária.</DialogDescription>
+            <DialogTitle className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</DialogTitle>
+            <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">Conteúdo Restrito</DialogDescription>
           </DialogHeader>
           <div className="py-6 flex justify-center">
              <Input 
@@ -233,7 +232,7 @@ export default function HomeContent() {
              />
           </div>
           <DialogFooter>
-             <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
+             <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">ENTRAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

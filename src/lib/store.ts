@@ -142,7 +142,9 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
+    // Primeiro deleta os usuários vinculados para não dar erro de chave estrangeira
     await supabase.from('users').delete().eq('resellerId', id);
+    // Depois deleta o revendedor
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
@@ -194,9 +196,14 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   return { error: "Erro de sincronia." };
 }
 
+/**
+ * VALIDAÇÃO DE LOGIN COM VINCULAÇÃO DE HARDWARE (BINDING) PERMANENTE
+ * O PIN é "casado" com os aparelhos que logam primeiro.
+ */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
+  // Acesso Admin Master Blindado
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -204,39 +211,36 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "PIN INVÁLIDO." };
-  if (user.isBlocked) return { error: "ACESSO BLOQUEADO POR SEGURANÇA. CONTATE O ADMIN." };
+  if (!user) return { error: "CÓDIGO INVÁLIDO." };
+  if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O ADMINISTRADOR." };
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
+    return { error: "SINAL EXPIRADO! RENOVE PARA VOLTAR A ASSISTIR." };
   }
 
-  // LIMPEZA INTELIGENTE DE DISPOSITIVOS STALE (Inativos por mais de 30 minutos)
-  let activeDevices = (user.activeDevices || []).filter(device => {
-    const lastActive = new Date(device.lastActive);
-    const diffMinutes = (now.getTime() - lastActive.getTime()) / (1000 * 60);
-    return diffMinutes < 30 || device.id === deviceId; // Mantém se for o atual ou ativo nos últimos 30min
-  });
+  // LÓGICA DE VINCULAÇÃO DE HARDWARE (BINDING) PERMANENTE
+  const registeredDevices = user.activeDevices || [];
+  const isDeviceRegistered = registeredDevices.some(d => d.id === deviceId);
 
-  const isAlreadyRegistered = activeDevices.find(d => d.id === deviceId);
-
-  if (!isAlreadyRegistered) {
-    // Só bloqueia se realmente estiver excedendo as telas simultâneas ativas
-    if (activeDevices.length >= user.maxScreens) {
+  if (!isDeviceRegistered) {
+    // Se não está registrado, tenta registrar uma nova vaga
+    if (registeredDevices.length >= user.maxScreens) {
+      // Bloqueia o PIN permanentemente porque tentou usar em um aparelho novo sem ter vaga disponível
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
+      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
-    activeDevices.push({ id: deviceId, lastActive: now.toISOString() });
+    // Vincula este aparelho permanentemente ao PIN
+    registeredDevices.push({ id: deviceId, lastActive: now.toISOString() });
+    user.activeDevices = registeredDevices;
   } else {
-    // Atualiza o timestamp do dispositivo atual
-    activeDevices = activeDevices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
+    // Aparelho já vinculado, apenas atualiza o timestamp de atividade
+    user.activeDevices = registeredDevices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
-
-  user.activeDevices = activeDevices;
   
+  // Ativação do PIN no primeiro uso
   if (!user.activatedAt) {
     user.activatedAt = now.toISOString();
     if (user.subscriptionTier === 'test') {
@@ -251,12 +255,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 }
 
 export async function logoutDevice(userId: string, deviceId: string) {
-  const users = await getRemoteUsers();
-  const user = users.find(u => u.id === userId);
-  if (user) {
-    user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
-    await saveUser(user);
-  }
+  // Logout no modelo de vinculação de hardware (Binding) não desvincula o aparelho, pois o vínculo é permanente conforme pedido.
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
@@ -303,7 +302,8 @@ export async function updateGlobalSettings(data: { parentalPin: string }) {
   return !error;
 }
 
-export const generateRandomPin = (length: number = 6) => {
+// PINs DE 11 DÍGITOS PARA MÁXIMA SEGURANÇA
+export const generateRandomPin = (length: number = 11) => {
   const chars = '0123456789';
   let result = '';
   for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -312,16 +312,16 @@ export const generateRandomPin = (length: number = 6) => {
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
-  const planoText = tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias';
+  const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   
   return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀
 
-🔑 *SEU PIN:* \`${pin}\`
+🔑 *SEU CÓDIGO:* \`${pin}\`
 📅 *PLANO:* ${planoText}
-🖥️ *TELAS:* ${screens} simultânea(s)
+🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
 
 📺 *SERVIDOR IPTV (SMART TV):* 
 ${playlistUrl}
 
-📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
+⚠️ _Nota: Este código será vinculado permanentemente aos primeiros aparelhos que logarem._`;
 }
