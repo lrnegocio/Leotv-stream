@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key, Loader2, AlertCircle, User, Checkbox } from "lucide-react"
+import { Tv, Key, Loader2, AlertCircle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -74,7 +74,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white -rotate-3" />
           </div>
           <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo Stream</CardTitle>
-          <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Hardware Blindado v80.0</CardDescription>
+          <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Sistema de Transmissão Master</CardDescription>
         </CardHeader>
 
         <CardContent className="px-10">

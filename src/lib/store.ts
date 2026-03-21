@@ -143,11 +143,12 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // BLINDAGEM DE EXCLUSÃO: Remove todos os usuários vinculados antes de remover o revendedor
+    // BLINDAGEM DE EXCLUSÃO PROFUNDA: Remove todos os usuários (PINs) vinculados ao revendedor antes de removê-lo
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
+    console.error("Erro ao remover revenda:", err);
     return false;
   }
 }
@@ -166,7 +167,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
-  // Se o PIN já está ativo e não expirou, soma o tempo à data de expiração atual
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) baseDate = currentExpiry;
@@ -199,12 +199,12 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 
 /**
  * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE PERMANENTE (VINCO DE APARELHO)
- * PIN de 11 dígitos agora é a norma Master.
+ * PIN agora se casa com os aparelhos. Excedeu as telas? BLOQUEIA TUDO.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Acesso Admin Master
+  // Acesso Admin Master Blindado
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -212,21 +212,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "CÓDIGO PIN INVÁLIDO OU NÃO LOCALIZADO." };
+  if (!user) return { error: "CÓDIGO DE ACESSO INVÁLIDO." };
   if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O SUPORTE PARA DESBLOQUEIO." };
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO! RENOVE PARA VOLTAR A ASSISTIR." };
+    return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
   }
 
-  // BINDING DE HARDWARE: Vincula permanentemente aos aparelhos que logarem primeiro
+  // BINDING DE HARDWARE: O PIN se casa com os aparelhos que logam primeiro
   const registeredDevices = user.activeDevices || [];
   const isDeviceRegistered = registeredDevices.some(d => d.id === deviceId);
 
   if (!isDeviceRegistered) {
     if (registeredDevices.length >= user.maxScreens) {
-      // TENTATIVA DE LOGIN EM NOVO APARELHO SEM VAGAS -> BLOQUEIO PERMANENTE
+      // TENTATIVA DE LOGIN EM NOVO APARELHO SEM VAGAS -> BLOQUEIO PERMANENTE DO PIN
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
@@ -252,6 +252,16 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   
   await saveUser(user);
   return { user };
+}
+
+export async function logoutDevice(userId: string, deviceId: string) {
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return false;
+  
+  // Remove o dispositivo da lista de ativos para liberar vaga
+  user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
+  return await saveUser(user);
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
@@ -298,7 +308,7 @@ export async function updateGlobalSettings(data: { parentalPin: string }) {
   return !error;
 }
 
-// PINs DE 11 DÍGITOS PARA MÁXIMA SEGURANÇA MASTER
+// PINs DE 11 DÍGITOS PARA SEGURANÇA MÁXIMA
 export const generateRandomPin = (length: number = 11) => {
   const chars = '0123456789';
   let result = '';
@@ -314,10 +324,10 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 
 🔑 *SEU PIN:* \`${pin}\`
 📅 *PLANO:* ${planoText}
-🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
+🖥️ *LIMITE:* ${screens} tela(s) vinculadas
 
 📺 *SERVIDORES PARA SMART TV:* 
 ${playlistUrl}
 
-⚠️ _Nota: Este código será vinculado permanentemente ao seu aparelho. Não compartilhe._`;
+⚠️ _Nota: Este código foi vinculado permanentemente ao seu aparelho atual. Se tentar usar em outros sem ter telas disponíveis, o PIN será bloqueado automaticamente._`;
 }
