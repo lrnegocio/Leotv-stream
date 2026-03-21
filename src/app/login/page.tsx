@@ -7,7 +7,6 @@ import { Tv, Key, Loader2, AlertCircle, User, Checkbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox as CustomCheckbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { validateDeviceLogin, validateResellerLogin } from "@/lib/store"
 
@@ -75,7 +74,7 @@ export default function LoginPage() {
             <Tv className="h-12 w-12 text-white -rotate-3" />
           </div>
           <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo Stream</CardTitle>
-          <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Hardware Blindado v79.0</CardDescription>
+          <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Hardware Blindado v80.0</CardDescription>
         </CardHeader>
 
         <CardContent className="px-10">
@@ -90,7 +89,7 @@ export default function LoginPage() {
                 <div className="relative group">
                   <Key className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40 group-focus-within:text-primary transition-colors" />
                   <Input 
-                    placeholder="SEU PIN 11 DÍGITOS" 
+                    placeholder="CÓDIGO DE ACESSO" 
                     className="pl-16 h-20 text-center text-2xl tracking-[0.3em] font-black bg-black/40 border-white/5 rounded-3xl focus:ring-primary focus:border-primary" 
                     value={pin} 
                     onChange={e => setPin(e.target.value)} 

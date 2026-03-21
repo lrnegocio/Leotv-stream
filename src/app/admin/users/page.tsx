@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -140,7 +141,7 @@ export default function UserManagementPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN (6 Dígitos)</Label>
+                <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN Master</Label>
                 <div className="flex gap-2">
                   <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
                   <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 h-14 rounded-xl">
