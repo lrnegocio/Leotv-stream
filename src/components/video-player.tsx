@@ -20,8 +20,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 2000)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
+    const timer = setTimeout(() => setLoading(false), 2500)
+    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
     return () => {
       clearTimeout(timer)
       clearTimeout(muteTimer)
@@ -32,7 +32,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // Lógica de Autoplay Turbo
+    // BLINDAGEM X-VIDEOS: Converte link comum em link de player limpo
+    if (targetUrl.includes('xvideos.com/video.')) {
+      const parts = targetUrl.split('video.');
+      if (parts[1]) {
+        const videoId = parts[1].split('/')[0];
+        return `https://www.xvideos.com/embedframe/${videoId}`;
+      }
+    }
+
+    // Lógica de YouTube Autoplay
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
@@ -41,7 +50,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const connector = targetUrl.includes('?') ? '&' : '?'
-    // Force Autoplay e Mute para evitar bloqueio de som
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
 
@@ -76,14 +84,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">INICIANDO SINAL MASTER...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">SINAL MASTER ESTABILIZANDO...</span>
         </div>
       )}
 
       {showMuteNotice && !loading && (
         <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in">
           <Volume2 className="h-4 w-4 text-primary animate-bounce" />
-          <span className="text-[9px] font-black text-white uppercase tracking-tighter">CLIQUE NO PLAYER PARA ATIVAR O SOM</span>
+          <span className="text-[9px] font-black text-white uppercase tracking-tighter">CLIQUE NO VÍDEO PARA ATIVAR O SOM</span>
         </div>
       )}
 
@@ -92,7 +100,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
-        // SANDBOX BLINDADO: Impede que o canal abra novas abas ou janelas de propaganda
+        // SANDBOX BLINDADO CONTRA POPUPS
         sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
@@ -108,7 +116,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-xl" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-4 w-4" /> ABRIR EXTERNO
+            <ExternalLink className="mr-2 h-4 w-4" /> LINK ORIGINAL
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!containerRef.current) return;

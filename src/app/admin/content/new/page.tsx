@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -39,7 +38,7 @@ function NewContentForm() {
   const addEpisode = (seasonId?: string) => {
     const newEp: Episode = {
       id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      title: `Episódio`,
+      title: `Episódio ${episodes.length + 1}`,
       number: episodes.length + 1,
       streamUrl: ""
     }
@@ -177,12 +176,12 @@ function NewContentForm() {
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link da Stream (Sinal Direto)</h3>
+            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Principal (Sinal Direto)</h3>
             <Input 
               value={formData.streamUrl} 
               onChange={e => setFormData({...formData, streamUrl: e.target.value})}
               placeholder="https://sua-stream.m3u8" 
-              required
+              required={formData.type === 'channel' || formData.type === 'movie'}
               className="h-12 bg-black/40 border-white/5 font-mono text-xs"
             />
           </div>
@@ -195,10 +194,9 @@ function NewContentForm() {
               placeholder="https://exemplo.com/capa.jpg" 
               className="h-12 bg-black/40 border-white/5 font-mono text-xs"
             />
-            <p className="text-[8px] text-muted-foreground uppercase font-bold italic">Cole aqui o link da imagem se você não quiser usar a IA abaixo.</p>
           </div>
 
-          {formData.type === 'series' ? (
+          {formData.type === 'series' && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Lista de Episódios</h3>
@@ -218,7 +216,9 @@ function NewContentForm() {
                 ))}
               </div>
             </div>
-          ) : formData.type === 'multi-season' ? (
+          )}
+
+          {formData.type === 'multi-season' && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><Layers className="h-4 w-4" /> Temporadas</h3>
@@ -232,19 +232,25 @@ function NewContentForm() {
                   </div>
                   <div className="space-y-2">
                     {season.episodes.map((ep, eIdx) => (
-                      <div key={ep.id} className="flex gap-2">
-                        <Input placeholder={`Link Ep ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                      <div key={ep.id} className="flex gap-2 items-center">
+                         <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
+                        <Input placeholder={`Link do Episódio ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
-                        }} className="h-9 bg-black/40 border-white/5 font-mono text-xs" />
+                        }} className="h-9 bg-black/40 border-white/5 font-mono text-xs flex-1" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                           const newSeasons = [...seasons];
+                           newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
+                           setSeasons(newSeasons);
+                        }}><Trash2 className="h-3 w-3" /></Button>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
-          ) : null}
+          )}
         </div>
 
         <div className="space-y-6">
@@ -256,7 +262,7 @@ function NewContentForm() {
                   <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Button type="button" variant="outline" size="sm" onClick={handleGenerateImage} disabled={generatingImage}>
-                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Gerar com IA"}
+                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Regerar com IA"}
                     </Button>
                   </div>
                 </>
