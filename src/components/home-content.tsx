@@ -25,7 +25,6 @@ export default function HomeContent() {
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
   
-  // SELETOR DE EPISÓDIOS MASTER
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingVideo, setPendingVideo] = React.useState<ContentItem | null>(null)
   const [timeLeft, setTimeLeft] = React.useState("")
@@ -230,6 +229,9 @@ export default function HomeContent() {
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
+              <DialogHeader className="sr-only">
+                <DialogTitle>{selectedSeries.title}</DialogTitle>
+              </DialogHeader>
               <div className="h-48 relative">
                  {selectedSeries.imageUrl ? (
                    <Image src={selectedSeries.imageUrl} alt={selectedSeries.title} fill className="object-cover opacity-40" unoptimized />
@@ -289,13 +291,6 @@ export default function HomeContent() {
                       </div>
                     ))}
                   </div>
-                )}
-                
-                {(!selectedSeries.episodes || selectedSeries.episodes.length === 0) && (!selectedSeries.seasons || selectedSeries.seasons.length === 0) && (
-                   <div className="flex flex-col items-center justify-center py-20 opacity-20 space-y-4">
-                      <Tv className="h-16 w-16" />
-                      <p className="font-black uppercase text-xs italic tracking-widest">NENHUM EPISÓDIO SINALIZADO</p>
-                   </div>
                 )}
               </div>
             </div>

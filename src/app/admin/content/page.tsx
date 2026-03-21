@@ -5,7 +5,7 @@ import * as React from "react"
 import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, ListOrdered } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, removeContent, ContentItem, Episode } from "@/lib/store"
+import { getRemoteContent, removeContent, ContentItem } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -160,6 +160,9 @@ export default function ContentManagementPage() {
       {/* Player de Preview Master */}
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
         <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{activeEpisode?.title}</DialogTitle>
+          </DialogHeader>
           {activeEpisode && (
             <div className="p-0">
               <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />
