@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Key, Plus, Loader2, TrendingUp, Users, ShieldAlert } from "lucide-react"
+import { ChevronLeft, Key, Plus, Loader2, TrendingUp, Users, ShieldAlert, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteResellers, saveReseller, saveUser, generateRandomPin, getRemoteUsers, Reseller, User } from "@/lib/store"
@@ -41,8 +40,10 @@ export default function ResellerManagementPage() {
     toast({ title: "Créditos Adicionados" })
   }
 
-  const handleGeneratePins = async () => {
-    if (!reseller || reseller.credits < 1) {
+  const handleGeneratePins = async (type: 'monthly' | 'test' = 'monthly') => {
+    if (!reseller) return;
+    
+    if (type === 'monthly' && reseller.credits < 1) {
       toast({ variant: "destructive", title: "Sem Créditos", description: "Adicione créditos primeiro." })
       return
     }
@@ -51,10 +52,10 @@ export default function ResellerManagementPage() {
     const newPin = generateRandomPin()
     
     const newUser: User = {
-      id: "user_" + Date.now(),
+      id: "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newPin,
       role: 'user',
-      subscriptionTier: 'monthly',
+      subscriptionTier: type,
       maxScreens: 1,
       activeDevices: [],
       isBlocked: false,
@@ -63,17 +64,19 @@ export default function ResellerManagementPage() {
 
     await saveUser(newUser)
     
-    const updatedReseller = { 
-      ...reseller, 
-      credits: reseller.credits - 1,
-      totalSold: (reseller.totalSold || 0) + 1
+    if (type === 'monthly') {
+      const updatedReseller = { 
+        ...reseller, 
+        credits: reseller.credits - 1,
+        totalSold: (reseller.totalSold || 0) + 1
+      }
+      await saveReseller(updatedReseller)
+      setReseller(updatedReseller)
     }
-    await saveReseller(updatedReseller)
     
-    setReseller(updatedReseller)
     await loadData()
     setIsGenerating(false)
-    toast({ title: "PIN GERADO!", description: `Código: ${newPin}` })
+    toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN GERADO!", description: `Código: ${newPin}` })
   }
 
   if (loading || !reseller) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
@@ -123,14 +126,20 @@ export default function ResellerManagementPage() {
             </CardContent>
           </Card>
 
-          <Button onClick={handleGeneratePins} disabled={isGenerating} className="w-full h-20 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-3xl">
-            {isGenerating ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Key className="mr-3 h-8 w-8" /> GERAR NOVO PIN</>}
-          </Button>
+          <div className="grid gap-4">
+            <Button onClick={() => handleGeneratePins('monthly')} disabled={isGenerating} className="w-full h-20 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-3xl transition-transform active:scale-95">
+              {isGenerating ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Key className="mr-3 h-8 w-8" /> VENDER PIN (30 DIAS)</>}
+            </Button>
+
+            <Button onClick={() => handleGeneratePins('test')} disabled={isGenerating} variant="outline" className="w-full h-16 border-white/10 text-emerald-400 font-black uppercase rounded-3xl hover:bg-emerald-500/10 transition-transform active:scale-95">
+              <Timer className="mr-2 h-6 w-6" /> GERAR TESTE GRÁTIS (6H)
+            </Button>
+          </div>
 
           <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-3xl flex gap-4">
             <ShieldAlert className="h-6 w-6 text-destructive shrink-0" />
             <p className="text-[10px] font-bold uppercase leading-tight opacity-70">
-              O PIN gerado será descontado do saldo e não terá validade até que o cliente faça o primeiro acesso.
+              O PIN de teste é ilimitado e não consome créditos. O sistema bloqueia automaticamente se o mesmo aparelho tentar usar mais de um teste.
             </p>
           </div>
         </div>
@@ -139,7 +148,7 @@ export default function ResellerManagementPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="border-b border-white/5 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" /> PINs Gerados por esta Revenda
+                <Users className="h-4 w-4 text-primary" /> PINs e Testes da Revenda
               </CardTitle>
               <span className="text-[10px] font-black opacity-40 uppercase">{users.length} Registros</span>
             </CardHeader>
@@ -150,15 +159,18 @@ export default function ResellerManagementPage() {
                 ) : (
                   users.sort((a,b) => b.id.localeCompare(a.id)).map(u => (
                     <div key={u.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
-                      <div>
-                        <p className="font-mono font-black text-lg text-primary tracking-[0.2em]">{u.pin}</p>
-                        <p className="text-[8px] font-black uppercase opacity-50">
-                          {u.activatedAt ? `Ativado em: ${new Date(u.activatedAt).toLocaleDateString()}` : 'AGUARDANDO ATIVAÇÃO'}
-                        </p>
+                      <div className="flex items-center gap-4">
+                        <div className={`w-2 h-2 rounded-full ${u.subscriptionTier === 'test' ? 'bg-emerald-500' : 'bg-primary'}`} />
+                        <div>
+                          <p className="font-mono font-black text-lg text-primary tracking-[0.2em]">{u.pin}</p>
+                          <p className="text-[8px] font-black uppercase opacity-50">
+                            {u.subscriptionTier === 'test' ? 'TESTE 6H' : 'PLANO 30 DIAS'} • {u.activatedAt ? `Ativado em: ${new Date(u.activatedAt).toLocaleDateString()}` : 'AGUARDANDO ATIVAÇÃO'}
+                          </p>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <span className={`text-[10px] font-black uppercase ${u.expiryDate ? 'text-destructive' : 'text-emerald-500'}`}>
-                          {u.expiryDate ? `Expira em ${new Date(u.expiryDate).toLocaleDateString()}` : 'PERPÉTUO (ESTOQUE)'}
+                        <span className={`text-[10px] font-black uppercase ${u.isBlocked ? 'text-destructive' : 'text-emerald-500'}`}>
+                          {u.isBlocked ? 'BLOQUEADO/EXPIRADO' : u.expiryDate ? `Expira em ${new Date(u.expiryDate).toLocaleString()}` : 'DISPONÍVEL'}
                         </span>
                       </div>
                     </div>

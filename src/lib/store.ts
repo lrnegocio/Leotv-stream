@@ -1,4 +1,3 @@
-
 'use client';
 
 import { supabase } from './supabase-client';
@@ -43,6 +42,7 @@ export interface User {
   isBlocked: boolean;
   resellerId?: string;
   activatedAt?: string;
+  blockedAt?: string;
 }
 
 export interface Reseller {
@@ -56,10 +56,6 @@ export interface Reseller {
   totalSold: number;
 }
 
-/**
- * MOTOR DE BUSCA PERPÉTUA MASTER 9.0
- * Busca sem limites no Supabase/Vercel usando paginação recursiva.
- */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -129,10 +125,6 @@ export async function removeReseller(id: string) {
   return !error;
 }
 
-/**
- * MOTOR DE VALIDAÇÃO MASTER
- * Gerencia a ativação de PINs de revenda no primeiro login (30 dias de vida).
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
@@ -156,24 +148,47 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
   if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-  // Lógica de Ativação Master para Revendas (30 dias a partir do 1º login)
+  // LÓGICA DE TESTE GRÁTIS (6 HORAS) COM ANTI-FRAUDE DE DISPOSITIVO
+  if (user.subscriptionTier === 'test') {
+    // Verificar se este dispositivo já usou QUALQUER outro PIN de teste
+    const deviceUsedOtherTest = users.find(u => 
+      u.subscriptionTier === 'test' && 
+      u.pin !== normalizedPin && 
+      u.activeDevices && u.activeDevices.includes(deviceId)
+    );
+
+    if (deviceUsedOtherTest) {
+      user.isBlocked = true;
+      user.blockedAt = new Date().toISOString();
+      await saveUser(user);
+      return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS. ADQUIRA UM PLANO." };
+    }
+
+    if (!user.activatedAt) {
+      user.activatedAt = new Date().toISOString();
+      user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+      user.activeDevices = [deviceId];
+      await saveUser(user);
+    }
+  }
+
+  // Lógica de Ativação Master para Revendas (30 dias)
   if (!user.activatedAt && user.subscriptionTier === 'monthly') {
     user.activatedAt = new Date().toISOString();
     user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    user.activeDevices = [deviceId];
     await saveUser(user);
   }
 
   const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
 
   if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "ACESSO EXPIRADO." };
+    return { error: "ACESSO EXPIRADO. CONTATE SEU REVENDEDOR." };
   }
 
   const deviceList = user.activeDevices || [];
   if (!deviceList.includes(deviceId)) {
     if (deviceList.length >= user.maxScreens && !isImmune) {
-      user.isBlocked = true;
-      await saveUser(user);
       return { error: "LIMITE DE TELAS EXCEDIDO." };
     }
     user.activeDevices = [...deviceList, deviceId];

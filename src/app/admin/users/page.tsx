@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2 } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -22,7 +22,7 @@ export default function UserManagementPage() {
   
   const [newUser, setNewUser] = React.useState({
     pin: "",
-    tier: "test" as SubscriptionTier,
+    tier: "monthly" as SubscriptionTier,
     hours: "6",
     screens: "1"
   })
@@ -57,19 +57,22 @@ export default function UserManagementPage() {
     
     let expiry = undefined
     if (newUser.tier === 'test') {
-      expiry = new Date(Date.now() + parseInt(newUser.hours) * 60 * 60 * 1000).toISOString()
+      // Testes expiram em 6 horas a partir de AGORA se criados manualmente pelo admin
+      // ou ficam "pendentes" se criados sem ativação. 
+      // Para o Admin, já vamos deixar pendente para ativar no 1º uso.
+      expiry = undefined 
     } else if (newUser.tier === 'monthly') {
-      expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      expiry = undefined // Ativa no 1º uso por 30 dias
     }
 
     const userData: User = {
-      id: editingUserId || Math.random().toString(36).substring(7),
+      id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin,
       role: 'user',
       subscriptionTier: newUser.tier,
       expiryDate: expiry,
       maxScreens: parseInt(newUser.screens),
-      activeDevices: [],
+      activeDevices: editingUserId ? (users.find(u => u.id === editingUserId)?.activeDevices || []) : [],
       isBlocked: false
     }
 
@@ -79,14 +82,10 @@ export default function UserManagementPage() {
       toast({ title: "PIN Salvo", description: "Atualizado com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
-      setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" })
+      setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" })
       await loadUsers()
     } else {
-      toast({ 
-        variant: "destructive", 
-        title: "Erro", 
-        description: "Falha ao salvar no servidor." 
-      })
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao salvar." })
     }
     setIsSaving(false)
   }
@@ -123,18 +122,18 @@ export default function UserManagementPage() {
 
   const filteredUsers = users.filter(u => 
     u.pin.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  ).sort((a,b) => b.id.localeCompare(a.id))
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Gerenciar PINs</h1>
-          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Controle de Acessos</p>
+          <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest italic text-primary">Controle de Acessos e Testes</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) { setEditingUserId(null); setNewUser({ pin: "", tier: "test", hours: "6", screens: "1" }); }
+          if (!open) { setEditingUserId(null); setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" }); }
         }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs" onClick={() => handleGeneratePin()}>
@@ -143,12 +142,8 @@ export default function UserManagementPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card border-white/10">
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold uppercase italic text-primary">
-                Configurar Acesso
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Formulário para criar ou editar um PIN de acesso.
-              </DialogDescription>
+              <DialogTitle className="text-lg font-bold uppercase italic text-primary">Configurar Acesso</DialogTitle>
+              <DialogDescription className="sr-only">Formulário de PIN</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -166,30 +161,26 @@ export default function UserManagementPage() {
                   <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
                     <SelectTrigger className="bg-black/40 border-white/5"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="test">Teste</SelectItem>
-                      <SelectItem value="monthly">Mensal</SelectItem>
+                      <SelectItem value="test">Teste Grátis (6h)</SelectItem>
+                      <SelectItem value="monthly">Mensal (30 dias)</SelectItem>
                       <SelectItem value="lifetime">Vitalício</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {newUser.tier === 'test' && (
-                  <div className="grid gap-2">
-                    <Label className="uppercase text-[10px] font-bold opacity-70">Horas</Label>
-                    <Input type="number" value={newUser.hours} onChange={e => setNewUser({...newUser, hours: e.target.value})} className="bg-black/40 border-white/5" />
-                  </div>
-                )}
+                <div className="grid gap-2">
+                  <Label className="uppercase text-[10px] font-bold opacity-70">Telas</Label>
+                  <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5" />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label className="uppercase text-[10px] font-bold opacity-70">Telas</Label>
-                <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5" />
-              </div>
+              {newUser.tier === 'test' && (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex gap-3">
+                  <ShieldAlert className="h-5 w-5 text-emerald-500 shrink-0" />
+                  <p className="text-[9px] font-bold uppercase text-emerald-500">O teste será ativado no 1º login e valerá por 6 horas. Bloqueio automático por aparelho ativado.</p>
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button 
-                onClick={handleSaveUser} 
-                className="w-full font-black uppercase h-14 bg-primary text-lg"
-                disabled={isSaving}
-              >
+              <Button onClick={handleSaveUser} className="w-full font-black uppercase h-14 bg-primary text-lg" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : 'SALVAR ACESSO'}
               </Button>
             </DialogFooter>
@@ -199,12 +190,7 @@ export default function UserManagementPage() {
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="BUSCAR PIN..." 
-          className="pl-10 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" 
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
+        <Input placeholder="BUSCAR PIN..." className="pl-10 bg-card/50 border-white/5 h-12 uppercase font-bold text-xs" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
       </div>
 
       {loading ? (
@@ -217,32 +203,28 @@ export default function UserManagementPage() {
                 <TableHead className="uppercase text-[10px] font-black text-primary">PIN</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">TELAS</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 opacity-30">Vazio.</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-30">Vazio.</TableCell></TableRow>
               ) : (
                 filteredUsers.map((user) => (
                   <TableRow key={user.id} className="border-white/5 hover:bg-white/5 transition-colors">
                     <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{user.pin}</TableCell>
                     <TableCell>
-                      <Badge variant={user.subscriptionTier === 'lifetime' ? 'default' : 'secondary'} className="uppercase text-[9px] font-bold">
-                        {user.subscriptionTier}
+                      <Badge variant={user.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
+                        {user.subscriptionTier === 'test' ? 'TESTE 6H' : user.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-[10px] font-bold uppercase opacity-60">
-                      {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'VITALÍCIO'}
+                      {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'PENDENTE/VITALÍCIO'}
                     </TableCell>
-                    <TableCell className="font-black">{user.maxScreens}</TableCell>
                     <TableCell>
                       {user.isBlocked ? (
-                        <Badge variant="destructive" className="uppercase text-[9px]">SUSPENSO</Badge>
+                        <Badge variant="destructive" className="uppercase text-[9px]">BLOQUEADO</Badge>
                       ) : (
                         <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
                       )}
@@ -252,12 +234,8 @@ export default function UserManagementPage() {
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
                           {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
