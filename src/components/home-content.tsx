@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, logoutDevice } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -30,10 +30,18 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
-  const handleLogout = React.useCallback(() => {
+  const handleLogout = React.useCallback(async () => {
+    const session = localStorage.getItem("user_session")
+    if (session) {
+      const u = JSON.parse(session)
+      const deviceId = localStorage.getItem("p2p_device_id")
+      if (deviceId) {
+        await logoutDevice(u.id, deviceId)
+      }
+    }
     localStorage.removeItem("user_session")
     router.push("/login")
-    toast({ variant: "destructive", title: "SINAL EXPIRADO", description: "Acesso desconectado." })
+    toast({ variant: "destructive", title: "SINAL ENCERRADO", description: "Vaga liberada para outro aparelho." })
   }, [router])
 
   React.useEffect(() => {
@@ -52,12 +60,15 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // Varredura de Expiração em Tempo Real (5s)
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
       if (session) {
         const u = JSON.parse(session)
+        if (u.isBlocked) {
+          handleLogout()
+          toast({ variant: "destructive", title: "SINAL BLOQUEADO", description: "Muitos aparelhos usando o mesmo PIN." })
+        }
         if (u.expiryDate && new Date(u.expiryDate) < new Date() && u.subscriptionTier !== 'lifetime') {
           handleLogout()
         }
@@ -66,7 +77,6 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  // Filtro Instantâneo Master
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchQuery) || (item.genre && item.genre.toLowerCase().includes(searchQuery));
@@ -75,7 +85,6 @@ export default function HomeContent() {
     })
   }, [content, searchQuery, showAdult])
 
-  // Agrupamento de Pastas Únicas
   const categories = React.useMemo(() => {
     const cats = Array.from(new Set(filteredContent.map(item => (item.genre || "GERAL").toUpperCase()))).sort()
     return cats
@@ -122,7 +131,7 @@ export default function HomeContent() {
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <div className="hidden lg:block">
             <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Master Elite</span>
-            <span className="text-[8px] font-bold uppercase opacity-40">{content.length} CANAIS NO AR</span>
+            <span className="text-[8px] font-bold uppercase opacity-40">{content.length} CANAIS ATIVOS</span>
           </div>
         </div>
         

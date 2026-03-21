@@ -59,10 +59,6 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-/**
- * MOTOR DE BUSCA PERPÉTUA - MESTRE LÉO
- * Varre o banco em blocos de 1.000 para trazer TODOS os registros da sua rede de 1.045+ canais.
- */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -140,10 +136,6 @@ export async function saveReseller(reseller: Reseller) {
   return !error;
 }
 
-/**
- * EXCLUSÃO BLINDADA DE REVENDA
- * Remove primeiro todos os usuários e depois o revendedor para evitar erros de chave estrangeira.
- */
 export async function removeReseller(id: string) {
   try {
     await supabase.from('users').delete().eq('resellerId', id);
@@ -161,16 +153,17 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const reseller = resellers.find(r => r.id === resellerId);
 
   if (!user || !reseller) return { error: "Dados não localizados." };
-  if (reseller.credits < 1) return { error: "Sem créditos!" };
+  
+  // Renovação sempre usa 1 crédito por tela por mês
+  const cost = user.maxScreens || 1;
+  if (reseller.credits < cost) return { error: `Sem créditos suficientes (${cost} necessários).` };
 
   const now = new Date();
   let baseDate = now;
 
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
-    if (currentExpiry > now) {
-      baseDate = currentExpiry;
-    }
+    if (currentExpiry > now) baseDate = currentExpiry;
   }
 
   const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -185,7 +178,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 
   const updatedReseller: Reseller = {
     ...reseller,
-    credits: reseller.credits - 1,
+    credits: reseller.credits - cost,
     totalSold: (reseller.totalSold || 0) + 1
   };
 
@@ -209,38 +202,57 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "PIN INVÁLIDO." };
-  if (user.isBlocked) return { error: "PIN SUSPENSO." };
+  if (user.isBlocked) return { error: "PIN BLOQUEADO PELO SISTEMA (EXCESSO DE TELAS OU SUSPENSÃO)." };
 
+  // Verifica validade
+  const now = new Date();
+  if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
+    return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
+  }
+
+  // Verifica Revenda
   if (user.resellerId) {
     const resellers = await getRemoteResellers();
     const res = resellers.find(r => r.id === user.resellerId);
     if (res?.isBlocked) return { error: "SINAL SUSPENSO (REVENDA BLOQUEADA)." };
   }
 
-  if (!user.activatedAt) {
-    if (user.subscriptionTier === 'test') {
-      const alreadyUsed = users.some(u => 
-        u.subscriptionTier === 'test' && 
-        u.pin !== normalizedPin && 
-        u.activeDevices?.includes(deviceId)
-      );
-      if (alreadyUsed) return { error: "APARELHO JÁ USOU O TESTE GRÁTIS." };
-      
-      user.activatedAt = new Date().toISOString();
-      user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-    } else if (user.subscriptionTier === 'monthly') {
-      user.activatedAt = new Date().toISOString();
-      user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  // Gerenciamento de Telas Inteligente
+  let activeDevices = user.activeDevices || [];
+  
+  if (!activeDevices.includes(deviceId)) {
+    if (activeDevices.length >= user.maxScreens) {
+      // Bloqueia o PIN por tentativa de uso em excesso
+      user.isBlocked = true;
+      user.blockedAt = new Date().toISOString();
+      await saveUser(user);
+      return { error: "LIMITE DE TELAS EXCEDIDO! ACESSO BLOQUEADO POR SEGURANÇA. CONTATE O ADMIN." };
     }
-    user.activeDevices = [deviceId];
+    activeDevices.push(deviceId);
+    user.activeDevices = activeDevices;
+    
+    // Se for ativação
+    if (!user.activatedAt) {
+      user.activatedAt = new Date().toISOString();
+      if (user.subscriptionTier === 'test') {
+        user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+      } else if (user.subscriptionTier === 'monthly') {
+        user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      }
+    }
     await saveUser(user);
   }
 
-  if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO." };
-  }
-  
   return { user };
+}
+
+export async function logoutDevice(userId: string, deviceId: string) {
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    user.activeDevices = (user.activeDevices || []).filter(id => id !== deviceId);
+    await saveUser(user);
+  }
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
@@ -294,7 +306,7 @@ export const generateRandomPin = (length: number = 6) => {
   return result;
 };
 
-export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string) => {
+export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
-  return `🚀 *LÉO STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6 Horas' : 'Mensal 30 Dias'}\n\n📺 *LINK PARA SMART TV:* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV ou Celular!_`;
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias'}\n🖥️ *TELAS:* ${screens} simultânea(s)\n\n📺 *SERVIDOR IPTV (SMART TV):* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
 }
