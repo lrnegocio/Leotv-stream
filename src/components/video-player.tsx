@@ -21,6 +21,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
+    // Motor de Autoplay Master com Mute para eliminar popups
     const timer = setTimeout(() => setLoading(false), 2000)
     const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
     return () => {
@@ -33,7 +34,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
-    // 1. YouTube
+    // 1. YouTube Pro
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
@@ -41,13 +42,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
 
-    // 2. Dailymotion
+    // 2. Dailymotion Master
     if (targetUrl.includes('dailymotion.com/video/')) {
       const id = targetUrl.split('video/')[1]?.split('?')[0];
       return `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=1`
     }
 
-    // 3. XVideos
+    // 3. XVideos Master
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video[.-]([^/]+)\//) || targetUrl.match(/video[.-]([^/]+)$/)
       if (match && match[1]) {
@@ -65,8 +66,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-[2rem] shadow-3xl border border-white/5">
       
-      {/* Camada de Navegação - Z-INDEX SUPREMO */}
-      <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-between px-2 sm:px-10">
+      {/* Camada de Navegação - Z-INDEX SUPREMO 1000 */}
+      <div className="absolute inset-0 z-[1000] pointer-events-none flex items-center justify-between px-2 sm:px-10">
         {onPrev && (
           <button 
             type="button"
@@ -124,7 +125,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             <ExternalLink className="mr-2 h-4 w-4" /> LINK EXTERNO
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
-            if (!document.fullscreenElement) containerRef.current?.requestFullscreen();
+            if (!containerRef.current) return;
+            if (!document.fullscreenElement) containerRef.current.requestFullscreen();
             else document.exitFullscreen();
           }}>
             <Maximize className="h-6 w-6" />

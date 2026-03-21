@@ -68,6 +68,7 @@ export default function HomeContent() {
     const userData = JSON.parse(session)
     setUser(userData)
 
+    // Verificação inicial de expiração
     if (userData.expiryDate && new Date(userData.expiryDate) < new Date()) {
       handleLogout()
       return
@@ -75,28 +76,34 @@ export default function HomeContent() {
 
     const load = async () => {
       const data = await getRemoteContent()
+      // Garante ordem alfabética
       setContent(data.sort((a, b) => a.title.localeCompare(b.title)))
       setLoading(false)
     }
     load()
   }, [router, handleLogout])
 
-  // Verificação constante de expiração
+  // Trava de Expiração Real-Time (Corta o sinal se o tempo acabar enquanto assiste)
   React.useEffect(() => {
     const interval = setInterval(() => {
-      if (user?.expiryDate && new Date(user.expiryDate) < new Date()) {
-        handleLogout()
+      const session = localStorage.getItem("user_session")
+      if (session) {
+        const u = JSON.parse(session)
+        if (u.expiryDate && new Date(u.expiryDate) < new Date()) {
+          handleLogout()
+        }
       }
     }, 5000)
     return () => clearInterval(interval)
-  }, [user, handleLogout])
+  }, [handleLogout])
 
-  // Filtragem e Agrupamento por Pastas Únicas
+  // Filtra o conteúdo com base na busca do Mestre Léo
   const filteredContent = content.filter(item => 
     item.title.toLowerCase().includes(searchQuery) || 
     item.genre.toLowerCase().includes(searchQuery)
   )
 
+  // Agrupa por Categorias Únicas (Pastas)
   const categories = Array.from(new Set(filteredContent.map(item => item.genre))).sort()
 
   const handleNavigate = (direction: 'next' | 'prev') => {
@@ -111,7 +118,7 @@ export default function HomeContent() {
     setActiveVideo(currentCategoryItems[nextIndex])
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden">
@@ -120,7 +127,7 @@ export default function HomeContent() {
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter hidden lg:block">Léo Stream Master</span>
         </div>
-        <div className="flex-1 max-w-xl mx-4 sm:mx-8">
+        <div className="flex-1 max-w-xl mx-4">
           <VoiceSearch />
         </div>
         <div className="flex items-center gap-4">
@@ -137,7 +144,7 @@ export default function HomeContent() {
             <section key={category} className="space-y-6">
               <div className="flex items-center gap-3 border-l-4 border-primary pl-4">
                 <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
-                <span className="text-[10px] bg-white/5 px-2 py-1 rounded-md font-bold opacity-40">{filteredContent.filter(i => i.genre === category).length} CANAIS</span>
+                <span className="text-[10px] bg-white/5 px-2 py-1 rounded-md font-bold opacity-40 uppercase tracking-widest">{filteredContent.filter(i => i.genre === category).length} CANAIS</span>
               </div>
               
               <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
@@ -145,9 +152,14 @@ export default function HomeContent() {
                   <div 
                     key={item.id} 
                     onClick={() => {
-                      if (user?.expiryDate && new Date(user.expiryDate) < new Date()) {
-                        handleLogout()
-                        return
+                      // Verifica expiração antes de abrir o player
+                      const session = localStorage.getItem("user_session")
+                      if (session) {
+                        const u = JSON.parse(session)
+                        if (u.expiryDate && new Date(u.expiryDate) < new Date()) {
+                          handleLogout()
+                          return
+                        }
                       }
                       setActiveVideo(item)
                     }} 
@@ -184,8 +196,8 @@ export default function HomeContent() {
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2rem] shadow-3xl">
-            <DialogHeader className="p-6 pb-2 sr-only">
+          <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2rem] shadow-[0_0_100px_rgba(var(--primary),0.3)]">
+            <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
               <DialogDescription>Sinal Master de alta performance</DialogDescription>
             </DialogHeader>

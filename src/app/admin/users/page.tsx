@@ -205,36 +205,37 @@ export default function UserManagementPage() {
               {filteredUsers.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-30">Vazio.</TableCell></TableRow>
               ) : (
-                filteredUsers.map((user) => {
-                  const isExpired = user.expiryDate && new Date(user.expiryDate) < new Date();
+                filteredUsers.map((u) => {
+                  const now = new Date();
+                  const isExpired = u.expiryDate && new Date(u.expiryDate) < now;
                   
                   return (
-                    <TableRow key={user.id} className="border-white/5 hover:bg-white/5 transition-colors">
-                      <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{user.pin}</TableCell>
+                    <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                      <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{u.pin}</TableCell>
                       <TableCell>
-                        <Badge variant={user.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
-                          {user.subscriptionTier === 'test' ? 'TESTE 6H' : user.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
+                        <Badge variant={u.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
+                          {u.subscriptionTier === 'test' ? 'TESTE 6H' : u.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-[10px] font-bold uppercase opacity-60">
-                        {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'PENDENTE/VITALÍCIO'}
+                        {u.expiryDate ? new Date(u.expiryDate).toLocaleString('pt-BR') : 'ESTOQUE'}
                       </TableCell>
                       <TableCell>
-                        {user.isBlocked ? (
-                          <Badge variant="destructive" className="uppercase text-[9px]">BLOQUEADO</Badge>
+                        {u.isBlocked ? (
+                          <Badge variant="destructive" className="uppercase text-[9px]">SUSPENSO</Badge>
                         ) : isExpired ? (
-                          <Badge variant="destructive" className="uppercase text-[9px] bg-orange-600 border-orange-600">EXPIRADO</Badge>
+                          <Badge variant="destructive" className="uppercase text-[9px] bg-red-600 border-red-600">EXPIRADO</Badge>
                         ) : (
                           <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
-                            {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
+                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)}>
+                            {u.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
