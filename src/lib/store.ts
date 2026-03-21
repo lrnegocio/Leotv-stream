@@ -115,6 +115,7 @@ export async function saveContent(item: ContentItem) {
     imageUrl: item.imageUrl || null,
   };
 
+  // Lógica Inteligente: Se for série, remove o link principal e foca nos episódios
   if (item.type === 'series') {
     payload.episodes = item.episodes || [];
     payload.seasons = [];
@@ -172,6 +173,7 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
+    // Limpeza Master: Apaga os PINs vinculados antes de apagar a revenda
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -224,9 +226,14 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   return { error: "Erro de sincronia." };
 }
 
+/**
+ * LOGICA DE HARDWARE BINDING MASTER - MESTRE LÉO
+ * O PIN se "casa" com o aparelho. Bloqueia se tentar usar em outro fora do limite.
+ */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
+  // Acesso Master do Léo
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -245,24 +252,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
-  // LOGICA DE HARDWARE BINDING MASTER:
-  // Se o aparelho não está vinculado, tenta vincular.
+  // VÍNCULO DE HARDWARE:
   if (!isThisDeviceLinked) {
-    // Se já atingiu o limite de aparelhos diferentes vinculados, BLOQUEIA O PIN.
+    // Se o cliente já usou todos os aparelhos que comprou, BLOQUEIA O PIN NA HORA
     if (devices.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
       return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
-    // Vincula este novo aparelho permanentemente ao PIN.
+    // Vincula o novo aparelho permanentemente
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
   } else {
-    // Apenas atualiza o último acesso do aparelho já vinculado.
+    // Apenas atualiza o último acesso
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
+  // Ativação automática no primeiro login
   if (!user.activatedAt) {
     user.activatedAt = now.toISOString();
     if (user.subscriptionTier === 'test') {
@@ -274,11 +281,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   
   await saveUser(user);
   return { user };
-}
-
-export async function logoutDevice(userId: string, deviceId: string) {
-  // Na lógica de hardware binding, o logout não desvincula o aparelho, apenas encerra a sessão.
-  return true; 
 }
 
 export async function validateResellerLogin(username: string, pass: string) {

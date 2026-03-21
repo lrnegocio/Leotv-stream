@@ -20,7 +20,7 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null)
   const router = useRouter()
 
-  // Carrega PIN salvo ao iniciar
+  // Carrega PIN salvo ao iniciar (MEMÓRIA MASTER)
   React.useEffect(() => {
     const saved = localStorage.getItem("p2p_saved_pin")
     if (saved) {
@@ -34,14 +34,14 @@ export default function LoginPage() {
     setError(null)
 
     if (loginType === 'user') {
-      // Salva o PIN se o usuário marcou a opção
+      // Salva o PIN se o usuário marcou a opção (SEM DICAS DE DIGITOS)
       if (rememberMe) {
         localStorage.setItem("p2p_saved_pin", pin)
       } else {
         localStorage.removeItem("p2p_saved_pin")
       }
 
-      // Gera ou recupera o ID único deste aparelho (Hardware ID Fake)
+      // Gera ou recupera o ID único deste aparelho (VÍNCULO DE HARDWARE)
       let deviceId = localStorage.getItem("p2p_device_id") || "dev_" + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("p2p_device_id", deviceId);
       
