@@ -105,19 +105,39 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 export async function saveContent(item: ContentItem) {
-  // BLINDAGEM DE SALVAMENTO: Garante que os dados de episódios sejam enviados como arrays limpos
-  const payload = {
-    ...item,
-    // Se for canal ou filme, remove as listas
-    episodes: (item.type === 'series') ? (item.episodes || []) : null,
-    seasons: (item.type === 'multi-season') ? (item.seasons || []) : null,
-    // Se for série, remove o link principal para não dar conflito
-    streamUrl: (item.type === 'channel' || item.type === 'movie') ? item.streamUrl : null,
+  // BLINDAGEM DE SALVAMENTO MASTER: 
+  // Garante que os dados de episódios sejam enviados no formato JSON correto
+  const payload: any = {
+    id: item.id,
+    title: item.title,
+    type: item.type,
+    description: item.description,
+    genre: item.genre,
+    isRestricted: item.isRestricted,
+    imageUrl: item.imageUrl || null,
   };
+
+  // Se for série, remove o link principal e ativa os arrays de episódios
+  if (item.type === 'series') {
+    payload.episodes = item.episodes || [];
+    payload.seasons = null;
+    payload.streamUrl = null;
+  } else if (item.type === 'multi-season') {
+    payload.seasons = item.seasons || [];
+    payload.episodes = null;
+    payload.streamUrl = null;
+  } else {
+    // Para Canais e Filmes, usa o link direto
+    payload.streamUrl = item.streamUrl || null;
+    payload.episodes = null;
+    payload.seasons = null;
+  }
   
   const { error } = await supabase.from('content').upsert(payload);
+  
   if (error) {
-    console.error("Erro ao salvar conteúdo no Supabase:", error);
+    // Log detalhado para o Mestre Léo identificar se faltam as colunas
+    console.error("FALHA CRÍTICA SUPABASE:", error.message, error.details);
     return false;
   }
   return true;
@@ -157,13 +177,11 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // BLINDAGEM DE EXCLUSÃO PROFUNDA: Remove todos os usuários (PINs) vinculados ao revendedor antes de removê-lo
-    // Isso evita o erro 500 de Chave Estrangeira (Foreign Key Violation)
+    // Remove dependências antes para evitar erro de Foreign Key
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
-    console.error("Erro ao remover revenda:", err);
     return false;
   }
 }
@@ -212,14 +230,9 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   return { error: "Erro de sincronia." };
 }
 
-/**
- * VALIDAÇÃO DE LOGIN POR HARDWARE BINDING (VÍNCULO DE APARELHO)
- * O PIN se "casa" com o aparelho. Se exceder a quantidade de telas, bloqueia o PIN.
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Acesso Admin Master Blindado
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -235,28 +248,22 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
   }
 
-  // LÓGICA HARDWARE BINDING: O PIN salva os IDs dos aparelhos permanentemente
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
   if (!isThisDeviceLinked) {
-    // Se for um aparelho NOVO e já atingiu o limite de telas vinculadas
     if (devices.length >= user.maxScreens) {
-      // Bloqueio Master por tentativa de login em aparelho não autorizado
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
       return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
-    // Vincula este novo aparelho
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
   } else {
-    // Atualiza apenas a última atividade do aparelho já vinculado
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
-  // Ativação no primeiro uso
   if (!user.activatedAt) {
     user.activatedAt = now.toISOString();
     if (user.subscriptionTier === 'test') {
@@ -274,8 +281,6 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const users = await getRemoteUsers();
   const user = users.find(u => u.id === userId);
   if (!user) return false;
-  
-  // O hardware binding é permanente. O logout apenas encerra a sessão visual.
   return true; 
 }
 
@@ -302,7 +307,6 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   let m3u = "#EXTM3U\n";
 
   content.forEach(item => {
-    // Só adiciona itens que tenham URL (canal/filme) ou episódios (série)
     if (item.type === 'channel' || item.type === 'movie') {
       const streamUrl = item.streamUrl || "";
       const title = item.title.toUpperCase();
@@ -329,7 +333,6 @@ export async function updateGlobalSettings(data: { parentalPin: string }) {
   return !error;
 }
 
-// PINs DE 11 DÍGITOS PARA SEGURANÇA MÁXIMA
 export const generateRandomPin = (length: number = 11) => {
   const chars = '0123456789';
   let result = '';
