@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -31,10 +32,14 @@ export default function ResellersPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("Deseja realmente remover este parceiro e todo o estoque dele?")) {
-      await removeReseller(id)
-      toast({ title: "Removido do Sistema" })
-      load()
+    if (confirm("Deseja realmente remover este parceiro e todo o estoque dele? Esta ação é irreversível.")) {
+      const success = await removeReseller(id)
+      if (success) {
+        toast({ title: "Removido do Sistema" })
+        load()
+      } else {
+        toast({ variant: "destructive", title: "Erro ao excluir" })
+      }
     }
   }
 
@@ -95,19 +100,24 @@ export default function ResellersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)} className={r.isBlocked ? "text-green-400" : "text-destructive"}>
-                        {r.isBlocked ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
+                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)} title={r.isBlocked ? "Ativar" : "Suspender"}>
+                        {r.isBlocked ? <ShieldCheck className="h-4 w-4 text-green-400" /> : <ShieldAlert className="h-4 w-4 text-destructive" />}
                       </Button>
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" asChild title="Gerenciar Estoque">
                         <Link href={`/admin/resellers/${r.id}`}><Key className="h-4 w-4 text-primary" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-destructive">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-destructive hover:bg-destructive/10" title="Excluir Permanente">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase text-xs">Nenhum parceiro localizado.</TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
