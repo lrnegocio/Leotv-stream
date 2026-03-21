@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -51,7 +52,7 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // Verificação de Expiração em Tempo Real
+  // Varredura de Expiração em Tempo Real (5s)
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -65,20 +66,18 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  // Filtro Inteligente (Busca Instantânea + À La Carte)
+  // Filtro Instantâneo Master
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
-      // Filtro de Busca
       const matchesSearch = item.title.toLowerCase().includes(searchQuery) || (item.genre && item.genre.toLowerCase().includes(searchQuery));
-      // Filtro À La Carte Adulto
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
   }, [content, searchQuery, showAdult])
 
-  // Agrupamento Único por Categoria
+  // Agrupamento de Pastas Únicas
   const categories = React.useMemo(() => {
-    const cats = Array.from(new Set(filteredContent.map(item => item.genre || "GERAL"))).sort()
+    const cats = Array.from(new Set(filteredContent.map(item => (item.genre || "GERAL").toUpperCase()))).sort()
     return cats
   }, [filteredContent])
 
@@ -98,13 +97,13 @@ export default function HomeContent() {
       setPinInput("")
       setPendingVideo(null)
     } else {
-      toast({ variant: "destructive", title: "SENHA INCORRETA", description: "Verifique seu código parental." })
+      toast({ variant: "destructive", title: "SENHA INCORRETA" })
     }
   }
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     if (!activeVideo) return
-    const currentCategoryItems = filteredContent.filter(i => (i.genre || "GERAL") === (activeVideo.genre || "GERAL"))
+    const currentCategoryItems = filteredContent.filter(i => (i.genre || "GERAL").toUpperCase() === (activeVideo.genre || "GERAL").toUpperCase())
     const currentIndex = currentCategoryItems.findIndex(i => i.id === activeVideo.id)
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     
@@ -148,7 +147,7 @@ export default function HomeContent() {
           <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum sinal localizado...</div>
         ) : (
           categories.map(category => {
-            const categoryItems = filteredContent.filter(item => (item.genre || "GERAL") === category)
+            const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
             return (
               <section key={category} className="space-y-6">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -194,16 +193,11 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* DIALOG DE SENHA PARENTAL */}
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase italic text-primary text-center flex items-center justify-center gap-3">
-               <ShieldAlert className="h-6 w-6" /> Conteúdo Restrito
-            </DialogTitle>
-            <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">
-               Insira sua Senha Parental de 4 dígitos para liberar este canal.
-            </DialogDescription>
+            <DialogTitle className="text-xl font-black uppercase italic text-primary text-center">Conteúdo Restrito</DialogTitle>
+            <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">Senha Parental de 4 dígitos necessária.</DialogDescription>
           </DialogHeader>
           <div className="py-6 flex justify-center">
              <Input 
@@ -212,15 +206,11 @@ export default function HomeContent() {
                 className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl" 
                 value={pinInput}
                 onChange={e => setPinInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && verifyPin()}
                 autoFocus
-                placeholder="****"
              />
           </div>
           <DialogFooter>
-             <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">
-                DESBLOQUEAR SINAL
-             </Button>
+             <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -230,7 +220,6 @@ export default function HomeContent() {
           <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
-              <DialogDescription>Central de Transmissão Master</DialogDescription>
             </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 

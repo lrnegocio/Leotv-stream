@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -37,7 +38,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const parts = targetUrl.split('video.');
       if (parts[1]) {
         const videoId = parts[1].split('/')[0];
-        return `https://www.xvideos.com/embedframe/${videoId}`;
+        return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1`;
       }
     }
 
@@ -100,7 +101,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
-        // SANDBOX BLINDADO: BLOQUEIA POPUPS E REDIRECIONAMENTOS
         sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen

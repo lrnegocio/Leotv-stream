@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -126,6 +127,7 @@ export async function saveUser(user: User) {
     activatedAt: user.activatedAt || null,
     blockedAt: user.blockedAt || null
   });
+  if (error) console.error("Erro ao salvar usuário:", error.message);
   return !error;
 }
 
@@ -136,15 +138,24 @@ export async function removeUser(id: string) {
 
 export async function saveReseller(reseller: Reseller) {
   const { error } = await supabase.from('resellers').upsert(reseller);
+  if (error) console.error("Erro ao salvar revenda:", error.message);
   return !error;
 }
 
+/**
+ * EXCLUSÃO BLINDADA DE REVENDA
+ * Remove primeiro todos os usuários e depois o revendedor para evitar erros de chave estrangeira.
+ */
 export async function removeReseller(id: string) {
   try {
+    // 1. Limpa os usuários vinculados
     await supabase.from('users').delete().eq('resellerId', id);
+    // 2. Apaga o revendedor
     const { error } = await supabase.from('resellers').delete().eq('id', id);
+    if (error) console.error("Erro ao excluir revenda:", error.message);
     return !error;
   } catch (err) {
+    console.error("Falha fatal na exclusão:", err);
     return false;
   }
 }
@@ -161,7 +172,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
-  // RENOVAÇÃO ACUMULATIVA: Se ainda tiver tempo, soma na frente.
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
@@ -247,9 +257,6 @@ export async function validateResellerLogin(username: string, pass: string) {
   return { reseller: res };
 }
 
-/**
- * GERA PLAYLIST M3U PARA SMART TV
- */
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === pin);
@@ -288,7 +295,7 @@ export const generateRandomPin = (length: number = 6) => {
   return result;
 };
 
-export const getBeautifulMessage = (pin: string, type: string, baseUrl: string) => {
+export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
-  return `🚀 *LÉO STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste VIP 6 Horas' : 'Mensal 30 Dias'}\n\n📺 *LINK PARA SMART TV:* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV ou Celular!_`;
+  return `🚀 *LÉO STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6 Horas' : 'Mensal 30 Dias'}\n\n📺 *LINK PARA SMART TV:* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV ou Celular!_`;
 }
