@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
-import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Key, Plus, Loader2, TrendingUp, Users, ShieldAlert, Timer } from "lucide-react"
+import { useParams } from "next/navigation"
+import { ChevronLeft, Key, Plus, Loader2, Users, ShieldAlert, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteResellers, saveReseller, saveUser, generateRandomPin, getRemoteUsers, Reseller, User } from "@/lib/store"
@@ -25,6 +26,7 @@ export default function ResellerManagementPage() {
     if (r) {
       setReseller(r)
       const allUsers = await getRemoteUsers()
+      // Filtra PINs vendidos por este revendedor
       setUsers(allUsers.filter(u => u.resellerId === id))
     }
     setLoading(false)
@@ -37,14 +39,14 @@ export default function ResellerManagementPage() {
     const updated = { ...reseller, credits: reseller.credits + pinsToAdd }
     await saveReseller(updated)
     setReseller(updated)
-    toast({ title: "Créditos Adicionados" })
+    toast({ title: "Estoque de Créditos Atualizado!" })
   }
 
   const handleGeneratePins = async (type: 'monthly' | 'test' = 'monthly') => {
     if (!reseller) return;
     
     if (type === 'monthly' && reseller.credits < 1) {
-      toast({ variant: "destructive", title: "Sem Créditos", description: "Adicione créditos primeiro." })
+      toast({ variant: "destructive", title: "SEM CRÉDITOS", description: "Adicione créditos ao estoque do revendedor." })
       return
     }
 
@@ -76,7 +78,7 @@ export default function ResellerManagementPage() {
     
     await loadData()
     setIsGenerating(false)
-    toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN GERADO!", description: `Código: ${newPin}` })
+    toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN 30 DIAS GERADO!", description: `CÓDIGO: ${newPin}` })
   }
 
   if (loading || !reseller) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
@@ -90,12 +92,12 @@ export default function ResellerManagementPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-black uppercase font-headline italic">{reseller.name}</h1>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Painel de Controle da Revenda</p>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Gerenciamento de Revenda</p>
           </div>
         </div>
         <div className="flex gap-4">
           <div className="px-6 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex flex-col items-center">
-            <span className="text-[8px] font-black uppercase opacity-60">Créditos Atuais</span>
+            <span className="text-[8px] font-black uppercase opacity-60">Créditos em Estoque</span>
             <span className="text-2xl font-black text-emerald-500">{reseller.credits}</span>
           </div>
           <div className="px-6 py-2 bg-primary/10 border border-primary/20 rounded-2xl flex flex-col items-center">
@@ -110,7 +112,7 @@ export default function ResellerManagementPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Adicionar Créditos
+                <Plus className="h-4 w-4" /> Abastecer Estoque
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
@@ -128,19 +130,22 @@ export default function ResellerManagementPage() {
 
           <div className="grid gap-4">
             <Button onClick={() => handleGeneratePins('monthly')} disabled={isGenerating} className="w-full h-20 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-3xl transition-transform active:scale-95">
-              {isGenerating ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Key className="mr-3 h-8 w-8" /> VENDER PIN (30 DIAS)</>}
+              {isGenerating ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Key className="mr-3 h-8 w-8" /> GERAR PIN (30 DIAS)</>}
             </Button>
 
             <Button onClick={() => handleGeneratePins('test')} disabled={isGenerating} variant="outline" className="w-full h-16 border-white/10 text-emerald-400 font-black uppercase rounded-3xl hover:bg-emerald-500/10 transition-transform active:scale-95">
-              <Timer className="mr-2 h-6 w-6" /> GERAR TESTE GRÁTIS (6H)
+              <Timer className="mr-2 h-6 w-6" /> TESTE GRÁTIS (6H)
             </Button>
           </div>
 
           <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-3xl flex gap-4">
             <ShieldAlert className="h-6 w-6 text-destructive shrink-0" />
-            <p className="text-[10px] font-bold uppercase leading-tight opacity-70">
-              O PIN de teste é ilimitado e não consome créditos. O sistema bloqueia automaticamente se o mesmo aparelho tentar usar mais de um teste.
-            </p>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase text-destructive">BLOQUEIO ANTI-FRAUDE ATIVO</p>
+              <p className="text-[9px] font-bold uppercase leading-tight opacity-70">
+                Testes são ilimitados e não gastam créditos. O sistema trava automaticamente o aparelho se detectar reuso de testes. Compras de 30 dias liberam o aparelho normalmente.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -164,13 +169,13 @@ export default function ResellerManagementPage() {
                         <div>
                           <p className="font-mono font-black text-lg text-primary tracking-[0.2em]">{u.pin}</p>
                           <p className="text-[8px] font-black uppercase opacity-50">
-                            {u.subscriptionTier === 'test' ? 'TESTE 6H' : 'PLANO 30 DIAS'} • {u.activatedAt ? `Ativado em: ${new Date(u.activatedAt).toLocaleDateString()}` : 'AGUARDANDO ATIVAÇÃO'}
+                            {u.subscriptionTier === 'test' ? 'TESTE 6H' : 'PLANO 30 DIAS'} • {u.activatedAt ? `ATIVADO EM: ${new Date(u.activatedAt).toLocaleDateString()}` : 'DISPONÍVEL NO ESTOQUE'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className={`text-[10px] font-black uppercase ${u.isBlocked ? 'text-destructive' : 'text-emerald-500'}`}>
-                          {u.isBlocked ? 'BLOQUEADO/EXPIRADO' : u.expiryDate ? `Expira em ${new Date(u.expiryDate).toLocaleString()}` : 'DISPONÍVEL'}
+                          {u.isBlocked ? 'BLOQUEADO/EXPIRADO' : u.expiryDate ? `EXPIRA: ${new Date(u.expiryDate).toLocaleString()}` : 'ESTOQUE'}
                         </span>
                       </div>
                     </div>

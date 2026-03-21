@@ -1,3 +1,4 @@
+
 'use client';
 
 import { supabase } from './supabase-client';
@@ -56,6 +57,10 @@ export interface Reseller {
   totalSold: number;
 }
 
+/**
+ * MOTOR DE BUSCA PERPÉTUA (ILIMITADO)
+ * Varre o banco de 1000 em 1000 até carregar absolutamente tudo.
+ */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -79,11 +84,14 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         finished = true;
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error(`Erro na busca da tabela ${table}:`, e);
+  }
   return allData;
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
+  // Retorna canais em ordem alfabética (A-Z)
   return await fetchAllRecords('content', 'title');
 }
 
@@ -128,6 +136,7 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
+  // LOGIN MASTER ADMIN
   if (normalizedPin === 'adm77x2p') {
     return { 
       user: {
@@ -150,20 +159,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   // LÓGICA DE TESTE GRÁTIS (6 HORAS) COM ANTI-FRAUDE DE DISPOSITIVO
   if (user.subscriptionTier === 'test') {
-    // Verificar se este dispositivo já usou QUALQUER outro PIN de teste
-    const deviceUsedOtherTest = users.find(u => 
+    // ANTI-FRAUDE: Verifica se este aparelho já usou OUTRO teste grátis antes
+    const alreadyUsedATest = users.some(u => 
       u.subscriptionTier === 'test' && 
       u.pin !== normalizedPin && 
-      u.activeDevices && u.activeDevices.includes(deviceId)
+      u.activeDevices?.includes(deviceId)
     );
 
-    if (deviceUsedOtherTest) {
+    if (alreadyUsedATest) {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);
       return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS. ADQUIRA UM PLANO." };
     }
 
+    // Ativação do Teste no 1º Uso
     if (!user.activatedAt) {
       user.activatedAt = new Date().toISOString();
       user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
@@ -172,8 +182,9 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     }
   }
 
-  // Lógica de Ativação Master para Revendas (30 dias)
-  if (!user.activatedAt && user.subscriptionTier === 'monthly') {
+  // Lógica de Ativação Master para Vendas (30 dias)
+  // Se for venda (monthly), libera mesmo que tenha usado teste antes
+  if (!user.activatedAt && (user.subscriptionTier === 'monthly')) {
     user.activatedAt = new Date().toISOString();
     user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     user.activeDevices = [deviceId];
@@ -182,10 +193,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
 
+  // Verifica expiração
   if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
     return { error: "ACESSO EXPIRADO. CONTATE SEU REVENDEDOR." };
   }
 
+  // Controle de Telas
   const deviceList = user.activeDevices || [];
   if (!deviceList.includes(deviceId)) {
     if (deviceList.length >= user.maxScreens && !isImmune) {

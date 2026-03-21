@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -20,15 +21,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true)
     setLoading(true)
-    const timer = setTimeout(() => setLoading(false), 2000)
-    const muteTimer = setTimeout(() => setShowMuteNotice(false), 6000)
+    const timer = setTimeout(() => setLoading(false), 3000)
+    const muteTimer = setTimeout(() => setShowMuteNotice(false), 8000)
     return () => {
       clearTimeout(timer)
       clearTimeout(muteTimer)
     }
   }, [url])
 
-  // MOTOR DE SINAL MASTER 8.0 - AUTOPLAY TOTAL E EMBEDS BLINDADOS
+  // MOTOR DE SINAL MASTER 35.0 TURBO - AUTOPLAY TOTAL E EMBEDS BLINDADOS
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
@@ -63,7 +64,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 5. Sinal Geral com Autoplay Forçado (mute=1 é obrigatório para autoplay)
+    // 5. Sinal Geral com Autoplay Forçado
+    // O mute=1 é essencial para que o navegador permita o autoplay sem interação do usuário
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1`
   }, [url])
@@ -73,7 +75,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black rounded-3xl shadow-3xl border border-white/5">
       
-      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE MÁXIMA PARA TROCA DE CANAL */}
+      {/* CAMADA DE NAVEGAÇÃO SUPREMA - PRIORIDADE MÁXIMA PARA TROCA DE CANAL (z-999999) */}
       <div className="absolute inset-0 z-[999999] pointer-events-none flex items-center justify-between px-4 sm:px-10">
         {onPrev && (
           <button 
@@ -99,14 +101,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">Sintonizando Sinal...</span>
+          <span className="mt-4 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse italic">SINTONIZANDO SINAL...</span>
         </div>
       )}
 
       {showMuteNotice && !loading && (
         <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-4 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
           <Volume2 className="h-3 w-3 text-primary" />
-          <span className="text-[8px] font-black text-white uppercase tracking-tight">Ative o Som se Desejar</span>
+          <span className="text-[8px] font-black text-white uppercase tracking-tight">ATIVE O SOM NO PLAYER</span>
         </div>
       )}
 
@@ -131,7 +133,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 via-transparent flex justify-between items-center px-10">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-8 text-[11px] uppercase font-black rounded-2xl pointer-events-auto shadow-xl" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-5 w-5" /> Abrir Sinal Externo
+            <ExternalLink className="mr-2 h-5 w-5" /> ABRIR SINAL EXTERNO
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-14 w-14 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!document.fullscreenElement) containerRef.current?.requestFullscreen();

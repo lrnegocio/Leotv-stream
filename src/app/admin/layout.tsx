@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, UserPlus, Briefcase } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -72,7 +72,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton asChild>
                   <Link href="/admin/settings">
                     <Settings className="h-5 w-5 text-orange-400" />
-                    <span className="font-bold uppercase text-xs tracking-widest">Configurações</span>
+                    <span className="font-bold uppercase text-xs tracking-widest">Segurança</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -82,7 +82,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <SidebarMenuButton asChild className="text-destructive hover:bg-destructive/10 h-12 rounded-xl">
               <Link href="/login">
                 <LogOut className="h-5 w-5" />
-                <span className="font-bold uppercase text-xs tracking-widest">Sair do Painel</span>
+                <span className="font-bold uppercase text-xs tracking-widest">Sair</span>
               </Link>
             </SidebarMenuButton>
           </SidebarFooter>
