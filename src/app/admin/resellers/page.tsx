@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -32,13 +31,17 @@ export default function ResellersPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("Deseja realmente remover este parceiro e todo o estoque dele? Esta ação é irreversível.")) {
-      const success = await removeReseller(id)
-      if (success) {
-        toast({ title: "Removido do Sistema" })
-        load()
-      } else {
-        toast({ variant: "destructive", title: "Erro ao excluir" })
+    if (confirm("ATENÇÃO: Deseja realmente excluir este revendedor? Todos os créditos e acessos dele serão removidos permanentemente.")) {
+      try {
+        const success = await removeReseller(id)
+        if (success) {
+          toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
+          load()
+        } else {
+          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Não foi possível remover no Supabase." })
+        }
+      } catch (err) {
+        toast({ variant: "destructive", title: "Erro Fatal", description: "Falha na conexão com o servidor." })
       }
     }
   }
@@ -75,7 +78,7 @@ export default function ResellersPage() {
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="uppercase text-[10px] font-black text-primary">NOME DO PARCEIRO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">USUÁRIO DE ACESSO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">USUÁRIO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black text-center">ESTOQUE</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black">AÇÕES</TableHead>
@@ -100,13 +103,13 @@ export default function ResellersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)} title={r.isBlocked ? "Ativar" : "Suspender"}>
+                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)}>
                         {r.isBlocked ? <ShieldCheck className="h-4 w-4 text-green-400" /> : <ShieldAlert className="h-4 w-4 text-destructive" />}
                       </Button>
-                      <Button variant="ghost" size="icon" asChild title="Gerenciar Estoque">
+                      <Button variant="ghost" size="icon" asChild>
                         <Link href={`/admin/resellers/${r.id}`}><Key className="h-4 w-4 text-primary" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(r.id)} className="text-destructive hover:bg-destructive/10" title="Excluir Permanente">
+                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(r.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

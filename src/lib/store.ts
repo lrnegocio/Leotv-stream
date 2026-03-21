@@ -60,7 +60,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// Motor de Busca Perpétua - Varre o banco de 1000 em 1000 sem limites para a Vercel
+/**
+ * MOTOR DE BUSCA PERPÉTUA LÉO STREAM
+ * Varre o Supabase de 1000 em 1000 canais para evitar limites da Vercel.
+ */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -75,10 +78,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) {
-        console.error(`Erro ao buscar ${table}:`, error);
-        break;
-      }
+      if (error) break;
       
       if (data && data.length > 0) {
         allData = [...allData, ...data];
@@ -89,7 +89,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
       }
     }
   } catch (e) {
-    console.error(`Falha crítica no motor de busca ${table}:`, e);
+    console.error(`Falha no motor P2P ${table}:`, e);
   }
   return allData;
 }
@@ -136,27 +136,6 @@ export async function removeReseller(id: string) {
   return !error;
 }
 
-export async function renewUser(userId: string, resellerId: string) {
-  const resellers = await getRemoteResellers();
-  const res = resellers.find(r => r.id === resellerId);
-  if (!res || res.credits < 1 || res.isBlocked) return { error: "CRÉDITOS INSUFICIENTES OU REVENDA BLOQUEADA" };
-
-  const users = await getRemoteUsers();
-  const user = users.find(u => u.id === userId);
-  if (!user) return { error: "USUÁRIO NÃO LOCALIZADO" };
-
-  user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  user.subscriptionTier = 'monthly';
-  user.isBlocked = false;
-
-  res.credits -= 1;
-  res.totalSold += 1;
-
-  await saveUser(user);
-  await saveReseller(res);
-  return { success: true };
-}
-
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   if (normalizedPin === 'adm77x2p') return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [deviceId], isBlocked: false } };
@@ -173,7 +152,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (res?.isBlocked) return { error: "SINAL TEMPORARIAMENTE FORA DO AR (REVENDA)." };
   }
 
-  // Anti-Fraude de Teste Master: Identifica se o aparelho já usou teste grátis
+  // Anti-Fraude Teste 6h
   if (user.subscriptionTier === 'test' && !user.activatedAt) {
     const alreadyUsed = users.some(u => 
       u.subscriptionTier === 'test' && 
@@ -215,8 +194,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 export async function validateResellerLogin(username: string, pass: string) {
   const resellers = await getRemoteResellers();
   const res = resellers.find(r => r.username === username && r.password === pass);
-  if (!res) return { error: "ACESSO NEGADO: USUÁRIO OU SENHA INVÁLIDOS" };
-  if (res.isBlocked) return { error: "REVENDA SUSPENSA PELO ADMIN MASTER" };
+  if (!res) return { error: "USUÁRIO OU SENHA INVÁLIDOS" };
+  if (res.isBlocked) return { error: "REVENDA SUSPENSA PELO ADMIN" };
   return { reseller: res };
 }
 
@@ -238,5 +217,5 @@ export const generateRandomPin = (length: number = 6) => {
 };
 
 export const getBeautifulMessage = (pin: string, type: string) => {
-  return `🚀 *LÉO STREAM - SINAL ATIVADO!* 🚀\n\nSeu acesso master de alta performance foi liberado com sucesso.\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste 6 Horas' : 'Mensal 30 Dias'}\n\n📲 *Como acessar:* Baixe nosso app ou acesse o site e coloque o código acima.\n\n✨ _O melhor sinal P2P do Brasil, agora na sua tela!_`;
+  return `🚀 *LÉO STREAM - SINAL ATIVADO!* 🚀\n\nSeu acesso master de alta performance foi liberado com sucesso.\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste 6 Horas' : 'Mensal 30 Dias'}\n\n📲 *Como acessar:* Acesse nosso site e coloque o código acima.\n\n✨ _O melhor sinal P2P do Brasil!_`;
 }

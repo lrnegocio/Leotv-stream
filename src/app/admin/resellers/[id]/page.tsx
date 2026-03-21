@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -46,11 +45,13 @@ export default function ResellerManagementPage() {
   }
 
   const handleDeleteReseller = async () => {
-    if (confirm("ATENÇÃO: Deseja realmente remover este parceiro e todo o seu estoque? Esta ação não pode ser desfeita.")) {
+    if (confirm("ATENÇÃO: Deseja realmente remover este parceiro e todo o seu estoque? Esta ação é irreversível.")) {
       const success = await removeReseller(id as string)
       if (success) {
         toast({ title: "Removido", description: "O parceiro foi excluído do sistema." })
         router.push("/admin/resellers")
+      } else {
+        toast({ variant: "destructive", title: "Erro ao Excluir", description: "Não foi possível remover no Supabase." })
       }
     }
   }
