@@ -2,143 +2,93 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Tv, Key, Loader2, AlertCircle, Globe } from "lucide-react"
+import { Tv, Key, Loader2, AlertCircle, Globe, Briefcase, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/hooks/use-toast"
-import { validateDeviceLogin } from "@/lib/store"
+import { validateDeviceLogin, validateResellerLogin } from "@/lib/store"
 
 export default function LoginPage() {
+  const [loginType, setLoginType] = React.useState<'user' | 'reseller'>('user')
   const [pin, setPin] = React.useState("")
-  const [rememberMe, setRememberMe] = React.useState(false)
+  const [username, setUsername] = React.useState("")
+  const [password, setPassword] = React.useState("")
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [isMounted, setIsMounted] = React.useState(false)
   const router = useRouter()
-
-  React.useEffect(() => {
-    setIsMounted(true)
-    const savedPin = localStorage.getItem("remembered_pin")
-    if (savedPin) {
-      setPin(savedPin)
-      setRememberMe(true)
-    }
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pin) return
-
     setLoading(true)
     setError(null)
 
-    let deviceId = localStorage.getItem("p2p_device_id");
-    if (!deviceId) {
-      deviceId = "dev_" + Math.random().toString(36).substring(2, 15);
+    if (loginType === 'user') {
+      let deviceId = localStorage.getItem("p2p_device_id") || "dev_" + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("p2p_device_id", deviceId);
-    }
-
-    try {
-      const result = await validateDeviceLogin(pin, deviceId);
-
-      if (result.error) {
-        setError(result.error);
-        setLoading(false);
-        return;
-      }
-
-      if (result.user) {
-        const session = {
-          id: result.user.id,
-          role: result.user.role,
-          pin: result.user.pin,
-          deviceId: deviceId
-        }
-        
-        localStorage.setItem("user_session", JSON.stringify(session))
-        if (rememberMe) localStorage.setItem("remembered_pin", pin)
-
-        toast({ title: "Sinal Liberado!", description: "Conectado com sucesso." })
-        
-        if (result.user.role === 'admin') {
-          router.push("/admin")
-        } else {
-          router.push("/user/home")
-        }
-      }
-    } catch (err: any) {
-      setError("Erro de conexão com o servidor.")
-      setLoading(false)
+      
+      const res = await validateDeviceLogin(pin, deviceId);
+      if (res.error) { setError(res.error); setLoading(false); return; }
+      
+      localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId }));
+      router.push(res.user?.role === 'admin' ? "/admin" : "/user/home");
+    } else {
+      const res = await validateResellerLogin(username, password);
+      if (res.error) { setError(res.error); setLoading(false); return; }
+      
+      localStorage.setItem("reseller_session", JSON.stringify(res.reseller));
+      router.push("/reseller/dashboard");
     }
   }
 
-  if (!isMounted) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  )
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-background to-background">
-      <Card className="w-full max-w-md bg-card/40 backdrop-blur-2xl border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-        <CardHeader className="text-center space-y-2 pb-8">
-          <div className="mx-auto bg-primary w-24 h-24 rounded-3xl flex items-center justify-center mb-4 shadow-2xl shadow-primary/40 border border-white/10">
-            <Tv className="h-12 w-12 text-white" />
+      <Card className="w-full max-w-md bg-card/40 backdrop-blur-3xl border-white/5 shadow-2xl rounded-[3rem] overflow-hidden">
+        <CardHeader className="text-center pb-8 pt-10">
+          <div className="mx-auto bg-primary w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-primary/30 border border-white/10">
+            <Tv className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-5xl font-black tracking-tighter text-primary font-headline italic uppercase">Léo Stream</CardTitle>
-          <CardDescription className="uppercase text-[10px] tracking-[0.3em] font-bold text-muted-foreground/60">Sistema de Alta Performance</CardDescription>
+          <CardTitle className="text-4xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo Stream</CardTitle>
+          <CardDescription className="text-[9px] uppercase tracking-[0.4em] font-bold opacity-40 mt-2">Tecnologia P2P de Alta Velocidade</CardDescription>
         </CardHeader>
-        <CardContent className="px-8">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <div className="relative">
-                <Key className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
-                <Input 
-                  placeholder="DIGITE SEU CÓDIGO" 
-                  className="pl-14 h-16 text-center text-2xl tracking-[0.4em] uppercase font-black bg-black/40 border-white/5 rounded-2xl focus:ring-primary focus:border-primary transition-all"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </div>
-            </div>
 
-            {error && (
-              <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-[10px] font-bold uppercase leading-tight animate-in slide-in-from-top-2">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                <span>{error}</span>
+        <CardContent className="px-8">
+          <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 mb-8">
+            <button onClick={() => setLoginType('user')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase transition-all ${loginType === 'user' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground'}`}>Acesso Direto</button>
+            <button onClick={() => setLoginType('reseller')} className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase transition-all ${loginType === 'reseller' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground'}`}>Sou Revendedor</button>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            {loginType === 'user' ? (
+              <div className="relative">
+                <Key className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
+                <Input placeholder="DIGITE SEU CÓDIGO" className="pl-14 h-16 text-center text-2xl tracking-[0.4em] font-black bg-black/40 border-white/5 rounded-2xl" value={pin} onChange={e => setPin(e.target.value)} required />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative">
+                  <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
+                  <Input placeholder="USUÁRIO" className="pl-14 h-14 bg-black/40 border-white/5 rounded-xl font-bold uppercase text-xs" value={username} onChange={e => setUsername(e.target.value)} required />
+                </div>
+                <div className="relative">
+                  <Key className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
+                  <Input type="password" placeholder="SENHA MESTRE" className="pl-14 h-14 bg-black/40 border-white/5 rounded-xl font-bold uppercase text-xs" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
               </div>
             )}
-            
-            <div className="flex items-center space-x-3 bg-white/5 p-4 rounded-2xl border border-white/5 group hover:bg-white/10 transition-colors cursor-pointer" onClick={() => setRememberMe(!rememberMe)}>
-              <Checkbox 
-                id="remember" 
-                checked={rememberMe} 
-                onCheckedChange={(val) => setRememberMe(!!val)}
-                className="rounded-md border-primary"
-              />
-              <label htmlFor="remember" className="text-[10px] font-bold cursor-pointer uppercase tracking-widest text-muted-foreground flex-1">Lembrar neste aparelho</label>
-            </div>
 
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-16 text-xl font-black shadow-2xl shadow-primary/20 rounded-2xl group transition-all" disabled={loading}>
-              {loading ? <Loader2 className="h-8 w-8 animate-spin" /> : (
-                <span className="flex items-center gap-2 group-hover:scale-110 transition-transform">
-                  ENTRAR NO SISTEMA <Globe className="h-5 w-5" />
-                </span>
-              )}
+            {error && <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-[10px] font-bold uppercase text-destructive flex items-center gap-3"><AlertCircle className="h-4 w-4" /> {error}</div>}
+
+            <Button type="submit" className="w-full bg-primary h-16 text-lg font-black rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform" disabled={loading}>
+              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : 'ENTRAR NO SISTEMA'}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4 border-t border-white/5 pt-6 mt-4 px-8 pb-8">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2 text-[9px] text-green-400 font-bold uppercase tracking-tighter">
-              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" /> Sinal Ativo
-            </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold">Versão 5.0</div>
-          </div>
+        <CardFooter className="pb-10 pt-4 px-8 flex justify-between items-center opacity-40">
+           <div className="flex items-center gap-2 text-[8px] font-bold uppercase text-green-400">
+             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /> Sinal Blindado
+           </div>
+           <span className="text-[8px] font-bold uppercase">Versão 50.0 Master</span>
         </CardFooter>
       </Card>
     </div>

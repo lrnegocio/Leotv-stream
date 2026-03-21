@@ -25,6 +25,7 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl?: string; 
+  imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
 }
@@ -48,18 +49,18 @@ export interface User {
 export interface Reseller {
   id: string;
   name: string;
+  username: string;
+  password?: string;
   cpf: string;
   birthDate: string;
   phone: string;
   email: string;
   credits: number;
   totalSold: number;
+  isBlocked: boolean;
 }
 
-/**
- * MOTOR DE BUSCA PERPÉTUA (ILIMITADO)
- * Varre o banco de 1000 em 1000 até carregar absolutamente tudo.
- */
+// Motor de Busca Perpétua - Varre o banco de 1000 em 1000 sem limites
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -75,7 +76,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .order(orderBy, { ascending: true });
 
       if (error) {
-        console.error(`Erro ao buscar bloco ${from} da tabela ${table}:`, error);
+        console.error(`Erro ao buscar ${table}:`, error);
         break;
       }
       
@@ -88,13 +89,12 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
       }
     }
   } catch (e) {
-    console.error(`Erro fatal na busca da tabela ${table}:`, e);
+    console.error(`Falha crítica no motor de busca ${table}:`, e);
   }
   return allData;
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  // Retorna canais em ordem alfabética (A-Z) para organização master
   return await fetchAllRecords('content', 'title');
 }
 
@@ -127,12 +127,7 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  const sanitized = {
-    ...reseller,
-    credits: Number(reseller.credits) || 0,
-    totalSold: Number(reseller.totalSold) || 0
-  };
-  const { error } = await supabase.from('resellers').upsert(sanitized);
+  const { error } = await supabase.from('resellers').upsert(reseller);
   return !error;
 }
 
@@ -141,78 +136,88 @@ export async function removeReseller(id: string) {
   return !error;
 }
 
+export async function renewUser(userId: string, resellerId: string) {
+  const resellers = await getRemoteResellers();
+  const res = resellers.find(r => r.id === resellerId);
+  if (!res || res.credits < 1 || res.isBlocked) return { error: "CRÉDITOS INSUFICIENTES OU REVENDA BLOQUEADA" };
+
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return { error: "USUÁRIO NÃO LOCALIZADO" };
+
+  user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  user.subscriptionTier = 'monthly';
+  user.isBlocked = false;
+
+  res.credits -= 1;
+  res.totalSold += 1;
+
+  await saveUser(user);
+  await saveReseller(res);
+  return { success: true };
+}
+
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
-  
-  if (normalizedPin === 'adm77x2p') {
-    return { 
-      user: {
-        id: 'master-leo',
-        pin: 'adm77x2p',
-        role: 'admin',
-        subscriptionTier: 'lifetime',
-        maxScreens: 999,
-        activeDevices: [deviceId],
-        isBlocked: false
-      }
-    };
-  }
+  if (normalizedPin === 'adm77x2p') return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [deviceId], isBlocked: false } };
 
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "CÓDIGO INVÁLIDO" };
-  if (user.isBlocked) return { error: "ACESSO SUSPENSO POR SEGURANÇA." };
+  if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-  // LÓGICA DE TESTE GRÁTIS COM ANTI-FRAUDE DE DISPOSITIVO
-  if (user.subscriptionTier === 'test') {
-    const alreadyUsedATest = users.some(u => 
+  if (user.resellerId) {
+    const resellers = await getRemoteResellers();
+    const res = resellers.find(r => r.id === user.resellerId);
+    if (res?.isBlocked) return { error: "SINAL TEMPORARIAMENTE FORA DO AR (REVENDA)." };
+  }
+
+  // Anti-Fraude de Teste: Identifica se o aparelho já usou teste grátis
+  if (user.subscriptionTier === 'test' && !user.activatedAt) {
+    const alreadyUsed = users.some(u => 
       u.subscriptionTier === 'test' && 
       u.pin !== normalizedPin && 
       u.activeDevices?.includes(deviceId)
     );
-
-    if (alreadyUsedATest) {
+    
+    if (alreadyUsed) {
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);
-      return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS. ADQUIRA UM PLANO MENSAL." };
+      return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS." };
     }
-
-    if (!user.activatedAt) {
-      user.activatedAt = new Date().toISOString();
-      user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
-      user.activeDevices = [deviceId];
-      await saveUser(user);
-    }
+    
+    user.activatedAt = new Date().toISOString();
+    user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+    user.activeDevices = [deviceId];
+    await saveUser(user);
   }
 
-  // Ativação de 30 dias só no 1º uso
-  if (!user.activatedAt && (user.subscriptionTier === 'monthly')) {
+  // Ativação Mensal
+  if (user.subscriptionTier === 'monthly' && !user.activatedAt) {
     user.activatedAt = new Date().toISOString();
     user.expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     user.activeDevices = [deviceId];
     await saveUser(user);
   }
 
-  const isImmune = user.role === 'admin' || user.subscriptionTier === 'lifetime';
-
-  if (!isImmune && user.expiryDate && new Date(user.expiryDate) < new Date()) {
+  // Verificação de Expiração
+  if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
     user.isBlocked = true;
     await saveUser(user);
-    return { error: "ACESSO EXPIRADO. RENOVE COM SEU REVENDEDOR." };
-  }
-
-  const deviceList = user.activeDevices || [];
-  if (!deviceList.includes(deviceId)) {
-    if (deviceList.length >= user.maxScreens && !isImmune) {
-      return { error: "LIMITE DE TELAS EXCEDIDO." };
-    }
-    user.activeDevices = [...deviceList, deviceId];
-    await saveUser(user);
+    return { error: "SINAL EXPIRADO. PROCURE SEU REVENDEDOR." };
   }
 
   return { user };
+}
+
+export async function validateResellerLogin(username: string, pass: string) {
+  const resellers = await getRemoteResellers();
+  const res = resellers.find(r => r.username === username && r.password === pass);
+  if (!res) return { error: "ACESSO NEGADO: USUÁRIO OU SENHA INVÁLIDOS" };
+  if (res.isBlocked) return { error: "REVENDA SUSPENSA PELO ADMIN MASTER" };
+  return { reseller: res };
 }
 
 export async function getGlobalSettings() {
@@ -231,3 +236,7 @@ export const generateRandomPin = (length: number = 6) => {
   for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
   return result;
 };
+
+export const getBeautifulMessage = (pin: string, type: string) => {
+  return `🚀 *LÉO STREAM - SINAL ATIVADO!* 🚀\n\nSeu acesso master de alta performance foi liberado com sucesso.\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste 6 Horas' : 'Mensal 30 Dias'}\n\n📲 *Como acessar:* Baixe nosso app ou acesse o site e coloque o código acima.\n\n✨ _O melhor sinal P2P do Brasil, agora na sua tela!_`;
+}
