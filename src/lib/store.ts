@@ -60,7 +60,7 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// Motor de Busca Perpétua - Varre o banco de 1000 em 1000 sem limites
+// Motor de Busca Perpétua - Varre o banco de 1000 em 1000 sem limites para a Vercel
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -173,7 +173,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (res?.isBlocked) return { error: "SINAL TEMPORARIAMENTE FORA DO AR (REVENDA)." };
   }
 
-  // Anti-Fraude de Teste: Identifica se o aparelho já usou teste grátis
+  // Anti-Fraude de Teste Master: Identifica se o aparelho já usou teste grátis
   if (user.subscriptionTier === 'test' && !user.activatedAt) {
     const alreadyUsed = users.some(u => 
       u.subscriptionTier === 'test' && 
