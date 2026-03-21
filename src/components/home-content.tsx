@@ -59,7 +59,7 @@ export default function HomeContent() {
   const handleLogout = React.useCallback(() => {
     localStorage.removeItem("user_session")
     router.push("/login")
-    toast({ variant: "destructive", title: "ACESSO ENCERRADO", description: "Seu tempo de sinal expirou ou você saiu." })
+    toast({ variant: "destructive", title: "SINAL ENCERRADO", description: "Seu acesso expirou ou foi desconectado pelo sistema." })
   }, [router])
 
   React.useEffect(() => {
@@ -68,7 +68,6 @@ export default function HomeContent() {
     const userData = JSON.parse(session)
     setUser(userData)
 
-    // Verificação de expiração imediata ao carregar
     if (userData.expiryDate && new Date(userData.expiryDate) < new Date()) {
       handleLogout()
       return
@@ -82,7 +81,17 @@ export default function HomeContent() {
     load()
   }, [router, handleLogout])
 
-  // Filtragem e Agrupamento por Pastas (Categorias)
+  // Verificação constante de expiração
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (user?.expiryDate && new Date(user.expiryDate) < new Date()) {
+        handleLogout()
+      }
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [user, handleLogout])
+
+  // Filtragem e Agrupamento por Pastas Únicas
   const filteredContent = content.filter(item => 
     item.title.toLowerCase().includes(searchQuery) || 
     item.genre.toLowerCase().includes(searchQuery)
@@ -92,13 +101,14 @@ export default function HomeContent() {
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     if (!activeVideo) return
-    const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.id)
+    const currentCategoryItems = filteredContent.filter(i => i.genre === activeVideo.genre)
+    const currentIndex = currentCategoryItems.findIndex(i => i.id === activeVideo.id)
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     
-    if (nextIndex >= filteredContent.length) nextIndex = 0
-    if (nextIndex < 0) nextIndex = filteredContent.length - 1
+    if (nextIndex >= currentCategoryItems.length) nextIndex = 0
+    if (nextIndex < 0) nextIndex = currentCategoryItems.length - 1
     
-    setActiveVideo(filteredContent[nextIndex])
+    setActiveVideo(currentCategoryItems[nextIndex])
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
@@ -161,7 +171,7 @@ export default function HomeContent() {
                       <h3 className="font-black text-[11px] uppercase italic truncate tracking-tighter leading-none text-white group-hover:text-primary transition-colors">{item.title}</h3>
                       <div className="mt-2 flex items-center gap-2">
                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                         <span className="text-[7px] font-bold uppercase opacity-40 tracking-widest text-white">Sinal 4K Ativo</span>
+                         <span className="text-[7px] font-bold uppercase opacity-40 tracking-widest text-white">Sinal Ativo</span>
                       </div>
                     </div>
                   </div>
@@ -175,9 +185,9 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2rem] shadow-3xl">
-            <DialogHeader className="sr-only">
+            <DialogHeader className="p-6 pb-2 sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
-              <DialogDescription>Player Master de alta performance</DialogDescription>
+              <DialogDescription>Sinal Master de alta performance</DialogDescription>
             </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 

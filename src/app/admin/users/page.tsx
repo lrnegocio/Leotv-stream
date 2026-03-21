@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -55,25 +56,18 @@ export default function UserManagementPage() {
 
     setIsSaving(true)
     
-    let expiry = undefined
-    if (newUser.tier === 'test') {
-      // Testes expiram em 6 horas a partir de AGORA se criados manualmente pelo admin
-      // ou ficam "pendentes" se criados sem ativação. 
-      // Para o Admin, já vamos deixar pendente para ativar no 1º uso.
-      expiry = undefined 
-    } else if (newUser.tier === 'monthly') {
-      expiry = undefined // Ativa no 1º uso por 30 dias
-    }
+    const editingUser = users.find(u => u.id === editingUserId);
 
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin,
       role: 'user',
       subscriptionTier: newUser.tier,
-      expiryDate: expiry,
+      expiryDate: editingUser?.expiryDate,
       maxScreens: parseInt(newUser.screens),
-      activeDevices: editingUserId ? (users.find(u => u.id === editingUserId)?.activeDevices || []) : [],
-      isBlocked: false
+      activeDevices: editingUser?.activeDevices || [],
+      isBlocked: editingUser?.isBlocked || false,
+      activatedAt: editingUser?.activatedAt
     }
 
     const success = await saveUser(userData)
@@ -211,35 +205,41 @@ export default function UserManagementPage() {
               {filteredUsers.length === 0 ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-10 opacity-30">Vazio.</TableCell></TableRow>
               ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id} className="border-white/5 hover:bg-white/5 transition-colors">
-                    <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{user.pin}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
-                        {user.subscriptionTier === 'test' ? 'TESTE 6H' : user.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-[10px] font-bold uppercase opacity-60">
-                      {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'PENDENTE/VITALÍCIO'}
-                    </TableCell>
-                    <TableCell>
-                      {user.isBlocked ? (
-                        <Badge variant="destructive" className="uppercase text-[9px]">BLOQUEADO</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
-                          {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredUsers.map((user) => {
+                  const isExpired = user.expiryDate && new Date(user.expiryDate) < new Date();
+                  
+                  return (
+                    <TableRow key={user.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                      <TableCell className="font-mono font-black text-lg text-primary tracking-widest">{user.pin}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-bold">
+                          {user.subscriptionTier === 'test' ? 'TESTE 6H' : user.subscriptionTier === 'monthly' ? '30 DIAS' : 'VITALÍCIO'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-[10px] font-bold uppercase opacity-60">
+                        {user.expiryDate ? new Date(user.expiryDate).toLocaleString('pt-BR') : 'PENDENTE/VITALÍCIO'}
+                      </TableCell>
+                      <TableCell>
+                        {user.isBlocked ? (
+                          <Badge variant="destructive" className="uppercase text-[9px]">BLOQUEADO</Badge>
+                        ) : isExpired ? (
+                          <Badge variant="destructive" className="uppercase text-[9px] bg-orange-600 border-orange-600">EXPIRADO</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px]">ATIVO</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(user)}>
+                            {user.isBlocked ? <UserCheck className="h-4 w-4 text-green-400" /> : <UserX className="h-4 w-4 text-destructive" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)} className="text-blue-400"><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

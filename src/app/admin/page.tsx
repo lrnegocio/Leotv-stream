@@ -91,27 +91,33 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-white/5">
-              {users.slice(0, 5).map((user) => (
-                <div key={user.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors group">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center font-mono font-bold text-primary uppercase text-lg border border-primary/20 shadow-inner">
-                    {user.pin.substring(0, 2)}
+              {users.slice(0, 10).map((user) => {
+                const isExpired = user.expiryDate && new Date(user.expiryDate) < new Date();
+                const statusColor = user.isBlocked ? 'text-destructive' : isExpired ? 'text-orange-500' : 'text-green-400';
+                const statusText = user.isBlocked ? 'SUSPENSO' : isExpired ? 'EXPIRADO' : 'ATIVO';
+
+                return (
+                  <div key={user.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors group">
+                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center font-mono font-bold text-primary uppercase text-lg border border-primary/20 shadow-inner">
+                      {user.pin.substring(0, 2)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-black uppercase tracking-[0.2em] text-sm text-primary group-hover:scale-105 origin-left transition-transform">{user.pin}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                        {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.activatedAt ? 'ATIVADO' : 'ESTOQUE'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-[10px] font-bold tracking-widest uppercase ${statusColor}`}>
+                        {statusText}
+                      </p>
+                      <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">
+                        {user.expiryDate ? new Date(user.expiryDate).toLocaleDateString('pt-BR') : 'SEM VALIDADE'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-black uppercase tracking-[0.2em] text-sm text-primary group-hover:scale-105 origin-left transition-transform">{user.pin}</p>
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
-                      {user.subscriptionTier === 'test' ? 'Teste' : user.subscriptionTier === 'monthly' ? 'Mensal' : 'Vitalício'} • {user.activatedAt ? 'ATIVADO' : 'ESTOQUE'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-[10px] font-bold tracking-widest uppercase ${user.isBlocked ? 'text-destructive' : 'text-green-400'}`}>
-                      {user.isBlocked ? 'SUSPENSO' : 'ATIVO'}
-                    </p>
-                    <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">
-                      {user.expiryDate ? new Date(user.expiryDate).toLocaleDateString('pt-BR') : 'SEM VALIDADE'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
