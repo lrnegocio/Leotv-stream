@@ -47,7 +47,7 @@ export default function HomeContent() {
       const session = localStorage.getItem("user_session")
       if (session) {
         const u = JSON.parse(session)
-        if (u.expiryDate && new Date(u.expiryDate) < new Date()) {
+        if (u.expiryDate && new Date(u.expiryDate) < new Date() && u.subscriptionTier !== 'lifetime') {
           handleLogout()
         }
       }
@@ -55,23 +55,23 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  // Filtro Instantâneo Letra por Letra
+  // Filtro Instantâneo Letra por Letra (Busca Master)
   const filteredContent = React.useMemo(() => {
     return content.filter(item => 
       item.title.toLowerCase().includes(searchQuery) || 
-      item.genre.toLowerCase().includes(searchQuery)
+      (item.genre && item.genre.toLowerCase().includes(searchQuery))
     )
   }, [content, searchQuery])
 
   // Agrupamento Inteligente em Pastas Únicas
   const categories = React.useMemo(() => {
-    const cats = Array.from(new Set(filteredContent.map(item => item.genre))).sort()
+    const cats = Array.from(new Set(filteredContent.map(item => item.genre || "GERAL"))).sort()
     return cats
   }, [filteredContent])
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     if (!activeVideo) return
-    const currentCategoryItems = filteredContent.filter(i => i.genre === activeVideo.genre)
+    const currentCategoryItems = filteredContent.filter(i => (i.genre || "GERAL") === (activeVideo.genre || "GERAL"))
     const currentIndex = currentCategoryItems.findIndex(i => i.id === activeVideo.id)
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     
@@ -106,7 +106,7 @@ export default function HomeContent() {
           <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum sinal localizado...</div>
         ) : (
           categories.map(category => {
-            const categoryItems = filteredContent.filter(item => item.genre === category)
+            const categoryItems = filteredContent.filter(item => (item.genre || "GERAL") === category)
             return (
               <section key={category} className="space-y-6">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">

@@ -32,41 +32,43 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return ""
     let targetUrl = url.trim()
 
+    // Lógica de Autoplay Turbo
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
     }
 
     const connector = targetUrl.includes('?') ? '&' : '?'
-    return `${targetUrl}${connector}autoplay=1&mute=1`
+    // Force Autoplay e Mute para evitar bloqueio de som
+    return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
   return (
-    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl">
+    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl">
       
       {/* NAVEGAÇÃO SUPREMA - Z-INDEX 1000 */}
       <div className="absolute inset-0 z-[1000] pointer-events-none flex items-center justify-between px-4 sm:px-12">
         {onPrev && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-black/60 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-3xl opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-black/60 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-3xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev(); }}
           >
-            <ChevronLeft className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronLeft className="h-10 w-10 sm:h-14 sm:w-14" />
           </button>
         )}
         
         {onNext && (
           <button 
             type="button"
-            className="h-20 w-20 sm:h-28 sm:w-28 rounded-full bg-black/60 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-3xl opacity-0 group-hover:opacity-100"
+            className="h-16 w-16 sm:h-24 sm:w-24 rounded-full bg-black/60 hover:bg-primary text-white pointer-events-auto border border-white/10 backdrop-blur-xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center shadow-3xl opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext(); }}
           >
-            <ChevronRight className="h-12 w-12 sm:h-16 sm:w-16" />
+            <ChevronRight className="h-10 w-10 sm:h-14 sm:w-14" />
           </button>
         )}
       </div>
@@ -74,14 +76,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">CONECTANDO AO SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">INICIANDO SINAL MASTER...</span>
         </div>
       )}
 
       {showMuteNotice && !loading && (
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-4 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in">
-          <Volume2 className="h-3 w-3 text-primary" />
-          <span className="text-[8px] font-black text-white uppercase tracking-tight">ATIVE O SOM NO PLAYER</span>
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in">
+          <Volume2 className="h-4 w-4 text-primary animate-bounce" />
+          <span className="text-[9px] font-black text-white uppercase tracking-tighter">CLIQUE NO PLAYER PARA ATIVAR O SOM</span>
         </div>
       )}
 
@@ -90,6 +92,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
+        // SANDBOX BLINDADO: Impede que o canal abra novas abas ou janelas de propaganda
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         onLoad={() => setLoading(false)}
@@ -104,7 +108,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary text-white h-12 px-6 text-[10px] uppercase font-black rounded-xl pointer-events-auto shadow-xl" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-4 w-4" /> LINK EXTERNO
+            <ExternalLink className="mr-2 h-4 w-4" /> ABRIR EXTERNO
           </Button>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!containerRef.current) return;

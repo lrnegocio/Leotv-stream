@@ -1,5 +1,3 @@
-'use client';
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -62,7 +60,7 @@ export interface Reseller {
 
 /**
  * MOTOR DE BUSCA PERPÉTUA - MESTRE LÉO
- * Varre o banco em blocos de 1.000 para trazer TODOS os 1.045+ registros.
+ * Varre o banco em blocos de 1.000 para trazer TODOS os registros da sua rede de 1.045+ canais.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -78,10 +76,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) {
-        console.error(`Erro na busca perpétua na tabela ${table}:`, error.message);
-        break;
-      }
+      if (error) break;
       
       if (data && data.length > 0) {
         allData = [...allData, ...data];
@@ -91,9 +86,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         finished = true;
       }
     }
-  } catch (e) {
-    console.error(`Falha fatal no motor de busca na tabela ${table}`);
-  }
+  } catch (e) {}
   return allData;
 }
 
@@ -168,6 +161,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
+  // RENOVAÇÃO ACUMULATIVA: Se ainda tiver tempo, soma na frente.
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
@@ -253,6 +247,30 @@ export async function validateResellerLogin(username: string, pass: string) {
   return { reseller: res };
 }
 
+/**
+ * GERA PLAYLIST M3U PARA SMART TV
+ */
+export async function generateM3UPlaylist(pin: string): Promise<string> {
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.pin === pin);
+  
+  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU EXPIRADO";
+
+  const content = await getRemoteContent();
+  let m3u = "#EXTM3U\n";
+
+  content.forEach(item => {
+    const streamUrl = item.streamUrl || "";
+    const title = item.title.toUpperCase();
+    const category = (item.genre || "GERAL").toUpperCase();
+    const logo = item.imageUrl || "";
+
+    m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
+  });
+
+  return m3u;
+}
+
 export async function getGlobalSettings() {
   const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
   return data?.value || { parentalPin: '1234' };
@@ -270,6 +288,7 @@ export const generateRandomPin = (length: number = 6) => {
   return result;
 };
 
-export const getBeautifulMessage = (pin: string, type: string) => {
-  return `🚀 *LÉO STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste VIP 6 Horas' : 'Mensal 30 Dias'}\n\n📲 _Assista agora em sua Smart TV ou Celular!_`;
+export const getBeautifulMessage = (pin: string, type: string, baseUrl: string) => {
+  const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
+  return `🚀 *LÉO STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${type === 'test' ? 'Teste VIP 6 Horas' : 'Mensal 30 Dias'}\n\n📺 *LINK PARA SMART TV:* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV ou Celular!_`;
 }

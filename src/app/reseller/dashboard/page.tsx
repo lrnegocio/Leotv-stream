@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Key, Timer, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap } from "lucide-react"
+import { Key, Timer, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap, Tv, Copy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +16,7 @@ export default function ResellerDashboard() {
   const [search, setSearch] = React.useState("")
   const [isGenerating, setIsGenerating] = React.useState(false)
   const [isRenewing, setIsRenewing] = React.useState<string | null>(null)
+  const [copiedPin, setCopiedPin] = React.useState<string | null>(null)
   const router = useRouter()
 
   const loadData = React.useCallback(async () => {
@@ -75,7 +75,7 @@ export default function ResellerDashboard() {
       toast({ title: "PIN GERADO COM SUCESSO!", description: `O código ${pin} já está ativo.` })
       await loadData()
     } else {
-      toast({ variant: "destructive", title: "ERRO DE GRAVAÇÃO", description: "Verifique se o Admin criou a coluna resellerId no Supabase." })
+      toast({ variant: "destructive", title: "ERRO DE GRAVAÇÃO", description: "Falha ao salvar no Supabase." })
     }
     setIsGenerating(false)
   }
@@ -106,8 +106,17 @@ export default function ResellerDashboard() {
   }
 
   const sendAccess = (pin: string, tier: string) => {
-    const msg = encodeURIComponent(getBeautifulMessage(pin, tier))
+    const baseUrl = window.location.origin;
+    const msg = encodeURIComponent(getBeautifulMessage(pin, tier, baseUrl))
     window.open(`https://wa.me/?text=${msg}`, '_blank')
+  }
+
+  const copyPlaylistLink = (pin: string) => {
+    const playlistUrl = `${window.location.origin}/api/playlist?pin=${pin}`;
+    navigator.clipboard.writeText(playlistUrl);
+    setCopiedPin(pin);
+    toast({ title: "LINK COPIADO!", description: "O link da playlist M3U está na sua área de transferência." });
+    setTimeout(() => setCopiedPin(null), 3000);
   }
 
   if (loading || !reseller) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -174,6 +183,15 @@ export default function ResellerDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        title="Copiar Link para Smart TV"
+                        onClick={() => copyPlaylistLink(u.pin)} 
+                        className="h-12 border-blue-500/20 text-blue-500 text-[9px] font-black uppercase px-6 rounded-2xl hover:bg-blue-500/10 shadow-lg shadow-blue-500/5"
+                      >
+                        {copiedPin === u.pin ? <Check className="h-4 w-4" /> : <Tv className="h-4 w-4" />}
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
