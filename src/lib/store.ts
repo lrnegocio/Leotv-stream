@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -142,9 +143,8 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // Primeiro deleta os usuários vinculados para não dar erro de chave estrangeira
+    // BLINDAGEM DE EXCLUSÃO: Remove todos os usuários vinculados antes de remover o revendedor
     await supabase.from('users').delete().eq('resellerId', id);
-    // Depois deleta o revendedor
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
@@ -166,6 +166,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const now = new Date();
   let baseDate = now;
 
+  // Se o PIN já está ativo e não expirou, soma o tempo à data de expiração atual
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) baseDate = currentExpiry;
@@ -197,13 +198,13 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * VALIDAÇÃO DE LOGIN COM VINCULAÇÃO DE HARDWARE (BINDING) PERMANENTE
- * O PIN é "casado" com os aparelhos que logam primeiro.
+ * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE PERMANENTE (VINCO DE APARELHO)
+ * PIN de 11 dígitos agora é a norma Master.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Acesso Admin Master Blindado
+  // Acesso Admin Master
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -211,36 +212,35 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "CÓDIGO INVÁLIDO." };
-  if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O ADMINISTRADOR." };
+  if (!user) return { error: "CÓDIGO PIN INVÁLIDO OU NÃO LOCALIZADO." };
+  if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O SUPORTE PARA DESBLOQUEIO." };
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
     return { error: "SINAL EXPIRADO! RENOVE PARA VOLTAR A ASSISTIR." };
   }
 
-  // LÓGICA DE VINCULAÇÃO DE HARDWARE (BINDING) PERMANENTE
+  // BINDING DE HARDWARE: Vincula permanentemente aos aparelhos que logarem primeiro
   const registeredDevices = user.activeDevices || [];
   const isDeviceRegistered = registeredDevices.some(d => d.id === deviceId);
 
   if (!isDeviceRegistered) {
-    // Se não está registrado, tenta registrar uma nova vaga
     if (registeredDevices.length >= user.maxScreens) {
-      // Bloqueia o PIN permanentemente porque tentou usar em um aparelho novo sem ter vaga disponível
+      // TENTATIVA DE LOGIN EM NOVO APARELHO SEM VAGAS -> BLOQUEIO PERMANENTE
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
+      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
     }
     // Vincula este aparelho permanentemente ao PIN
     registeredDevices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = registeredDevices;
   } else {
-    // Aparelho já vinculado, apenas atualiza o timestamp de atividade
+    // Aparelho já vinculado, apenas atualiza atividade
     user.activeDevices = registeredDevices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
-  // Ativação do PIN no primeiro uso
+  // Ativação no primeiro uso
   if (!user.activatedAt) {
     user.activatedAt = now.toISOString();
     if (user.subscriptionTier === 'test') {
@@ -254,15 +254,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   return { user };
 }
 
-export async function logoutDevice(userId: string, deviceId: string) {
-  // Logout no modelo de vinculação de hardware (Binding) não desvincula o aparelho, pois o vínculo é permanente conforme pedido.
-}
-
 export async function validateResellerLogin(username: string, pass: string) {
   const resellers = await getRemoteResellers();
   const res = resellers.find(r => r.username === username && r.password === pass);
-  if (!res) return { error: "LOGIN INVÁLIDO." };
-  if (res.isBlocked) return { error: "PAINEL SUSPENSO." };
+  if (!res) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
+  if (res.isBlocked) return { error: "PAINEL DE REVENDA SUSPENSO." };
   return { reseller: res };
 }
 
@@ -274,7 +270,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE COM SEU REVENDEDOR";
+    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE PARA CONTINUAR";
   }
 
   const content = await fetchAllRecords('content', 'title');
@@ -302,7 +298,7 @@ export async function updateGlobalSettings(data: { parentalPin: string }) {
   return !error;
 }
 
-// PINs DE 11 DÍGITOS PARA MÁXIMA SEGURANÇA
+// PINs DE 11 DÍGITOS PARA MÁXIMA SEGURANÇA MASTER
 export const generateRandomPin = (length: number = 11) => {
   const chars = '0123456789';
   let result = '';
@@ -316,12 +312,12 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
   
   return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀
 
-🔑 *SEU CÓDIGO:* \`${pin}\`
+🔑 *SEU PIN:* \`${pin}\`
 📅 *PLANO:* ${planoText}
 🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
 
-📺 *SERVIDOR IPTV (SMART TV):* 
+📺 *SERVIDORES PARA SMART TV:* 
 ${playlistUrl}
 
-⚠️ _Nota: Este código será vinculado permanentemente aos primeiros aparelhos que logarem._`;
+⚠️ _Nota: Este código será vinculado permanentemente ao seu aparelho. Não compartilhe._`;
 }
