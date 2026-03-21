@@ -38,10 +38,12 @@ export default function ResellerManagementPage() {
 
   const handleAddCredits = async () => {
     if (!reseller) return
-    const updated = { ...reseller, credits: reseller.credits + pinsToAdd }
-    await saveReseller(updated)
-    setReseller(updated)
-    toast({ title: "Estoque de Créditos Atualizado!" })
+    const updated = { ...reseller, credits: reseller.credits + (pinsToAdd || 0) }
+    const success = await saveReseller(updated)
+    if (success) {
+      setReseller(updated)
+      toast({ title: "Estoque de Créditos Atualizado!" })
+    }
   }
 
   const handleDeleteReseller = async () => {
@@ -78,21 +80,23 @@ export default function ResellerManagementPage() {
       resellerId: reseller.id as string
     }
 
-    await saveUser(newUser)
+    const successUser = await saveUser(newUser)
     
-    if (type === 'monthly') {
-      const updatedReseller = { 
-        ...reseller, 
-        credits: reseller.credits - 1,
-        totalSold: (reseller.totalSold || 0) + 1
+    if (successUser) {
+      if (type === 'monthly') {
+        const updatedReseller = { 
+          ...reseller, 
+          credits: reseller.credits - 1,
+          totalSold: (reseller.totalSold || 0) + 1
+        }
+        await saveReseller(updatedReseller)
+        setReseller(updatedReseller)
       }
-      await saveReseller(updatedReseller)
-      setReseller(updatedReseller)
+      
+      await loadData()
+      toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN 30 DIAS GERADO!", description: `CÓDIGO: ${newPin}` })
     }
-    
-    await loadData()
     setIsGenerating(false)
-    toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN 30 DIAS GERADO!", description: `CÓDIGO: ${newPin}` })
   }
 
   if (loading || !reseller) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
@@ -106,7 +110,7 @@ export default function ResellerManagementPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-black uppercase font-headline italic text-primary">{reseller.name}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Painel de Controle de Revenda Master</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Painel de Controle de Revenda Master {reseller.isBlocked ? "(SUSPENSO)" : "(ATIVO)"}</p>
           </div>
         </div>
         <div className="flex gap-4">
@@ -136,7 +140,7 @@ export default function ResellerManagementPage() {
               <Input 
                 type="number" 
                 value={pinsToAdd} 
-                onChange={e => setPinsToAdd(parseInt(e.target.value))} 
+                onChange={e => setPinsToAdd(parseInt(e.target.value) || 0)} 
                 className="h-14 bg-black/40 text-center text-xl font-black border-white/5"
               />
               <Button onClick={handleAddCredits} className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 font-black uppercase text-xs">
@@ -170,11 +174,11 @@ export default function ResellerManagementPage() {
           </Card>
 
           <div className="grid gap-4">
-            <Button onClick={() => handleGeneratePins('monthly')} disabled={isGenerating} className="w-full h-20 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-3xl transition-transform active:scale-95">
+            <Button onClick={() => handleGeneratePins('monthly')} disabled={isGenerating || reseller.isBlocked} className="w-full h-20 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-3xl transition-transform active:scale-95">
               {isGenerating ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Key className="mr-3 h-8 w-8" /> GERAR PIN (30 DIAS)</>}
             </Button>
 
-            <Button onClick={() => handleGeneratePins('test')} disabled={isGenerating} variant="outline" className="w-full h-16 border-white/10 text-emerald-400 font-black uppercase rounded-3xl hover:bg-emerald-500/10 transition-transform active:scale-95">
+            <Button onClick={() => handleGeneratePins('test')} disabled={isGenerating || reseller.isBlocked} variant="outline" className="w-full h-16 border-white/10 text-emerald-400 font-black uppercase rounded-3xl hover:bg-emerald-500/10 transition-transform active:scale-95">
               <Timer className="mr-2 h-6 w-6" /> TESTE GRÁTIS (6H)
             </Button>
           </div>

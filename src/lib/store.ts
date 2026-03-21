@@ -127,12 +127,18 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  const { error } = await supabase.from('resellers').upsert(reseller);
+  // Garante que o campo isBlocked está sendo enviado corretamente
+  const { error } = await supabase.from('resellers').upsert({
+    ...reseller,
+    isBlocked: reseller.isBlocked || false
+  });
+  if (error) console.error("Erro ao salvar revenda:", error);
   return !error;
 }
 
 export async function removeReseller(id: string) {
   const { error } = await supabase.from('resellers').delete().eq('id', id);
+  if (error) console.error("Erro ao excluir revenda:", error);
   return !error;
 }
 

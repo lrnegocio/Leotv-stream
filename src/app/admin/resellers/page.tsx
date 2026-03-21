@@ -25,9 +25,13 @@ export default function ResellersPage() {
 
   const toggleBlock = async (res: Reseller) => {
     const updated = { ...res, isBlocked: !res.isBlocked }
-    await saveReseller(updated)
-    toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
-    load()
+    const success = await saveReseller(updated)
+    if (success) {
+      toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
+      load()
+    } else {
+      toast({ variant: "destructive", title: "Erro ao atualizar", description: "Verifique o banco de dados." })
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -103,13 +107,13 @@ export default function ResellersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)}>
+                      <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)} title={r.isBlocked ? "Ativar Revenda" : "Bloquear Revenda"}>
                         {r.isBlocked ? <ShieldCheck className="h-4 w-4 text-green-400" /> : <ShieldAlert className="h-4 w-4 text-destructive" />}
                       </Button>
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" asChild title="Ver Detalhes">
                         <Link href={`/admin/resellers/${r.id}`}><Key className="h-4 w-4 text-primary" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(r.id)}>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(r.id)} title="Excluir Revendedor">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
