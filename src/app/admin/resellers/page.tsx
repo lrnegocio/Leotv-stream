@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Key, Loader2, ShieldCheck, ShieldAlert, User, Trash2 } from "lucide-react"
+import { Plus, Search, Key, Loader2, ShieldCheck, ShieldAlert, User, Trash2, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteResellers, removeReseller, saveReseller, Reseller } from "@/lib/store"
@@ -36,17 +37,12 @@ export default function ResellersPage() {
     
     const result = await saveReseller(updated)
     
-    if (result.success) {
+    if (result === true) {
       toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
       await load()
-    } else if (result.error === "COLUNA_FALTANDO") {
-      toast({ 
-        variant: "destructive", 
-        title: "Erro no Banco", 
-        description: "Você precisa rodar o comando SQL no Supabase para criar a coluna 'isBlocked'!" 
-      })
     } else {
-      toast({ variant: "destructive", title: "Erro", description: result.error })
+      // O erro detalhado já é disparado pelo store.ts via alert
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao alterar status no banco." })
     }
   }
 
@@ -106,7 +102,7 @@ export default function ResellersPage() {
                   <TableCell className="font-bold uppercase text-xs">{r.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 font-mono text-[10px] opacity-60 uppercase bg-black/20 px-3 py-1 rounded-md w-fit">
-                      <User className="h-3 w-3 text-primary" /> {r.username}
+                      <User className="h-3 w-3 text-primary" /> {r.username || 'NÃO DEFINIDO'}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -118,12 +114,15 @@ export default function ResellersPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => toggleBlock(r)} title={r.isBlocked ? "Ativar Revenda" : "Bloquear Revenda"}>
                         {r.isBlocked ? <ShieldCheck className="h-4 w-4 text-green-400" /> : <ShieldAlert className="h-4 w-4 text-destructive" />}
                       </Button>
-                      <Button variant="ghost" size="icon" asChild title="Ver Detalhes">
-                        <Link href={`/admin/resellers/${r.id}`}><Key className="h-4 w-4 text-primary" /></Link>
+                      <Button variant="ghost" size="icon" asChild title="Editar Parceiro" className="text-primary">
+                        <Link href={`/admin/resellers/edit/${r.id}`}><Edit className="h-4 w-4" /></Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild title="Ver Painel Master">
+                        <Link href={`/admin/resellers/${r.id}`}><Key className="h-4 w-4 text-blue-400" /></Link>
                       </Button>
                       <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(r.id)} title="Excluir Revendedor">
                         <Trash2 className="h-4 w-4" />
