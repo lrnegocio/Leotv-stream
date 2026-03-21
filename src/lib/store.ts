@@ -62,7 +62,8 @@ export interface Reseller {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v61.0
+ * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v62.0 Master
+ * Varre o banco em blocos de 1.000 para carregar milhares de registros alfabeticamente.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -78,7 +79,10 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) break;
+      if (error) {
+        console.error(`Erro na busca perpétua na tabela ${table}:`, error.message);
+        break;
+      }
       
       if (data && data.length > 0) {
         allData = [...allData, ...data];
@@ -89,6 +93,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
       }
     }
   } catch (e) {
+    console.error(`Falha fatal no motor de busca na tabela ${table}`);
   }
   return allData;
 }
@@ -116,8 +121,26 @@ export async function removeContent(id: string) {
 }
 
 export async function saveUser(user: User) {
-  const { error } = await supabase.from('users').upsert(user);
-  if (error) console.error("Erro ao salvar usuário:", error.message);
+  const { error } = await supabase.from('users').upsert({
+    id: user.id,
+    pin: user.pin,
+    role: user.role,
+    subscriptionTier: user.subscriptionTier,
+    expiryDate: user.expiryDate || null,
+    maxScreens: user.maxScreens || 1,
+    activeDevices: user.activeDevices || [],
+    isBlocked: user.isBlocked || false,
+    resellerId: user.resellerId || null,
+    activatedAt: user.activatedAt || null,
+    blockedAt: user.blockedAt || null
+  });
+  
+  if (error) {
+    console.error("Erro fatal ao salvar PIN/Usuário:", error.message);
+    if (error.message.includes('resellerId')) {
+      alert("ATENÇÃO MESTRE LÉO: Você precisa rodar o comando SQL no Supabase para criar a coluna de REVENDEDOR!");
+    }
+  }
   return !error;
 }
 
@@ -142,11 +165,19 @@ export async function saveReseller(reseller: Reseller) {
   };
 
   const { error } = await supabase.from('resellers').upsert(dataToSave);
+  
+  if (error) {
+    console.error("Erro fatal ao salvar revenda:", error.message);
+    if (error.message.includes('isBlocked')) {
+      alert("ATENÇÃO MESTRE LÉO: Rode o comando SQL no Supabase para criar a coluna de BLOQUEIO!");
+    }
+  }
   return !error;
 }
 
 export async function removeReseller(id: string) {
   try {
+    // Limpa os usuários antes de excluir a revenda (Integridade Master)
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -156,7 +187,7 @@ export async function removeReseller(id: string) {
 }
 
 /**
- * RENOVAÇÃO ACUMULATIVA MASTER
+ * RENOVAÇÃO ACUMULATIVA MASTER v62.0
  * Soma 30 dias ao tempo restante ou a partir de agora se expirado.
  */
 export async function renewUserSubscription(userId: string, resellerId: string) {
@@ -165,13 +196,13 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   const resellers = await getRemoteResellers();
   const reseller = resellers.find(r => r.id === resellerId);
 
-  if (!user || !reseller) return { error: "Dados não localizados." };
-  if (reseller.credits < 1) return { error: "Você não tem créditos suficientes." };
+  if (!user || !reseller) return { error: "Dados não localizados no núcleo." };
+  if (reseller.credits < 1) return { error: "Seu estoque de créditos está vazio!" };
 
   const now = new Date();
   let baseDate = now;
 
-  // Se o PIN já tem validade e ainda não expirou, somamos no tempo que resta
+  // Se o PIN já tem validade e ainda não expirou, somamos no tempo que resta (Acumulativo)
   if (user.expiryDate) {
     const currentExpiry = new Date(user.expiryDate);
     if (currentExpiry > now) {
@@ -185,8 +216,8 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
     ...user,
     subscriptionTier: 'monthly',
     expiryDate: newExpiry.toISOString(),
-    isBlocked: false, // Desbloqueia se estava expirado
-    activatedAt: user.activatedAt || now.toISOString() // Garante ativação
+    isBlocked: false, // Desbloqueia automaticamente na renovação
+    activatedAt: user.activatedAt || now.toISOString() 
   };
 
   const updatedReseller: Reseller = {
@@ -201,11 +232,13 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   if (successUser && successReseller) {
     return { success: true, user: updatedUser, reseller: updatedReseller };
   }
-  return { error: "Erro ao atualizar no banco de dados." };
+  return { error: "Erro crítico de sincronia com o banco de dados." };
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
+  
+  // Acesso de Emergência Mestre
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [deviceId], isBlocked: false } };
   }
@@ -213,8 +246,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const users = await getRemoteUsers();
   const user = users.find(u => u.pin === normalizedPin);
   
-  if (!user) return { error: "PIN INVÁLIDO. Verifique o código." };
-  if (user.isBlocked) return { error: "ACESSO SUSPENSO PELO SISTEMA." };
+  if (!user) return { error: "PIN INVÁLIDO. Verifique o código enviado pelo seu revendedor." };
+  if (user.isBlocked) return { error: "ESTE PIN FOI SUSPENSO PELO SISTEMA." };
 
   if (user.resellerId) {
     const resellers = await getRemoteResellers();
@@ -222,15 +255,22 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (res?.isBlocked) return { error: "SINAL SUSPENSO (REVENDA BLOQUEADA)." };
   }
 
-  // Lógica de Ativação no Primeiro Login
+  // Lógica de Ativação e Anti-Fraude Master
   if (!user.activatedAt) {
     if (user.subscriptionTier === 'test') {
-      const alreadyUsed = users.some(u => u.subscriptionTier === 'test' && u.pin !== normalizedPin && u.activeDevices?.includes(deviceId));
+      // Bloqueia reuso de teste grátis no mesmo equipamento
+      const alreadyUsed = users.some(u => 
+        u.subscriptionTier === 'test' && 
+        u.pin !== normalizedPin && 
+        u.activeDevices?.includes(deviceId)
+      );
+      
       if (alreadyUsed) {
         user.isBlocked = true;
         await saveUser(user);
-        return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS." };
+        return { error: "ESTE APARELHO JÁ UTILIZOU O TESTE GRÁTIS DE 6H." };
       }
+      
       user.activatedAt = new Date().toISOString();
       user.expiryDate = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
     } else if (user.subscriptionTier === 'monthly') {
@@ -243,7 +283,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   // Verificação de Expiração em Tempo Real
   if (user.expiryDate && new Date(user.expiryDate) < new Date() && user.subscriptionTier !== 'lifetime') {
-    return { error: "SINAL EXPIRADO. FALE COM SEU REVENDEDOR." };
+    return { error: "SINAL EXPIRADO. FALE COM SEU REVENDEDOR PARA RENOVAR." };
   }
   
   return { user };
@@ -252,14 +292,18 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 export async function validateResellerLogin(username: string, pass: string) {
   const resellers = await getRemoteResellers();
   const res = resellers.find(r => r.username === username && r.password === pass);
-  if (!res) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
-  if (res.isBlocked) return { error: "PAINEL DE REVENDA SUSPENSO." };
+  if (!res) return { error: "USUÁRIO OU SENHA DE REVENDA INVÁLIDOS." };
+  if (res.isBlocked) return { error: "SEU PAINEL DE REVENDA FOI SUSPENSO PELO ADMIN." };
   return { reseller: res };
 }
 
 export async function getGlobalSettings() {
-  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return data?.value || { parentalPin: '1234' };
+  try {
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    return data?.value || { parentalPin: '1234' };
+  } catch (e) {
+    return { parentalPin: '1234' };
+  }
 }
 
 export async function updateGlobalSettings(data: { parentalPin: string }) {
