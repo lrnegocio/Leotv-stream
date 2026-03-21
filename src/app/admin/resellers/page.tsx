@@ -34,32 +34,30 @@ export default function ResellersPage() {
       isBlocked: !res.isBlocked 
     }
     
-    const success = await saveReseller(updated)
+    const result = await saveReseller(updated)
     
-    if (success) {
+    if (result.success) {
       toast({ title: updated.isBlocked ? "REVENDA SUSPENSA" : "REVENDA ATIVADA" })
-      await load() // Recarrega a lista para garantir a visualização correta
-    } else {
+      await load()
+    } else if (result.error === "COLUNA_FALTANDO") {
       toast({ 
         variant: "destructive", 
         title: "Erro no Banco", 
-        description: "Você rodou o comando SQL para adicionar a coluna 'isBlocked'?" 
+        description: "Você precisa rodar o comando SQL no Supabase para criar a coluna 'isBlocked'!" 
       })
+    } else {
+      toast({ variant: "destructive", title: "Erro", description: result.error })
     }
   }
 
   const handleDelete = async (id: string) => {
     if (confirm("ATENÇÃO: Deseja realmente excluir este revendedor? Todos os créditos e acessos dele serão removidos permanentemente.")) {
-      try {
-        const success = await removeReseller(id)
-        if (success) {
-          toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
-          await load()
-        } else {
-          toast({ variant: "destructive", title: "Erro na Exclusão", description: "Falha ao remover no Supabase." })
-        }
-      } catch (err) {
-        toast({ variant: "destructive", title: "Erro Fatal", description: "Falha na conexão com o servidor." })
+      const success = await removeReseller(id)
+      if (success) {
+        toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
+        await load()
+      } else {
+        toast({ variant: "destructive", title: "Erro na Exclusão", description: "Falha ao remover no Supabase." })
       }
     }
   }

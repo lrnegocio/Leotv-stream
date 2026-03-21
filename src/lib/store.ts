@@ -61,8 +61,8 @@ export interface Reseller {
 }
 
 /**
- * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v57.0
- * Varre o Supabase em blocos de 1000 canais de forma sequencial para evitar Timeout na Vercel.
+ * MOTOR DE BUSCA PERPÉTUA LÉO STREAM v58.0
+ * Varre o Supabase em blocos de 1000 canais de forma sequencial.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -130,7 +130,7 @@ export async function removeUser(id: string) {
 }
 
 export async function saveReseller(reseller: Reseller) {
-  // Envio explícito e blindado de campos para garantir compatibilidade com o banco
+  // Envio blindado com aspas para garantir compatibilidade com colunas do Supabase
   const dataToSave = {
     id: reseller.id,
     name: reseller.name,
@@ -149,22 +149,37 @@ export async function saveReseller(reseller: Reseller) {
   
   if (error) {
     console.error("Erro fatal ao salvar revenda:", error.message);
-    // Se o erro for de coluna ausente, avisar o mestre léo
     if (error.message.includes('column') && error.message.includes('not found')) {
-      alert("ATENÇÃO MESTRE LÉO: Você precisa rodar o comando SQL no Supabase para criar a coluna de BLOQUEIO!");
+      return { error: "COLUNA_FALTANDO" };
     }
-    return false;
+    return { error: error.message };
   }
-  return true;
+  return { success: true };
 }
 
 export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  if (error) {
-    console.error("Erro fatal ao excluir revenda:", error.message);
+  try {
+    // 1. Verifica se tem usuários vinculados
+    const { data: users } = await supabase.from('users').select('id').eq('resellerId', id);
+    
+    if (users && users.length > 0) {
+      // Se tiver usuários, deleta eles primeiro ou avisa
+      const deleteUsers = confirm(`Este revendedor possui ${users.length} clientes. Deseja excluir os clientes e o revendedor?`);
+      if (!deleteUsers) return false;
+      
+      await supabase.from('users').delete().eq('resellerId', id);
+    }
+
+    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    if (error) {
+      console.error("Erro ao excluir no banco:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Falha na exclusão master:", err);
     return false;
   }
-  return true;
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
