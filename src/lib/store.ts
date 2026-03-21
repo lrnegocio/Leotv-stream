@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -114,7 +115,6 @@ export async function saveContent(item: ContentItem) {
     imageUrl: item.imageUrl || null,
   };
 
-  // Lógica Inteligente Master: Se for série, remove o link principal e foca nos episódios
   if (item.type === 'series' || item.type === 'multi-season') {
     payload.episodes = item.episodes || [];
     payload.seasons = item.seasons || [];
@@ -128,7 +128,7 @@ export async function saveContent(item: ContentItem) {
   const { error } = await supabase.from('content').upsert(payload);
   
   if (error) {
-    console.error("FALHA CRÍTICA NO SUPABASE:", error.message, "| Detalhes:", error.details);
+    console.error("FALHA CRÍTICA NO SUPABASE:", error.message);
     return false;
   }
   return true;
@@ -168,7 +168,6 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    // Limpeza Master: Apaga os PINs vinculados antes de apagar a revenda
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -221,14 +220,9 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   return { error: "Erro de sincronia." };
 }
 
-/**
- * LOGICA DE HARDWARE BINDING MASTER - MESTRE LÉO
- * O PIN se "casa" com o aparelho. Bloqueia se atingir o limite de telas simultâneas registradas.
- */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
   
-  // Acesso Master do Léo
   if (normalizedPin === 'adm77x2p') {
     return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
   }
@@ -247,24 +241,20 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
-  // VÍNCULO DE HARDWARE INTELIGENTE:
   if (!isThisDeviceLinked) {
-    // Só bloqueia se tentar registrar um NOVO aparelho e já estiver no limite
     if (devices.length >= user.maxScreens) {
+      // PERFORMANCE & SEGURANÇA: Só bloqueia se tentar um novo aparelho acima do limite.
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
+      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO." };
     }
-    // Vincula o novo aparelho permanentemente
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
   } else {
-    // Apenas atualiza o último acesso do aparelho já vinculado
     user.activeDevices = devices.map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   }
   
-  // Ativação automática no primeiro login
   if (!user.activatedAt) {
     user.activatedAt = now.toISOString();
     if (user.subscriptionTier === 'test') {
