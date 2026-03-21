@@ -109,15 +109,15 @@ export async function saveContent(item: ContentItem) {
     id: item.id,
     title: item.title,
     type: item.type,
-    description: item.description,
-    genre: item.genre,
-    isRestricted: item.isRestricted,
+    description: item.description || "",
+    genre: item.genre || "",
+    isRestricted: item.isRestricted || false,
     imageUrl: item.imageUrl || null,
   };
 
   if (item.type === 'series' || item.type === 'multi-season') {
-    payload.episodes = item.episodes || [];
-    payload.seasons = item.seasons || [];
+    payload.episodes = Array.isArray(item.episodes) ? item.episodes : [];
+    payload.seasons = Array.isArray(item.seasons) ? item.seasons : [];
     payload.streamUrl = null;
   } else {
     payload.streamUrl = item.streamUrl || null;
@@ -128,7 +128,7 @@ export async function saveContent(item: ContentItem) {
   const { error } = await supabase.from('content').upsert(payload);
   
   if (error) {
-    console.error("FALHA CRÍTICA NO SUPABASE:", error.message);
+    console.error("FALHA CRÍTICA NO SUPABASE:", error.message, "| Detalhes:", error.details);
     return false;
   }
   return true;
@@ -243,7 +243,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
   if (!isThisDeviceLinked) {
     if (devices.length >= user.maxScreens) {
-      // PERFORMANCE & SEGURANÇA: Só bloqueia se tentar um novo aparelho acima do limite.
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
