@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, ShieldAlert, EyeOff, Eye, Key } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, ShieldAlert, EyeOff, Eye, Timer, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -25,6 +24,7 @@ export default function HomeContent() {
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
   const [pendingVideo, setPendingVideo] = React.useState<ContentItem | null>(null)
+  const [timeLeft, setTimeLeft] = React.useState("")
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -60,22 +60,32 @@ export default function HomeContent() {
     load()
   }, [router])
 
+  // MONITOR DE EXPIRAÇÃO REAL-TIME
   React.useEffect(() => {
     const interval = setInterval(() => {
-      const session = localStorage.getItem("user_session")
-      if (session) {
-        const u = JSON.parse(session)
-        if (u.isBlocked) {
-          handleLogout()
-          toast({ variant: "destructive", title: "SINAL BLOQUEADO", description: "Muitos aparelhos usando o mesmo PIN." })
-        }
-        if (u.expiryDate && new Date(u.expiryDate) < new Date() && u.subscriptionTier !== 'lifetime') {
-          handleLogout()
-        }
+      if (!user?.expiryDate) return;
+      
+      const now = new Date();
+      const expiry = new Date(user.expiryDate);
+      const diff = expiry.getTime() - now.getTime();
+
+      if (diff <= 0 && user.subscriptionTier !== 'lifetime') {
+        handleLogout();
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (user.subscriptionTier === 'lifetime') {
+        setTimeLeft("ACESSO VITALÍCIO");
+      } else {
+        setTimeLeft(`${days}d ${hours}h ${minutes}m RESTANTES`);
       }
     }, 5000)
     return () => clearInterval(interval)
-  }, [handleLogout])
+  }, [user, handleLogout])
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
@@ -126,12 +136,15 @@ export default function HomeContent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
-      <header className="h-20 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
+      <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <div className="hidden lg:block">
             <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Master Elite</span>
-            <span className="text-[8px] font-bold uppercase opacity-40">{content.length} CANAIS ATIVOS</span>
+            <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-primary/20">
+               <Timer className="h-3 w-3 text-primary animate-pulse" />
+               <span className="text-[9px] font-black uppercase text-primary tracking-widest">{timeLeft}</span>
+            </div>
           </div>
         </div>
         
@@ -229,6 +242,7 @@ export default function HomeContent() {
           <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
+              <DialogDescription className="sr-only">Player Master Elite</DialogDescription>
             </DialogHeader>
             <VideoPlayer 
               url={activeVideo.streamUrl || ""} 

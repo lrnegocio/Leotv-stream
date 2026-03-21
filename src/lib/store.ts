@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -138,6 +137,7 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
+    // Primeiro remove usuários vinculados para evitar erro de Foreign Key
     await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
@@ -154,7 +154,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 
   if (!user || !reseller) return { error: "Dados não localizados." };
   
-  // Renovação sempre usa 1 crédito por tela por mês
   const cost = user.maxScreens || 1;
   if (reseller.credits < cost) return { error: `Sem créditos suficientes (${cost} necessários).` };
 
@@ -202,36 +201,26 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   const user = users.find(u => u.pin === normalizedPin);
   
   if (!user) return { error: "PIN INVÁLIDO." };
-  if (user.isBlocked) return { error: "PIN BLOQUEADO PELO SISTEMA (EXCESSO DE TELAS OU SUSPENSÃO)." };
+  if (user.isBlocked) return { error: "ACESSO BLOQUEADO POR SEGURANÇA. CONTATE O ADMIN." };
 
-  // Verifica validade
   const now = new Date();
   if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
     return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
   }
 
-  // Verifica Revenda
-  if (user.resellerId) {
-    const resellers = await getRemoteResellers();
-    const res = resellers.find(r => r.id === user.resellerId);
-    if (res?.isBlocked) return { error: "SINAL SUSPENSO (REVENDA BLOQUEADA)." };
-  }
-
-  // Gerenciamento de Telas Inteligente
   let activeDevices = user.activeDevices || [];
   
+  // LOGIN DUPLO INTELIGENTE: Bloqueia apenas se exceder telas SIMULTÂNEAS
   if (!activeDevices.includes(deviceId)) {
     if (activeDevices.length >= user.maxScreens) {
-      // Bloqueia o PIN por tentativa de uso em excesso
       user.isBlocked = true;
       user.blockedAt = new Date().toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE TELAS EXCEDIDO! ACESSO BLOQUEADO POR SEGURANÇA. CONTATE O ADMIN." };
+      return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
     activeDevices.push(deviceId);
     user.activeDevices = activeDevices;
     
-    // Se for ativação
     if (!user.activatedAt) {
       user.activatedAt = new Date().toISOString();
       if (user.subscriptionTier === 'test') {
@@ -308,5 +297,5 @@ export const generateRandomPin = (length: number = 6) => {
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU PIN:* \`${pin}\`\n📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias'}\n🖥️ *TELAS:* ${screens} simultânea(s)\n\n📺 *SERVIDOR IPTV (SMART TV):* \n${playlistUrl}\n\n📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀%0A%0A🔑 *SEU PIN:* \`${pin}\`%0A📅 *PLANO:* ${tier === 'test' ? 'Teste VIP 6H' : 'Mensal 30 Dias'}%0A🖥️ *TELAS:* ${screens} simultânea(s)%0A%0A📺 *SERVIDOR IPTV (SMART TV):* %0A${playlistUrl}%0A%0A📲 _Assista agora em sua Smart TV, Celular ou PC!_`;
 }

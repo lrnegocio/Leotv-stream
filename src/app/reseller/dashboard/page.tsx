@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -18,7 +17,6 @@ export default function ResellerDashboard() {
   const [search, setSearch] = React.useState("")
   const [isGenerating, setIsGenerating] = React.useState(false)
   const [isRenewing, setIsRenewing] = React.useState<string | null>(null)
-  const [copiedPin, setCopiedPin] = React.useState<string | null>(null)
   const [numScreens, setNumScreens] = React.useState("1")
   const router = useRouter()
 
@@ -78,8 +76,6 @@ export default function ResellerDashboard() {
       }
       toast({ title: "PIN GERADO COM SUCESSO!", description: `O código ${pin} (${screens} telas) está ativo.` })
       await loadData()
-    } else {
-      toast({ variant: "destructive", title: "ERRO DE GRAVAÇÃO", description: "Falha ao salvar no banco." })
     }
     setIsGenerating(false)
   }
@@ -95,7 +91,7 @@ export default function ResellerDashboard() {
       return
     }
 
-    if (!confirm(`Deseja usar ${cost} créditos para renovar este PIN (${user.maxScreens} telas) por +30 dias?`)) return
+    if (!confirm(`Deseja renovar este PIN (${user.maxScreens} telas) por +30 dias? Custo: ${cost} créditos.`)) return
 
     setIsRenewing(userId)
     const result = await renewUserSubscription(userId, reseller.id)
@@ -107,8 +103,6 @@ export default function ResellerDashboard() {
         localStorage.setItem("reseller_session", JSON.stringify(result.reseller))
       }
       await loadData()
-    } else {
-      toast({ variant: "destructive", title: "ERRO NA RENOVAÇÃO", description: result.error })
     }
     setIsRenewing(null)
   }
@@ -116,18 +110,8 @@ export default function ResellerDashboard() {
   const sendAccess = (pin: string, tier: string, screens: number) => {
     const baseUrl = window.location.origin;
     const msg = getBeautifulMessage(pin, tier, baseUrl, screens);
-    const encodedMsg = encodeURIComponent(msg);
-    // Abre WhatsApp Web ou App dependendo do dispositivo
-    const waUrl = `https://wa.me/?text=${encodedMsg}`;
+    const waUrl = `https://wa.me/?text=${msg}`;
     window.open(waUrl, '_blank');
-  }
-
-  const copyPlaylistLink = (pin: string) => {
-    const playlistUrl = `${window.location.origin}/api/playlist?pin=${pin}`;
-    navigator.clipboard.writeText(playlistUrl);
-    setCopiedPin(pin);
-    toast({ title: "LINK COPIADO!" });
-    setTimeout(() => setCopiedPin(null), 3000);
   }
 
   if (loading || !reseller) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -194,7 +178,8 @@ export default function ResellerDashboard() {
           <CardContent className="p-0">
             <div className="divide-y divide-white/5">
               {filteredUsers.map(u => {
-                const isExpired = u.expiryDate && new Date(u.expiryDate) < new Date() && u.subscriptionTier !== 'lifetime';
+                const now = new Date();
+                const isExpired = u.expiryDate && new Date(u.expiryDate) < now && u.subscriptionTier !== 'lifetime';
                 return (
                   <div key={u.id} className="p-6 flex flex-col md:flex-row items-center justify-between hover:bg-white/5 transition-colors gap-6">
                     <div className="flex items-center gap-6 w-full">
@@ -215,14 +200,11 @@ export default function ResellerDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
-                      <Button variant="outline" size="sm" onClick={() => copyPlaylistLink(u.pin)} className="flex-1 md:flex-none h-12 border-blue-500/20 text-blue-500 text-[9px] font-black px-4 rounded-2xl hover:bg-blue-500/10">
-                        {copiedPin === u.pin ? <Check className="h-4 w-4" /> : <Tv className="h-4 w-4" />}
+                      <Button variant="outline" size="sm" onClick={() => sendAccess(u.pin, u.subscriptionTier, u.maxScreens)} className="flex-1 md:flex-none h-12 border-emerald-500/20 text-emerald-500 text-[9px] font-black px-4 rounded-2xl hover:bg-emerald-500/10">
+                        <Send className="h-4 w-4 mr-2" /> ENVIAR
                       </Button>
                       <Button variant="outline" size="sm" disabled={isRenewing === u.id} onClick={() => handleRenew(u.id)} className="flex-1 md:flex-none h-12 border-primary/20 text-primary text-[9px] font-black px-4 rounded-2xl hover:bg-primary/10">
-                        {isRenewing === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => sendAccess(u.pin, u.subscriptionTier, u.maxScreens)} className="flex-1 md:flex-none h-12 border-emerald-500/20 text-emerald-500 text-[9px] font-black px-4 rounded-2xl hover:bg-emerald-500/10">
-                        <Send className="h-4 w-4" />
+                        {isRenewing === u.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />} RENOVAR
                       </Button>
                     </div>
                   </div>
