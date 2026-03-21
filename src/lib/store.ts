@@ -198,8 +198,8 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE PERMANENTE (VINCO DE APARELHO)
- * PIN agora se casa com os aparelhos. Excedeu as telas? BLOQUEIA TUDO.
+ * VALIDAÇÃO DE LOGIN COM BINDING DE HARDWARE (VINCULAÇÃO DE APARELHO)
+ * PIN agora se casa com os aparelhos que logam primeiro. Excedeu as telas? BLOQUEIA TUDO.
  */
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   const normalizedPin = pin.trim();
@@ -220,7 +220,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR ASSISTINDO." };
   }
 
-  // BINDING DE HARDWARE: O PIN se casa com os aparelhos que logam primeiro
+  // BINDING DE HARDWARE: O PIN se casa permanentemente com os aparelhos que logam primeiro
   const registeredDevices = user.activeDevices || [];
   const isDeviceRegistered = registeredDevices.some(d => d.id === deviceId);
 
@@ -230,7 +230,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
+      return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA DO PAINEL." };
     }
     // Vincula este aparelho permanentemente ao PIN
     registeredDevices.push({ id: deviceId, lastActive: now.toISOString() });
@@ -259,8 +259,9 @@ export async function logoutDevice(userId: string, deviceId: string) {
   const user = users.find(u => u.id === userId);
   if (!user) return false;
   
-  // Remove o dispositivo da lista de ativos para liberar vaga
-  user.activeDevices = (user.activeDevices || []).filter(d => d.id !== deviceId);
+  // No Hardware Binding estrito, não removemos o dispositivo no logout, apenas registramos a saída
+  // Para liberar vaga para outro aparelho, você deve limpar no Admin.
+  user.activeDevices = (user.activeDevices || []).map(d => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
   return await saveUser(user);
 }
 

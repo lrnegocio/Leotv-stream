@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -115,6 +116,9 @@ function NewContentForm() {
     router.push("/admin/content")
   }
 
+  const isStreamRequired = formData.type === 'channel' || formData.type === 'movie';
+  const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
+
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
       <div className="flex items-center gap-4">
@@ -175,16 +179,18 @@ function NewContentForm() {
             </div>
           </div>
 
-          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Principal (Sinal Direto)</h3>
-            <Input 
-              value={formData.streamUrl} 
-              onChange={e => setFormData({...formData, streamUrl: e.target.value})}
-              placeholder="https://sua-stream.m3u8" 
-              required={formData.type === 'channel' || formData.type === 'movie'}
-              className="h-12 bg-black/40 border-white/5 font-mono text-xs"
-            />
-          </div>
+          {showMainStreamUrl && (
+            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
+              <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Principal (Sinal Direto)</h3>
+              <Input 
+                value={formData.streamUrl} 
+                onChange={e => setFormData({...formData, streamUrl: e.target.value})}
+                placeholder="https://sua-stream.m3u8" 
+                required={isStreamRequired}
+                className="h-12 bg-black/40 border-white/5 font-mono text-xs"
+              />
+            </div>
+          )}
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
             <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><LinkIcon className="h-4 w-4" /> URL da Capa (Manual)</h3>
