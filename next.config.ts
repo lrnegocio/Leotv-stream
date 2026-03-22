@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.xvideos-cdn.com' },
       { protocol: 'https', hostname: '**.xvideos.com' },
       { protocol: 'https', hostname: 'encrypted-tbn0.gstatic.com' },
-      { protocol: 'https', hostname: '**.rdcanais.com' }
+      { protocol: 'https', hostname: '**.rdcanais.com' },
+      { protocol: 'https', hostname: 'reidoscanais.ooo' }
     ],
   },
 };

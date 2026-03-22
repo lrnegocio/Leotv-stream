@@ -31,29 +31,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
 
-    // Conversão Especial Xvideos
+    // Xvideos Embed Anti-Ads
     if (targetUrl.includes('xvideos.com/video')) {
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
-      if (videoId) {
-        return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1`;
-      }
+      if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=1`;
     }
 
-    // Conversão Especial Dailymotion
+    // Dailymotion Embed
     if (targetUrl.includes('dailymotion.com/video/')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
-      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=1`;
+      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=1&ui-logo=0&ui-start-screen-info=0`;
     }
 
-    // Lógica de YouTube Autoplay
+    // YouTube Embed
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
     }
 
-    // Adiciona parâmetros de autoplay e mute para links diretos
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
@@ -65,7 +62,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic text-center px-8">
-          SINAL P2P NÃO DISPONÍVEL NESTE CONTEÚDO OU LINK INVÁLIDO
+          SINAL P2P NÃO DISPONÍVEL NESTE CONTEÚDO
         </span>
       </div>
     )
@@ -84,7 +81,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {showMuteNotice && !loading && (
         <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in">
           <Volume2 className="h-4 w-4 text-primary animate-bounce" />
-          <span className="text-[9px] font-black text-white uppercase tracking-tighter">CLIQUE NO PLAYER PARA ATIVAR O SOM</span>
+          <span className="text-[9px] font-black text-white uppercase tracking-tighter">SINAL MUDO: CLIQUE PARA ATIVAR O SOM</span>
         </div>
       )}
 
@@ -93,6 +90,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
+        // Sandbox Anti-Ads - Bloqueia popups e protege o sistema
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-top-navigation-by-user-activation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         onLoad={() => setLoading(false)}

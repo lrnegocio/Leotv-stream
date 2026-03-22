@@ -2,17 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
-/**
- * SERVIDOR DE PLAYLIST MASTER - LÉO STREAM
- * Endpoint para aplicativos de IPTV externos (IPTV Smarters, etc)
- */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const pin = searchParams.get('pin');
 
     if (!pin) {
-      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO", { 
+      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK", { 
         status: 200,
         headers: { 'Content-Type': 'application/x-mpegurl' }
       });
@@ -23,17 +19,29 @@ export async function GET(req: NextRequest) {
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {
-        'Content-Type': 'application/x-mpegurl',
+        'Content-Type': 'application/x-mpegurl; charset=utf-8',
         'Content-Disposition': 'inline; filename="playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error: any) {
-    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR P2P", { status: 200 });
+    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER", { status: 200 });
   }
 }
 
 export async function POST(req: NextRequest) {
   return GET(req);
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }
