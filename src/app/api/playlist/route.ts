@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (!pin) {
       return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK", { 
         status: 200,
-        headers: { 'Content-Type': 'application/x-mpegurl' }
+        headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
       });
     }
 
@@ -27,7 +27,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER", { status: 200 });
+    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER", { 
+      status: 200,
+      headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
+    });
   }
 }
 

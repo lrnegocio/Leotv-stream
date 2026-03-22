@@ -30,7 +30,7 @@ function VoiceSearchContent() {
       if (value) params.set('q', value)
       else params.delete('q')
       router.replace(`?${params.toString()}`, { scroll: false })
-    }, 100)
+    }, 50) // Reduzido para resposta instantânea
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +51,6 @@ function VoiceSearchContent() {
 
     recognition.onstart = () => {
       setIsListening(true)
-      toast({ title: "Escutando...", description: "Diga o nome do canal agora." })
     }
 
     recognition.onresult = async (event: any) => {

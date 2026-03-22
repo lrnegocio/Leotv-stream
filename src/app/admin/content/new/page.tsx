@@ -37,24 +37,37 @@ function NewContentForm() {
   const [seasons, setSeasons] = React.useState<Season[]>([])
 
   const addEpisode = (seasonId?: string) => {
-    const newEp: Episode = {
-      id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      title: `Episódio ${episodes.length + 1}`,
-      number: episodes.length + 1,
-      streamUrl: ""
-    }
-    
     if (seasonId) {
-      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
+      setSeasons(prev => prev.map(s => {
+        if (s.id === seasonId) {
+          const nextNum = s.episodes.length + 1;
+          const newEp: Episode = {
+            id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+            title: `Episódio ${nextNum}`,
+            number: nextNum,
+            streamUrl: ""
+          };
+          return { ...s, episodes: [...s.episodes, newEp] };
+        }
+        return s;
+      }));
     } else {
-      setEpisodes(prev => [...prev, newEp])
+      const nextNum = episodes.length + 1;
+      const newEp: Episode = {
+        id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+        title: `Episódio ${nextNum}`,
+        number: nextNum,
+        streamUrl: ""
+      };
+      setEpisodes(prev => [...prev, newEp]);
     }
   }
 
   const addSeason = () => {
+    const nextNum = seasons.length + 1;
     const newSeason: Season = {
       id: "sea_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      number: seasons.length + 1,
+      number: nextNum,
       episodes: []
     }
     setSeasons(prev => [...prev, newSeason])
@@ -117,7 +130,7 @@ function NewContentForm() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Certifique-se de que criou as colunas JSONB no Supabase." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique seu banco Supabase." })
     }
   }
 
@@ -212,7 +225,7 @@ function NewContentForm() {
               <div className="space-y-3">
                 {episodes.map((ep, idx) => (
                   <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-3 rounded-lg border border-white/5">
-                    <span className="text-[10px] opacity-40">EP {idx + 1}</span>
+                    <span className="text-[10px] opacity-40">EP {ep.number}</span>
                     <Input placeholder="URL do Episódio" value={ep.streamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
@@ -240,8 +253,8 @@ function NewContentForm() {
                   <div className="space-y-2">
                     {season.episodes.map((ep, eIdx) => (
                       <div key={ep.id} className="flex gap-2 items-center">
-                        <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
-                        <Input placeholder={`URL do EP ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                        <span className="text-[10px] opacity-40">EP {ep.number}</span>
+                        <Input placeholder={`URL do EP ${ep.number}`} value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);

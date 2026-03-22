@@ -51,6 +51,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
     }
 
+    // Adiciona parâmetros de autoplay se não existirem
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
@@ -85,13 +86,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
+      {/* REMOVIDO SANDBOX PARA LIBERAR RDCANAIS, DAILYMOTION E TODOS OS SINAIS MASTER */}
       <iframe
         key={processedUrl}
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
-        // Sandbox Anti-Ads - Bloqueia popups e protege o sistema
-        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-top-navigation-by-user-activation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         onLoad={() => setLoading(false)}
@@ -107,12 +107,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
 
-        {/* SETAS DE NAVEGAÇÃO MASTER */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev?.(); }} 
             className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev ? 'opacity-0' : 'opacity-100'}`}
           >
             <SkipBack className="h-8 w-8" />
@@ -122,7 +121,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext?.(); }} 
             className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext ? 'opacity-0' : 'opacity-100'}`}
           >
             <SkipForward className="h-8 w-8" />

@@ -129,8 +129,13 @@ export async function saveContent(item: ContentItem) {
     };
 
     if (item.type === 'series' || item.type === 'multi-season') {
-      payload.episodes = Array.isArray(item.episodes) ? item.episodes : [];
-      payload.seasons = Array.isArray(item.seasons) ? item.seasons : [];
+      // GARANTE QUE OS NÚMEROS SEJAM SEQUENCIAIS E INTEIROS
+      payload.episodes = Array.isArray(item.episodes) ? item.episodes.map((e, idx) => ({ ...e, number: idx + 1 })) : [];
+      payload.seasons = Array.isArray(item.seasons) ? item.seasons.map((s, sIdx) => ({ 
+        ...s, 
+        number: sIdx + 1, 
+        episodes: s.episodes.map((e, eIdx) => ({ ...e, number: eIdx + 1 })) 
+      })) : [];
       payload.streamUrl = null;
     } else {
       payload.streamUrl = item.streamUrl || null;
@@ -140,7 +145,7 @@ export async function saveContent(item: ContentItem) {
     
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
-      console.error("ERRO SUPABASE:", error.message);
+      console.error("FALHA CRÍTICA NO SUPABASE:", error.message);
       return false;
     }
     return true;
@@ -216,13 +221,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     let devices = user.activeDevices || [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
-    // HARDWARE BINDING MASTER
     if (!isThisDeviceLinked) {
       if (devices.length >= (user.maxScreens || 1)) {
         user.isBlocked = true;
         user.blockedAt = now.toISOString();
         await saveUser(user);
-        return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO." };
+        return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO POR SEGURANÇA." };
       }
       devices.push({ id: deviceId, lastActive: now.toISOString() });
       user.activeDevices = devices;
@@ -242,7 +246,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
     return { user };
   } catch (e) {
-    return { error: "ERRO INTERNO NO SERVIDOR." };
+    return { error: "ERRO INTERNO NO SERVIDOR MASTER." };
   }
 }
 
@@ -279,9 +283,19 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
         m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
       } else if ((item.type === 'series' || item.type === 'multi-season')) {
         const eps = item.episodes || [];
-        eps.forEach((ep: Episode) => {
+        eps.sort((a,b) => a.number - b.number).forEach((ep: Episode) => {
           if (!ep.streamUrl) return;
           m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}\n${ep.streamUrl}\n`;
+        });
+        
+        const seasons = item.seasons || [];
+        seasons.forEach(s => {
+          if (s.episodes) {
+            s.episodes.sort((a,b) => a.number - b.number).forEach(ep => {
+              if (!ep.streamUrl) return;
+              m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} - T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
+            });
+          }
         });
       }
     });
