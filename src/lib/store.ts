@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -167,56 +168,12 @@ export async function saveReseller(reseller: Reseller) {
 
 export async function removeReseller(id: string) {
   try {
-    const { error: usersError } = await supabase.from('users').delete().eq('resellerId', id);
+    await supabase.from('users').delete().eq('resellerId', id);
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (err) {
     return false;
   }
-}
-
-export async function renewUserSubscription(userId: string, resellerId: string) {
-  const users = await getRemoteUsers();
-  const user = users.find(u => u.id === userId);
-  const resellers = await getRemoteResellers();
-  const reseller = resellers.find(r => r.id === resellerId);
-
-  if (!user || !reseller) return { error: "Dados não localizados." };
-  
-  const cost = user.maxScreens || 1;
-  if (reseller.credits < cost) return { error: `Sem créditos suficientes (${cost} necessários).` };
-
-  const now = new Date();
-  let baseDate = now;
-
-  if (user.expiryDate) {
-    const currentExpiry = new Date(user.expiryDate);
-    if (currentExpiry > now) baseDate = currentExpiry;
-  }
-
-  const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-  const updatedUser: User = {
-    ...user,
-    subscriptionTier: 'monthly',
-    expiryDate: newExpiry.toISOString(),
-    isBlocked: false, 
-    activatedAt: user.activatedAt || now.toISOString() 
-  };
-
-  const updatedReseller: Reseller = {
-    ...reseller,
-    credits: reseller.credits - cost,
-    totalSold: (reseller.totalSold || 0) + 1
-  };
-
-  const successUser = await saveUser(updatedUser);
-  const successReseller = await saveReseller(updatedReseller);
-
-  if (successUser && successReseller) {
-    return { success: true, user: updatedUser, reseller: updatedReseller };
-  }
-  return { error: "Erro de sincronia." };
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
@@ -240,12 +197,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   let devices = user.activeDevices || [];
   const isThisDeviceLinked = devices.some(d => d.id === deviceId);
 
+  // HARDWARE BINDING MASTER: Bloqueio se tentar usar em mais aparelhos que o permitido
   if (!isThisDeviceLinked) {
     if (devices.length >= user.maxScreens) {
       user.isBlocked = true;
       user.blockedAt = now.toISOString();
       await saveUser(user);
-      return { error: "LIMITE DE APARELHOS EXCEDIDO! PIN BLOQUEADO." };
+      return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO PARA SEGURANÇA." };
     }
     devices.push({ id: deviceId, lastActive: now.toISOString() });
     user.activeDevices = devices;
@@ -275,14 +233,9 @@ export async function validateResellerLogin(username: string, pass: string) {
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
-  const { data: userData, error: userError } = await supabase.from('users').select('*').eq('pin', pin).single();
+  const { data: userData } = await supabase.from('users').select('*').eq('pin', pin).single();
   
   if (!userData || userData.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
-
-  const now = new Date();
-  if (userData.expiryDate && new Date(userData.expiryDate) < now && userData.subscriptionTier !== 'lifetime') {
-    return "#EXTM3U\n#EXTINF:-1,SINAL EXPIRADO - RENOVE SEU PIN";
-  }
 
   const { data: contentData } = await supabase.from('content').select('*').order('title');
   if (!contentData) return "#EXTM3U\n#EXTINF:-1,BIBLIOTECA VAZIA";
@@ -340,4 +293,48 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 ${playlistUrl}
 
 ⚠️ _Nota: Este código ficará vinculado aos seus primeiros ${screens} aparelhos. O uso em outros causará bloqueio automático._`;
+}
+
+export async function renewUserSubscription(userId: string, resellerId: string) {
+  const users = await getRemoteUsers();
+  const user = users.find(u => u.id === userId);
+  const resellers = await getRemoteResellers();
+  const reseller = resellers.find(r => r.id === resellerId);
+
+  if (!user || !reseller) return { error: "Dados não localizados." };
+  
+  const cost = user.maxScreens || 1;
+  if (reseller.credits < cost) return { error: `Sem créditos suficientes (${cost} necessários).` };
+
+  const now = new Date();
+  let baseDate = now;
+
+  if (user.expiryDate) {
+    const currentExpiry = new Date(user.expiryDate);
+    if (currentExpiry > now) baseDate = currentExpiry;
+  }
+
+  const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const updatedUser: User = {
+    ...user,
+    subscriptionTier: 'monthly',
+    expiryDate: newExpiry.toISOString(),
+    isBlocked: false, 
+    activatedAt: user.activatedAt || now.toISOString() 
+  };
+
+  const updatedReseller: Reseller = {
+    ...reseller,
+    credits: reseller.credits - cost,
+    totalSold: (reseller.totalSold || 0) + 1
+  };
+
+  const successUser = await saveUser(updatedUser);
+  const successReseller = await saveReseller(updatedReseller);
+
+  if (successUser && successReseller) {
+    return { success: true, user: updatedUser, reseller: updatedReseller };
+  }
+  return { error: "Erro de sincronia." };
 }

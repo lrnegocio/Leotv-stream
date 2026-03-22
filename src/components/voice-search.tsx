@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Mic, Search, Loader2, X, Tv } from "lucide-react"
+import { Mic, Search, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
@@ -15,7 +16,6 @@ function VoiceSearchContent() {
   const [isListening, setIsListening] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
 
-  // UseRef para debounce master
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   React.useEffect(() => {
@@ -30,7 +30,7 @@ function VoiceSearchContent() {
       if (value) params.set('q', value)
       else params.delete('q')
       router.replace(`?${params.toString()}`, { scroll: false })
-    }, 150)
+    }, 100)
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +51,7 @@ function VoiceSearchContent() {
 
     recognition.onstart = () => {
       setIsListening(true)
-      toast({ title: "Sintonizando Voz...", description: "Fale o nome do canal agora." })
+      toast({ title: "Escutando...", description: "Diga o nome do canal agora." })
     }
 
     recognition.onresult = async (event: any) => {
@@ -78,7 +78,7 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busca Instantânea Master..."
+          placeholder="Busca Master..."
           className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest"
           value={query}
           onChange={handleInputChange}

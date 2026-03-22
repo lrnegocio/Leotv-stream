@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv, AlertCircle } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -21,7 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 4000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -36,6 +37,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoId) {
         return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1`;
       }
+    }
+
+    // Conversão Especial Dailymotion
+    if (targetUrl.includes('dailymotion.com/video/')) {
+      const videoId = targetUrl.split('video/')[1]?.split('?')[0];
+      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=1`;
     }
 
     // Lógica de YouTube Autoplay
@@ -58,7 +65,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic text-center px-8">
-          SINAL P2P NÃO DISPONÍVEL OU LINK INVÁLIDO
+          SINAL P2P NÃO DISPONÍVEL NESTE CONTEÚDO OU LINK INVÁLIDO
         </span>
       </div>
     )
@@ -70,7 +77,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">SINTONIZANDO SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase tracking-widest animate-pulse italic">SINTONIZANDO SINAL MASTER...</span>
         </div>
       )}
 
@@ -86,25 +93,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         onLoad={() => setLoading(false)}
       />
       
-      {/* Botão de Emergência Master para links bloqueados por Iframe */}
-      {!loading && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button 
-            onClick={() => window.open(url, '_blank')} 
-            className="bg-primary hover:bg-primary/80 text-white font-black uppercase text-[10px] h-12 px-8 rounded-2xl shadow-2xl flex items-center gap-2"
-          >
-            <ExternalLink className="h-4 w-4" /> 
-            CASO O SINAL NÃO ABRA, CLIQUE AQUI (LINK EXTERNO)
-          </Button>
-        </div>
-      )}
-
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90">
           <div className="flex items-center justify-between">
@@ -115,14 +108,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
 
-        {/* SETAS DE NAVEGAÇÃO REATIVADAS */}
+        {/* SETAS DE NAVEGAÇÃO MASTER */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
             size="icon" 
-            disabled={!onPrev}
             onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all disabled:opacity-0`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev ? 'opacity-0' : 'opacity-100'}`}
           >
             <SkipBack className="h-8 w-8" />
           </Button>
@@ -131,27 +123,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Button 
             variant="ghost" 
             size="icon" 
-            disabled={!onNext}
             onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all disabled:opacity-0`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext ? 'opacity-0' : 'opacity-100'}`}
           >
             <SkipForward className="h-8 w-8" />
           </Button>
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 flex justify-between items-center">
-          <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-10 px-4 text-[9px] font-black rounded-xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-3 w-3" /> LINK DIRETO
-          </Button>
           <div className="flex gap-2">
-             <Button variant="ghost" size="icon" className="text-white h-10 w-10 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
-                if (!containerRef.current) return;
-                if (!document.fullscreenElement) containerRef.current.requestFullscreen();
-                else document.exitFullscreen();
-              }}>
-                <Maximize className="h-5 w-5" />
-              </Button>
+            <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-10 px-4 text-[9px] font-black rounded-xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
+              <ExternalLink className="mr-2 h-3 w-3" /> ABRIR SINAL EXTERNO
+            </Button>
           </div>
+          <Button variant="ghost" size="icon" className="text-white h-10 w-10 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
+            if (!containerRef.current) return;
+            if (!document.fullscreenElement) containerRef.current.requestFullscreen();
+            else document.exitFullscreen();
+          }}>
+            <Maximize className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </div>

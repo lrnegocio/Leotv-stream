@@ -1,10 +1,10 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
 /**
  * SERVIDOR DE PLAYLIST MASTER - LÉO STREAM
  * Endpoint para aplicativos de IPTV externos (IPTV Smarters, etc)
- * URL: /api/playlist?pin=SEU_PIN
  */
 export async function GET(req: NextRequest) {
   try {
@@ -12,15 +12,14 @@ export async function GET(req: NextRequest) {
     const pin = searchParams.get('pin');
 
     if (!pin) {
-      return new NextResponse("PIN é obrigatório para acessar o servidor.", { 
-        status: 400,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO", { 
+        status: 200,
+        headers: { 'Content-Type': 'application/x-mpegurl' }
       });
     }
 
     const m3uContent = await generateM3UPlaylist(pin);
     
-    // Configura headers para o sinal ser reconhecido como M3U real em qualquer app
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {
@@ -31,7 +30,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Erro Crítico API Playlist:", error);
-    return new NextResponse("Erro interno no servidor P2P.", { status: 500 });
+    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR P2P", { status: 200 });
   }
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req);
 }
