@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv, Play, SkipBack, SkipForward } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv, Play, SkipBack, SkipForward, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -21,7 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 2000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 3000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -46,6 +47,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
     }
 
+    // Para links de sites de canais externos (rdcanais, etc), tentamos abrir como iframe mas oferecemos botão externo
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1&controls=1`
   }, [url])
@@ -85,12 +87,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl}
         className="h-full w-full border-0 relative z-10"
         title={title}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowFullScreen
         onLoad={() => setLoading(false)}
       />
       
+      {/* Botão de Emergência para links que bloqueiam Iframe */}
+      {!loading && (
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button 
+            onClick={() => window.open(url, '_blank')} 
+            className="bg-primary hover:bg-primary/80 text-white font-black uppercase text-[10px] h-12 px-8 rounded-2xl shadow-2xl flex items-center gap-2"
+          >
+            <ExternalLink className="h-4 w-4" /> 
+            Caso o sinal não abra, clique aqui (Link Externo)
+          </Button>
+        </div>
+      )}
+
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90">
           <div className="flex items-center justify-between">
@@ -101,15 +116,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
         </div>
 
-        {/* SETAS DE NAVEGAÇÃO MASTER RESTAURADAS */}
+        {/* SETAS DE NAVEGAÇÃO REATIVADAS */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
-            className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}
           >
-            <SkipBack className="h-6 w-6" />
+            <SkipBack className="h-8 w-8" />
           </Button>
         </div>
         <div className="absolute inset-y-0 right-0 flex items-center pr-6 z-50">
@@ -117,15 +132,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
-            className={`h-12 w-12 rounded-full bg-black/40 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}
           >
-            <SkipForward className="h-6 w-6" />
+            <SkipForward className="h-8 w-8" />
           </Button>
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 flex justify-between items-center">
           <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-10 px-4 text-[9px] font-black rounded-xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
-            <ExternalLink className="mr-2 h-3 w-3" /> ABRIR EXTERNO
+            <ExternalLink className="mr-2 h-3 w-3" /> LINK DIRETO
           </Button>
           <div className="flex gap-2">
              <Button variant="ghost" size="icon" className="text-white h-10 w-10 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
