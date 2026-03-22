@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, ChevronLeft, ChevronRight, Volume2, Tv, Play, SkipBack, SkipForward, AlertCircle } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -22,7 +21,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 3000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 4000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -31,7 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
 
-    // Conversão Master Xvideos
+    // Conversão Especial Xvideos
     if (targetUrl.includes('xvideos.com/video')) {
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
       if (videoId) {
@@ -44,12 +43,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1`
     }
 
-    // Para links de sites de canais externos (rdcanais, etc), tentamos abrir como iframe mas oferecemos botão externo
+    // Adiciona parâmetros de autoplay e mute para links diretos
     const connector = targetUrl.includes('?') ? '&' : '?'
-    return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1&controls=1`
+    return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -59,7 +58,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest italic text-center px-8">
-          SINAL P2P NÃO DISPONÍVEL OU EPISÓDIO SEM LINK
+          SINAL P2P NÃO DISPONÍVEL OU LINK INVÁLIDO
         </span>
       </div>
     )
@@ -93,7 +92,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         onLoad={() => setLoading(false)}
       />
       
-      {/* Botão de Emergência para links que bloqueiam Iframe */}
+      {/* Botão de Emergência Master para links bloqueados por Iframe */}
       {!loading && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">
           <Button 
@@ -101,7 +100,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             className="bg-primary hover:bg-primary/80 text-white font-black uppercase text-[10px] h-12 px-8 rounded-2xl shadow-2xl flex items-center gap-2"
           >
             <ExternalLink className="h-4 w-4" /> 
-            Caso o sinal não abra, clique aqui (Link Externo)
+            CASO O SINAL NÃO ABRA, CLIQUE AQUI (LINK EXTERNO)
           </Button>
         </div>
       )}
@@ -121,8 +120,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Button 
             variant="ghost" 
             size="icon" 
+            disabled={!onPrev}
             onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev && 'hidden'}`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all disabled:opacity-0`}
           >
             <SkipBack className="h-8 w-8" />
           </Button>
@@ -131,8 +131,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Button 
             variant="ghost" 
             size="icon" 
+            disabled={!onNext}
             onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext && 'hidden'}`}
+            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all disabled:opacity-0`}
           >
             <SkipForward className="h-8 w-8" />
           </Button>

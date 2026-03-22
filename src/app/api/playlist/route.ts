@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
@@ -21,18 +20,18 @@ export async function GET(req: NextRequest) {
 
     const m3uContent = await generateM3UPlaylist(pin);
     
-    // Configura headers para o sinal ser reconhecido como M3U real e aceito por qualquer player
+    // Configura headers para o sinal ser reconhecido como M3U real em qualquer app
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {
         'Content-Type': 'application/x-mpegurl',
         'Content-Disposition': 'inline; filename="playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
   } catch (error: any) {
     console.error("Erro Crítico API Playlist:", error);
-    return new NextResponse("Erro interno no sintonizador P2P.", { status: 500 });
+    return new NextResponse("Erro interno no servidor P2P.", { status: 500 });
   }
 }

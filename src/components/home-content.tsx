@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -18,7 +17,7 @@ import Image from "next/image"
 export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
-  const [activeVideo, setActiveVideo] = React.useState<{url: string, title: string} | null>(null)
+  const [activeVideo, setActiveVideo] = React.useState<{url: string, title: string, itemId: string} | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [showAdult, setShowAdult] = React.useState(false)
   const [parentalPin, setParentalPin] = React.useState("")
@@ -76,7 +75,7 @@ export default function HomeContent() {
       } else {
         setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       }
-    }, 5000)
+    }, 10000)
     return () => clearInterval(interval)
   }, [user, handleLogout])
 
@@ -110,22 +109,33 @@ export default function HomeContent() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
     } else {
-      setActiveVideo({ url: item.streamUrl || "", title: item.title })
+      setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id })
     }
   }
 
-  const handleEpisodeClick = (ep: Episode, seriesTitle: string) => {
-    setActiveVideo({ url: ep.streamUrl, title: `${seriesTitle} - EP ${ep.number}` })
+  const handleEpisodeClick = (ep: Episode, series: ContentItem) => {
+    setActiveVideo({ url: ep.streamUrl, title: `${series.title} - EP ${ep.number}`, itemId: series.id })
+  }
+
+  const navigateContent = (direction: 'next' | 'prev') => {
+    if (!activeVideo) return
+    const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
+    if (currentIndex === -1) return
+
+    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
+    if (nextIndex >= filteredContent.length) nextIndex = 0
+    if (nextIndex < 0) nextIndex = filteredContent.length - 1
+
+    const nextItem = filteredContent[nextIndex]
+    if (nextItem) {
+      handleItemClick(nextItem)
+    }
   }
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
       if (pendingVideo) {
-        if (pendingVideo.type === 'series' || pendingVideo.type === 'multi-season') {
-          setSelectedSeries(pendingVideo)
-        } else {
-          setActiveVideo({ url: pendingVideo.streamUrl || "", title: pendingVideo.title })
-        }
+        handleItemClick(pendingVideo)
       }
       setIsPinDialogOpen(false)
       setPinInput("")
@@ -224,27 +234,18 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* SELETOR DE EPISÓDIOS MASTER */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
-              <DialogHeader className="sr-only">
-                <DialogTitle>{selectedSeries.title}</DialogTitle>
+              <DialogHeader className="p-8 pb-0">
+                <DialogTitle className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-2">
+                   {selectedSeries.genre} • {selectedSeries.type === 'multi-season' ? 'Temporadas' : 'Série'}
+                </DialogDescription>
               </DialogHeader>
-              <div className="h-48 relative">
-                 {selectedSeries.imageUrl ? (
-                   <Image src={selectedSeries.imageUrl} alt={selectedSeries.title} fill className="object-cover opacity-40" unoptimized />
-                 ) : (
-                   <div className="absolute inset-0 bg-primary/10" />
-                 )}
-                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-8 flex flex-col justify-end">
-                    <h2 className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</h2>
-                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-2">{selectedSeries.genre} • {selectedSeries.type === 'multi-season' ? 'Temporadas' : 'Série'}</p>
-                 </div>
-              </div>
               
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-card">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 {selectedSeries.type === 'series' && selectedSeries.episodes && (
                   <div className="grid gap-3">
                     <h4 className="text-[10px] font-black uppercase opacity-40 flex items-center gap-2"><ListOrdered className="h-3 w-3" /> Selecione o Episódio</h4>
@@ -253,11 +254,11 @@ export default function HomeContent() {
                         <Button 
                           key={ep.id} 
                           variant="outline" 
-                          onClick={() => handleEpisodeClick(ep, selectedSeries.title)}
+                          onClick={() => handleEpisodeClick(ep, selectedSeries)}
                           className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-sm group-hover:scale-110 transition-transform">{idx + 1}</div>
+                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-sm">EP {ep.number}</div>
                             <span className="font-bold uppercase text-xs">Episódio {ep.number}</span>
                           </div>
                           <PlayCircle className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -273,11 +274,11 @@ export default function HomeContent() {
                       <div key={season.id} className="space-y-4">
                         <h4 className="text-lg font-black uppercase italic text-primary border-l-4 border-primary pl-3">Temporada {season.number}</h4>
                         <div className="grid sm:grid-cols-2 gap-3">
-                          {season.episodes.map((ep, idx) => (
+                          {season.episodes.map((ep) => (
                             <Button 
                               key={ep.id} 
                               variant="outline" 
-                              onClick={() => handleEpisodeClick(ep, `${selectedSeries.title} T${season.number}`)}
+                              onClick={() => handleEpisodeClick(ep, selectedSeries)}
                               className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
                             >
                               <div className="flex items-center gap-4">
@@ -326,7 +327,12 @@ export default function HomeContent() {
             <DialogHeader className="sr-only">
               <DialogTitle>{activeVideo.title}</DialogTitle>
             </DialogHeader>
-            <VideoPlayer url={activeVideo.url} title={activeVideo.title} />
+            <VideoPlayer 
+              url={activeVideo.url} 
+              title={activeVideo.title} 
+              onNext={() => navigateContent('next')}
+              onPrev={() => navigateContent('prev')}
+            />
           </DialogContent>
         </Dialog>
       )}
