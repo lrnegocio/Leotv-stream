@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -23,9 +24,10 @@ export default function HomeContent() {
   const [parentalPin, setParentalPin] = React.useState("")
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
+  const [isPinVerified, setIsPinVerified] = React.useState(false)
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
-  const [pendingVideo, setPendingVideo] = React.useState<ContentItem | null>(null)
+  const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
   const [timeLeft, setTimeLeft] = React.useState("")
   
   const router = useRouter()
@@ -100,8 +102,9 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    if (item.isRestricted && !showAdult) {
-      setPendingVideo(item)
+    // Se for restrito e não tiver verificado o PIN nesta sessão
+    if (item.isRestricted && !isPinVerified) {
+      setPendingItem(item)
       setIsPinDialogOpen(true)
       return
     }
@@ -134,14 +137,22 @@ export default function HomeContent() {
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
-      if (pendingVideo) {
-        handleItemClick(pendingVideo)
+      setIsPinVerified(true)
+      if (pendingItem) {
+        // Agora que verificou, executa o clique original
+        const item = pendingItem;
+        if (item.type === 'series' || item.type === 'multi-season') {
+          setSelectedSeries(item)
+        } else {
+          setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id })
+        }
       }
       setIsPinDialogOpen(false)
       setPinInput("")
-      setPendingVideo(null)
+      setPendingItem(null)
     } else {
       toast({ variant: "destructive", title: "SENHA INCORRETA" })
+      setPinInput("")
     }
   }
 
@@ -250,7 +261,7 @@ export default function HomeContent() {
                   <div className="grid gap-3">
                     <h4 className="text-[10px] font-black uppercase opacity-40 flex items-center gap-2"><ListOrdered className="h-3 w-3" /> Selecione o Episódio</h4>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      {selectedSeries.episodes.map((ep, idx) => (
+                      {selectedSeries.episodes.map((ep) => (
                         <Button 
                           key={ep.id} 
                           variant="outline" 
@@ -312,6 +323,7 @@ export default function HomeContent() {
                 className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl" 
                 value={pinInput}
                 onChange={e => setPinInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && verifyPin()}
                 autoFocus
              />
           </div>

@@ -2,13 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const pin = searchParams.get('pin');
 
     if (!pin) {
-      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK", { 
+      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK\n", { 
         status: 200,
         headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
       });
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER", { 
+    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n", { 
       status: 200,
       headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
     });

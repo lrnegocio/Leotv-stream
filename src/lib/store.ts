@@ -129,7 +129,6 @@ export async function saveContent(item: ContentItem) {
     };
 
     if (item.type === 'series' || item.type === 'multi-season') {
-      // GARANTE QUE OS NÚMEROS SEJAM SEQUENCIAIS E INTEIROS
       payload.episodes = Array.isArray(item.episodes) ? item.episodes.map((e, idx) => ({ ...e, number: idx + 1 })) : [];
       payload.seasons = Array.isArray(item.seasons) ? item.seasons.map((s, sIdx) => ({ 
         ...s, 
@@ -144,11 +143,7 @@ export async function saveContent(item: ContentItem) {
     }
     
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("FALHA CRÍTICA NO SUPABASE:", error.message);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) {
     return false;
   }

@@ -86,7 +86,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* REMOVIDO SANDBOX PARA LIBERAR RDCANAIS, DAILYMOTION E TODOS OS SINAIS MASTER */}
+      {/* SINAL MASTER SEM SANDBOX PARA LIBERAR RDCANAIS, DAILYMOTION E TODOS OS SINAIS MASTER */}
       <iframe
         key={processedUrl}
         src={processedUrl}
