@@ -133,7 +133,7 @@ export async function saveContent(item: ContentItem) {
       payload.seasons = Array.isArray(item.seasons) ? item.seasons.map((s, sIdx) => ({ 
         ...s, 
         number: sIdx + 1, 
-        episodes: s.episodes.map((e, eIdx) => ({ ...e, number: eIdx + 1 })) 
+        episodes: Array.isArray(s.episodes) ? s.episodes.map((e, eIdx) => ({ ...e, number: eIdx + 1 })) : []
       })) : [];
       payload.streamUrl = null;
     } else {
@@ -276,22 +276,24 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
         const streamUrl = item.streamUrl || "";
         if (!streamUrl) return;
         m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
-      } else if ((item.type === 'series' || item.type === 'multi-season')) {
-        const eps = item.episodes || [];
-        eps.sort((a,b) => a.number - b.number).forEach((ep: Episode) => {
-          if (!ep.streamUrl) return;
-          m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}\n${ep.streamUrl}\n`;
-        });
+      } else if (item.type === 'series' || item.type === 'multi-season') {
+        if (Array.isArray(item.episodes)) {
+          item.episodes.sort((a,b) => a.number - b.number).forEach((ep: Episode) => {
+            if (!ep.streamUrl) return;
+            m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}\n${ep.streamUrl}\n`;
+          });
+        }
         
-        const seasons = item.seasons || [];
-        seasons.forEach(s => {
-          if (s.episodes) {
-            s.episodes.sort((a,b) => a.number - b.number).forEach(ep => {
-              if (!ep.streamUrl) return;
-              m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} - T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
-            });
-          }
-        });
+        if (Array.isArray(item.seasons)) {
+          item.seasons.forEach(s => {
+            if (Array.isArray(s.episodes)) {
+              s.episodes.sort((a,b) => a.number - b.number).forEach(ep => {
+                if (!ep.streamUrl) return;
+                m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} - T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
+              });
+            }
+          });
+        }
       }
     });
 

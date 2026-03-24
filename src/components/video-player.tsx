@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -17,13 +17,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [showMuteNotice, setShowMuteNotice] = React.useState(true)
+  const [isMuted, setIsMuted] = React.useState(true)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      // Oculta o aviso de mudo após 8 segundos
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 8000)
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 15000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -31,31 +31,34 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const processedUrl = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
+    const muteVal = isMuted ? "1" : "0"
 
-    // Xvideos Embed Master
     if (targetUrl.includes('xvideos.com/video')) {
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
-      if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=1`;
+      if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=${muteVal}`;
     }
 
-    // Dailymotion Embed Master
     if (targetUrl.includes('dailymotion.com/video/')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
-      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=1&ui-logo=0&ui-start-screen-info=0`;
+      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&ui-start-screen-info=0`;
     }
 
-    // YouTube Embed Master
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
     }
 
-    // Adiciona parâmetros de áudio e autoplay universal
     const connector = targetUrl.includes('?') ? '&' : '?'
-    return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
-  }, [url])
+    return `${targetUrl}${connector}autoplay=1&mute=${muteVal}&playsinline=1`
+  }, [url, isMuted])
+
+  const handleActivateAudio = () => {
+    setIsMuted(false)
+    setShowMuteNotice(false)
+    setLoading(true)
+  }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -80,26 +83,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* BOTÃO DE ÁUDIO CENTRAL - RESOLVE O MUDO DOS EMBEDS */}
       {!loading && showMuteNotice && (
-        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/40 pointer-events-none">
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
           <Button 
             variant="default" 
-            onClick={() => setShowMuteNotice(false)}
-            className="pointer-events-auto h-20 px-10 bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_50px_rgba(var(--primary),0.5)] border-4 border-white/20 animate-in zoom-in-95"
+            onClick={handleActivateAudio}
+            className="pointer-events-auto h-24 px-12 bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_60px_rgba(var(--primary),0.6)] border-4 border-white/20 animate-in zoom-in-95 transition-all hover:scale-110"
           >
-            <div className="flex items-center gap-4">
-              <Volume2 className="h-10 w-10 text-white animate-bounce" />
+            <div className="flex items-center gap-6">
+              <Volume2 className="h-12 w-12 text-white animate-bounce" />
               <div className="text-left">
-                <span className="block text-lg font-black uppercase italic leading-none">Ativar Áudio</span>
-                <span className="text-[10px] font-bold uppercase opacity-80 tracking-widest">Clique aqui para liberar o som</span>
+                <span className="block text-xl font-black uppercase italic leading-none">Ativar Áudio</span>
+                <span className="text-[10px] font-bold uppercase opacity-80 tracking-widest">Clique para liberar o som master</span>
               </div>
             </div>
           </Button>
         </div>
       )}
 
-      {/* SINAL MASTER SEM SANDBOX PARA LIBERAR TODOS OS SINAIS */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -116,12 +117,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
             <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
           </div>
-          <Button variant="ghost" size="icon" className="text-white pointer-events-auto" onClick={() => setShowMuteNotice(!showMuteNotice)}>
-            {showMuteNotice ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+          <Button variant="ghost" size="icon" className="text-white pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => setShowMuteNotice(true)}>
+            {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
           </Button>
         </div>
 
-        {/* NAVEGAÇÃO MASTER DE EPISÓDIOS E CANAIS */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
@@ -143,12 +143,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </Button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 flex justify-between items-center">
-          <div className="flex gap-4">
-            <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-12 px-6 text-[11px] font-black rounded-2xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
-              <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL EXTERNO (FULL)
-            </Button>
-          </div>
+        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 flex justify-end items-center">
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!containerRef.current) return;
             if (!document.fullscreenElement) containerRef.current.requestFullscreen();

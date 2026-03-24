@@ -66,7 +66,10 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     const interval = setInterval(() => {
-      if (!user?.expiryDate) return;
+      if (!user?.expiryDate) {
+        if (user?.subscriptionTier === 'lifetime') setTimeLeft("SINAL VITALÍCIO");
+        return;
+      }
       
       const now = new Date();
       const expiry = new Date(user.expiryDate);
@@ -77,13 +80,12 @@ export default function HomeContent() {
         return;
       }
 
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      
       if (user.subscriptionTier === 'lifetime') {
         setTimeLeft("SINAL VITALÍCIO");
       } else {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       }
     }, 10000)
@@ -111,7 +113,6 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // Se for restrito e não tiver verificado o PIN nesta sessão
     if (item.isRestricted && !isPinVerified) {
       setPendingItem(item)
       setIsPinDialogOpen(true)
@@ -131,6 +132,12 @@ export default function HomeContent() {
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
+    if (series.isRestricted && !isPinVerified) {
+      setPendingItem(series)
+      setIsPinDialogOpen(true)
+      return
+    }
+
     setActiveVideo({ 
       url: ep.streamUrl, 
       title: `${series.title} - EP ${ep.number}`, 
@@ -147,36 +154,37 @@ export default function HomeContent() {
     const currentItem = content.find(i => i.id === activeVideo.itemId);
     if (!currentItem) return;
 
-    // NAVEGAÇÃO TURBO DE EPISÓDIOS
-    if (currentItem.type === 'series' && currentItem.episodes) {
+    if (currentItem.type === 'series' && Array.isArray(currentItem.episodes)) {
       const newIndex = direction === 'next' ? (activeVideo.episodeIndex || 0) + 1 : (activeVideo.episodeIndex || 0) - 1;
       if (newIndex >= 0 && newIndex < currentItem.episodes.length) {
         handleEpisodeClick(currentItem.episodes[newIndex], currentItem, newIndex);
         return;
       }
-    } else if (currentItem.type === 'multi-season' && currentItem.seasons) {
+    } else if (currentItem.type === 'multi-season' && Array.isArray(currentItem.seasons)) {
       const currentSeasonIdx = activeVideo.seasonIndex || 0;
       const currentEpIdx = activeVideo.episodeIndex || 0;
       const currentSeason = currentItem.seasons[currentSeasonIdx];
       
-      let nextEpIdx = direction === 'next' ? currentEpIdx + 1 : currentEpIdx - 1;
-      
-      if (nextEpIdx >= 0 && nextEpIdx < currentSeason.episodes.length) {
-        handleEpisodeClick(currentSeason.episodes[nextEpIdx], currentItem, nextEpIdx, currentSeasonIdx);
-        return;
-      } else {
-        // Muda de temporada
-        const nextSeasonIdx = direction === 'next' ? currentSeasonIdx + 1 : currentSeasonIdx - 1;
-        if (nextSeasonIdx >= 0 && nextSeasonIdx < currentItem.seasons.length) {
-          const targetSeason = currentItem.seasons[nextSeasonIdx];
-          const targetEpIdx = direction === 'next' ? 0 : targetSeason.episodes.length - 1;
-          handleEpisodeClick(targetSeason.episodes[targetEpIdx], currentItem, targetEpIdx, nextSeasonIdx);
+      if (currentSeason && Array.isArray(currentSeason.episodes)) {
+        let nextEpIdx = direction === 'next' ? currentEpIdx + 1 : currentEpIdx - 1;
+        
+        if (nextEpIdx >= 0 && nextEpIdx < currentSeason.episodes.length) {
+          handleEpisodeClick(currentSeason.episodes[nextEpIdx], currentItem, nextEpIdx, currentSeasonIdx);
           return;
+        } else {
+          const nextSeasonIdx = direction === 'next' ? currentSeasonIdx + 1 : currentSeasonIdx - 1;
+          if (nextSeasonIdx >= 0 && nextSeasonIdx < currentItem.seasons.length) {
+            const targetSeason = currentItem.seasons[nextSeasonIdx];
+            if (targetSeason && Array.isArray(targetSeason.episodes)) {
+              const targetEpIdx = direction === 'next' ? 0 : targetSeason.episodes.length - 1;
+              handleEpisodeClick(targetSeason.episodes[targetEpIdx], currentItem, targetEpIdx, nextSeasonIdx);
+              return;
+            }
+          }
         }
       }
     }
 
-    // Se não for episódio ou chegou ao fim da série, navega na lista geral
     const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
     if (currentIndex === -1) return
 
@@ -317,7 +325,7 @@ export default function HomeContent() {
               </DialogHeader>
               
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                {selectedSeries.type === 'series' && selectedSeries.episodes && (
+                {selectedSeries.type === 'series' && Array.isArray(selectedSeries.episodes) && (
                   <div className="grid gap-3">
                     <h4 className="text-[10px] font-black uppercase opacity-40 flex items-center gap-2"><ListOrdered className="h-3 w-3" /> Selecione o Episódio</h4>
                     <div className="grid sm:grid-cols-2 gap-3">
@@ -339,13 +347,13 @@ export default function HomeContent() {
                   </div>
                 )}
 
-                {selectedSeries.type === 'multi-season' && selectedSeries.seasons && (
+                {selectedSeries.type === 'multi-season' && Array.isArray(selectedSeries.seasons) && (
                   <div className="space-y-8">
                     {selectedSeries.seasons.map((season, sIdx) => (
                       <div key={season.id} className="space-y-4">
                         <h4 className="text-lg font-black uppercase italic text-primary border-l-4 border-primary pl-3">Temporada {season.number}</h4>
                         <div className="grid sm:grid-cols-2 gap-3">
-                          {season.episodes.map((ep, eIdx) => (
+                          {Array.isArray(season.episodes) && season.episodes.map((ep, eIdx) => (
                             <Button 
                               key={ep.id} 
                               variant="outline" 

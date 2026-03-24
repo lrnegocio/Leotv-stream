@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
     if (!pin) {
       return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK\n", { 
         status: 200,
-        headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
+        headers: { 
+          'Content-Type': 'application/x-mpegurl; charset=utf-8',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store, no-cache, must-revalidate'
+        }
       });
     }
 
@@ -26,12 +30,16 @@ export async function GET(req: NextRequest) {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Content-Type-Options': 'nosniff'
       },
     });
   } catch (error: any) {
     return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n", { 
       status: 200,
-      headers: { 'Content-Type': 'application/x-mpegurl; charset=utf-8' }
+      headers: { 
+        'Content-Type': 'application/x-mpegurl; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   }
 }

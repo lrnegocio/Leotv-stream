@@ -47,24 +47,37 @@ export default function EditContentPage() {
   if (fetching || !formData) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   const addEpisode = (seasonId?: string) => {
-    const newEp: Episode = {
-      id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      title: `Episódio ${episodes.length + 1}`,
-      number: episodes.length + 1,
-      streamUrl: ""
-    }
-    
     if (seasonId) {
-      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s))
+      setSeasons(prev => prev.map(s => {
+        if (s.id === seasonId) {
+          const nextNum = s.episodes.length + 1;
+          const newEp: Episode = {
+            id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+            title: `Episódio ${nextNum}`,
+            number: nextNum,
+            streamUrl: ""
+          };
+          return { ...s, episodes: [...s.episodes, newEp] };
+        }
+        return s;
+      }));
     } else {
-      setEpisodes(prev => [...prev, newEp])
+      const nextNum = episodes.length + 1;
+      const newEp: Episode = {
+        id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+        title: `Episódio ${nextNum}`,
+        number: nextNum,
+        streamUrl: ""
+      }
+      setEpisodes(prev => [...prev, newEp]);
     }
   }
 
   const addSeason = () => {
+    const nextNum = seasons.length + 1;
     const newSeason: Season = {
       id: "sea_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      number: seasons.length + 1,
+      number: nextNum,
       episodes: []
     }
     setSeasons(prev => [...prev, newSeason])
@@ -90,7 +103,6 @@ export default function EditContentPage() {
     e.preventDefault()
     setLoading(true)
     
-    // BLINDAGEM DE SALVAMENTO: Garante que os dados sejam validados pelo banco antes de redirecionar
     const success = await saveContent({
       ...formData,
       episodes: formData.type === 'series' ? episodes : undefined,
@@ -110,7 +122,6 @@ export default function EditContentPage() {
     }
   }
 
-  // Interface Inteligente: Link Principal só para canais e filmes
   const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
 
   return (
@@ -190,7 +201,7 @@ export default function EditContentPage() {
               <div className="space-y-3">
                 {episodes.map((ep, idx) => (
                   <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-3 rounded-lg border border-white/5">
-                    <span className="text-[10px] opacity-40">EP {idx + 1}</span>
+                    <span className="text-[10px] opacity-40">EP {ep.number}</span>
                     <Input placeholder="URL do Episódio" value={ep.streamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
@@ -218,8 +229,8 @@ export default function EditContentPage() {
                   <div className="space-y-2">
                     {season.episodes.map((ep, eIdx) => (
                       <div key={ep.id} className="flex gap-2 items-center">
-                        <span className="text-[10px] opacity-40">EP {eIdx + 1}</span>
-                        <Input placeholder={`Link do Ep ${eIdx + 1}`} value={ep.streamUrl} onChange={e => {
+                        <span className="text-[10px] opacity-40">EP {ep.number}</span>
+                        <Input placeholder={`Link do Ep ${ep.number}`} value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
