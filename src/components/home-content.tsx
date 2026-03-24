@@ -8,17 +8,26 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, Episode } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, Episode, Season } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
 
+interface ActiveVideo {
+  url: string;
+  title: string;
+  itemId: string;
+  episodeIndex?: number;
+  seasonIndex?: number;
+  type: string;
+}
+
 export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
-  const [activeVideo, setActiveVideo] = React.useState<{url: string, title: string, itemId: string} | null>(null)
+  const [activeVideo, setActiveVideo] = React.useState<ActiveVideo | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [showAdult, setShowAdult] = React.useState(false)
   const [parentalPin, setParentalPin] = React.useState("")
@@ -112,16 +121,62 @@ export default function HomeContent() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
     } else {
-      setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id })
+      setActiveVideo({ 
+        url: item.streamUrl || "", 
+        title: item.title, 
+        itemId: item.id,
+        type: item.type
+      })
     }
   }
 
-  const handleEpisodeClick = (ep: Episode, series: ContentItem) => {
-    setActiveVideo({ url: ep.streamUrl, title: `${series.title} - EP ${ep.number}`, itemId: series.id })
+  const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
+    setActiveVideo({ 
+      url: ep.streamUrl, 
+      title: `${series.title} - EP ${ep.number}`, 
+      itemId: series.id,
+      episodeIndex: epIndex,
+      seasonIndex: seasonIndex,
+      type: series.type
+    })
   }
 
   const navigateContent = (direction: 'next' | 'prev') => {
     if (!activeVideo) return
+    
+    const currentItem = content.find(i => i.id === activeVideo.itemId);
+    if (!currentItem) return;
+
+    // NAVEGAÇÃO TURBO DE EPISÓDIOS
+    if (currentItem.type === 'series' && currentItem.episodes) {
+      const newIndex = direction === 'next' ? (activeVideo.episodeIndex || 0) + 1 : (activeVideo.episodeIndex || 0) - 1;
+      if (newIndex >= 0 && newIndex < currentItem.episodes.length) {
+        handleEpisodeClick(currentItem.episodes[newIndex], currentItem, newIndex);
+        return;
+      }
+    } else if (currentItem.type === 'multi-season' && currentItem.seasons) {
+      const currentSeasonIdx = activeVideo.seasonIndex || 0;
+      const currentEpIdx = activeVideo.episodeIndex || 0;
+      const currentSeason = currentItem.seasons[currentSeasonIdx];
+      
+      let nextEpIdx = direction === 'next' ? currentEpIdx + 1 : currentEpIdx - 1;
+      
+      if (nextEpIdx >= 0 && nextEpIdx < currentSeason.episodes.length) {
+        handleEpisodeClick(currentSeason.episodes[nextEpIdx], currentItem, nextEpIdx, currentSeasonIdx);
+        return;
+      } else {
+        // Muda de temporada
+        const nextSeasonIdx = direction === 'next' ? currentSeasonIdx + 1 : currentSeasonIdx - 1;
+        if (nextSeasonIdx >= 0 && nextSeasonIdx < currentItem.seasons.length) {
+          const targetSeason = currentItem.seasons[nextSeasonIdx];
+          const targetEpIdx = direction === 'next' ? 0 : targetSeason.episodes.length - 1;
+          handleEpisodeClick(targetSeason.episodes[targetEpIdx], currentItem, targetEpIdx, nextSeasonIdx);
+          return;
+        }
+      }
+    }
+
+    // Se não for episódio ou chegou ao fim da série, navega na lista geral
     const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
     if (currentIndex === -1) return
 
@@ -139,12 +194,16 @@ export default function HomeContent() {
     if (pinInput === parentalPin) {
       setIsPinVerified(true)
       if (pendingItem) {
-        // Agora que verificou, executa o clique original
         const item = pendingItem;
         if (item.type === 'series' || item.type === 'multi-season') {
           setSelectedSeries(item)
         } else {
-          setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id })
+          setActiveVideo({ 
+            url: item.streamUrl || "", 
+            title: item.title, 
+            itemId: item.id,
+            type: item.type
+          })
         }
       }
       setIsPinDialogOpen(false)
@@ -247,10 +306,11 @@ export default function HomeContent() {
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
+          <DialogTitle className="sr-only">Seleção de Episódios</DialogTitle>
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
               <DialogHeader className="p-8 pb-0">
-                <DialogTitle className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</DialogTitle>
+                <div className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</div>
                 <DialogDescription className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-2">
                    {selectedSeries.genre} • {selectedSeries.type === 'multi-season' ? 'Temporadas' : 'Série'}
                 </DialogDescription>
@@ -261,11 +321,11 @@ export default function HomeContent() {
                   <div className="grid gap-3">
                     <h4 className="text-[10px] font-black uppercase opacity-40 flex items-center gap-2"><ListOrdered className="h-3 w-3" /> Selecione o Episódio</h4>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      {selectedSeries.episodes.map((ep) => (
+                      {selectedSeries.episodes.map((ep, idx) => (
                         <Button 
                           key={ep.id} 
                           variant="outline" 
-                          onClick={() => handleEpisodeClick(ep, selectedSeries)}
+                          onClick={() => handleEpisodeClick(ep, selectedSeries, idx)}
                           className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
                         >
                           <div className="flex items-center gap-4">
@@ -281,15 +341,15 @@ export default function HomeContent() {
 
                 {selectedSeries.type === 'multi-season' && selectedSeries.seasons && (
                   <div className="space-y-8">
-                    {selectedSeries.seasons.map((season) => (
+                    {selectedSeries.seasons.map((season, sIdx) => (
                       <div key={season.id} className="space-y-4">
                         <h4 className="text-lg font-black uppercase italic text-primary border-l-4 border-primary pl-3">Temporada {season.number}</h4>
                         <div className="grid sm:grid-cols-2 gap-3">
-                          {season.episodes.map((ep) => (
+                          {season.episodes.map((ep, eIdx) => (
                             <Button 
                               key={ep.id} 
                               variant="outline" 
-                              onClick={() => handleEpisodeClick(ep, selectedSeries)}
+                              onClick={() => handleEpisodeClick(ep, selectedSeries, eIdx, sIdx)}
                               className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
                             >
                               <div className="flex items-center gap-4">
@@ -312,8 +372,9 @@ export default function HomeContent() {
 
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
+          <DialogTitle className="sr-only">Senha Parental</DialogTitle>
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</DialogTitle>
+            <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
             <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">Conteúdo Protegido por PIN</DialogDescription>
           </DialogHeader>
           <div className="py-6 flex justify-center">
@@ -336,9 +397,7 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
-            <DialogHeader className="sr-only">
-              <DialogTitle>{activeVideo.title}</DialogTitle>
-            </DialogHeader>
+            <DialogTitle className="sr-only">{activeVideo.title}</DialogTitle>
             <VideoPlayer 
               url={activeVideo.url} 
               title={activeVideo.title} 

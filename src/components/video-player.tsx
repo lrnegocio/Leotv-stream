@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv } from "lucide-react"
+import { Maximize, ExternalLink, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -22,7 +22,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 5000)
+      // Oculta o aviso de mudo após 8 segundos
+      const muteTimer = setTimeout(() => setShowMuteNotice(false), 8000)
       return () => clearTimeout(muteTimer)
     }
   }, [url])
@@ -31,19 +32,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return null
     let targetUrl = url.trim()
 
-    // Xvideos Embed Anti-Ads
+    // Xvideos Embed Master
     if (targetUrl.includes('xvideos.com/video')) {
       const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
       if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=1`;
     }
 
-    // Dailymotion Embed
+    // Dailymotion Embed Master
     if (targetUrl.includes('dailymotion.com/video/')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
       return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=1&ui-logo=0&ui-start-screen-info=0`;
     }
 
-    // YouTube Embed
+    // YouTube Embed Master
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
@@ -51,7 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0&modestbranding=1&controls=1`
     }
 
-    // Adiciona parâmetros de autoplay se não existirem
+    // Adiciona parâmetros de áudio e autoplay universal
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=1&playsinline=1`
   }, [url])
@@ -79,14 +80,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {showMuteNotice && !loading && (
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-2 rounded-full border border-primary/30 flex items-center gap-2 animate-in fade-in zoom-in">
-          <Volume2 className="h-4 w-4 text-primary animate-bounce" />
-          <span className="text-[9px] font-black text-white uppercase tracking-tighter">SINAL MUDO: CLIQUE PARA ATIVAR O SOM</span>
+      {/* BOTÃO DE ÁUDIO CENTRAL - RESOLVE O MUDO DOS EMBEDS */}
+      {!loading && showMuteNotice && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/40 pointer-events-none">
+          <Button 
+            variant="default" 
+            onClick={() => setShowMuteNotice(false)}
+            className="pointer-events-auto h-20 px-10 bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_50px_rgba(var(--primary),0.5)] border-4 border-white/20 animate-in zoom-in-95"
+          >
+            <div className="flex items-center gap-4">
+              <Volume2 className="h-10 w-10 text-white animate-bounce" />
+              <div className="text-left">
+                <span className="block text-lg font-black uppercase italic leading-none">Ativar Áudio</span>
+                <span className="text-[10px] font-bold uppercase opacity-80 tracking-widest">Clique aqui para liberar o som</span>
+              </div>
+            </div>
+          </Button>
         </div>
       )}
 
-      {/* SINAL MASTER SEM SANDBOX PARA LIBERAR RDCANAIS, DAILYMOTION E TODOS OS SINAIS MASTER */}
+      {/* SINAL MASTER SEM SANDBOX PARA LIBERAR TODOS OS SINAIS */}
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -98,23 +111,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       />
       
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/90">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <h3 className="text-lg font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
-            </div>
+        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/95 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+            <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
           </div>
+          <Button variant="ghost" size="icon" className="text-white pointer-events-auto" onClick={() => setShowMuteNotice(!showMuteNotice)}>
+            {showMuteNotice ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+          </Button>
         </div>
 
+        {/* NAVEGAÇÃO MASTER DE EPISÓDIOS E CANAIS */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onPrev ? 'opacity-0' : 'opacity-100'}`}
+            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onPrev ? 'opacity-0' : 'opacity-100 hover:scale-110'}`}
           >
-            <SkipBack className="h-8 w-8" />
+            <SkipBack className="h-10 w-10" />
           </Button>
         </div>
         <div className="absolute inset-y-0 right-0 flex items-center pr-6 z-50">
@@ -122,24 +137,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext?.(); }} 
-            className={`h-14 w-14 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all ${!onNext ? 'opacity-0' : 'opacity-100'}`}
+            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onNext ? 'opacity-0' : 'opacity-100 hover:scale-110'}`}
           >
-            <SkipForward className="h-8 w-8" />
+            <SkipForward className="h-10 w-10" />
           </Button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-black/90 flex justify-between items-center">
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-10 px-4 text-[9px] font-black rounded-xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
-              <ExternalLink className="mr-2 h-3 w-3" /> ABRIR SINAL EXTERNO
+        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 flex justify-between items-center">
+          <div className="flex gap-4">
+            <Button variant="secondary" size="sm" className="bg-primary/20 text-primary hover:bg-primary hover:text-white h-12 px-6 text-[11px] font-black rounded-2xl pointer-events-auto transition-all" onClick={() => window.open(url, '_blank')}>
+              <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL EXTERNO (FULL)
             </Button>
           </div>
-          <Button variant="ghost" size="icon" className="text-white h-10 w-10 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
+          <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!containerRef.current) return;
             if (!document.fullscreenElement) containerRef.current.requestFullscreen();
             else document.exitFullscreen();
           }}>
-            <Maximize className="h-5 w-5" />
+            <Maximize className="h-6 w-6" />
           </Button>
         </div>
       </div>
