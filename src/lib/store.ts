@@ -55,65 +55,40 @@ export interface Reseller {
   name: string;
   username: string;
   password?: string;
-  cpf: string;
-  birthDate: string;
-  phone: string;
-  email: string;
+  cpf?: string;
+  birthDate?: string;
+  phone?: string;
+  email?: string;
   credits: number;
   totalSold: number;
   isBlocked: boolean;
 }
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
-  let allData: any[] = [];
-  let from = 0;
-  let step = 1000;
-  let finished = false;
-
   try {
-    while (!finished) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .range(from, from + step - 1)
-        .order(orderBy, { ascending: true });
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order(orderBy, { ascending: true });
 
-      if (error) break;
-      
-      if (data && data.length > 0) {
-        allData = [...allData, ...data];
-        if (data.length < step) finished = true;
-        else from += step;
-      } else {
-        finished = true;
-      }
-    }
-  } catch (e) {}
-  return allData;
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error(`Erro ao buscar ${table}:`, e);
+    return [];
+  }
 }
 
 export async function getRemoteContent(): Promise<ContentItem[]> {
-  try {
-    return await fetchAllRecords('content', 'title');
-  } catch (e) {
-    return [];
-  }
+  return await fetchAllRecords('content', 'title');
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    return await fetchAllRecords('users', 'id');
-  } catch (e) {
-    return [];
-  }
+  return await fetchAllRecords('users', 'id');
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  try {
-    return await fetchAllRecords('resellers', 'name');
-  } catch (e) {
-    return [];
-  }
+  return await fetchAllRecords('resellers', 'name');
 }
 
 export async function saveContent(item: ContentItem) {
@@ -156,21 +131,7 @@ export async function removeContent(id: string) {
 
 export async function saveUser(user: User) {
   try {
-    const payload = {
-      id: user.id,
-      pin: user.pin,
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens || 1,
-      activeDevices: user.activeDevices || [],
-      isBlocked: user.isBlocked || false,
-      resellerId: user.resellerId || null,
-      activatedAt: user.activatedAt || null,
-      blockedAt: user.blockedAt || null
-    };
-
-    const { error } = await supabase.from('users').upsert(payload);
+    const { error } = await supabase.from('users').upsert(user);
     return !error;
   } catch (e) {
     return false;
@@ -200,30 +161,25 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
-    
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
     }
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
-    
-    if (error || !user) return { error: "CÓDIGO DE ACESSO INVÁLIDO." };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO! CONTATE O SUPORTE." };
+    if (error || !user) return { error: "CÓDIGO INVÁLIDO." };
+    if (user.isBlocked) return { error: "ACESSO BLOQUEADO." };
 
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-      return { error: "SINAL EXPIRADO! RENOVE PARA CONTINUAR." };
+      return { error: "SINAL EXPIRADO." };
     }
 
-    let devices = user.activeDevices || [];
+    let devices = Array.isArray(user.activeDevices) ? user.activeDevices : [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
     if (!isThisDeviceLinked) {
       if (devices.length >= (user.maxScreens || 1)) {
-        user.isBlocked = true;
-        user.blockedAt = now.toISOString();
-        await saveUser(user);
-        return { error: "LIMITE DE TELAS EXCEDIDO! PIN BLOQUEADO POR SEGURANÇA." };
+        return { error: "LIMITE DE TELAS EXCEDIDO." };
       }
       devices.push({ id: deviceId, lastActive: now.toISOString() });
       user.activeDevices = devices;
@@ -243,65 +199,58 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
     return { user };
   } catch (e) {
-    return { error: "ERRO INTERNO NO SERVIDOR MASTER." };
+    return { error: "ERRO DE CONEXÃO MASTER." };
   }
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
   try {
     const { data: res, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', pass).maybeSingle();
-    if (error || !res) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
-    if (res.isBlocked) return { error: "PAINEL DE REVENDA SUSPENSO." };
+    if (error || !res) return { error: "LOGIN INVÁLIDO." };
+    if (res.isBlocked) return { error: "REVENDA SUSPENSA." };
     return { reseller: res };
   } catch (e) {
-    return { error: "ERRO DE CONEXÃO." };
+    return { error: "ERRO DE REDE." };
   }
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
-    const { data: userData } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-    
-    if (!userData || userData.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU BLOQUEADO";
+    const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
+    if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
 
-    const { data: contentData } = await supabase.from('content').select('*').order('title');
-    if (!contentData) return "#EXTM3U\n#EXTINF:-1,BIBLIOTECA VAZIA";
+    const { data: content } = await supabase.from('content').select('*').order('title');
+    if (!content) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
 
     let m3u = "#EXTM3U\n";
-
-    contentData.forEach(item => {
+    content.forEach(item => {
       const logo = item.imageUrl || "";
-      const category = (item.genre || "GERAL").toUpperCase();
+      const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
       if (item.type === 'channel' || item.type === 'movie') {
-        const streamUrl = item.streamUrl || "";
-        if (!streamUrl) return;
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${title}\n${streamUrl}\n`;
+        if (!item.streamUrl) return;
+        m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}\n${item.streamUrl}\n`;
       } else if (item.type === 'series' || item.type === 'multi-season') {
-        if (Array.isArray(item.episodes)) {
-          item.episodes.sort((a,b) => a.number - b.number).forEach((ep: Episode) => {
+        if (item.episodes) {
+          item.episodes.forEach((ep: Episode) => {
             if (!ep.streamUrl) return;
             m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}\n${ep.streamUrl}\n`;
           });
         }
-        
-        if (Array.isArray(item.seasons)) {
-          item.seasons.forEach(s => {
-            if (Array.isArray(s.episodes)) {
-              s.episodes.sort((a,b) => a.number - b.number).forEach(ep => {
-                if (!ep.streamUrl) return;
-                m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} - T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
-              });
-            }
+        if (item.seasons) {
+          item.seasons.forEach((s: Season) => {
+            s.episodes.forEach(ep => {
+              if (!ep.streamUrl) return;
+              m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
+            });
           });
         }
       }
     });
-
     return m3u;
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO INTERNO NO SERVIDOR MASTER";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR";
   }
 }
 
@@ -329,61 +278,26 @@ export const generateRandomPin = (length: number = 11) => {
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
-  
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀
-
-🔑 *SEU CÓDIGO:* \`${pin}\`
-📅 *PLANO:* ${planoText}
-🖥️ *LIMITE:* ${screens} aparelho(s) vinculados
-
-📺 *SERVIDOR SMART TV:* 
-${playlistUrl}
-
-⚠️ _Nota: Este código ficará vinculado aos seus primeiros ${screens} aparelhos. O uso em outros causará bloqueio automático._`;
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado por hardware._`;
 }
 
 export async function renewUserSubscription(userId: string, resellerId: string) {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
     const { data: reseller } = await supabase.from('resellers').select('*').eq('id', resellerId).single();
-
-    if (!user || !reseller) return { error: "Dados não localizados." };
-    
+    if (!user || !reseller) return { error: "Erro." };
     const cost = user.maxScreens || 1;
-    if (reseller.credits < cost) return { error: `Sem créditos suficientes (${cost} necessários).` };
-
+    if (reseller.credits < cost) return { error: "Sem créditos." };
     const now = new Date();
     let baseDate = now;
-
-    if (user.expiryDate) {
-      const currentExpiry = new Date(user.expiryDate);
-      if (currentExpiry > now) baseDate = currentExpiry;
-    }
-
+    if (user.expiryDate && new Date(user.expiryDate) > now) baseDate = new Date(user.expiryDate);
     const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    const updatedUser = {
-      ...user,
-      subscriptionTier: 'monthly',
-      expiryDate: newExpiry.toISOString(),
-      isBlocked: false, 
-      activatedAt: user.activatedAt || now.toISOString() 
-    };
-
-    const updatedReseller = {
-      ...reseller,
-      credits: reseller.credits - cost,
-      totalSold: (reseller.totalSold || 0) + 1
-    };
-
-    const { error: errorU } = await supabase.from('users').upsert(updatedUser);
-    const { error: errorR } = await supabase.from('resellers').upsert(updatedReseller);
-
-    if (!errorU && !errorR) {
-      return { success: true, user: updatedUser, reseller: updatedReseller };
-    }
-    return { error: "Erro de sincronia." };
+    const updatedUser = { ...user, subscriptionTier: 'monthly', expiryDate: newExpiry.toISOString(), isBlocked: false };
+    const updatedReseller = { ...reseller, credits: reseller.credits - cost, totalSold: (reseller.totalSold || 0) + 1 };
+    await supabase.from('users').upsert(updatedUser);
+    await supabase.from('resellers').upsert(updatedReseller);
+    return { success: true, user: updatedUser, reseller: updatedReseller };
   } catch (e) {
-    return { error: "FALHA NA RENOVAÇÃO." };
+    return { error: "FALHA." };
   }
 }

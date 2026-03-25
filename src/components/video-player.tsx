@@ -28,18 +28,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
+    // YouTube handling
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
     }
 
+    // Dailymotion handling
     if (targetUrl.includes('dailymotion.com/video/')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
-      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0`;
+      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&controls=1`;
     }
 
+    // Generic signals (no sandbox to allow signals like rdcanais)
     const connector = targetUrl.includes('?') ? '&' : '?'
-    // REMOVIDO SANDBOX PARA SINAL DA RDCANAIS E OUTROS FUNCIONAR
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}`
   }, [url, isMuted])
 
@@ -55,7 +57,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return (
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
-        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center px-8">SINAL NÃO DISPONÍVEL</span>
+        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SINAL OFF</span>
       </div>
     )
   }
@@ -65,10 +67,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse">SINTONIZANDO SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO...</span>
         </div>
       )}
 
+      {/* NO SANDBOX TO ALLOW ALL SIGNALS */}
       <iframe 
         key={processedUrl} 
         src={processedUrl} 
@@ -82,7 +85,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
-          {/* BOTÃO DE ÁUDIO NO CANTO SUPERIOR DIREITO - SEM BOTÃO NO CENTRO */}
+          
           <Button 
             variant="ghost" 
             size="icon" 

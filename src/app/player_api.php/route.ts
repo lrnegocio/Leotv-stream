@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const username = searchParams.get('username');
-  const password = searchParams.get('password');
+  const username = searchParams.get('username'); // Usuário é o PIN
+  const password = searchParams.get('password'); // Senha é o PIN
   const action = searchParams.get('action');
 
   const headers = {
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
   }
 
-  // Validação do PIN (Usuário e Senha são o PIN)
+  // Validação Master do PIN
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
