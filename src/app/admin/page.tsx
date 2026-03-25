@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     </div>
   )
 
-  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios) - v117.0
+  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios de Séries) - v117.0
   const totalEpisodes = content.reduce((acc, item) => {
     let count = 0;
     if (item.type === 'series' && Array.isArray(item.episodes)) {

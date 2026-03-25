@@ -62,7 +62,7 @@ export default function HomeContent() {
       setContent(data)
       setLoading(false)
 
-      // v117.0: Tenta abrir conteúdo direto se houver ID na URL
+      // v117.0: Tenta abrir conteúdo direto se houver ID na URL ao carregar
       const contentId = searchParams.get('v');
       if (contentId) {
         const item = data.find(i => i.id === contentId);
@@ -134,7 +134,7 @@ export default function HomeContent() {
     return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
   }, [filteredContent])
 
-  // v117.0: Atualiza a URL sem recarregar a página ao abrir um canal
+  // v117.0: Atualiza a URL sem recarregar a página ao abrir um canal para ser seu "Controle Remoto"
   const updateURL = (contentId: string | null) => {
     const params = new URLSearchParams(window.location.search);
     if (contentId) params.set('v', contentId);
