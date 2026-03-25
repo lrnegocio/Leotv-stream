@@ -37,7 +37,7 @@ export default function HomeContent() {
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
-  const [timeLeft, setTimeLeft] = React.useState("Calculando...")
+  const [timeLeft, setTimeLeft] = React.useState("SINTONIZANDO...")
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -67,18 +67,22 @@ export default function HomeContent() {
   // Cronômetro Master de Expiração Blindado
   React.useEffect(() => {
     const interval = setInterval(() => {
-      if (!user) return;
-      if (user.subscriptionTier === 'lifetime') {
+      const session = localStorage.getItem("user_session")
+      if (!session) return;
+      const u = JSON.parse(session);
+
+      if (u.subscriptionTier === 'lifetime') {
         setTimeLeft("SINAL VITALÍCIO");
         return;
       }
-      if (!user.expiryDate) {
-        setTimeLeft("NÃO ATIVADO");
+      
+      if (!u.expiryDate) {
+        setTimeLeft("ESTOQUE");
         return;
       }
       
       const now = new Date();
-      const expiry = new Date(user.expiryDate);
+      const expiry = new Date(u.expiryDate);
       const diff = expiry.getTime() - now.getTime();
 
       if (diff <= 0) {
@@ -95,7 +99,7 @@ export default function HomeContent() {
       setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
     }, 1000)
     return () => clearInterval(interval)
-  }, [user, handleLogout])
+  }, [handleLogout])
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
@@ -155,52 +159,36 @@ export default function HomeContent() {
 
   const navigateContent = (direction: 'next' | 'prev') => {
     if (!activeVideo) return
-    
     const currentItem = content.find(i => i.id === activeVideo.itemId);
     if (!currentItem) return;
 
-    if (currentItem.type === 'series' && Array.isArray(currentItem.episodes)) {
-      const newIndex = direction === 'next' ? (activeVideo.episodeIndex || 0) + 1 : (activeVideo.episodeIndex || 0) - 1;
-      if (newIndex >= 0 && newIndex < currentItem.episodes.length) {
-        handleEpisodeClick(currentItem.episodes[newIndex], currentItem, newIndex);
-        return;
-      }
-    } else if (currentItem.type === 'multi-season' && Array.isArray(currentItem.seasons)) {
-      const currentSeasonIdx = activeVideo.seasonIndex || 0;
-      const currentEpIdx = activeVideo.episodeIndex || 0;
-      const currentSeason = currentItem.seasons[currentSeasonIdx];
-      
-      if (currentSeason && Array.isArray(currentSeason.episodes)) {
-        let nextEpIdx = direction === 'next' ? currentEpIdx + 1 : currentEpIdx - 1;
-        
-        if (nextEpIdx >= 0 && nextEpIdx < currentSeason.episodes.length) {
-          handleEpisodeClick(currentSeason.episodes[nextEpIdx], currentItem, nextEpIdx, currentSeasonIdx);
+    if ((activeVideo.type === 'series' || activeVideo.type === 'multi-season') && activeVideo.episodeIndex !== undefined) {
+      if (activeVideo.type === 'series' && currentItem.episodes) {
+        const nextIdx = direction === 'next' ? activeVideo.episodeIndex + 1 : activeVideo.episodeIndex - 1;
+        if (nextIdx >= 0 && nextIdx < currentItem.episodes.length) {
+          handleEpisodeClick(currentItem.episodes[nextIdx], currentItem, nextIdx);
           return;
-        } else {
-          const nextSeasonIdx = direction === 'next' ? currentSeasonIdx + 1 : currentSeasonIdx - 1;
-          if (nextSeasonIdx >= 0 && nextSeasonIdx < currentItem.seasons.length) {
-            const targetSeason = currentItem.seasons[nextSeasonIdx];
-            if (targetSeason && Array.isArray(targetSeason.episodes)) {
-              const targetEpIdx = direction === 'next' ? 0 : targetSeason.episodes.length - 1;
-              handleEpisodeClick(targetSeason.episodes[targetEpIdx], currentItem, targetEpIdx, nextSeasonIdx);
-              return;
-            }
+        }
+      } else if (activeVideo.type === 'multi-season' && currentItem.seasons) {
+        const sIdx = activeVideo.seasonIndex || 0;
+        const eIdx = activeVideo.episodeIndex;
+        const season = currentItem.seasons[sIdx];
+        if (season) {
+          const nextEIdx = direction === 'next' ? eIdx + 1 : eIdx - 1;
+          if (nextEIdx >= 0 && nextEIdx < season.episodes.length) {
+            handleEpisodeClick(season.episodes[nextEIdx], currentItem, nextEIdx, sIdx);
+            return;
           }
         }
       }
     }
 
     const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
-    if (currentIndex === -1) return
-
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     if (nextIndex >= filteredContent.length) nextIndex = 0
     if (nextIndex < 0) nextIndex = filteredContent.length - 1
-
     const nextItem = filteredContent[nextIndex]
-    if (nextItem) {
-      handleItemClick(nextItem)
-    }
+    if (nextItem) handleItemClick(nextItem)
   }
 
   const verifyPin = () => {
@@ -208,22 +196,14 @@ export default function HomeContent() {
       setIsPinVerified(true)
       if (pendingItem) {
         const item = pendingItem;
-        if (item.type === 'series' || item.type === 'multi-season') {
-          setSelectedSeries(item)
-        } else {
-          setActiveVideo({ 
-            url: item.streamUrl || "", 
-            title: item.title, 
-            itemId: item.id,
-            type: item.type
-          })
-        }
+        if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
+        else setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
       }
       setIsPinDialogOpen(false)
       setPinInput("")
       setPendingItem(null)
     } else {
-      toast({ variant: "destructive", title: "SENHA INCORRETA" })
+      toast({ variant: "destructive", title: "PIN INCORRETO" })
       setPinInput("")
     }
   }
@@ -260,15 +240,14 @@ export default function HomeContent() {
         </div>
       </header>
 
-      {/* Cronômetro Flutuante para Mobile */}
       <div className="lg:hidden bg-primary/20 backdrop-blur-md border-b border-white/10 p-3 flex items-center justify-center gap-2 text-primary">
           <Timer className="h-4 w-4 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest">EXPIRA EM: {timeLeft}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest">SINAL: {timeLeft}</span>
       </div>
 
       <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
         {categoriesWithCounts.length === 0 ? (
-          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum conteúdo sintonizado...</div>
+          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum sinal localizado...</div>
         ) : (
           categoriesWithCounts.map(([category, count]) => {
             const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
@@ -280,7 +259,7 @@ export default function HomeContent() {
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
                   <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                    {count} TÍTULOS
+                    {count} SINAIS
                   </span>
                 </div>
                 
@@ -292,13 +271,7 @@ export default function HomeContent() {
                       className="group relative aspect-[2/3] bg-card rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl"
                     >
                       {item.imageUrl ? (
-                        <Image 
-                          src={item.imageUrl} 
-                          alt={item.title} 
-                          fill 
-                          className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
-                          unoptimized 
-                        />
+                        <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center p-4">
                           <Tv className="h-10 w-10 text-primary opacity-20" />
@@ -308,10 +281,6 @@ export default function HomeContent() {
                         <div className="flex items-center justify-between mb-1">
                            <h3 className="font-black text-[11px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary transition-colors flex-1">{item.title}</h3>
                            {item.isRestricted && <Lock className="h-3 w-3 text-primary ml-2" />}
-                        </div>
-                        <div className="flex items-center gap-2">
-                           <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                           <span className="text-[7px] font-bold uppercase opacity-50 tracking-widest text-white">SINAL BLINDADO</span>
                         </div>
                       </div>
                     </div>
@@ -325,64 +294,32 @@ export default function HomeContent() {
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
-          <DialogTitle className="sr-only">Seleção de Episódios</DialogTitle>
+          <DialogHeader className="sr-only"><DialogTitle>{selectedSeries?.title}</DialogTitle></DialogHeader>
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
-              <DialogHeader className="p-8 pb-0">
+              <div className="p-8 pb-0">
                 <div className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</div>
-                <DialogDescription className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-2">
-                   {selectedSeries.genre} • {selectedSeries.type === 'multi-season' ? 'Temporadas' : 'Série'}
-                </DialogDescription>
-              </DialogHeader>
-              
+              </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                {selectedSeries.type === 'series' && Array.isArray(selectedSeries.episodes) && (
-                  <div className="grid gap-3">
-                    <h4 className="text-[10px] font-black uppercase opacity-40 flex items-center gap-2"><ListOrdered className="h-3 w-3" /> Selecione o Episódio</h4>
+                {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
+                  <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-16 justify-between bg-black/20 border-white/5 hover:border-primary rounded-2xl">
+                    <span className="font-bold uppercase text-xs">Episódio {ep.number}</span>
+                    <PlayCircle className="h-5 w-5 text-primary" />
+                  </Button>
+                ))}
+                {selectedSeries.type === 'multi-season' && selectedSeries.seasons?.map((s, sIdx) => (
+                  <div key={s.id} className="space-y-4">
+                    <h4 className="text-lg font-black uppercase text-primary">Temporada {s.number}</h4>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      {selectedSeries.episodes.map((ep, idx) => (
-                        <Button 
-                          key={ep.id} 
-                          variant="outline" 
-                          onClick={() => handleEpisodeClick(ep, selectedSeries, idx)}
-                          className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-sm">EP {ep.number}</div>
-                            <span className="font-bold uppercase text-xs">Episódio {ep.number}</span>
-                          </div>
-                          <PlayCircle className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {s.episodes.map((ep, eIdx) => (
+                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, eIdx, sIdx)} className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary rounded-2xl">
+                          <span className="font-bold uppercase text-xs">Ep {ep.number}</span>
+                          <PlayCircle className="h-5 w-5 text-primary" />
                         </Button>
                       ))}
                     </div>
                   </div>
-                )}
-
-                {selectedSeries.type === 'multi-season' && Array.isArray(selectedSeries.seasons) && (
-                  <div className="space-y-8">
-                    {selectedSeries.seasons.map((season, sIdx) => (
-                      <div key={season.id} className="space-y-4">
-                        <h4 className="text-lg font-black uppercase italic text-primary border-l-4 border-primary pl-3">Temporada {season.number}</h4>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          {Array.isArray(season.episodes) && season.episodes.map((ep, eIdx) => (
-                            <Button 
-                              key={ep.id} 
-                              variant="outline" 
-                              onClick={() => handleEpisodeClick(ep, selectedSeries, eIdx, sIdx)}
-                              className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary hover:bg-primary/5 rounded-2xl group transition-all"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-sm">EP {ep.number}</div>
-                                <span className="font-bold uppercase text-xs">Episódio {ep.number}</span>
-                              </div>
-                              <PlayCircle className="h-5 w-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
             </div>
           )}
@@ -391,38 +328,20 @@ export default function HomeContent() {
 
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
-          <DialogTitle className="sr-only">Senha Parental</DialogTitle>
-          <DialogHeader>
-            <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
-            <DialogDescription className="text-center text-[10px] uppercase font-bold opacity-60">Conteúdo Protegido por PIN</DialogDescription>
-          </DialogHeader>
+          <DialogHeader className="sr-only"><DialogTitle>PIN Parental</DialogTitle></DialogHeader>
+          <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
           <div className="py-6 flex justify-center">
-             <Input 
-                type="password" 
-                maxLength={4} 
-                className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl" 
-                value={pinInput}
-                onChange={e => setPinInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && verifyPin()}
-                autoFocus
-             />
+             <Input type="password" maxLength={4} className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
           </div>
-          <DialogFooter>
-             <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR SINAL</Button>
-          </DialogFooter>
+          <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
         </DialogContent>
       </Dialog>
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
-            <DialogTitle className="sr-only">{activeVideo.title}</DialogTitle>
-            <VideoPlayer 
-              url={activeVideo.url} 
-              title={activeVideo.title} 
-              onNext={() => navigateContent('next')}
-              onPrev={() => navigateContent('prev')}
-            />
+          <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
+            <DialogHeader className="sr-only"><DialogTitle>{activeVideo.title}</DialogTitle></DialogHeader>
+            <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
           </DialogContent>
         </Dialog>
       )}

@@ -1,0 +1,88 @@
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase-client';
+
+/**
+ * XC API - COMPATIBILIDADE TOTAL COM IPTV SMARTERS E ROKU
+ * Mestre Léo, este arquivo faz o seu servidor se comportar como um Painel Profissional.
+ */
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const username = searchParams.get('username');
+  const password = searchParams.get('password');
+  const action = searchParams.get('action');
+
+  if (!username || !password) {
+    return NextResponse.json({ error: "Missing credentials" }, { status: 401 });
+  }
+
+  // Validação de PIN Master
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('pin', username)
+    .maybeSingle();
+
+  if (error || !user || user.isBlocked) {
+    return NextResponse.json({ error: "Auth Failed" }, { status: 401 });
+  }
+
+  // Se não houver ação, retorna informações do usuário (Login)
+  if (!action) {
+    const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000) : "0";
+    return NextResponse.json({
+      user_info: {
+        username: user.pin,
+        status: "Active",
+        expiry_date: expiry,
+        is_trial: user.subscriptionTier === 'test' ? "1" : "0",
+        active_cons: user.activeDevices?.length || 0,
+        max_connections: user.maxScreens || 1,
+        allowed_output_formats: ["m3u8", "ts", "rtmp"]
+      },
+      server_info: {
+        url: req.nextUrl.origin,
+        port: "443",
+        https_port: "443",
+        server_protocol: "https",
+        rtmp_port: "8000",
+        timezone: "America/Sao_Paulo",
+        time_now: new Date().toISOString()
+      }
+    });
+  }
+
+  // Busca de Conteúdo para Categorias e Canais
+  const { data: content } = await supabase.from('content').select('*');
+  if (!content) return NextResponse.json([]);
+
+  if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
+    const genres = Array.from(new Set(content.map(i => i.genre || "GERAL")));
+    return NextResponse.json(genres.map((g, idx) => ({
+      category_id: (idx + 1).toString(),
+      category_name: g.toUpperCase(),
+      parent_id: 0
+    })));
+  }
+
+  if (action === 'get_live_streams') {
+    return NextResponse.json(content.filter(i => i.type === 'channel').map(i => ({
+      num: i.id,
+      name: i.title,
+      stream_type: "live",
+      stream_id: i.id,
+      stream_icon: i.imageUrl || "",
+      category_id: "1",
+      added: "0",
+      custom_sid: "",
+      tv_archive: 0,
+      direct_source: i.streamUrl || ""
+    })));
+  }
+
+  return NextResponse.json([]);
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req);
+}
