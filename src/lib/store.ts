@@ -61,7 +61,7 @@ export interface Reseller {
 }
 
 /**
- * BUSCA TURBO INFINITA - v116.0
+ * BUSCA TURBO INFINITA - v117.0
  * Rompe o limite de 1000 registros do Supabase buscando em blocos.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
@@ -296,7 +296,7 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 /**
- * MENSAGEM MASTER LÉO - v116.0
+ * MENSAGEM MASTER LÉO - v117.0
  * Força sempre o link da VERCEL OFICIAL.
  */
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {

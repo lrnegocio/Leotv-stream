@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // v116.0: Processamento de URL Blindado para YouTube e Dailymotion
+    // v117.0: Processamento de URL Blindado para YouTube e Dailymotion
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
@@ -46,7 +46,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const handleToggleAudio = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // v116.0: Recarrega o áudio SEM abrir novas abas e SEM sair da tela
+    // v117.0: Recarrega o áudio na mesma tela sem abrir novas abas
     setIsMuted(false);
     setLoading(true);
   }
@@ -76,8 +76,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl} 
         className="h-full w-full border-0 relative z-10" 
         title={title} 
-        // v116.0: SANDBOX BLINDADO - Impede a abertura de novas abas/anúncios
-        sandbox="allow-forms allow-modals allow-pointer-lock allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+        // v117.0: REMOVIDO SANDBOX para compatibilidade total com Rei dos Canais e Esportes
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
         allowFullScreen 
         onLoad={() => setLoading(false)} 

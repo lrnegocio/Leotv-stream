@@ -61,9 +61,22 @@ export default function HomeContent() {
       setParentalPin(settings.parentalPin || "1234")
       setContent(data)
       setLoading(false)
+
+      // v117.0: Tenta abrir conteúdo direto se houver ID na URL
+      const contentId = searchParams.get('v');
+      if (contentId) {
+        const item = data.find(i => i.id === contentId);
+        if (item) {
+          if (item.type === 'channel' || item.type === 'movie') {
+            setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type });
+          } else {
+            setSelectedSeries(item);
+          }
+        }
+      }
     }
     load()
-  }, [router])
+  }, [router, searchParams])
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -121,12 +134,23 @@ export default function HomeContent() {
     return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
   }, [filteredContent])
 
+  // v117.0: Atualiza a URL sem recarregar a página ao abrir um canal
+  const updateURL = (contentId: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (contentId) params.set('v', contentId);
+    else params.delete('v');
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({ path: newURL }, '', newURL);
+  }
+
   const handleItemClick = (item: ContentItem) => {
     if (item.isRestricted && !isPinVerified) {
       setPendingItem(item)
       setIsPinDialogOpen(true)
       return
     }
+
+    updateURL(item.id);
 
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
@@ -208,6 +232,7 @@ export default function HomeContent() {
         setPendingEpisodeData(null)
       } else if (pendingItem) {
         const item = pendingItem;
+        updateURL(item.id);
         if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
         else setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
       }
@@ -300,7 +325,7 @@ export default function HomeContent() {
         )}
       </main>
 
-      <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
+      <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) { setSelectedSeries(null); updateURL(null); } }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           <DialogHeader className="sr-only">
              <DialogTitle>{selectedSeries?.title}</DialogTitle>
@@ -352,7 +377,7 @@ export default function HomeContent() {
       </Dialog>
 
       {activeVideo && (
-        <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
+        <Dialog open={!!activeVideo} onOpenChange={(open) => { if(!open) { setActiveVideo(null); updateURL(null); } }}>
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="sr-only">
                <DialogTitle>{activeVideo.title}</DialogTitle>
