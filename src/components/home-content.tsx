@@ -64,7 +64,7 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // Cronômetro Master de Expiração
+  // Cronômetro Master de Expiração Blindado
   React.useEffect(() => {
     const interval = setInterval(() => {
       if (!user) return;
@@ -259,6 +259,12 @@ export default function HomeContent() {
           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 rounded-xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
         </div>
       </header>
+
+      {/* Cronômetro Flutuante para Mobile */}
+      <div className="lg:hidden bg-primary/20 backdrop-blur-md border-b border-white/10 p-3 flex items-center justify-center gap-2 text-primary">
+          <Timer className="h-4 w-4 animate-pulse" />
+          <span className="text-[10px] font-black uppercase tracking-widest">EXPIRA EM: {timeLeft}</span>
+      </div>
 
       <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
         {categoriesWithCounts.length === 0 ? (

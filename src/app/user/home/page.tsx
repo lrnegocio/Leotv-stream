@@ -5,6 +5,7 @@ import * as React from 'react';
 import { Suspense } from 'react';
 import HomeContent from '@/components/home-content';
 import { Loader2 } from 'lucide-react';
+import { AiAssistant } from '@/components/ai-assistant';
 
 export default function HomePage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -26,6 +27,8 @@ export default function HomePage() {
       </div>
     }>
       <HomeContent />
+      {/* Microfone e Assistente liberado para o cliente */}
+      <AiAssistant />
     </Suspense>
   );
 }

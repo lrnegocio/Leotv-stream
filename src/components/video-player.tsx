@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
         : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
+      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1&showinfo=0`
     }
 
     // Dailymotion Handling
@@ -54,7 +54,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}&playsinline=1`
   }, [url, isMuted])
 
-  const handleToggleAudio = () => {
+  const handleToggleAudio = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setIsMuted(!isMuted)
     setLoading(true)
   }
@@ -92,22 +94,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         onLoad={() => setLoading(false)}
       />
       
+      {/* Botões de Controle Blindados */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/95 flex items-center justify-between">
+        {/* Topo com Título e Som */}
+        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/95 flex items-center justify-between pointer-events-none">
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-            <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
+            <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter max-w-[200px] sm:max-w-md">{title}</h3>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="text-white pointer-events-auto hover:bg-white/10 rounded-full" 
+            className="text-white pointer-events-auto h-14 w-14 bg-black/40 hover:bg-primary rounded-full transition-all border border-white/10" 
             onClick={handleToggleAudio}
           >
-            {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
+            {isMuted ? <VolumeX className="h-8 w-8 text-destructive animate-pulse" /> : <Volume2 className="h-8 w-8 text-primary" />}
           </Button>
         </div>
 
+        {/* Setas de Navegação Laterais */}
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
           <Button 
             variant="ghost" 
@@ -129,6 +134,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </Button>
         </div>
 
+        {/* Rodapé com Tela Cheia */}
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/95 flex justify-end items-center">
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => {
             if (!containerRef.current) return;

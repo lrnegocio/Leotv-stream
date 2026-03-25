@@ -15,25 +15,23 @@ export async function GET(req: NextRequest) {
         headers: { 
           'Content-Type': 'application/x-mpegurl; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Cache-Control': 'no-store, no-cache, must-revalidate'
         }
       });
     }
 
     const m3uContent = await generateM3UPlaylist(pin);
     
-    // Cabeçalhos de ultra-compatibilidade para apps de IPTV (Smarters, etc.)
+    // Cabeçalhos de ultra-compatibilidade para evitar erro de JSON em apps de IPTV
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {
         'Content-Type': 'application/x-mpegurl; charset=utf-8',
-        'Content-Disposition': 'inline; filename="playlist.m3u"',
+        'Content-Disposition': 'attachment; filename="playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'X-Content-Type-Options': 'nosniff'
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error: any) {
