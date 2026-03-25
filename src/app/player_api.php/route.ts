@@ -2,21 +2,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 
-/**
- * XC API - COMPATIBILIDADE TOTAL COM IPTV SMARTERS E ROKU
- * Mestre Léo, este arquivo faz o seu servidor se comportar como um Painel Profissional.
- */
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const username = searchParams.get('username');
   const password = searchParams.get('password');
   const action = searchParams.get('action');
 
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+
   if (!username || !password) {
-    return NextResponse.json({ error: "Missing credentials" }, { status: 401 });
+    return NextResponse.json({ error: "Missing credentials" }, { status: 401, headers });
   }
 
-  // Validação de PIN Master
+  // Validação de PIN Master (username e password são o PIN)
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
@@ -24,10 +28,10 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (error || !user || user.isBlocked) {
-    return NextResponse.json({ error: "Auth Failed" }, { status: 401 });
+    return NextResponse.json({ error: "Auth Failed" }, { status: 401, headers });
   }
 
-  // Se não houver ação, retorna informações do usuário (Login)
+  // Se não houver ação, retorna informações do usuário (Login Real XC)
   if (!action) {
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000) : "0";
     return NextResponse.json({
@@ -49,12 +53,12 @@ export async function GET(req: NextRequest) {
         timezone: "America/Sao_Paulo",
         time_now: new Date().toISOString()
       }
-    });
+    }, { headers });
   }
 
   // Busca de Conteúdo para Categorias e Canais
   const { data: content } = await supabase.from('content').select('*');
-  if (!content) return NextResponse.json([]);
+  if (!content) return NextResponse.json([], { headers });
 
   if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
     const genres = Array.from(new Set(content.map(i => i.genre || "GERAL")));
@@ -62,7 +66,7 @@ export async function GET(req: NextRequest) {
       category_id: (idx + 1).toString(),
       category_name: g.toUpperCase(),
       parent_id: 0
-    })));
+    })), { headers });
   }
 
   if (action === 'get_live_streams') {
@@ -77,12 +81,37 @@ export async function GET(req: NextRequest) {
       custom_sid: "",
       tv_archive: 0,
       direct_source: i.streamUrl || ""
-    })));
+    })), { headers });
   }
 
-  return NextResponse.json([]);
+  if (action === 'get_vod_streams') {
+    return NextResponse.json(content.filter(i => i.type === 'movie').map(i => ({
+      num: i.id,
+      name: i.title,
+      stream_type: "movie",
+      stream_id: i.id,
+      stream_icon: i.imageUrl || "",
+      category_id: "1",
+      container_extension: "mp4",
+      added: "0",
+      rating: "10"
+    })), { headers });
+  }
+
+  return NextResponse.json([], { headers });
 }
 
 export async function POST(req: NextRequest) {
   return GET(req);
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 }

@@ -294,7 +294,10 @@ export default function HomeContent() {
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
-          <DialogHeader className="sr-only"><DialogTitle>{selectedSeries?.title}</DialogTitle></DialogHeader>
+          <DialogHeader className="sr-only">
+             <DialogTitle>{selectedSeries?.title}</DialogTitle>
+             <DialogDescription>Selecione um episódio para assistir.</DialogDescription>
+          </DialogHeader>
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
               <div className="p-8 pb-0">
@@ -328,10 +331,13 @@ export default function HomeContent() {
 
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
-          <DialogHeader className="sr-only"><DialogTitle>PIN Parental</DialogTitle></DialogHeader>
+          <DialogHeader className="sr-only">
+             <DialogTitle>PIN Parental</DialogTitle>
+             <DialogDescription>Insira sua senha de 4 dígitos para liberar este conteúdo.</DialogDescription>
+          </DialogHeader>
           <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
           <div className="py-6 flex justify-center">
-             <Input type="password" maxLength={4} className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
+             <input type="password" maxLength={4} className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none border focus:border-primary" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
           </div>
           <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
         </DialogContent>
@@ -340,7 +346,10 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
-            <DialogHeader className="sr-only"><DialogTitle>{activeVideo.title}</DialogTitle></DialogHeader>
+            <DialogHeader className="sr-only">
+               <DialogTitle>{activeVideo.title}</DialogTitle>
+               <DialogDescription>Assistindo agora no Léo Stream.</DialogDescription>
+            </DialogHeader>
             <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
           </DialogContent>
         </Dialog>
