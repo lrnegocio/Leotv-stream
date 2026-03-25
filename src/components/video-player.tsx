@@ -23,32 +23,63 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (url) setLoading(true)
   }, [url])
 
-  const processedUrl = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return null
+  // v118.0: PROCESSAMENTO TURBO UNIVERSAL
+  const { processedUrl, isDirectVideo } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // v118.0: Processamento de URL Blindado
-    if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
+    // DETECÇÃO DE VÍDEO DIRETO (.m3u8, .mp4, .ts, etc)
+    const isDirect = /\.(m3u8|mp4|webm|ogg|mp3|wav|ts|mkv)$/i.test(targetUrl);
+
+    // YouTube
+    if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
+      return { 
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
+        isDirectVideo: false 
+      }
     }
 
-    if (targetUrl.includes('dailymotion.com/video/')) {
+    // Dailymotion
+    if (targetUrl.includes('dailymotion.com')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
-      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&controls=1`;
+      return { 
+        processedUrl: `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&controls=1`,
+        isDirectVideo: false 
+      };
     }
 
-    const connector = targetUrl.includes('?') ? '&' : '?'
-    return `${targetUrl}${connector}autoplay=1&mute=${muteVal}`
+    // XVideos (Formato: https://www.xvideos.com/video.ID/title)
+    if (targetUrl.includes('xvideos.com')) {
+      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
+      if (match) {
+        return { 
+          processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, 
+          isDirectVideo: false 
+        };
+      }
+    }
+
+    // TokyVideo (Formato: https://www.tokyvideo.com/video/slug)
+    if (targetUrl.includes('tokyvideo.com')) {
+      const slug = targetUrl.split('video/')[1];
+      if (slug) {
+        return { 
+          processedUrl: `https://www.tokyvideo.com/embed/${slug}`, 
+          isDirectVideo: false 
+        };
+      }
+    }
+
+    // VisionCine / Mercado Play / Outros embeds (Tenta rodar direto)
+    return { processedUrl: targetUrl, isDirectVideo: isDirect };
   }, [url, isMuted])
 
   const handleToggleAudio = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // v118.0: Sintoniza o áudio na mesma aba
     setIsMuted(prev => !prev);
-    // Não alteramos o loading para evitar o flash preto se o player suportar mute dinâmico
   }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -71,16 +102,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      <iframe 
-        key={processedUrl} 
-        src={processedUrl} 
-        className="h-full w-full border-0 relative z-10" 
-        title={title} 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        allowFullScreen 
-        onLoad={() => setLoading(false)} 
-      />
+      {isDirectVideo ? (
+        <video 
+          key={processedUrl}
+          src={processedUrl}
+          autoPlay
+          muted={isMuted}
+          controls
+          className="h-full w-full object-contain relative z-10"
+          onLoadedData={() => setLoading(false)}
+        />
+      ) : (
+        <iframe 
+          key={processedUrl} 
+          src={processedUrl} 
+          className="h-full w-full border-0 relative z-10" 
+          title={title} 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+          allowFullScreen 
+          onLoad={() => setLoading(false)} 
+        />
+      )}
       
+      {/* OVERLAY DE CONTROLE MASTER */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>

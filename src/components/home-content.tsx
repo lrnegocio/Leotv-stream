@@ -49,13 +49,14 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
-  // v118.0: Atualiza a URL sem recarregar a página ao abrir um canal para ser seu "Controle Remoto"
+  // v118.0: CONTROLE REMOTO ATIVO - Muda o link do navegador na hora
   const updateURL = React.useCallback((contentId: string | null) => {
     const params = new URLSearchParams(window.location.search);
     if (contentId) params.set('v', contentId);
     else params.delete('v');
     const newURL = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState({ path: newURL }, '', newURL);
+    // Usando pushState para que o link no navegador seja atualizado
+    window.history.pushState({ path: newURL }, '', newURL);
   }, []);
 
   React.useEffect(() => {
@@ -72,7 +73,7 @@ export default function HomeContent() {
         setContent(data)
         setLoading(false)
 
-        // v118.0: Tenta abrir conteúdo direto se houver ID na URL ao carregar
+        // v118.0: Carregamento Automático via URL
         const contentId = searchParams.get('v');
         if (contentId) {
           const item = data.find(i => i.id === contentId);
@@ -330,6 +331,7 @@ export default function HomeContent() {
         )}
       </main>
 
+      {/* SELETOR DE EPISÓDIOS COM TRAVA PARENTAL */}
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) { setSelectedSeries(null); updateURL(null); } }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           <DialogHeader className="sr-only">
