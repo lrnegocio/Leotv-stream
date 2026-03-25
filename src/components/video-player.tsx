@@ -23,14 +23,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (url) setLoading(true)
   }, [url])
 
-  // v118.0: PROCESSAMENTO TURBO UNIVERSAL
+  // v118.0: SINTONIZADOR UNIVERSAL v4 - SUPREMACIA DE SINAL
   const { processedUrl, isDirectVideo } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
     // DETECÇÃO DE VÍDEO DIRETO (.m3u8, .mp4, .ts, etc)
-    const isDirect = /\.(m3u8|mp4|webm|ogg|mp3|wav|ts|mkv)$/i.test(targetUrl);
+    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv)$/i.test(targetUrl.split('?')[0]);
 
     // YouTube
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -38,6 +38,28 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
         isDirectVideo: false 
+      }
+    }
+
+    // Pornhub (NOVO!)
+    if (targetUrl.includes('pornhub.com')) {
+      const viewKey = new URL(targetUrl).searchParams.get('viewkey');
+      if (viewKey) {
+        return {
+          processedUrl: `https://www.pornhub.com/embed/${viewKey}`,
+          isDirectVideo: false
+        }
+      }
+    }
+
+    // XVideos
+    if (targetUrl.includes('xvideos.com')) {
+      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
+      if (match) {
+        return { 
+          processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, 
+          isDirectVideo: false 
+        };
       }
     }
 
@@ -50,18 +72,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       };
     }
 
-    // XVideos (Formato: https://www.xvideos.com/video.ID/title)
-    if (targetUrl.includes('xvideos.com')) {
-      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) {
-        return { 
-          processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, 
-          isDirectVideo: false 
-        };
-      }
-    }
-
-    // TokyVideo (Formato: https://www.tokyvideo.com/video/slug)
+    // TokyVideo
     if (targetUrl.includes('tokyvideo.com')) {
       const slug = targetUrl.split('video/')[1];
       if (slug) {
@@ -72,7 +83,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // VisionCine / Mercado Play / Outros embeds (Tenta rodar direto)
+    // Caso Geral (Canais de Esportes, Mercado Play, Pluto, etc)
     return { processedUrl: targetUrl, isDirectVideo: isDirect };
   }, [url, isMuted])
 
@@ -88,7 +99,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return (
       <div className="aspect-video bg-black rounded-3xl flex flex-col items-center justify-center border border-white/5">
         <Tv className="h-16 w-16 text-primary/20 mb-4" />
-        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SINAL OFF</span>
+        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">SINAL NÃO SINTONIZADO</span>
       </div>
     )
   }
