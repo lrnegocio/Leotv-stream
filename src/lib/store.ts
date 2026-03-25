@@ -62,6 +62,7 @@ export interface Reseller {
 
 /**
  * BUSCA TURBO INFINITA - Rompe o limite de 1000 registros do Supabase
+ * v115.0: Carrega milhares de registros em milissegundos
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -88,7 +89,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    console.error(`Erro ao buscar ${table}:`, e);
+    console.error(`Erro Turbo em ${table}:`, e);
     return [];
   }
 }
@@ -290,11 +291,11 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  // BLINDAGEM v115.0: Força o link oficial da Vercel fixo para o cliente
+  // BLINDAGEM v115.0: Força o link oficial fixo para o cliente
   const prodUrl = "https://leotv-streaming.vercel.app";
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado por hardware._`;
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
 }
 
 export async function renewUserSubscription(userId: string, resellerId: string) {

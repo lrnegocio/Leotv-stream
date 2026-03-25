@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteContent, getRemoteResellers, User, ContentItem, Reseller } from "@/lib/store"
@@ -37,7 +37,8 @@ export default function AdminDashboard() {
     </div>
   )
 
-  // CÁLCULO DE SINAIS TOTAIS (Canais + Todos os Episódios)
+  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios)
+  // v115.0: Força a contagem real de cada sinal disponível
   const totalEpisodes = content.reduce((acc, item) => {
     if (item.type === 'series') return acc + (item.episodes?.length || 0);
     if (item.type === 'multi-season') {
@@ -48,7 +49,8 @@ export default function AdminDashboard() {
   }, 0);
 
   const totalChannels = content.filter(c => c.type === 'channel').length;
-  const totalSignals = totalChannels + totalEpisodes + content.filter(c => c.type === 'movie').length;
+  const totalMovies = content.filter(c => c.type === 'movie').length;
+  const totalSignals = totalChannels + totalEpisodes + totalMovies;
 
   const stats = [
     { title: "Clientes", value: users.length.toString(), icon: Users, color: "text-blue-400" },
