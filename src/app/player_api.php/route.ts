@@ -11,13 +11,14 @@ export async function GET(req: NextRequest) {
   const action = searchParams.get('action');
 
   const headers = {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
   if (!username || !password) {
-    return NextResponse.json({ error: "Missing credentials" }, { status: 401, headers });
+    return NextResponse.json({ error: "Missing credentials" }, { status: 200, headers });
   }
 
   // Validação de PIN Master (username e password são o PIN)
@@ -28,7 +29,9 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
 
   if (error || !user || user.isBlocked) {
-    return NextResponse.json({ error: "Auth Failed" }, { status: 401, headers });
+    return NextResponse.json({ 
+      user_info: { auth: 0, status: "Inactive", exp_date: "0" } 
+    }, { status: 200, headers });
   }
 
   // Se não houver ação, retorna informações do usuário (Login Real XC)
@@ -36,13 +39,16 @@ export async function GET(req: NextRequest) {
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000) : "0";
     return NextResponse.json({
       user_info: {
+        auth: 1,
         username: user.pin,
+        password: user.pin,
         status: "Active",
-        expiry_date: expiry,
+        exp_date: expiry,
         is_trial: user.subscriptionTier === 'test' ? "1" : "0",
         active_cons: user.activeDevices?.length || 0,
         max_connections: user.maxScreens || 1,
-        allowed_output_formats: ["m3u8", "ts", "rtmp"]
+        allowed_output_formats: ["m3u8", "ts", "rtmp"],
+        message: "SINAL MASTER LEO ATIVO"
       },
       server_info: {
         url: req.nextUrl.origin,
@@ -57,22 +63,22 @@ export async function GET(req: NextRequest) {
   }
 
   // Busca de Conteúdo para Categorias e Canais
-  const { data: content } = await supabase.from('content').select('*');
+  const { data: content } = await supabase.from('content').select('*').order('title');
   if (!content) return NextResponse.json([], { headers });
 
   if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
-    const genres = Array.from(new Set(content.map(i => i.genre || "GERAL")));
+    const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase())));
     return NextResponse.json(genres.map((g, idx) => ({
       category_id: (idx + 1).toString(),
-      category_name: g.toUpperCase(),
-      parent_id: 0
+      category_name: g,
+      parent_id: "0"
     })), { headers });
   }
 
   if (action === 'get_live_streams') {
-    return NextResponse.json(content.filter(i => i.type === 'channel').map(i => ({
-      num: i.id,
-      name: i.title,
+    return NextResponse.json(content.filter(i => i.type === 'channel').map((i, idx) => ({
+      num: (idx + 1),
+      name: i.title.toUpperCase(),
       stream_type: "live",
       stream_id: i.id,
       stream_icon: i.imageUrl || "",
@@ -85,9 +91,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'get_vod_streams') {
-    return NextResponse.json(content.filter(i => i.type === 'movie').map(i => ({
-      num: i.id,
-      name: i.title,
+    return NextResponse.json(content.filter(i => i.type === 'movie').map((i, idx) => ({
+      num: (idx + 1),
+      name: i.title.toUpperCase(),
       stream_type: "movie",
       stream_id: i.id,
       stream_icon: i.imageUrl || "",

@@ -40,7 +40,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&ui-start-screen-info=0`;
     }
 
-    // Direct Stream Handling (m3u8, etc)
+    // Direct Stream Handling
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}&playsinline=1`
   }, [url, isMuted])
@@ -48,7 +48,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const handleToggleAudio = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     setIsMuted(!isMuted);
-    setLoading(true); // Trigger loading screen while it reloads without mute
+    setLoading(true); // Recarrega o player sem mudo
   }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -81,6 +81,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         onLoad={() => setLoading(false)} 
       />
       
+      {/* HUD de Controles Master */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         {/* Header Controls */}
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
@@ -92,6 +93,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             size="icon" 
             className="text-white pointer-events-auto h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10" 
             onClick={handleToggleAudio}
+            title="Sintonizar Áudio"
           >
             {isMuted ? <VolumeX className="h-8 w-8 text-destructive animate-pulse" /> : <Volume2 className="h-8 w-8 text-primary" />}
           </Button>

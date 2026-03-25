@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -14,13 +15,22 @@ import { useRouter } from "next/navigation"
 export function AiAssistant() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [input, setInput] = React.useState("")
-  const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([
-    { role: 'model', text: 'Mestre Léo, App Prototyper ativo. Sistema operando em alta performance e biblioteca organizada de A a Z. Como posso ajudar na gestão da rede hoje?' }
-  ])
+  const [messages, setMessages] = React.useState<{role: 'user' | 'model', text: string}[]>([])
   const [loading, setLoading] = React.useState(false)
   const [isListening, setIsListening] = React.useState(false)
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  React.useEffect(() => {
+    // Carrega mensagem inicial baseada no usuário
+    const session = localStorage.getItem("user_session");
+    const user = session ? JSON.parse(session) : null;
+    const initialText = user?.role === 'admin' 
+      ? 'Mestre Léo, App Prototyper ativo. Como posso ajudar na gestão da rede hoje?' 
+      : 'Olá! Sou seu assistente Léo TV. O que você gostaria de assistir hoje? Pode falar o nome do canal ou filme!';
+    
+    setMessages([{ role: 'model', text: initialText }]);
+  }, []);
 
   React.useEffect(() => {
     if (scrollRef.current) {
@@ -49,15 +59,15 @@ export function AiAssistant() {
     try {
       const lower = text.toLowerCase()
       
-      // Busca Inteligente Master via Voz
-      if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("canal") || lower.includes("abrir") || lower.includes("procurar")) {
+      // Busca Inteligente Master via Voz (Liberado para Clientes)
+      if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("canal") || lower.includes("abrir") || lower.includes("procurar") || lower.length < 20) {
         try {
           const searchRes = await voiceSearchContent({ query: text })
           const urlParams = new URLSearchParams(window.location.search);
           urlParams.set('q', searchRes.searchTerm);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Comando recebido, Mestre. Sintonizando canal: ${searchRes.searchTerm}.`
+          const msg = `Comando recebido. Buscando por: ${searchRes.searchTerm} na biblioteca.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -67,7 +77,7 @@ export function AiAssistant() {
           urlParams.set('q', text);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Iniciando busca profunda por ${text} na biblioteca.`
+          const msg = `Iniciando busca por ${text}.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -85,7 +95,7 @@ export function AiAssistant() {
       speak(result.response)
 
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: "Mestre Léo, houve um erro no núcleo de dados. Pode repetir?" }])
+      setMessages(prev => [...prev, { role: 'model', text: "Houve um pequeno erro na conexão. Pode repetir?" }])
     } finally {
       setLoading(false)
     }
@@ -123,10 +133,10 @@ export function AiAssistant() {
             <div className="flex items-center gap-4">
               <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/20"><Cpu className="h-5 w-5 text-white" /></div>
               <div>
-                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tighter">App Prototyper IA</CardTitle>
+                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tighter">Léo TV IA</CardTitle>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Núcleo Operacional Ativo</span>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Sinal Online</span>
                 </div>
               </div>
             </div>
@@ -163,7 +173,7 @@ export function AiAssistant() {
               <Mic className={`h-6 w-6 ${isListening ? 'text-white' : 'text-primary'}`} />
             </Button>
             <div className="relative flex-1">
-              <Input placeholder="Comando para o Prototyper..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/40 border-white/5 rounded-2xl pr-12 h-12 text-xs font-bold" />
+              <Input placeholder="Qual canal deseja ver?" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/40 border-white/5 rounded-2xl pr-12 h-12 text-xs font-bold" />
               <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 text-primary hover:bg-transparent" onClick={() => handleSend()}>
                 <Send className="h-5 w-5" />
               </Button>
