@@ -64,7 +64,7 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // Cronômetro Master de Expiração Blindado
+  // Cronômetro de Expiração Master
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -72,7 +72,7 @@ export default function HomeContent() {
       const u = JSON.parse(session);
 
       if (u.subscriptionTier === 'lifetime') {
-        setTimeLeft("SINAL VITALÍCIO");
+        setTimeLeft("ACESSO VITALÍCIO");
         return;
       }
       
@@ -86,7 +86,7 @@ export default function HomeContent() {
       const diff = expiry.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeLeft("SINAL EXPIRADO");
+        setTimeLeft("ACESSO EXPIRADO");
         handleLogout();
         return;
       }
@@ -247,7 +247,7 @@ export default function HomeContent() {
 
       <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
         {categoriesWithCounts.length === 0 ? (
-          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum sinal localizado...</div>
+          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum canal localizado...</div>
         ) : (
           categoriesWithCounts.map(([category, count]) => {
             const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
@@ -259,7 +259,7 @@ export default function HomeContent() {
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
                   <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                    {count} SINAIS
+                    {count} CANAIS
                   </span>
                 </div>
                 
@@ -296,7 +296,7 @@ export default function HomeContent() {
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           <DialogHeader className="sr-only">
              <DialogTitle>{selectedSeries?.title}</DialogTitle>
-             <DialogDescription>Selecione um episódio para assistir.</DialogDescription>
+             <DialogDescription>Selecione um episódio.</DialogDescription>
           </DialogHeader>
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
@@ -333,7 +333,7 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
           <DialogHeader className="sr-only">
              <DialogTitle>PIN Parental</DialogTitle>
-             <DialogDescription>Insira sua senha de 4 dígitos para liberar este conteúdo.</DialogDescription>
+             <DialogDescription>Insira sua senha.</DialogDescription>
           </DialogHeader>
           <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
           <div className="py-6 flex justify-center">
@@ -348,7 +348,7 @@ export default function HomeContent() {
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="sr-only">
                <DialogTitle>{activeVideo.title}</DialogTitle>
-               <DialogDescription>Assistindo agora no Léo Stream.</DialogDescription>
+               <DialogDescription>Sintonizando...</DialogDescription>
             </DialogHeader>
             <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
           </DialogContent>

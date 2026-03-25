@@ -18,10 +18,10 @@ export async function GET(req: NextRequest) {
   };
 
   if (!username || !password) {
-    return NextResponse.json({ error: "Missing credentials" }, { status: 200, headers });
+    return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
   }
 
-  // Validação de PIN Master (username e password são o PIN)
+  // Validação do PIN (Usuário e Senha são o PIN)
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
@@ -34,9 +34,9 @@ export async function GET(req: NextRequest) {
     }, { status: 200, headers });
   }
 
-  // Se não houver ação, retorna informações do usuário (Login Real XC)
+  // Resposta de Login (Smarters Pro exige auth: 1 e status: Active)
   if (!action) {
-    const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000) : "0";
+    const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
     return NextResponse.json({
       user_info: {
         auth: 1,
@@ -45,10 +45,9 @@ export async function GET(req: NextRequest) {
         status: "Active",
         exp_date: expiry,
         is_trial: user.subscriptionTier === 'test' ? "1" : "0",
-        active_cons: user.activeDevices?.length || 0,
-        max_connections: user.maxScreens || 1,
-        allowed_output_formats: ["m3u8", "ts", "rtmp"],
-        message: "SINAL MASTER LEO ATIVO"
+        active_cons: "0",
+        max_connections: user.maxScreens?.toString() || "1",
+        allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
       },
       server_info: {
         url: req.nextUrl.origin,
@@ -62,10 +61,10 @@ export async function GET(req: NextRequest) {
     }, { headers });
   }
 
-  // Busca de Conteúdo para Categorias e Canais
   const { data: content } = await supabase.from('content').select('*').order('title');
   if (!content) return NextResponse.json([], { headers });
 
+  // Categorias
   if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
     const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase())));
     return NextResponse.json(genres.map((g, idx) => ({
@@ -75,6 +74,7 @@ export async function GET(req: NextRequest) {
     })), { headers });
   }
 
+  // Canais
   if (action === 'get_live_streams') {
     return NextResponse.json(content.filter(i => i.type === 'channel').map((i, idx) => ({
       num: (idx + 1),
@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
       stream_id: i.id,
       stream_icon: i.imageUrl || "",
       category_id: "1",
+      epg_channel_id: "",
       added: "0",
       custom_sid: "",
       tv_archive: 0,
@@ -90,6 +91,7 @@ export async function GET(req: NextRequest) {
     })), { headers });
   }
 
+  // Filmes
   if (action === 'get_vod_streams') {
     return NextResponse.json(content.filter(i => i.type === 'movie').map((i, idx) => ({
       num: (idx + 1),
