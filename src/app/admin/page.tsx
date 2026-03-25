@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase } from "lucide-react"
+import { Film, Users, Tv, Key, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteContent, getRemoteResellers, User, ContentItem, Reseller } from "@/lib/store"
@@ -37,11 +37,24 @@ export default function AdminDashboard() {
     </div>
   )
 
+  // CÁLCULO DE SINAIS TOTAIS (Canais + Todos os Episódios)
+  const totalEpisodes = content.reduce((acc, item) => {
+    if (item.type === 'series') return acc + (item.episodes?.length || 0);
+    if (item.type === 'multi-season') {
+      const epCount = item.seasons?.reduce((sAcc, s) => sAcc + (s.episodes?.length || 0), 0) || 0;
+      return acc + epCount;
+    }
+    return acc;
+  }, 0);
+
+  const totalChannels = content.filter(c => c.type === 'channel').length;
+  const totalSignals = totalChannels + totalEpisodes + content.filter(c => c.type === 'movie').length;
+
   const stats = [
     { title: "Clientes", value: users.length.toString(), icon: Users, color: "text-blue-400" },
+    { title: "Sinais Ativos", value: totalSignals.toString(), icon: Zap, color: "text-yellow-400" },
+    { title: "Canais TV", value: totalChannels.toString(), icon: Tv, color: "text-primary" },
     { title: "Revendedores", value: resellers.length.toString(), icon: Briefcase, color: "text-emerald-400" },
-    { title: "Canais", value: content.filter(c => c.type === 'channel').length.toString(), icon: Tv, color: "text-primary" },
-    { title: "Filmes/Séries", value: content.filter(c => c.type !== 'channel').length.toString(), icon: Film, color: "text-secondary" },
   ]
 
   return (
@@ -49,7 +62,7 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight uppercase font-headline italic text-primary">Painel Master Léo</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Central de Rede.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Central de Rede Infinita.</p>
         </div>
         <div className="flex gap-3">
           <Button asChild className="bg-primary hover:bg-primary/90 uppercase font-bold text-[10px] h-10 px-6 rounded-xl shadow-lg shadow-primary/20">
@@ -129,8 +142,8 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status Master de Revendas</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando em alta performance e estoque blindado.</p>
+                <h4 className="font-bold text-lg uppercase tracking-tight italic">Status Master de Rede</h4>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando com {totalSignals} sinais blindados de alta performance.</p>
               </div>
             </div>
           </CardContent>

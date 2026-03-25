@@ -60,16 +60,35 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
+/**
+ * BUSCA TURBO INFINITA - Rompe o limite de 1000 registros do Supabase
+ */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .order(orderBy, { ascending: true });
+  let allData: any[] = [];
+  let from = 0;
+  const step = 1000;
+  let hasMore = true;
 
-    if (error) throw error;
-    return data || [];
+  try {
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .range(from, from + step - 1)
+        .order(orderBy, { ascending: true });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        from += step;
+        if (data.length < step) hasMore = false;
+      } else {
+        hasMore = false;
+      }
+    }
+    return allData;
   } catch (e) {
+    console.error(`Erro ao buscar ${table}:`, e);
     return [];
   }
 }
@@ -214,8 +233,8 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
 
-    const { data: content } = await supabase.from('content').select('*').order('title');
-    if (!content) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
+    const content = await getRemoteContent();
+    if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
 
     let m3u = "#EXTM3U\n";
     content.forEach(item => {
@@ -271,11 +290,9 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  // BLINDAGEM v114.0: Força o link oficial da Vercel se estiver no ambiente de produção
+  // BLINDAGEM v115.0: Força o link oficial da Vercel fixo para o cliente
   const prodUrl = "https://leotv-streaming.vercel.app";
-  const finalUrl = baseUrl.includes("vercel.app") ? baseUrl : prodUrl;
-  
-  const playlistUrl = `${finalUrl}/api/playlist?pin=${pin}`;
+  const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado por hardware._`;
 }
