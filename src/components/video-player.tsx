@@ -16,15 +16,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [showMuteNotice, setShowMuteNotice] = React.useState(true)
   const [isMuted, setIsMuted] = React.useState(true)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      const muteTimer = setTimeout(() => setShowMuteNotice(false), 15000)
-      return () => clearTimeout(muteTimer)
     }
   }, [url])
 
@@ -33,16 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    if (targetUrl.includes('xvideos.com/video')) {
-      const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
-      if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=${muteVal}`;
-    }
-
-    if (targetUrl.includes('dailymotion.com/video/')) {
-      const videoId = targetUrl.split('video/')[1]?.split('?')[0];
-      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&ui-start-screen-info=0`;
-    }
-
+    // YouTube Handling
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') 
         ? targetUrl.split('v=')[1]?.split('&')[0] 
@@ -50,13 +38,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
     }
 
+    // Dailymotion Handling
+    if (targetUrl.includes('dailymotion.com/video/')) {
+      const videoId = targetUrl.split('video/')[1]?.split('?')[0];
+      return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&ui-start-screen-info=0`;
+    }
+
+    // XVideos Handling
+    if (targetUrl.includes('xvideos.com/video')) {
+      const videoId = targetUrl.match(/video[.-]([^/]+)/)?.[1];
+      if (videoId) return `https://www.xvideos.com/embedframe/${videoId}?autoplay=1&mute=${muteVal}`;
+    }
+
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}&playsinline=1`
   }, [url, isMuted])
 
-  const handleActivateAudio = () => {
-    setIsMuted(false)
-    setShowMuteNotice(false)
+  const handleToggleAudio = () => {
+    setIsMuted(!isMuted)
     setLoading(true)
   }
 
@@ -83,24 +82,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {!loading && showMuteNotice && (
-        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
-          <Button 
-            variant="default" 
-            onClick={handleActivateAudio}
-            className="pointer-events-auto h-24 px-12 bg-primary hover:bg-primary/90 rounded-full shadow-[0_0_60px_rgba(var(--primary),0.6)] border-4 border-white/20 animate-in zoom-in-95 transition-all hover:scale-110"
-          >
-            <div className="flex items-center gap-6">
-              <Volume2 className="h-12 w-12 text-white animate-bounce" />
-              <div className="text-left">
-                <span className="block text-xl font-black uppercase italic leading-none">Ativar Áudio</span>
-                <span className="text-[10px] font-bold uppercase opacity-80 tracking-widest">Clique para liberar o som master</span>
-              </div>
-            </div>
-          </Button>
-        </div>
-      )}
-
       <iframe
         key={processedUrl}
         src={processedUrl}
@@ -117,7 +98,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
             <h3 className="text-xl font-black text-white uppercase italic truncate tracking-tighter">{title}</h3>
           </div>
-          <Button variant="ghost" size="icon" className="text-white pointer-events-auto hover:bg-white/10 rounded-full" onClick={() => setShowMuteNotice(true)}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-white pointer-events-auto hover:bg-white/10 rounded-full" 
+            onClick={handleToggleAudio}
+          >
             {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
           </Button>
         </div>

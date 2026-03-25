@@ -37,7 +37,7 @@ export default function HomeContent() {
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
-  const [timeLeft, setTimeLeft] = React.useState("")
+  const [timeLeft, setTimeLeft] = React.useState("Calculando...")
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -64,10 +64,16 @@ export default function HomeContent() {
     load()
   }, [router])
 
+  // Cronômetro Master de Expiração
   React.useEffect(() => {
     const interval = setInterval(() => {
-      if (!user?.expiryDate) {
-        if (user?.subscriptionTier === 'lifetime') setTimeLeft("SINAL VITALÍCIO");
+      if (!user) return;
+      if (user.subscriptionTier === 'lifetime') {
+        setTimeLeft("SINAL VITALÍCIO");
+        return;
+      }
+      if (!user.expiryDate) {
+        setTimeLeft("NÃO ATIVADO");
         return;
       }
       
@@ -75,20 +81,19 @@ export default function HomeContent() {
       const expiry = new Date(user.expiryDate);
       const diff = expiry.getTime() - now.getTime();
 
-      if (diff <= 0 && user.subscriptionTier !== 'lifetime') {
+      if (diff <= 0) {
+        setTimeLeft("SINAL EXPIRADO");
         handleLogout();
         return;
       }
 
-      if (user.subscriptionTier === 'lifetime') {
-        setTimeLeft("SINAL VITALÍCIO");
-      } else {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        setTimeLeft(`${days}d ${hours}h ${minutes}m`);
-      }
-    }, 10000)
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    }, 1000)
     return () => clearInterval(interval)
   }, [user, handleLogout])
 
@@ -232,9 +237,9 @@ export default function HomeContent() {
           <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
           <div className="hidden lg:block">
             <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Stream</span>
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-primary/20 text-primary">
-               <Timer className="h-3 w-3" />
-               <span className="text-[9px] font-black uppercase tracking-widest">{timeLeft}</span>
+            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-primary/20 text-primary">
+               <Timer className="h-4 w-4 animate-pulse" />
+               <span className="text-[10px] font-black uppercase tracking-widest">{timeLeft}</span>
             </div>
           </div>
         </div>
@@ -244,7 +249,7 @@ export default function HomeContent() {
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+          <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
              <Label htmlFor="adult-mode" className="text-[9px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
                 {showAdult ? <Eye className="h-3 w-3 text-primary" /> : <EyeOff className="h-3 w-3" />}
                 ADULTO: {showAdult ? "ON" : "OFF"}
