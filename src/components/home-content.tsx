@@ -37,6 +37,7 @@ export default function HomeContent() {
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
+  const [pendingEpisodeData, setPendingEpisodeData] = React.useState<{ep: Episode, series: ContentItem, eIdx: number, sIdx?: number} | null>(null)
   const [timeLeft, setTimeLeft] = React.useState("SINTONIZANDO...")
   
   const router = useRouter()
@@ -64,7 +65,6 @@ export default function HomeContent() {
     load()
   }, [router])
 
-  // Cronômetro de Expiração Master
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -142,7 +142,7 @@ export default function HomeContent() {
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
     if (series.isRestricted && !isPinVerified) {
-      setPendingItem(series)
+      setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex })
       setIsPinDialogOpen(true)
       return
     }
@@ -194,11 +194,24 @@ export default function HomeContent() {
   const verifyPin = () => {
     if (pinInput === parentalPin) {
       setIsPinVerified(true)
-      if (pendingItem) {
+      
+      if (pendingEpisodeData) {
+        const { ep, series, eIdx, sIdx } = pendingEpisodeData;
+        setActiveVideo({ 
+          url: ep.streamUrl, 
+          title: `${series.title} - EP ${ep.number}`, 
+          itemId: series.id,
+          episodeIndex: eIdx,
+          seasonIndex: sIdx,
+          type: series.type
+        })
+        setPendingEpisodeData(null)
+      } else if (pendingItem) {
         const item = pendingItem;
         if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
         else setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
       }
+      
       setIsPinDialogOpen(false)
       setPinInput("")
       setPendingItem(null)

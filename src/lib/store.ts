@@ -271,7 +271,11 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  const playlistUrl = `${baseUrl}/api/playlist?pin=${pin}`;
+  // BLINDAGEM v114.0: Força o link oficial da Vercel se estiver no ambiente de produção
+  const prodUrl = "https://leotv-streaming.vercel.app";
+  const finalUrl = baseUrl.includes("vercel.app") ? baseUrl : prodUrl;
+  
+  const playlistUrl = `${finalUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado por hardware._`;
 }

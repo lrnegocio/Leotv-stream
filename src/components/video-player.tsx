@@ -45,7 +45,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const handleToggleAudio = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     setIsMuted(!isMuted);
-    setLoading(true);
+    setLoading(true); // Recarrega para aplicar mute=0 e forçar áudio
   }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -87,6 +87,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             size="icon" 
             className="text-white pointer-events-auto h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10" 
             onClick={handleToggleAudio}
+            title="Sintonizar Áudio"
           >
             {isMuted ? <VolumeX className="h-8 w-8 text-destructive animate-pulse" /> : <Volume2 className="h-8 w-8 text-primary" />}
           </Button>
