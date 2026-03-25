@@ -253,11 +253,6 @@ export default function HomeContent() {
         </div>
       </header>
 
-      <div className="lg:hidden bg-primary/20 backdrop-blur-md border-b border-white/10 p-3 flex items-center justify-center gap-2 text-primary">
-          <Timer className="h-4 w-4 animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-widest">SINAL: {timeLeft}</span>
-      </div>
-
       <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
         {categoriesWithCounts.length === 0 ? (
           <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum canal localizado...</div>

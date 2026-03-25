@@ -38,14 +38,14 @@ export default function AdminDashboard() {
   )
 
   // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios)
-  // v115.0: Força a contagem real de cada sinal disponível
   const totalEpisodes = content.reduce((acc, item) => {
-    if (item.type === 'series') return acc + (item.episodes?.length || 0);
-    if (item.type === 'multi-season') {
-      const epCount = item.seasons?.reduce((sAcc, s) => sAcc + (s.episodes?.length || 0), 0) || 0;
-      return acc + epCount;
+    let count = 0;
+    if (item.type === 'series' && Array.isArray(item.episodes)) {
+      count = item.episodes.length;
+    } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
+      count = item.seasons.reduce((sAcc, s) => sAcc + (Array.isArray(s.episodes) ? s.episodes.length : 0), 0);
     }
-    return acc;
+    return acc + count;
   }, 0);
 
   const totalChannels = content.filter(c => c.type === 'channel').length;

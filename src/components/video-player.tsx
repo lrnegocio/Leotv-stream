@@ -28,6 +28,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
+    // v116.0: Processamento de URL Blindado para YouTube e Dailymotion
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
@@ -45,7 +46,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const handleToggleAudio = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // v115.0: Força o mudo para 0 e recarrega na mesma tela
+    // v116.0: Recarrega o áudio SEM abrir novas abas e SEM sair da tela
     setIsMuted(false);
     setLoading(true);
   }
@@ -75,6 +76,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl} 
         className="h-full w-full border-0 relative z-10" 
         title={title} 
+        // v116.0: SANDBOX BLINDADO - Impede a abertura de novas abas/anúncios
+        sandbox="allow-forms allow-modals allow-pointer-lock allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
         allowFullScreen 
         onLoad={() => setLoading(false)} 
@@ -86,7 +89,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           
           <button 
             type="button"
-            className="pointer-events-auto h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10 flex items-center justify-center transition-all" 
+            className="pointer-events-auto h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10 flex items-center justify-center transition-all shadow-2xl" 
             onClick={handleToggleAudio}
           >
             {isMuted ? <VolumeX className="h-8 w-8 text-destructive animate-pulse" /> : <Volume2 className="h-8 w-8 text-primary" />}
@@ -98,7 +101,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPrev?.(); }} 
-            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onPrev ? 'opacity-0' : 'opacity-100'}`}
+            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onPrev ? 'hidden' : 'flex'}`}
           >
             <SkipBack className="h-10 w-10" />
           </Button>
@@ -108,7 +111,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             variant="ghost" 
             size="icon" 
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onNext?.(); }} 
-            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onNext ? 'opacity-0' : 'opacity-100'}`}
+            className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary transition-all shadow-2xl ${!onNext ? 'hidden' : 'flex'}`}
           >
             <SkipForward className="h-10 w-10" />
           </Button>

@@ -62,7 +62,7 @@ export interface Reseller {
 
 /**
  * BUSCA TURBO INFINITA - Rompe o limite de 1000 registros do Supabase
- * v115.0: Carrega milhares de registros em milissegundos
+ * v116.0: Otimizado para milhares de sinais sem lentidão.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -80,7 +80,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
 
       if (error) throw error;
       if (data && data.length > 0) {
-        allData = [...allData, ...data];
+        allData = allData.concat(data);
         from += step;
         if (data.length < step) hasMore = false;
       } else {
@@ -237,7 +237,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     const content = await getRemoteContent();
     if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
 
-    let m3u = "#EXTM3U\n";
+    let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
@@ -245,25 +245,30 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
       if (item.type === 'channel' || item.type === 'movie') {
         if (!item.streamUrl) return;
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}\n${item.streamUrl}\n`;
+        m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
+        m3uLines.push(item.streamUrl);
       } else if (item.type === 'series' || item.type === 'multi-season') {
-        if (item.episodes) {
+        if (Array.isArray(item.episodes)) {
           item.episodes.forEach((ep: Episode) => {
             if (!ep.streamUrl) return;
-            m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}\n${ep.streamUrl}\n`;
+            m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}`);
+            m3uLines.push(ep.streamUrl);
           });
         }
-        if (item.seasons) {
+        if (Array.isArray(item.seasons)) {
           item.seasons.forEach((s: Season) => {
-            s.episodes.forEach(ep => {
-              if (!ep.streamUrl) return;
-              m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}\n${ep.streamUrl}\n`;
-            });
+            if (Array.isArray(s.episodes)) {
+              s.episodes.forEach(ep => {
+                if (!ep.streamUrl) return;
+                m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}`);
+                m3uLines.push(ep.streamUrl);
+              });
+            }
           });
         }
       }
     });
-    return m3u;
+    return m3uLines.join('\n');
   } catch (e) {
     return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR";
   }
@@ -291,7 +296,6 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  // BLINDAGEM v115.0: Força o link oficial fixo para o cliente
   const prodUrl = "https://leotv-streaming.vercel.app";
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
