@@ -61,8 +61,8 @@ export interface Reseller {
 }
 
 /**
- * BUSCA TURBO INFINITA - Rompe o limite de 1000 registros do Supabase
- * v116.0: Otimizado para milhares de sinais sem lentidão.
+ * BUSCA TURBO INFINITA - v116.0
+ * Rompe o limite de 1000 registros do Supabase buscando em blocos.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -295,6 +295,10 @@ export const generateRandomPin = (length: number = 11) => {
   return result;
 };
 
+/**
+ * MENSAGEM MASTER LÉO - v116.0
+ * Força sempre o link da VERCEL OFICIAL.
+ */
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const prodUrl = "https://leotv-streaming.vercel.app";
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
