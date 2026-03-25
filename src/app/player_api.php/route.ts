@@ -22,13 +22,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
     }
 
-    const { data: user, error } = await supabase
+    // Busca rápida do usuário
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('pin', username)
       .maybeSingle();
 
-    if (error || !user || user.isBlocked) {
+    if (userError || !user || user.isBlocked) {
       return NextResponse.json({ 
         user_info: { auth: 0, status: "Inactive", exp_date: "0" } 
       }, { status: 200, headers });
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
 
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
 
+    // Resposta básica de login
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -61,8 +63,14 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    const { data: content } = await supabase.from('content').select('*').order('title');
-    if (!content) return NextResponse.json([], { headers });
+    // Busca de conteúdo limitada para evitar 500
+    const { data: content, error: contentError } = await supabase
+      .from('content')
+      .select('*')
+      .limit(2000)
+      .order('title');
+
+    if (contentError || !content) return NextResponse.json([], { headers });
 
     if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
       const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase())));
@@ -104,7 +112,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json([], { headers });
   } catch (err) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500, headers });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 200, headers });
   }
 }
 

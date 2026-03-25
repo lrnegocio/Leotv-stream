@@ -19,9 +19,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const m3uContent = await generateM3UPlaylist(pin);
+    // timeout para evitar 500 em processamento longo
+    const m3uContent = await Promise.race([
+      generateM3UPlaylist(pin),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+    ]);
     
-    // Cabeçalhos de ultra-compatibilidade para evitar erro de JSON em apps de IPTV
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {

@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     </div>
   )
 
-  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios de Séries) - v117.0
+  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios de Séries) - v118.0
   const totalEpisodes = content.reduce((acc, item) => {
     let count = 0;
     if (item.type === 'series' && Array.isArray(item.episodes)) {
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className={`text-[10px] font-bold tracking-widest uppercase ${statusColor}`}>
+                      <p className={`text-[10px] font-black uppercase ${statusColor}`}>
                         {statusText}
                       </p>
                       <p className="text-[8px] text-muted-foreground uppercase font-bold mt-1">

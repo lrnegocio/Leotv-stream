@@ -49,6 +49,15 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
+  // v118.0: Atualiza a URL sem recarregar a página ao abrir um canal para ser seu "Controle Remoto"
+  const updateURL = React.useCallback((contentId: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (contentId) params.set('v', contentId);
+    else params.delete('v');
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({ path: newURL }, '', newURL);
+  }, []);
+
   React.useEffect(() => {
     const session = localStorage.getItem("user_session")
     if (!session) { router.push("/login"); return; }
@@ -56,23 +65,28 @@ export default function HomeContent() {
     setUser(userData)
 
     const load = async () => {
-      const data = await getRemoteContent()
-      const settings = await getGlobalSettings()
-      setParentalPin(settings.parentalPin || "1234")
-      setContent(data)
-      setLoading(false)
+      try {
+        const data = await getRemoteContent()
+        const settings = await getGlobalSettings()
+        setParentalPin(settings.parentalPin || "1234")
+        setContent(data)
+        setLoading(false)
 
-      // v117.0: Tenta abrir conteúdo direto se houver ID na URL ao carregar
-      const contentId = searchParams.get('v');
-      if (contentId) {
-        const item = data.find(i => i.id === contentId);
-        if (item) {
-          if (item.type === 'channel' || item.type === 'movie') {
-            setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type });
-          } else {
-            setSelectedSeries(item);
+        // v118.0: Tenta abrir conteúdo direto se houver ID na URL ao carregar
+        const contentId = searchParams.get('v');
+        if (contentId) {
+          const item = data.find(i => i.id === contentId);
+          if (item) {
+            if (item.type === 'channel' || item.type === 'movie') {
+              setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type });
+            } else {
+              setSelectedSeries(item);
+            }
           }
         }
+      } catch (err) {
+        setLoading(false)
+        toast({ variant: "destructive", title: "Erro de Sintonização", description: "O servidor master está sobrecarregado." })
       }
     }
     load()
@@ -133,15 +147,6 @@ export default function HomeContent() {
     });
     return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
   }, [filteredContent])
-
-  // v117.0: Atualiza a URL sem recarregar a página ao abrir um canal para ser seu "Controle Remoto"
-  const updateURL = (contentId: string | null) => {
-    const params = new URLSearchParams(window.location.search);
-    if (contentId) params.set('v', contentId);
-    else params.delete('v');
-    const newURL = `${window.location.pathname}?${params.toString()}`;
-    window.history.pushState({ path: newURL }, '', newURL);
-  }
 
   const handleItemClick = (item: ContentItem) => {
     if (item.isRestricted && !isPinVerified) {
