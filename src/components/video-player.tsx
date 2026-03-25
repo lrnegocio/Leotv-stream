@@ -39,6 +39,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const connector = targetUrl.includes('?') ? '&' : '?'
+    // REMOVIDO SANDBOX PARA SINAL DA RDCANAIS E OUTROS FUNCIONAR
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}`
   }, [url, isMuted])
 
@@ -73,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         src={processedUrl} 
         className="h-full w-full border-0 relative z-10" 
         title={title} 
-        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
         allowFullScreen 
         onLoad={() => setLoading(false)} 
       />
@@ -81,6 +82,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
+          {/* BOTÃO DE ÁUDIO NO CANTO SUPERIOR DIREITO - SEM BOTÃO NO CENTRO */}
           <Button 
             variant="ghost" 
             size="icon" 

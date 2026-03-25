@@ -27,7 +27,7 @@ export default function HomePage() {
       </div>
     }>
       <HomeContent />
-      {/* Microfone e Assistente liberado para o cliente */}
+      {/* MICROFONE E ASSISTENTE LIBERADO PARA TODOS OS CLIENTES */}
       <AiAssistant />
     </Suspense>
   );

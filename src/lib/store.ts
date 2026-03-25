@@ -156,7 +156,7 @@ export async function removeContent(id: string) {
 
 export async function saveUser(user: User) {
   try {
-    const { error } = await supabase.from('users').upsert({
+    const payload = {
       id: user.id,
       pin: user.pin,
       role: user.role,
@@ -168,7 +168,9 @@ export async function saveUser(user: User) {
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       blockedAt: user.blockedAt || null
-    });
+    };
+
+    const { error } = await supabase.from('users').upsert(payload);
     return !error;
   } catch (e) {
     return false;
