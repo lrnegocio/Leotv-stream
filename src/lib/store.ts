@@ -55,10 +55,6 @@ export interface Reseller {
   name: string;
   username: string;
   password?: string;
-  cpf?: string;
-  birthDate?: string;
-  phone?: string;
-  email?: string;
   credits: number;
   totalSold: number;
   isBlocked: boolean;
@@ -74,7 +70,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     if (error) throw error;
     return data || [];
   } catch (e) {
-    console.error(`Erro ao buscar ${table}:`, e);
     return [];
   }
 }

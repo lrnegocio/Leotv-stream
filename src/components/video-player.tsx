@@ -28,19 +28,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // YouTube handling
     if (targetUrl.includes('youtube.com/watch?v=') || targetUrl.includes('youtu.be/')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`
     }
 
-    // Dailymotion handling
     if (targetUrl.includes('dailymotion.com/video/')) {
       const videoId = targetUrl.split('video/')[1]?.split('?')[0];
       return `https://www.dailymotion.com/embed/video/${videoId}?autoplay=1&mute=${muteVal}&ui-logo=0&controls=1`;
     }
 
-    // Generic signals (no sandbox to allow signals like rdcanais)
     const connector = targetUrl.includes('?') ? '&' : '?'
     return `${targetUrl}${connector}autoplay=1&mute=${muteVal}`
   }, [url, isMuted])
@@ -71,7 +68,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* NO SANDBOX TO ALLOW ALL SIGNALS */}
       <iframe 
         key={processedUrl} 
         src={processedUrl} 

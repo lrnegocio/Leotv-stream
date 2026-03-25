@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const username = searchParams.get('username'); // Usuário é o PIN
-  const password = searchParams.get('password'); // Senha é o PIN
+  const username = searchParams.get('username'); 
+  const password = searchParams.get('password'); 
   const action = searchParams.get('action');
 
   const headers = {
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
   }
 
-  // Validação Master do PIN
+  // Validação Master do PIN (XC API exige JSON)
   const { data: user, error } = await supabase
     .from('users')
     .select('*')
@@ -34,9 +34,9 @@ export async function GET(req: NextRequest) {
     }, { status: 200, headers });
   }
 
-  // Resposta de Login (Smarters Pro exige auth: 1 e status: Active)
+  const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
+
   if (!action) {
-    const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
     return NextResponse.json({
       user_info: {
         auth: 1,
@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
   const { data: content } = await supabase.from('content').select('*').order('title');
   if (!content) return NextResponse.json([], { headers });
 
-  // Categorias
   if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
     const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase())));
     return NextResponse.json(genres.map((g, idx) => ({
@@ -74,7 +73,6 @@ export async function GET(req: NextRequest) {
     })), { headers });
   }
 
-  // Canais
   if (action === 'get_live_streams') {
     return NextResponse.json(content.filter(i => i.type === 'channel').map((i, idx) => ({
       num: (idx + 1),
@@ -91,7 +89,6 @@ export async function GET(req: NextRequest) {
     })), { headers });
   }
 
-  // Filmes
   if (action === 'get_vod_streams') {
     return NextResponse.json(content.filter(i => i.type === 'movie').map((i, idx) => ({
       num: (idx + 1),
