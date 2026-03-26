@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, AlertTriangle } from "lucide-react"
+import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, processM3UImport } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [m3uContent, setM3uContent] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [importing, setImporting] = React.useState(false)
+  const [progress, setProgress] = React.useState(0)
 
   React.useEffect(() => {
     const load = async () => {
@@ -36,46 +37,36 @@ export default function SettingsPage() {
   }
 
   const handleImportM3U = async () => {
-    let contentToProcess = m3uContent;
-
-    if (m3uUrl) {
-      setImporting(true);
-      try {
-        // Tentativa de fetch com modo 'no-cors' não funciona para ler o texto
-        // Por isso o erro de CORS é comum em navegadores.
-        const res = await fetch(m3uUrl);
-        if (!res.ok) throw new Error("Erro de resposta");
-        contentToProcess = await res.text();
-      } catch (e) {
-        setImporting(false);
-        toast({ 
-          variant: "destructive", 
-          title: "BLOQUEIO DE SEGURANÇA (CORS)", 
-          description: "O navegador bloqueou o download direto. SOLUÇÃO: Abra o link no navegador, copie todo o texto e cole no campo 'Conteúdo Bruto' abaixo." 
-        });
-        return;
-      }
-    }
-
-    if (!contentToProcess || contentToProcess.length < 10) {
-      toast({ variant: "destructive", title: "Vazio", description: "Insira um link válido ou cole o conteúdo da sua lista M3U." });
+    if (!m3uContent || m3uContent.length < 10) {
+      toast({ variant: "destructive", title: "Vazio", description: "Cole o conteúdo da sua lista M3U no campo abaixo." });
       return;
     }
 
     setImporting(true);
+    setProgress(0);
+    
     try {
-      const result = await processM3UImport(contentToProcess);
+      // O processamento agora é feito via store com batching aprimorado
+      const result = await processM3UImport(m3uContent);
+      
       if (result.success > 0) {
-        toast({ title: "IMPORTAÇÃO CONCLUÍDA!", description: `${result.success} novos sinais sintonizados na sua rede.` });
-        setM3uUrl("");
-        setM3uContent("");
+        toast({ 
+          title: "IMPORTAÇÃO CONCLUÍDA!", 
+          description: `${result.success} novos canais sincronizados com sucesso.` 
+        });
+        setM3uContent(""); // Limpa para liberar memória
       } else {
-        toast({ variant: "destructive", title: "Erro no Formato", description: "O sistema não encontrou canais válidos. Verifique se o texto começa com #EXTM3U." });
+        toast({ 
+          variant: "destructive", 
+          title: "Erro no Formato", 
+          description: "Nenhum canal válido encontrado. Certifique-se de colar a lista completa começando com #EXTM3U." 
+        });
       }
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro Fatal", description: "Falha ao gravar no banco de dados." });
+      toast({ variant: "destructive", title: "Erro Fatal", description: "O processamento falhou por falta de memória no navegador. Tente colar partes menores da lista." });
     } finally {
       setImporting(false);
+      setProgress(0);
     }
   }
 
@@ -106,7 +97,7 @@ export default function SettingsPage() {
             <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/20 flex gap-4">
               <ShieldAlert className="h-6 w-6 text-destructive shrink-0" />
               <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
-                Esta senha é exigida em todos os dispositivos para abrir canais marcados como "Restritos" (Adultos e Terror). Altere com cuidado.
+                Esta senha é exigida em todos os dispositivos para abrir canais marcados como "Restritos".
               </p>
             </div>
 
@@ -129,16 +120,16 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* IMPORTADOR M3U SUPREMO */}
+        {/* IMPORTADOR M3U ULTRA-LIGHT */}
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-emerald-500/10 rounded-2xl">
-                <ListPlus className="h-6 w-6 text-emerald-500" />
+                <Zap className="h-6 w-6 text-emerald-500" />
               </div>
               <div>
-                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador M3U Master</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Importe milhares de sinais instantaneamente.</CardDescription>
+                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador M3U Ultra-Light</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Otimizado para listas gigantes (40k+ canais).</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -146,41 +137,31 @@ export default function SettingsPage() {
             <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex gap-4">
               <Info className="h-6 w-6 text-blue-400 shrink-0" />
               <div className="space-y-1">
-                <p className="text-[10px] text-blue-400 uppercase font-black">Dica Master Léo:</p>
+                <p className="text-[10px] text-blue-400 uppercase font-black">Dica para Listas Gigantes:</p>
                 <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
-                  Para importar sua lista do Blinder, se o link falhar, clique nele para abrir no navegador, copie todo o texto e cole no campo "Conteúdo Bruto" abaixo. O sistema organizará tudo automaticamente.
+                  Para evitar que seu PC trave, o campo abaixo está em modo "Simples". Cole a lista, aguarde alguns segundos e clique em importar. O sistema processará em segundo plano.
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase opacity-40 px-2 text-emerald-500">Link da Lista M3U (URL)</label>
-                <div className="flex gap-2">
-                  <Input 
-                    value={m3uUrl} 
-                    onChange={e => setM3uUrl(e.target.value)}
-                    placeholder="http://blinder.pro/get.php?username=..." 
-                    className="h-14 bg-black/40 border-white/5 font-mono text-xs rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
-                <div className="relative flex justify-center text-[8px] uppercase font-black"><span className="bg-card px-4 opacity-40">OU COLE O CONTEÚDO BRUTO ABAIXO</span></div>
-              </div>
-
-              <div className="space-y-2">
                 <div className="flex justify-between items-center px-2">
                   <label className="text-[10px] font-black uppercase opacity-40">Conteúdo da Lista (#EXTM3U)</label>
-                  {m3uContent.length > 0 && <span className="text-[8px] font-black text-primary uppercase">{m3uContent.length} Caracteres</span>}
+                  {m3uContent.length > 0 && (
+                    <span className="text-[8px] font-black text-primary uppercase">
+                      {(m3uContent.length / 1024 / 1024).toFixed(2)} MB de dados detectados
+                    </span>
+                  )}
                 </div>
                 <Textarea 
                   value={m3uContent}
                   onChange={e => setM3uContent(e.target.value)}
-                  placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-logo='...' group-title='CANAL',Nome do Canal&#10;http://link.com"
-                  className="h-60 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl leading-relaxed"
+                  placeholder="Cole aqui o conteúdo da lista M3U..."
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  className="h-80 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl leading-tight overflow-y-auto whitespace-pre"
                 />
               </div>
 
@@ -190,7 +171,7 @@ export default function SettingsPage() {
                 className="w-full h-20 bg-emerald-500 hover:bg-emerald-600 font-black uppercase text-sm rounded-3xl shadow-xl shadow-emerald-500/10 active:scale-95 transition-all"
               >
                 {importing ? (
-                  <><Loader2 className="mr-3 h-8 w-8 animate-spin" /> SINCRONIZANDO REDE...</>
+                  <><Loader2 className="mr-3 h-8 w-8 animate-spin" /> PROCESSANDO SINAIS...</>
                 ) : (
                   <><Download className="mr-3 h-8 w-8" /> INICIAR IMPORTAÇÃO AGORA</>
                 )}

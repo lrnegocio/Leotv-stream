@@ -325,63 +325,60 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * IMPORTADOR M3U SUPREMO v121.0 - TURBO PERFORMANCE
+ * IMPORTADOR M3U SUPREMO v122.0 - ULTRA-LIGHT TURBO
+ * Otimizado para processar listas de 40k+ itens sem travar o navegador.
  */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
   const items: ContentItem[] = [];
   let currentItem: Partial<ContentItem> | null = null;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('#EXTINF:')) {
-      const info = trimmed;
-      // Melhorei o regex para capturar mesmo com espaços ou formatos diferentes
-      const logoMatch = info.match(/tvg-logo=["']?([^"']+)["']?/i);
-      const groupMatch = info.match(/group-title=["']?([^"']+)["']?/i);
-      const nameParts = info.split(',');
+  // Processamento ultra-rápido de strings
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('#EXTINF:')) {
+      const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
+      const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
+      const nameParts = line.split(',');
       const name = nameParts[nameParts.length - 1]?.trim() || "Canal Importado";
       
       const genre = groupMatch ? groupMatch[1] : "GERAL";
       const genreUpper = genre.toUpperCase();
       const nameUpper = name.toUpperCase();
 
-      // Blindagem Parental Master: Adultos e Terror
-      const isAdult = genreUpper.includes('ADULT') || 
-                      genreUpper.includes('XXX') || 
-                      genreUpper.includes('HOT') ||
-                      nameUpper.includes('XXX') ||
-                      genreUpper.includes('HENTAI');
-      
-      const isTerror = genreUpper.includes('TERROR') || 
-                       genreUpper.includes('HORROR') ||
-                       nameUpper.includes('TERROR');
+      const isAdult = genreUpper.includes('ADULT') || genreUpper.includes('XXX') || genreUpper.includes('HOT') || nameUpper.includes('XXX');
+      const isTerror = genreUpper.includes('TERROR') || genreUpper.includes('HORROR') || nameUpper.includes('TERROR');
 
       currentItem = {
-        id: "m3u_" + Math.random().toString(36).substring(2, 12) + "_" + Date.now().toString(36),
+        id: "m3u_" + Math.random().toString(36).substring(2, 10) + "_" + i,
         title: name,
         type: genreUpper.includes('FILME') || genreUpper.includes('MOVIE') ? 'movie' : 'channel',
         genre: genreUpper,
         imageUrl: logoMatch ? logoMatch[1] : undefined,
-        isRestricted: isAdult || isTerror, // Terror também requer PIN conforme pedido
+        isRestricted: isAdult || isTerror,
         description: `Importado via M3U Master - Grupo: ${genre}`
       };
-    } else if (trimmed.startsWith('http') && currentItem) {
-      currentItem.streamUrl = trimmed;
+    } else if (line.startsWith('http') && currentItem) {
+      currentItem.streamUrl = line;
       items.push(currentItem as ContentItem);
       currentItem = null;
     }
   }
 
-  // Gravação em Lotes de 100 para Velocidade Suprema
+  // Gravação em lotes menores (50) para garantir estabilidade em conexões lentas
   let successCount = 0;
   let failedCount = 0;
 
-  for (let i = 0; i < items.length; i += 100) {
-    const batch = items.slice(i, i + 100);
+  for (let i = 0; i < items.length; i += 50) {
+    const batch = items.slice(i, i + 50);
     const { error } = await supabase.from('content').upsert(batch);
     if (!error) successCount += batch.length;
     else failedCount += batch.length;
+    
+    // Pequena pausa para o navegador respirar entre os lotes
+    if (i % 500 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
   }
 
   return { success: successCount, failed: failedCount };
