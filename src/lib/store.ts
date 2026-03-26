@@ -143,6 +143,17 @@ export async function removeContent(id: string) {
   return !error;
 }
 
+export async function bulkRemoveContent(ids: string[]) {
+  if (!ids || ids.length === 0) return true;
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
+}
+
+export async function clearAllM3UContent() {
+  const { error } = await supabase.from('content').delete().like('id', 'm3u_%');
+  return !error;
+}
+
 export async function saveUser(user: User) {
   try {
     const { error } = await supabase.from('users').upsert(user);
