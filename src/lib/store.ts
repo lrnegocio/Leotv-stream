@@ -45,7 +45,7 @@ export interface User {
   maxScreens: number;
   activeDevices: ActiveDevice[]; 
   isBlocked: boolean;
-  isAdultEnabled: boolean; // NOVO: Controle de venda de conteúdo adulto
+  isAdultEnabled: boolean;
   resellerId?: string;
   activatedAt?: string;
   blockedAt?: string;
@@ -238,7 +238,6 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
-      // Bloqueio de Adultos na Playlist se não estiver habilitado no usuário
       if (item.isRestricted && !user.isAdultEnabled) return;
 
       const logo = item.imageUrl || "";
@@ -323,4 +322,57 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   } catch (e) {
     return { error: "FALHA." };
   }
+}
+
+/**
+ * IMPORTADOR M3U SUPREMO v120.0
+ */
+export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
+  const lines = content.split('\n');
+  const items: ContentItem[] = [];
+  let currentItem: Partial<ContentItem> | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#EXTINF:')) {
+      const info = trimmed;
+      const logoMatch = info.match(/tvg-logo="([^"]+)"/);
+      const groupMatch = info.match(/group-title="([^"]+)"/);
+      const nameParts = info.split(',');
+      const name = nameParts[nameParts.length - 1]?.trim() || "Canal Importado";
+      
+      const genre = groupMatch ? groupMatch[1] : "GERAL";
+      const isAdult = genre.toLowerCase().includes('adult') || 
+                      genre.toLowerCase().includes('xxx') || 
+                      genre.toLowerCase().includes('hot') ||
+                      name.toLowerCase().includes('xxx');
+
+      currentItem = {
+        id: "m3u_" + Math.random().toString(36).substring(2, 12),
+        title: name,
+        type: 'channel',
+        genre: genre.toUpperCase(),
+        imageUrl: logoMatch ? logoMatch[1] : undefined,
+        isRestricted: isAdult,
+        description: `Importado via Lista M3U - Categoria: ${genre}`
+      };
+    } else if (trimmed.startsWith('http') && currentItem) {
+      currentItem.streamUrl = trimmed;
+      items.push(currentItem as ContentItem);
+      currentItem = null;
+    }
+  }
+
+  // Gravação em Lotes para Performance Suprema
+  let successCount = 0;
+  let failedCount = 0;
+
+  for (let i = 0; i < items.length; i += 50) {
+    const batch = items.slice(i, i + 50);
+    const { error } = await supabase.from('content').upsert(batch);
+    if (!error) successCount += batch.length;
+    else failedCount += batch.length;
+  }
+
+  return { success: successCount, failed: failedCount };
 }
