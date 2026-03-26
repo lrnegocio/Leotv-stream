@@ -336,8 +336,8 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * IMPORTADOR M3U SUPREMO v122.0 - ULTRA-LIGHT TURBO
- * Otimizado para processar listas de 40k+ itens sem travar o navegador.
+ * IMPORTADOR M3U SUPREMO v124.0 - ULTRA-LIGHT TURBO
+ * Otimizado para 40k+ itens e trava parental automática para Terror e Adultos.
  */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
@@ -357,8 +357,9 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const genreUpper = genre.toUpperCase();
       const nameUpper = name.toUpperCase();
 
-      const isAdult = genreUpper.includes('ADULT') || genreUpper.includes('XXX') || genreUpper.includes('HOT') || nameUpper.includes('XXX');
-      const isTerror = genreUpper.includes('TERROR') || genreUpper.includes('HORROR') || nameUpper.includes('TERROR');
+      // REGRA MESTRE: Detecção automática de restrição
+      const isAdult = genreUpper.includes('ADULT') || genreUpper.includes('XXX') || genreUpper.includes('HOT') || nameUpper.includes('XXX') || nameUpper.includes('ADULTO');
+      const isTerror = genreUpper.includes('TERROR') || genreUpper.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
 
       currentItem = {
         id: "m3u_" + Math.random().toString(36).substring(2, 10) + "_" + i,
@@ -376,7 +377,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
     }
   }
 
-  // Gravação em lotes menores (50) para garantir estabilidade em conexões lentas
+  // Gravação em lotes menores (50) para garantir estabilidade
   let successCount = 0;
   let failedCount = 0;
 

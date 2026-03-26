@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -129,7 +129,6 @@ export default function HomeContent() {
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
-      // Regra Master: Se o usuário não pagou por adultos, nunca mostra.
       if (item.isRestricted && user && !user.isAdultEnabled) return false;
       
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
@@ -255,6 +254,8 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
+  const userPlaylistUrl = user ? `${window.location.origin}/api/playlist?pin=${user.pin}` : "";
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
@@ -338,36 +339,46 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* DIÁLOGO DE INSTALAÇÃO MULTI-PLATAFORMA */}
+      {/* DIÁLOGO DE INSTALAÇÃO v124.0 */}
       <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
-        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem]">
-          <DialogHeader>
-            <DialogTitle className="text-center font-black uppercase italic text-primary">Instalar Léo Tv</DialogTitle>
-            <DialogDescription className="text-center uppercase text-[10px] font-bold opacity-60">Escolha seu dispositivo</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
-              <Smartphone className="h-8 w-8 text-primary" />
-              <div>
-                <h4 className="font-black uppercase text-xs">Android / iOS</h4>
-                <p className="text-[9px] opacity-60">Abra o navegador e clique em "Adicionar à tela de início".</p>
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] overflow-hidden p-0">
+          <div className="bg-primary/10 p-8 border-b border-white/5 text-center">
+            <Download className="h-12 w-12 text-primary mx-auto mb-4 animate-bounce" />
+            <DialogTitle className="text-3xl font-black uppercase italic text-primary">Instalar Léo Tv & Stream</DialogTitle>
+            <DialogDescription className="text-[10px] uppercase font-bold opacity-60 mt-2">Leve o melhor sinal para todos os seus aparelhos</DialogDescription>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="grid gap-4">
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
+                <Smartphone className="h-8 w-8 text-primary" />
+                <div>
+                  <h4 className="font-black uppercase text-xs">Android / iOS (iPhone)</h4>
+                  <p className="text-[9px] opacity-60">Abra o site no navegador e clique em <b>"Adicionar à tela de início"</b> para transformar em Aplicativo.</p>
+                </div>
+              </div>
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
+                <Monitor className="h-8 w-8 text-secondary" />
+                <div>
+                  <h4 className="font-black uppercase text-xs">Smart TV / Roku / TV Box</h4>
+                  <p className="text-[9px] opacity-60">Use um App de IPTV (Ex: IPTV Smarters) e cole o seu link oficial abaixo.</p>
+                </div>
               </div>
             </div>
-            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
-              <Monitor className="h-8 w-8 text-secondary" />
-              <div>
-                <h4 className="font-black uppercase text-xs">Smart TV / Roku</h4>
-                <p className="text-[9px] opacity-60">Use o link IPTV M3U gerado pelo sistema em aplicativos como Smart IPTV.</p>
-              </div>
-            </div>
-            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
-              <Globe className="h-8 w-8 text-emerald-500" />
-              <div>
-                <h4 className="font-black uppercase text-xs">Web Player Oficial</h4>
-                <p className="text-[9px] opacity-60">leotv-streaming.vercel.app</p>
-              </div>
+
+            <div className="p-6 bg-black/40 border border-primary/20 rounded-2xl space-y-3">
+               <div className="flex items-center gap-2">
+                 <Globe className="h-4 w-4 text-primary" />
+                 <span className="text-[10px] font-black uppercase text-primary">Seu Link IPTV Individual</span>
+               </div>
+               <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[9px] h-12" />
+               <p className="text-[8px] font-bold opacity-40 uppercase text-center flex items-center justify-center gap-2">
+                 <Info className="h-3 w-3" /> Este link contém apenas os seus canais autorizados.
+               </p>
             </div>
           </div>
+          <DialogFooter className="p-6 bg-black/20 flex justify-center">
+             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full bg-primary font-black uppercase h-14 rounded-2xl">FECHAR</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
