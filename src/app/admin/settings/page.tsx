@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, CheckCircle2 } from "lucide-react"
+import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, AlertTriangle } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, processM3UImport } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -41,30 +41,41 @@ export default function SettingsPage() {
     if (m3uUrl) {
       setImporting(true);
       try {
+        // Tentativa de fetch com modo 'no-cors' não funciona para ler o texto
+        // Por isso o erro de CORS é comum em navegadores.
         const res = await fetch(m3uUrl);
+        if (!res.ok) throw new Error("Erro de resposta");
         contentToProcess = await res.text();
       } catch (e) {
-        toast({ variant: "destructive", title: "Erro de Link", description: "Não foi possível baixar a lista. Tente colar o conteúdo abaixo." });
         setImporting(false);
+        toast({ 
+          variant: "destructive", 
+          title: "BLOQUEIO DE SEGURANÇA (CORS)", 
+          description: "O navegador bloqueou o download direto. SOLUÇÃO: Abra o link no navegador, copie todo o texto e cole no campo 'Conteúdo Bruto' abaixo." 
+        });
         return;
       }
     }
 
-    if (!contentToProcess) {
-      toast({ variant: "destructive", title: "Vazio", description: "Insira um link ou cole o conteúdo M3U." });
+    if (!contentToProcess || contentToProcess.length < 10) {
+      toast({ variant: "destructive", title: "Vazio", description: "Insira um link válido ou cole o conteúdo da sua lista M3U." });
       return;
     }
 
     setImporting(true);
-    const result = await processM3UImport(contentToProcess);
-    setImporting(false);
-    
-    if (result.success > 0) {
-      toast({ title: "Importação Concluída!", description: `${result.success} canais adicionados à sua biblioteca.` });
-      setM3uUrl("");
-      setM3uContent("");
-    } else {
-      toast({ variant: "destructive", title: "Falha na Importação", description: "Verifique o formato da sua lista." });
+    try {
+      const result = await processM3UImport(contentToProcess);
+      if (result.success > 0) {
+        toast({ title: "IMPORTAÇÃO CONCLUÍDA!", description: `${result.success} novos sinais sintonizados na sua rede.` });
+        setM3uUrl("");
+        setM3uContent("");
+      } else {
+        toast({ variant: "destructive", title: "Erro no Formato", description: "O sistema não encontrou canais válidos. Verifique se o texto começa com #EXTM3U." });
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro Fatal", description: "Falha ao gravar no banco de dados." });
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -87,7 +98,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Proteção para canais adultos e restritos.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Proteção para canais adultos, terror e restritos.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -95,7 +106,7 @@ export default function SettingsPage() {
             <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/20 flex gap-4">
               <ShieldAlert className="h-6 w-6 text-destructive shrink-0" />
               <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
-                Esta senha é exigida em todos os dispositivos para abrir canais marcados como "Restritos". Altere com cuidado.
+                Esta senha é exigida em todos os dispositivos para abrir canais marcados como "Restritos" (Adultos e Terror). Altere com cuidado.
               </p>
             </div>
 
@@ -127,11 +138,21 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador M3U Master</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Importe milhares de canais instantaneamente.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Importe milhares de sinais instantaneamente.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
+            <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex gap-4">
+              <Info className="h-6 w-6 text-blue-400 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-[10px] text-blue-400 uppercase font-black">Dica Master Léo:</p>
+                <p className="text-[9px] text-muted-foreground uppercase font-bold leading-relaxed">
+                  Para importar sua lista do Blinder, se o link falhar, clique nele para abrir no navegador, copie todo o texto e cole no campo "Conteúdo Bruto" abaixo. O sistema organizará tudo automaticamente.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase opacity-40 px-2 text-emerald-500">Link da Lista M3U (URL)</label>
@@ -139,7 +160,7 @@ export default function SettingsPage() {
                   <Input 
                     value={m3uUrl} 
                     onChange={e => setM3uUrl(e.target.value)}
-                    placeholder="http://seu-servidor.com/get.php?username=...&password=..." 
+                    placeholder="http://blinder.pro/get.php?username=..." 
                     className="h-14 bg-black/40 border-white/5 font-mono text-xs rounded-xl"
                   />
                 </div>
@@ -147,34 +168,48 @@ export default function SettingsPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
-                <div className="relative flex justify-center text-[8px] uppercase font-black"><span className="bg-card px-4 opacity-40">OU COLE O CONTEÚDO ABAIXO</span></div>
+                <div className="relative flex justify-center text-[8px] uppercase font-black"><span className="bg-card px-4 opacity-40">OU COLE O CONTEÚDO BRUTO ABAIXO</span></div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase opacity-40 px-2">Conteúdo Bruto da Lista</label>
+                <div className="flex justify-between items-center px-2">
+                  <label className="text-[10px] font-black uppercase opacity-40">Conteúdo da Lista (#EXTM3U)</label>
+                  {m3uContent.length > 0 && <span className="text-[8px] font-black text-primary uppercase">{m3uContent.length} Caracteres</span>}
+                </div>
                 <Textarea 
                   value={m3uContent}
                   onChange={e => setM3uContent(e.target.value)}
                   placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-logo='...' group-title='CANAL',Nome do Canal&#10;http://link.com"
-                  className="h-40 bg-black/40 border-white/5 font-mono text-[10px] rounded-xl"
+                  className="h-60 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl leading-relaxed"
                 />
               </div>
 
               <Button 
                 onClick={handleImportM3U} 
                 disabled={importing}
-                className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 font-black uppercase text-sm rounded-2xl shadow-xl shadow-emerald-500/10"
+                className="w-full h-20 bg-emerald-500 hover:bg-emerald-600 font-black uppercase text-sm rounded-3xl shadow-xl shadow-emerald-500/10 active:scale-95 transition-all"
               >
                 {importing ? (
-                  <><Loader2 className="mr-2 h-6 w-6 animate-spin" /> SINCRONIZANDO CANAIS...</>
+                  <><Loader2 className="mr-3 h-8 w-8 animate-spin" /> SINCRONIZANDO REDE...</>
                 ) : (
-                  <><Download className="mr-2 h-6 w-6" /> INICIAR IMPORTAÇÃO AGORA</>
+                  <><Download className="mr-3 h-8 w-8" /> INICIAR IMPORTAÇÃO AGORA</>
                 )}
               </Button>
               
-              <p className="text-[9px] text-center uppercase font-bold opacity-30">
-                O sistema reordenará automaticamente em categorias e adicionará as capas encontradas.
-              </p>
+              <div className="flex items-center justify-center gap-4 py-2">
+                <div className="flex items-center gap-1.5 opacity-40">
+                  <div className="w-2 h-2 bg-primary rounded-full" />
+                  <span className="text-[8px] font-black uppercase">Auto-Categorias</span>
+                </div>
+                <div className="flex items-center gap-1.5 opacity-40">
+                  <div className="w-2 h-2 bg-secondary rounded-full" />
+                  <span className="text-[8px] font-black uppercase">Auto-Capas</span>
+                </div>
+                <div className="flex items-center gap-1.5 opacity-40">
+                  <div className="w-2 h-2 bg-destructive rounded-full" />
+                  <span className="text-[8px] font-black uppercase">Trava Parental Auto</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
