@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, ShieldAlert, Send } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, ShieldAlert, Send, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -25,7 +26,8 @@ export default function UserManagementPage() {
     pin: "",
     tier: "monthly" as SubscriptionTier,
     hours: "6",
-    screens: "1"
+    screens: "1",
+    isAdultEnabled: true
   })
 
   const loadUsers = React.useCallback(async () => {
@@ -67,6 +69,7 @@ export default function UserManagementPage() {
       maxScreens: parseInt(newUser.screens) || 1,
       activeDevices: editingUser?.activeDevices || [],
       isBlocked: editingUser?.isBlocked || false,
+      isAdultEnabled: newUser.isAdultEnabled,
       activatedAt: editingUser?.activatedAt || ""
     }
 
@@ -76,10 +79,10 @@ export default function UserManagementPage() {
       toast({ title: "PIN SALVO", description: "Configurações aplicadas com sucesso." })
       setIsDialogOpen(false)
       setEditingUserId(null)
-      setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" })
+      setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1", isAdultEnabled: true })
       await loadUsers()
     } else {
-      toast({ variant: "destructive", title: "Erro de Gravação", description: "Verifique seu banco Supabase." })
+      toast({ variant: "destructive", title: "Erro de Gravação" })
     }
     setIsSaving(false)
   }
@@ -109,7 +112,8 @@ export default function UserManagementPage() {
       pin: user.pin,
       tier: user.subscriptionTier,
       hours: "6",
-      screens: user.maxScreens.toString()
+      screens: user.maxScreens.toString(),
+      isAdultEnabled: user.isAdultEnabled ?? true
     })
     setIsDialogOpen(true)
   }
@@ -117,8 +121,7 @@ export default function UserManagementPage() {
   const sendWhatsAppAccess = (user: User) => {
     const baseUrl = window.location.origin;
     const msg = getBeautifulMessage(user.pin, user.subscriptionTier, baseUrl, user.maxScreens);
-    const encodedMsg = encodeURIComponent(msg);
-    const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank');
   }
 
@@ -135,7 +138,7 @@ export default function UserManagementPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) { setEditingUserId(null); setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1" }); }
+          if (!open) { setEditingUserId(null); setNewUser({ pin: "", tier: "monthly", hours: "6", screens: "1", isAdultEnabled: true }); }
         }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:scale-105 transition-transform font-bold uppercase text-xs h-12 rounded-xl px-6">
@@ -174,6 +177,15 @@ export default function UserManagementPage() {
                   <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5 h-12 rounded-xl" />
                 </div>
               </div>
+
+              <div className="p-4 bg-primary/5 border border-white/5 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-primary" />
+                  <Label className="uppercase text-[10px] font-black">Liberar Adultos</Label>
+                </div>
+                <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
+              </div>
+
               {newUser.tier === 'test' && (
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex gap-3">
                   <ShieldAlert className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -203,10 +215,10 @@ export default function UserManagementPage() {
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 hover:bg-transparent h-14">
                 <TableHead className="uppercase text-[10px] font-black text-primary px-8">CÓDIGO PIN</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">NÍVEL DE PLANO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">VENCIMENTO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">STATUS ATUAL</TableHead>
-                <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES RÁPIDAS</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">PLANO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">ADULTO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">STATUS</TableHead>
+                <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -222,11 +234,13 @@ export default function UserManagementPage() {
                       <TableCell className="font-mono font-black text-xl text-primary tracking-[0.2em] px-8">{u.pin}</TableCell>
                       <TableCell>
                         <Badge variant={u.subscriptionTier === 'test' ? 'secondary' : 'default'} className="uppercase text-[9px] font-black px-3 py-1 rounded-full">
-                          {u.subscriptionTier === 'test' ? 'TESTE 6H' : u.subscriptionTier === 'monthly' ? 'MENSAL' : 'VITALÍCIO'}
+                          {u.subscriptionTier === 'test' ? 'TESTE' : u.subscriptionTier === 'monthly' ? 'MENSAL' : 'VITALÍCIO'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-[10px] font-bold uppercase opacity-60">
-                        {u.expiryDate ? new Date(u.expiryDate).toLocaleString('pt-BR') : 'ESTOQUE'}
+                      <TableCell>
+                        <Badge className={`uppercase text-[8px] font-black ${u.isAdultEnabled ? 'bg-primary/20 text-primary' : 'bg-muted opacity-40'}`}>
+                          {u.isAdultEnabled ? 'LIBERADO' : 'BLOQUEADO'}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {u.isBlocked ? (
@@ -234,15 +248,15 @@ export default function UserManagementPage() {
                         ) : isExpired ? (
                           <Badge variant="destructive" className="uppercase text-[9px] font-black bg-orange-600 border-orange-600">EXPIRADO</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px] font-black">SINAL ATIVO</Badge>
+                          <Badge variant="outline" className="text-green-400 border-green-400/30 uppercase text-[9px] font-black">ATIVO</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right px-8">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar WhatsApp">
+                          <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10">
                              <Send className="h-5 w-5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} title={u.isBlocked ? "Reativar Sinal" : "Suspender Sinal"}>
+                          <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)}>
                             {u.isBlocked ? <UserCheck className="h-5 w-5 text-green-400" /> : <UserX className="h-5 w-5 text-destructive" />}
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>

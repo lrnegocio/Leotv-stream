@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,7 @@ export default function HomeContent() {
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
   const [isPinVerified, setIsPinVerified] = React.useState(false)
+  const [isInstallDialogOpen, setIsInstallDialogOpen] = React.useState(false)
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
@@ -49,13 +50,11 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
-  // v118.0: CONTROLE REMOTO ATIVO - Muda o link do navegador na hora
   const updateURL = React.useCallback((contentId: string | null) => {
     const params = new URLSearchParams(window.location.search);
     if (contentId) params.set('v', contentId);
     else params.delete('v');
     const newURL = `${window.location.pathname}?${params.toString()}`;
-    // Usando pushState para que o link no navegador seja atualizado
     window.history.pushState({ path: newURL }, '', newURL);
   }, []);
 
@@ -73,7 +72,6 @@ export default function HomeContent() {
         setContent(data)
         setLoading(false)
 
-        // v118.0: Carregamento Automático via URL
         const contentId = searchParams.get('v');
         if (contentId) {
           const item = data.find(i => i.id === contentId);
@@ -87,7 +85,7 @@ export default function HomeContent() {
         }
       } catch (err) {
         setLoading(false)
-        toast({ variant: "destructive", title: "Erro de Sintonização", description: "O servidor master está sobrecarregado." })
+        toast({ variant: "destructive", title: "Erro de Sintonização" })
       }
     }
     load()
@@ -114,7 +112,7 @@ export default function HomeContent() {
       const diff = expiry.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeLeft("ACESSO EXPIRADO");
+        setTimeLeft("SINAL EXPIRADO");
         handleLogout();
         return;
       }
@@ -131,6 +129,9 @@ export default function HomeContent() {
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
+      // Regra Master: Se o usuário não pagou por adultos, nunca mostra.
+      if (item.isRestricted && user && !user.isAdultEnabled) return false;
+      
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
       const matchesSearch = titleMatch || genreMatch;
@@ -138,7 +139,7 @@ export default function HomeContent() {
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
-  }, [content, searchQuery, showAdult])
+  }, [content, searchQuery, showAdult, user])
 
   const categoriesWithCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -273,13 +274,19 @@ export default function HomeContent() {
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-             <Label htmlFor="adult-mode" className="text-[9px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
-                {showAdult ? <Eye className="h-3 w-3 text-primary" /> : <EyeOff className="h-3 w-3" />}
-                ADULTO: {showAdult ? "ON" : "OFF"}
-             </Label>
-             <Switch id="adult-mode" checked={showAdult} onCheckedChange={setShowAdult} />
-          </div>
+          <Button variant="outline" size="sm" onClick={() => setIsInstallDialogOpen(true)} className="hidden md:flex h-10 border-emerald-500/20 text-emerald-500 uppercase text-[9px] font-black rounded-xl">
+             <Smartphone className="h-4 w-4 mr-2" /> Instalar App
+          </Button>
+          
+          {user?.isAdultEnabled && (
+            <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
+               <Label htmlFor="adult-mode" className="text-[9px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
+                  {showAdult ? <Eye className="h-3 w-3 text-primary" /> : <EyeOff className="h-3 w-3" />}
+                  ADULTO: {showAdult ? "ON" : "OFF"}
+               </Label>
+               <Switch id="adult-mode" checked={showAdult} onCheckedChange={setShowAdult} />
+            </div>
+          )}
           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 rounded-xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
         </div>
       </header>
@@ -298,7 +305,7 @@ export default function HomeContent() {
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
                   <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                    {count} CANAIS
+                    {count} SINAIS
                   </span>
                 </div>
                 
@@ -331,12 +338,43 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* SELETOR DE EPISÓDIOS COM TRAVA PARENTAL */}
+      {/* DIÁLOGO DE INSTALAÇÃO MULTI-PLATAFORMA */}
+      <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
+        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem]">
+          <DialogHeader>
+            <DialogTitle className="text-center font-black uppercase italic text-primary">Instalar Léo Tv</DialogTitle>
+            <DialogDescription className="text-center uppercase text-[10px] font-bold opacity-60">Escolha seu dispositivo</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
+              <Smartphone className="h-8 w-8 text-primary" />
+              <div>
+                <h4 className="font-black uppercase text-xs">Android / iOS</h4>
+                <p className="text-[9px] opacity-60">Abra o navegador e clique em "Adicionar à tela de início".</p>
+              </div>
+            </div>
+            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
+              <Monitor className="h-8 w-8 text-secondary" />
+              <div>
+                <h4 className="font-black uppercase text-xs">Smart TV / Roku</h4>
+                <p className="text-[9px] opacity-60">Use o link IPTV M3U gerado pelo sistema em aplicativos como Smart IPTV.</p>
+              </div>
+            </div>
+            <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
+              <Globe className="h-8 w-8 text-emerald-500" />
+              <div>
+                <h4 className="font-black uppercase text-xs">Web Player Oficial</h4>
+                <p className="text-[9px] opacity-60">leotv-streaming.vercel.app</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) { setSelectedSeries(null); updateURL(null); } }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
           <DialogHeader className="sr-only">
              <DialogTitle>{selectedSeries?.title}</DialogTitle>
-             <DialogDescription>Selecione um episódio.</DialogDescription>
           </DialogHeader>
           {selectedSeries && (
             <div className="flex flex-col h-[80vh]">
@@ -371,10 +409,6 @@ export default function HomeContent() {
 
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
-          <DialogHeader className="sr-only">
-             <DialogTitle>PIN Parental</DialogTitle>
-             <DialogDescription>Insira sua senha.</DialogDescription>
-          </DialogHeader>
           <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
           <div className="py-6 flex justify-center">
              <input type="password" maxLength={4} className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none border focus:border-primary" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
@@ -386,10 +420,6 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={(open) => { if(!open) { setActiveVideo(null); updateURL(null); } }}>
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
-            <DialogHeader className="sr-only">
-               <DialogTitle>{activeVideo.title}</DialogTitle>
-               <DialogDescription>Sintonizando...</DialogDescription>
-            </DialogHeader>
             <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
           </DialogContent>
         </Dialog>

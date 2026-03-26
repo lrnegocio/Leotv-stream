@@ -45,6 +45,7 @@ export interface User {
   maxScreens: number;
   activeDevices: ActiveDevice[]; 
   isBlocked: boolean;
+  isAdultEnabled: boolean; // NOVO: Controle de venda de conteúdo adulto
   resellerId?: string;
   activatedAt?: string;
   blockedAt?: string;
@@ -62,7 +63,6 @@ export interface Reseller {
 
 /**
  * BUSCA TURBO v4 - SUPREMACIA INFINITA
- * Rompe o limite de 1000 registros do Supabase com busca em blocos recursivos.
  */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -89,7 +89,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    console.error(`Erro Turbo em ${table}:`, e);
     return [];
   }
 }
@@ -177,7 +176,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   try {
     const normalizedPin = pin.trim();
     if (normalizedPin === 'adm77x2p') {
-      return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false } };
+      return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
@@ -239,6 +238,9 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
+      // Bloqueio de Adultos na Playlist se não estiver habilitado no usuário
+      if (item.isRestricted && !user.isAdultEnabled) return;
+
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
@@ -295,10 +297,6 @@ export const generateRandomPin = (length: number = 11) => {
   return result;
 };
 
-/**
- * MENSAGEM MASTER LÉO - v118.0
- * Força sempre o link da VERCEL OFICIAL para o cliente.
- */
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const prodUrl = "https://leotv-streaming.vercel.app";
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
