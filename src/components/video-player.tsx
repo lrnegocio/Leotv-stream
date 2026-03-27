@@ -27,7 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v124.0: SINTONIZADOR UNIVERSAL v6 - SUPREMACIA DE SINAL EXTERNO
+  // v125.0: SINTONIZADOR UNIVERSAL v7 - SUPREMACIA DE SINAL EXTERNO & XC CODES
   const { processedUrl, isDirectVideo, isExternalPage } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false }
     let targetUrl = url.trim()
@@ -46,8 +46,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // IPTV Web Players (Supremo, Blinder, etc)
-    if (targetUrl.includes('webplayer.one') || targetUrl.includes('canais?id=')) {
+    // IPTV Web Players & XC Links (Supremo, Blinder, etc)
+    if (targetUrl.includes('webplayer.one') || targetUrl.includes('blinder.') || targetUrl.includes('canais?id=')) {
       return {
         processedUrl: targetUrl,
         isDirectVideo: false,
@@ -123,9 +123,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-50 p-8 text-center space-y-6">
           <ShieldAlert className="h-16 w-16 text-primary animate-bounce" />
           <div className="space-y-2">
-            <h3 className="text-xl font-black uppercase italic text-primary">Sinal HTTP Detectado</h3>
+            <h3 className="text-xl font-black uppercase italic text-primary">Sinal Externo Detectado</h3>
             <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">
-              O seu servidor de sinais usa segurança antiga (HTTP). Para garantir estabilidade total, sintonize via link externo abaixo.
+              Este servidor de sinais usa segurança antiga (HTTP) ou bloqueia exibição interna. Para assistir, abra via sintonizador externo.
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary h-16 px-10 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
@@ -164,7 +164,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
       
-      {/* OVERLAY DE CONTROLE MASTER */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>

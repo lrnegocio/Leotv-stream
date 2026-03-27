@@ -61,9 +61,6 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-/**
- * BUSCA TURBO v4 - SUPREMACIA INFINITA
- */
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -336,7 +333,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * IMPORTADOR M3U SUPREMO v124.0 - ULTRA-LIGHT TURBO
+ * IMPORTADOR M3U SUPREMO v125.0 - ULTRA-LIGHT TURBO
  * Otimizado para 40k+ itens e trava parental automática para Terror e Adultos.
  */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
@@ -344,7 +341,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   const items: ContentItem[] = [];
   let currentItem: Partial<ContentItem> | null = null;
 
-  // Processamento ultra-rápido de strings
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.startsWith('#EXTINF:')) {
@@ -357,7 +353,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const genreUpper = genre.toUpperCase();
       const nameUpper = name.toUpperCase();
 
-      // REGRA MESTRE: Detecção automática de restrição
+      // REGRA MESTRE: Detecção automática de restrição para Terror e Adultos
       const isAdult = genreUpper.includes('ADULT') || genreUpper.includes('XXX') || genreUpper.includes('HOT') || nameUpper.includes('XXX') || nameUpper.includes('ADULTO');
       const isTerror = genreUpper.includes('TERROR') || genreUpper.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
 
@@ -377,7 +373,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
     }
   }
 
-  // Gravação em lotes menores (50) para garantir estabilidade
   let successCount = 0;
   let failedCount = 0;
 
@@ -387,7 +382,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
     if (!error) successCount += batch.length;
     else failedCount += batch.length;
     
-    // Pequena pausa para o navegador respirar entre os lotes
     if (i % 500 === 0) {
       await new Promise(resolve => setTimeout(resolve, 10));
     }

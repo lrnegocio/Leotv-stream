@@ -339,7 +339,6 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* DIÁLOGO DE INSTALAÇÃO v124.0 */}
       <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] overflow-hidden p-0">
           <div className="bg-primary/10 p-8 border-b border-white/5 text-center">
