@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -35,6 +36,9 @@ export default function HomeContent() {
   const [isPinVerified, setIsPinVerified] = React.useState(false)
   const [isInstallDialogOpen, setIsInstallDialogOpen] = React.useState(false)
   
+  // Lógica de Instalação PWA
+  const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
+  
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
   const [pendingEpisodeData, setPendingEpisodeData] = React.useState<{ep: Episode, series: ContentItem, eIdx: number, sIdx?: number} | null>(null)
@@ -49,7 +53,6 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
-  // v127.0: CONTROLE REMOTO REAL - Atualiza a URL quando o canal muda
   const updateURL = React.useCallback((contentId: string | null) => {
     const params = new URLSearchParams(window.location.search);
     if (contentId) params.set('v', contentId);
@@ -59,6 +62,12 @@ export default function HomeContent() {
   }, []);
 
   React.useEffect(() => {
+    // Captura o evento de instalação do navegador
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+
     const session = localStorage.getItem("user_session")
     if (!session) { router.push("/login"); return; }
     const userData = JSON.parse(session)
@@ -72,7 +81,6 @@ export default function HomeContent() {
         setContent(data)
         setLoading(false)
 
-        // Se houver um canal na URL, abre ele direto
         const contentId = searchParams.get('v');
         if (contentId) {
           const item = data.find(i => i.id === contentId);
@@ -92,7 +100,6 @@ export default function HomeContent() {
     load()
   }, [router, searchParams])
 
-  // Cronômetro Master de Acesso
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -129,16 +136,25 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      toast({ title: "Instrução Master", description: "Abra o menu do seu navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela de Início'." });
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+      setIsInstallDialogOpen(false);
+    }
+  };
+
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
-      // Bloqueio de venda: Se o admin desativou adulto no PIN, nem aparece na lista.
       if (item.isRestricted && user && !user.isAdultEnabled) return false;
-      
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
       const matchesSearch = titleMatch || genreMatch;
-      
-      // Filtro visual: Interruptor Adulto ON/OFF
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
@@ -159,18 +175,11 @@ export default function HomeContent() {
       setIsPinDialogOpen(true)
       return
     }
-
     updateURL(item.id);
-
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
     } else {
-      setActiveVideo({ 
-        url: item.streamUrl || "", 
-        title: item.title, 
-        itemId: item.id,
-        type: item.type
-      })
+      setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
     }
   }
 
@@ -180,7 +189,6 @@ export default function HomeContent() {
       setIsPinDialogOpen(true)
       return
     }
-
     setActiveVideo({ 
       url: ep.streamUrl, 
       title: `${series.title} - EP ${ep.number}`, 
@@ -196,7 +204,6 @@ export default function HomeContent() {
     const currentItem = content.find(i => i.id === activeVideo.itemId);
     if (!currentItem) return;
 
-    // Navegação em Séries
     if ((activeVideo.type === 'series' || activeVideo.type === 'multi-season') && activeVideo.episodeIndex !== undefined) {
       if (activeVideo.type === 'series' && currentItem.episodes) {
         const nextIdx = direction === 'next' ? activeVideo.episodeIndex + 1 : activeVideo.episodeIndex - 1;
@@ -218,7 +225,6 @@ export default function HomeContent() {
       }
     }
 
-    // Navegação em Canais/Filmes
     const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     if (nextIndex >= filteredContent.length) nextIndex = 0
@@ -230,17 +236,9 @@ export default function HomeContent() {
   const verifyPin = () => {
     if (pinInput === parentalPin) {
       setIsPinVerified(true)
-      
       if (pendingEpisodeData) {
         const { ep, series, eIdx, sIdx } = pendingEpisodeData;
-        setActiveVideo({ 
-          url: ep.streamUrl, 
-          title: `${series.title} - EP ${ep.number}`, 
-          itemId: series.id,
-          episodeIndex: eIdx,
-          seasonIndex: sIdx,
-          type: series.type
-        })
+        setActiveVideo({ url: ep.streamUrl, title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type })
         setPendingEpisodeData(null)
       } else if (pendingItem) {
         const item = pendingItem;
@@ -248,7 +246,6 @@ export default function HomeContent() {
         if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
         else setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
       }
-      
       setIsPinDialogOpen(false)
       setPinInput("")
       setPendingItem(null)
@@ -260,7 +257,6 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
-  // v127.0: BLINDAGEM DE ACESSO MASTER - Oculta o PIN do Mestre Léo em links gerados na Home
   const isMaster = user?.pin === 'adm77x2p';
   const displayPin = isMaster ? 'DIGITE_O_PIN_DO_CLIENTE' : (user?.pin || '');
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPin}`;
@@ -362,19 +358,24 @@ export default function HomeContent() {
             <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme seu dispositivo em uma central master</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
+            <Button onClick={handleInstallClick} className="w-full h-20 bg-primary hover:bg-primary/90 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
+               <Zap className="h-8 w-8 text-white animate-pulse" />
+               INSTALAR AGORA NO DISPOSITIVO
+            </Button>
+
             <div className="grid gap-4">
-              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
-                <Smartphone className="h-10 w-10 text-primary" />
-                <div>
-                  <h4 className="font-black uppercase text-sm">Android / Celular / TV Box</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador, use a opção <b>"Instalar Aplicativo"</b> para ter o ícone oficial na sua tela inicial.</p>
-                </div>
-              </div>
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
                 <Monitor className="h-10 w-10 text-secondary" />
                 <div>
-                  <h4 className="font-black uppercase text-sm">Smart TV / Roku / Fire TV</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Utilize o app <b>IPTV Smarters</b> ou <b>VLC</b> e conecte-se usando o seu link individual abaixo.</p>
+                  <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou use o link M3U abaixo em apps de IPTV.</p>
+                </div>
+              </div>
+              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
+                <Smartphone className="h-10 w-10 text-primary" />
+                <div>
+                  <h4 className="font-black uppercase text-sm">iPhone / iPad</h4>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Pressione <Share className="inline h-3 w-3" /> no Safari e selecione <b>"Adicionar à Tela de Início"</b>.</p>
                 </div>
               </div>
             </div>
@@ -395,14 +396,10 @@ export default function HomeContent() {
                    <p className="text-[9px] font-bold text-destructive uppercase text-center">MESTRE LÉO: Seu PIN Master está oculto por segurança. Para enviar ao cliente, use o botão "Enviar" no painel Admin.</p>
                  </div>
                )}
-               <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-xl">
-                 <Info className="h-4 w-4 text-primary" />
-                 <p className="text-[9px] font-bold opacity-60 uppercase text-center">Este link é exclusivo para o seu PIN e sintoniza apenas seus canais.</p>
-               </div>
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/20">
-             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full bg-primary hover:bg-primary/90 font-black uppercase h-16 rounded-3xl text-lg shadow-xl shadow-primary/20 transition-transform active:scale-95">FECHAR PAINEL</Button>
+             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full h-14 bg-white/5 border border-white/10 font-black uppercase rounded-2xl text-xs hover:bg-white/10 transition-all">FECHAR PAINEL</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
