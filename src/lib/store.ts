@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -333,7 +332,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * IMPORTADOR M3U SUPREMO v125.0 - ULTRA-LIGHT TURBO
+ * IMPORTADOR M3U SUPREMO v126.0 - ULTRA-LIGHT TURBO
  * Otimizado para 40k+ itens e trava parental automática para Terror e Adultos.
  */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {

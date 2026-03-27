@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -27,13 +26,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v125.0: SINTONIZADOR UNIVERSAL v7 - SUPREMACIA DE SINAL EXTERNO & XC CODES
-  const { processedUrl, isDirectVideo, isExternalPage } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false }
+  // v126.0: SINTONIZADOR SUPREMO v8 - COMPATIBILIDADE TOTAL COM SIGMA E SUPREMO
+  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // DETECÇÃO DE VÍDEO DIRETO (.m3u8, .mp4, .ts, .mpegts, etc)
+    // DETECÇÃO DE SIGMA / SUPREMO / WEBPLAYER
+    const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.');
+
+    // DETECÇÃO DE VÍDEO DIRETO
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]);
 
     // YouTube
@@ -42,58 +44,33 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
         isDirectVideo: false,
-        isExternalPage: false
+        isExternalPage: false,
+        isSigmaLink: false
       }
     }
 
-    // IPTV Web Players & XC Links (Supremo, Blinder, etc)
-    if (targetUrl.includes('webplayer.one') || targetUrl.includes('blinder.') || targetUrl.includes('canais?id=')) {
-      return {
-        processedUrl: targetUrl,
-        isDirectVideo: false,
-        isExternalPage: true
-      }
-    }
-
-    // Pornhub
-    if (targetUrl.includes('pornhub.com')) {
-      const viewKey = new URL(targetUrl).searchParams.get('viewkey');
-      if (viewKey) {
-        return {
-          processedUrl: `https://www.pornhub.com/embed/${viewKey}`,
-          isDirectVideo: false,
-          isExternalPage: false
-        }
-      }
-    }
-
-    // XVideos
+    // XVideos & Pornhub (Recalibrados)
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) {
-        return { 
-          processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, 
-          isDirectVideo: false,
-          isExternalPage: false
-        };
-      }
+      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false };
+    }
+    if (targetUrl.includes('pornhub.com')) {
+      const viewKey = new URL(targetUrl).searchParams.get('viewkey');
+      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false };
     }
 
-    // Caso Geral
-    return { processedUrl: targetUrl, isDirectVideo: isDirect, isExternalPage: !isDirect };
+    return { 
+      processedUrl: targetUrl, 
+      isDirectVideo: isDirect, 
+      isExternalPage: !isDirect || isSigma,
+      isSigmaLink: isSigma
+    };
   }, [url, isMuted])
-
-  const handleToggleAudio = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsMuted(prev => !prev);
-  }
 
   const openExternal = () => {
     window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
   }
 
-  // Verifica se o sinal é HTTP em um site HTTPS (Problema de Mixed Content)
   const isMixedContent = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
     return window.location.protocol === 'https:' && processedUrl?.startsWith('http:');
@@ -111,25 +88,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   return (
-    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl">
+    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5">
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SUPREMACIA...</span>
         </div>
       )}
 
-      {isMixedContent ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-50 p-8 text-center space-y-6">
-          <ShieldAlert className="h-16 w-16 text-primary animate-bounce" />
+      {isMixedContent || isSigmaLink ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
+          <div className="p-6 bg-primary/10 rounded-full animate-pulse">
+            <Zap className="h-16 w-16 text-primary" />
+          </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-black uppercase italic text-primary">Sinal Externo Detectado</h3>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">
-              Este servidor de sinais usa segurança antiga (HTTP) ou bloqueia exibição interna. Para assistir, abra via sintonizador externo.
+            <h3 className="text-2xl font-black uppercase italic text-primary">Sinal Sigma Detectado</h3>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
+              Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios.
             </p>
           </div>
-          <Button onClick={openExternal} className="bg-primary h-16 px-10 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
-            <ExternalLink className="mr-3 h-6 w-6" /> ABRIR SINTONIA EXTERNA
+          <Button onClick={openExternal} className="bg-primary hover:bg-primary/90 h-16 px-12 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/40 hover:scale-105 transition-all">
+            <ExternalLink className="mr-3 h-6 w-6" /> LIBERAR SINAL AGORA
           </Button>
         </div>
       ) : isDirectVideo ? (
@@ -155,27 +134,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {hasError && !isMixedContent && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-[70] p-6 text-center">
-           <p className="text-primary font-black uppercase text-xs mb-4">Falha na Sintonia Direta</p>
-           <Button onClick={openExternal} variant="outline" className="border-primary text-primary font-black uppercase text-[10px]">
+      {hasError && !isMixedContent && !isSigmaLink && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[70] p-6 text-center">
+           <ShieldAlert className="h-12 w-12 text-destructive mb-4" />
+           <p className="text-primary font-black uppercase text-xs mb-4">Falha Crítica na Sintonia</p>
+           <Button onClick={openExternal} variant="outline" className="border-primary text-primary font-black uppercase text-[10px] rounded-xl h-12">
              Tentar Modo Externo
            </Button>
         </div>
       )}
       
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black flex items-center justify-between pointer-events-none">
-          <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
+        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-none">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black text-primary uppercase tracking-[0.3em] mb-1">Sintonizando</span>
+            <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
+          </div>
           
           <div className="flex gap-2 pointer-events-auto">
-            <Button variant="ghost" size="icon" onClick={openExternal} className="h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10 shadow-2xl">
+            <Button variant="ghost" size="icon" onClick={openExternal} className="h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10 shadow-2xl transition-all">
               <ExternalLink className="h-6 w-6 text-white" />
             </Button>
             <button 
               type="button"
               className="h-14 w-14 bg-black/40 hover:bg-primary rounded-full border border-white/10 flex items-center justify-center transition-all shadow-2xl" 
-              onClick={handleToggleAudio}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsMuted(!isMuted); }}
             >
               {isMuted ? <VolumeX className="h-8 w-8 text-destructive animate-pulse" /> : <Volume2 className="h-8 w-8 text-primary" />}
             </button>
@@ -203,7 +186,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </Button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black flex justify-end items-center">
+        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-end items-center">
           <Button 
             variant="ghost" 
             size="icon" 

@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -252,20 +251,20 @@ export default function HomeContent() {
     }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   const userPlaylistUrl = user ? `${window.location.origin}/api/playlist?pin=${user.pin}` : "";
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-cinematic text-foreground pb-20">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/30"><Tv className="h-6 w-6 text-white" /></div>
+          <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/30 rotate-2 hover:rotate-0 transition-transform"><Tv className="h-7 w-7 text-white" /></div>
           <div className="hidden lg:block">
-            <span className="text-xl font-black text-primary font-headline uppercase italic tracking-tighter block">Léo Stream</span>
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/40 border border-primary/20 text-primary">
-               <Timer className="h-4 w-4 animate-pulse" />
-               <span className="text-[10px] font-black uppercase tracking-widest">{timeLeft}</span>
+            <span className="text-2xl font-black text-primary font-headline uppercase italic tracking-tighter block leading-none">Léo Stream</span>
+            <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-black/40 border border-primary/20 text-primary">
+               <Timer className="h-3 w-3 animate-pulse" />
+               <span className="text-[9px] font-black uppercase tracking-widest">{timeLeft}</span>
             </div>
           </div>
         </div>
@@ -275,26 +274,26 @@ export default function HomeContent() {
         </div>
 
         <div className="flex items-center gap-6">
-          <Button variant="outline" size="sm" onClick={() => setIsInstallDialogOpen(true)} className="hidden md:flex h-10 border-emerald-500/20 text-emerald-500 uppercase text-[9px] font-black rounded-xl">
+          <Button variant="outline" size="sm" onClick={() => setIsInstallDialogOpen(true)} className="hidden md:flex h-11 border-primary/20 text-primary uppercase text-[10px] font-black rounded-2xl hover:bg-primary/10">
              <Smartphone className="h-4 w-4 mr-2" /> Instalar App
           </Button>
           
           {user?.isAdultEnabled && (
             <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-               <Label htmlFor="adult-mode" className="text-[9px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
-                  {showAdult ? <Eye className="h-3 w-3 text-primary" /> : <EyeOff className="h-3 w-3" />}
+               <Label htmlFor="adult-mode" className="text-[10px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
+                  {showAdult ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />}
                   ADULTO: {showAdult ? "ON" : "OFF"}
                </Label>
                <Switch id="adult-mode" checked={showAdult} onCheckedChange={setShowAdult} />
             </div>
           )}
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 rounded-xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 rounded-2xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
         </div>
       </header>
 
-      <main className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-16">
+      <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
         {categoriesWithCounts.length === 0 ? (
-          <div className="py-40 text-center opacity-20 uppercase font-black text-xl tracking-widest italic">Nenhum canal localizado...</div>
+          <div className="py-40 text-center opacity-20 uppercase font-black text-2xl tracking-widest italic">Nenhum sinal localizado no momento...</div>
         ) : (
           categoriesWithCounts.map(([category, count]) => {
             const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
@@ -302,33 +301,37 @@ export default function HomeContent() {
               <section key={category} className="space-y-6">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                   <div className="flex items-center gap-3">
-                    <Folder className="h-6 w-6 text-primary" />
+                    <div className="p-2 bg-primary/10 rounded-lg"><Folder className="h-6 w-6 text-primary" /></div>
                     <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
-                  <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-widest">
-                    {count} SINAIS
+                  <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest shadow-lg shadow-primary/5">
+                    {count} SINAIS ATIVOS
                   </span>
                 </div>
                 
-                <div className="grid gap-6 grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+                <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                   {categoryItems.map(item => (
                     <div 
                       key={item.id} 
                       onClick={() => handleItemClick(item)} 
-                      className="group relative aspect-[2/3] bg-card rounded-2xl overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl"
+                      className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl"
                     >
                       {item.imageUrl ? (
                         <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized />
                       ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center p-4">
-                          <Tv className="h-10 w-10 text-primary opacity-20" />
+                          <Tv className="h-12 w-12 text-primary opacity-20" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-4 flex flex-col justify-end">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                         <div className="flex items-center justify-between mb-1">
-                           <h3 className="font-black text-[11px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary transition-colors flex-1">{item.title}</h3>
-                           {item.isRestricted && <Lock className="h-3 w-3 text-primary ml-2" />}
+                           <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary transition-colors flex-1">{item.title}</h3>
+                           {item.isRestricted && <Lock className="h-4 w-4 text-primary ml-2 drop-shadow-[0_0_8px_rgba(223,76,217,0.8)]" />}
                         </div>
+                        <p className="text-[8px] font-black uppercase opacity-40 group-hover:opacity-100 transition-opacity text-primary">{item.genre}</p>
+                      </div>
+                      <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <div className="bg-primary p-2 rounded-full shadow-2xl"><Play className="h-4 w-4 text-white fill-white" /></div>
                       </div>
                     </div>
                   ))}
@@ -340,72 +343,98 @@ export default function HomeContent() {
       </main>
 
       <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
-        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] overflow-hidden p-0">
-          <div className="bg-primary/10 p-8 border-b border-white/5 text-center">
-            <Download className="h-12 w-12 text-primary mx-auto mb-4 animate-bounce" />
-            <DialogTitle className="text-3xl font-black uppercase italic text-primary">Instalar Léo Tv & Stream</DialogTitle>
-            <DialogDescription className="text-[10px] uppercase font-bold opacity-60 mt-2">Leve o melhor sinal para todos os seus aparelhos</DialogDescription>
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[3rem] overflow-hidden p-0">
+          <div className="bg-primary/10 p-10 border-b border-white/5 text-center">
+            <div className="w-20 h-20 bg-primary rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30">
+              <Download className="h-10 w-10 text-white animate-bounce" />
+            </div>
+            <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalar Sistema Léo</DialogTitle>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme seu dispositivo em uma central master</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
             <div className="grid gap-4">
-              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
-                <Smartphone className="h-8 w-8 text-primary" />
+              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
+                <Smartphone className="h-10 w-10 text-primary" />
                 <div>
-                  <h4 className="font-black uppercase text-xs">Android / iOS (iPhone)</h4>
-                  <p className="text-[9px] opacity-60">Abra o site no navegador e clique em <b>"Adicionar à tela de início"</b> para transformar em Aplicativo.</p>
+                  <h4 className="font-black uppercase text-sm">Android / Celular / TV Box</h4>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador, use a opção <b>"Instalar Aplicativo"</b> para ter o ícone oficial na sua tela inicial.</p>
                 </div>
               </div>
-              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl flex items-center gap-4">
-                <Monitor className="h-8 w-8 text-secondary" />
+              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
+                <Monitor className="h-10 w-10 text-secondary" />
                 <div>
-                  <h4 className="font-black uppercase text-xs">Smart TV / Roku / TV Box</h4>
-                  <p className="text-[9px] opacity-60">Use um App de IPTV (Ex: IPTV Smarters) e cole o seu link oficial abaixo.</p>
+                  <h4 className="font-black uppercase text-sm">Smart TV / Roku / Fire TV</h4>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Utilize o app <b>IPTV Smarters</b> ou <b>VLC</b> e conecte-se usando o seu link individual abaixo.</p>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 bg-black/40 border border-primary/20 rounded-2xl space-y-3">
+            <div className="p-6 bg-black/40 border border-primary/20 rounded-3xl space-y-4">
                <div className="flex items-center gap-2">
-                 <Globe className="h-4 w-4 text-primary" />
-                 <span className="text-[10px] font-black uppercase text-primary">Seu Link IPTV Individual</span>
+                 <Globe className="h-5 w-5 text-primary" />
+                 <span className="text-[11px] font-black uppercase text-primary tracking-widest">Link IPTV Individual Master</span>
                </div>
-               <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[9px] h-12" />
-               <p className="text-[8px] font-bold opacity-40 uppercase text-center flex items-center justify-center gap-2">
-                 <Info className="h-3 w-3" /> Este link contém apenas os seus canais autorizados.
-               </p>
+               <div className="relative">
+                 <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl" />
+                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); }}>
+                   <Key className="h-4 w-4 text-primary" />
+                 </Button>
+               </div>
+               <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-xl">
+                 <Info className="h-4 w-4 text-primary" />
+                 <p className="text-[9px] font-bold opacity-60 uppercase text-center">Este link é exclusivo para o seu PIN e sintoniza apenas seus canais.</p>
+               </div>
             </div>
           </div>
-          <DialogFooter className="p-6 bg-black/20 flex justify-center">
-             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full bg-primary font-black uppercase h-14 rounded-2xl">FECHAR</Button>
+          <DialogFooter className="p-8 bg-black/20">
+             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full bg-primary hover:bg-primary/90 font-black uppercase h-16 rounded-3xl text-lg shadow-xl shadow-primary/20 transition-transform active:scale-95">FECHAR PAINEL</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) { setSelectedSeries(null); updateURL(null); } }}>
-        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)]">
           <DialogHeader className="sr-only">
              <DialogTitle>{selectedSeries?.title}</DialogTitle>
           </DialogHeader>
           {selectedSeries && (
-            <div className="flex flex-col h-[80vh]">
-              <div className="p-8 pb-0">
-                <div className="text-4xl font-black uppercase italic tracking-tighter text-primary">{selectedSeries.title}</div>
+            <div className="flex flex-col h-[85vh]">
+              <div className="relative h-64 w-full">
+                {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt={selectedSeries.title} fill className="object-cover" unoptimized />}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">Temporadas Master</span>
+                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white drop-shadow-2xl">{selectedSeries.title}</div>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
-                  <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-16 justify-between bg-black/20 border-white/5 hover:border-primary rounded-2xl">
-                    <span className="font-bold uppercase text-xs">Episódio {ep.number}</span>
-                    <PlayCircle className="h-5 w-5 text-primary" />
-                  </Button>
-                ))}
+              <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar">
+                {selectedSeries.type === 'series' && (
+                  <div className="grid gap-4">
+                    {selectedSeries.episodes?.map((ep, idx) => (
+                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-[1.5rem] px-8 group transition-all">
+                        <div className="flex items-center gap-4">
+                          <span className="text-lg font-black opacity-20 group-hover:text-primary group-hover:opacity-100 transition-all">{idx + 1}</span>
+                          <span className="font-black uppercase text-sm tracking-widest">{ep.title || `Episódio ${ep.number}`}</span>
+                        </div>
+                        <div className="p-3 bg-primary/10 rounded-full group-hover:bg-primary group-hover:scale-110 transition-all">
+                          <PlayCircle className="h-6 w-6 text-primary group-hover:text-white" />
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 {selectedSeries.type === 'multi-season' && selectedSeries.seasons?.map((s, sIdx) => (
-                  <div key={s.id} className="space-y-4">
-                    <h4 className="text-lg font-black uppercase text-primary">Temporada {s.number}</h4>
-                    <div className="grid sm:grid-cols-2 gap-3">
+                  <div key={s.id} className="space-y-6">
+                    <div className="flex items-center gap-4 border-l-4 border-primary pl-4">
+                      <h4 className="text-2xl font-black uppercase text-white tracking-tighter">Temporada {s.number}</h4>
+                      <span className="text-[10px] font-bold opacity-40 uppercase">{s.episodes.length} Episódios</span>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
                       {s.episodes.map((ep, eIdx) => (
-                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, eIdx, sIdx)} className="h-16 justify-between bg-black/20 border-white/5 hover:border-primary rounded-2xl">
-                          <span className="font-bold uppercase text-xs">Ep {ep.number}</span>
-                          <PlayCircle className="h-5 w-5 text-primary" />
+                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, eIdx, sIdx)} className="h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-[1.5rem] px-6 group transition-all">
+                          <span className="font-black uppercase text-[11px] tracking-widest text-left">Ep {ep.number} • {ep.title || 'Sem Nome'}</span>
+                          <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary transition-all">
+                            <Play className="h-4 w-4 text-primary group-hover:text-white fill-current" />
+                          </div>
                         </Button>
                       ))}
                     </div>
@@ -418,18 +447,22 @@ export default function HomeContent() {
       </Dialog>
 
       <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-3xl">
-          <div className="text-xl font-black uppercase italic text-primary text-center">Senha Parental</div>
-          <div className="py-6 flex justify-center">
-             <input type="password" maxLength={4} className="h-16 w-48 bg-black/40 border-white/5 text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none border focus:border-primary" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
+        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-10 w-10 text-primary" />
           </div>
-          <Button onClick={verifyPin} className="w-full h-14 bg-primary text-lg font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
+          <div className="text-2xl font-black uppercase italic text-primary mb-2">Trava Parental Master</div>
+          <p className="text-[10px] uppercase font-bold opacity-40 mb-8">Digite o código secreto para liberar este sinal.</p>
+          <div className="py-6 flex justify-center">
+             <input type="password" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
+          </div>
+          <Button onClick={verifyPin} className="w-full h-16 bg-primary hover:bg-primary/90 text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20 mt-4 transition-transform active:scale-95">DESBLOQUEAR AGORA</Button>
         </DialogContent>
       </Dialog>
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={(open) => { if(!open) { setActiveVideo(null); updateURL(null); } }}>
-          <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
+          <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-[0_0_150px_rgba(223,76,217,0.3)]">
             <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
           </DialogContent>
         </Dialog>
