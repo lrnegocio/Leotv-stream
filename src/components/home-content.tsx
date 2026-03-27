@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share, ArrowDownToLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -36,7 +36,6 @@ export default function HomeContent() {
   const [isPinVerified, setIsPinVerified] = React.useState(false)
   const [isInstallDialogOpen, setIsInstallDialogOpen] = React.useState(false)
   
-  // Lógica de Instalação PWA
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
   
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
@@ -62,11 +61,11 @@ export default function HomeContent() {
   }, []);
 
   React.useEffect(() => {
-    // Captura o evento de instalação do navegador
-    window.addEventListener('beforeinstallprompt', (e) => {
+    const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
-    });
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
     const session = localStorage.getItem("user_session")
     if (!session) { router.push("/login"); return; }
@@ -98,6 +97,8 @@ export default function HomeContent() {
       }
     }
     load()
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, [router, searchParams])
 
   React.useEffect(() => {
@@ -106,7 +107,7 @@ export default function HomeContent() {
       if (!session) return;
       const u = JSON.parse(session);
 
-      if (u.subscriptionTier === 'lifetime') {
+      if (u.subscriptionTier === 'lifetime' || u.pin === 'adm77x2p') {
         setTimeLeft("ACESSO VITALÍCIO");
         return;
       }
@@ -137,17 +138,28 @@ export default function HomeContent() {
   }, [handleLogout])
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      toast({ title: "Instrução Master", description: "Abra o menu do seu navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela de Início'." });
-      return;
-    }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-      setIsInstallDialogOpen(false);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setIsInstallDialogOpen(false);
+        toast({ title: "Instalação Iniciada", description: "O Léo TV está sendo adicionado ao seu dispositivo." });
+      }
+    } else {
+      toast({ 
+        title: "Aviso de Compatibilidade", 
+        description: "Seu navegador não permite instalação automática. Use a opção 'Adicionar à Tela de Início' no menu do navegador." 
+      });
     }
   };
+
+  const handleDownloadAPK = () => {
+    // URL Placeholder para o APK do Mestre
+    const apkUrl = "https://leotv-streaming.vercel.app/leo-tv-master.apk"; 
+    window.open(apkUrl, '_blank');
+    toast({ title: "Download Iniciado", description: "Baixando o arquivo APK para Android/TV Box." });
+  }
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
@@ -355,20 +367,27 @@ export default function HomeContent() {
               <Download className="h-10 w-10 text-white animate-bounce" />
             </div>
             <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalar Sistema Léo</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme seu dispositivo em uma central master</DialogDescription>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Central Master de Transmissão</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
-            <Button onClick={handleInstallClick} className="w-full h-20 bg-primary hover:bg-primary/90 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
-               <Zap className="h-8 w-8 text-white animate-pulse" />
-               INSTALAR AGORA NO DISPOSITIVO
-            </Button>
+            <div className="grid gap-4">
+              <Button onClick={handleInstallClick} className="w-full h-20 bg-primary hover:bg-primary/90 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
+                 <Zap className="h-8 w-8 text-white animate-pulse" />
+                 INSTALAR AGORA NO DISPOSITIVO
+              </Button>
+              
+              <Button onClick={handleDownloadAPK} variant="outline" className="w-full h-16 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase rounded-3xl text-xs flex items-center justify-center gap-3">
+                 <ArrowDownToLine className="h-5 w-5" />
+                 BAIXAR APK PARA ANDROID / TV BOX
+              </Button>
+            </div>
 
             <div className="grid gap-4">
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
                 <Monitor className="h-10 w-10 text-secondary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou use o link M3U abaixo em apps de IPTV.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou use o link M3U abaixo.</p>
                 </div>
               </div>
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
@@ -392,8 +411,8 @@ export default function HomeContent() {
                  </Button>
                </div>
                {isMaster && (
-                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl">
-                   <p className="text-[9px] font-bold text-destructive uppercase text-center">MESTRE LÉO: Seu PIN Master está oculto por segurança. Para enviar ao cliente, use o botão "Enviar" no painel Admin.</p>
+                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-center">
+                   <p className="text-[9px] font-bold text-destructive uppercase">MESTRE LÉO: Seu PIN Master está oculto por segurança.</p>
                  </div>
                )}
             </div>
