@@ -49,6 +49,7 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
+  // v127.0: CONTROLE REMOTO REAL - Atualiza a URL quando o canal muda
   const updateURL = React.useCallback((contentId: string | null) => {
     const params = new URLSearchParams(window.location.search);
     if (contentId) params.set('v', contentId);
@@ -71,6 +72,7 @@ export default function HomeContent() {
         setContent(data)
         setLoading(false)
 
+        // Se houver um canal na URL, abre ele direto
         const contentId = searchParams.get('v');
         if (contentId) {
           const item = data.find(i => i.id === contentId);
@@ -90,6 +92,7 @@ export default function HomeContent() {
     load()
   }, [router, searchParams])
 
+  // Cronômetro Master de Acesso
   React.useEffect(() => {
     const interval = setInterval(() => {
       const session = localStorage.getItem("user_session")
@@ -128,12 +131,14 @@ export default function HomeContent() {
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
+      // Bloqueio de venda: Se o admin desativou adulto no PIN, nem aparece na lista.
       if (item.isRestricted && user && !user.isAdultEnabled) return false;
       
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
       const matchesSearch = titleMatch || genreMatch;
       
+      // Filtro visual: Interruptor Adulto ON/OFF
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
@@ -191,6 +196,7 @@ export default function HomeContent() {
     const currentItem = content.find(i => i.id === activeVideo.itemId);
     if (!currentItem) return;
 
+    // Navegação em Séries
     if ((activeVideo.type === 'series' || activeVideo.type === 'multi-season') && activeVideo.episodeIndex !== undefined) {
       if (activeVideo.type === 'series' && currentItem.episodes) {
         const nextIdx = direction === 'next' ? activeVideo.episodeIndex + 1 : activeVideo.episodeIndex - 1;
@@ -212,6 +218,7 @@ export default function HomeContent() {
       }
     }
 
+    // Navegação em Canais/Filmes
     const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
     let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
     if (nextIndex >= filteredContent.length) nextIndex = 0
@@ -253,7 +260,10 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
-  const userPlaylistUrl = user ? `${window.location.origin}/api/playlist?pin=${user.pin}` : "";
+  // v127.0: BLINDAGEM DE ACESSO MASTER - Oculta o PIN do Mestre Léo em links gerados na Home
+  const isMaster = user?.pin === 'adm77x2p';
+  const displayPin = isMaster ? 'DIGITE_O_PIN_DO_CLIENTE' : (user?.pin || '');
+  const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPin}`;
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20">
@@ -376,10 +386,15 @@ export default function HomeContent() {
                </div>
                <div className="relative">
                  <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl" />
-                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); }}>
+                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { if(isMaster) { toast({ title: "Admin: Copie o link e coloque o PIN do cliente!" }); } else { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); } }}>
                    <Key className="h-4 w-4 text-primary" />
                  </Button>
                </div>
+               {isMaster && (
+                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+                   <p className="text-[9px] font-bold text-destructive uppercase text-center">MESTRE LÉO: Seu PIN Master está oculto por segurança. Para enviar ao cliente, use o botão "Enviar" no painel Admin.</p>
+                 </div>
+               )}
                <div className="flex items-center justify-center gap-2 p-3 bg-primary/5 rounded-xl">
                  <Info className="h-4 w-4 text-primary" />
                  <p className="text-[9px] font-bold opacity-60 uppercase text-center">Este link é exclusivo para o seu PIN e sintoniza apenas seus canais.</p>

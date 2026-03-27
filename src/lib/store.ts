@@ -182,6 +182,7 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
+    // PIN MASTER LÉO - ACESSO TOTAL
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
@@ -238,14 +239,19 @@ export async function validateResellerLogin(username: string, pass: string) {
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-    if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
+    
+    // Se não achar no banco, verifica se é o Master
+    const isMaster = pin === 'adm77x2p';
+    
+    if (!isMaster && (!user || user.isBlocked)) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
 
     const content = await getRemoteContent();
     if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
-      if (item.isRestricted && !user.isAdultEnabled) return;
+      // Regra de Adulto para Playlist
+      if (item.isRestricted && !isMaster && user && !user.isAdultEnabled) return;
 
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
@@ -304,10 +310,13 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
+  // BLINDAGEM: Se alguém tentar gerar mensagem com o PIN master, bloqueia.
+  const safePin = pin === 'adm77x2p' ? 'ACESSO_RESTRITO' : pin;
   const prodUrl = "https://leotv-streaming.vercel.app";
-  const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
+  const playlistUrl = `${prodUrl}/api/playlist?pin=${safePin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
+  
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${safePin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
 }
 
 export async function renewUserSubscription(userId: string, resellerId: string) {
@@ -332,7 +341,7 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
 }
 
 /**
- * IMPORTADOR M3U SUPREMO v126.0 - ULTRA-LIGHT TURBO
+ * IMPORTADOR M3U SUPREMO v127.0 - ULTRA-LIGHT TURBO
  * Otimizado para 40k+ itens e trava parental automática para Terror e Adultos.
  */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
