@@ -27,7 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v139.0: SINTONIZADOR SUPREMO v12 - RESTAURAÇÃO DE SINAL
+  // v141.0: SINTONIZADOR SUPREMO v13 - RECUPERAÇÃO DE SINAL
   const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false }
     let targetUrl = url.trim()

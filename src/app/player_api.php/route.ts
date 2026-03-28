@@ -6,8 +6,8 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v140.0 - SUPREMACIA TOTAL
- * Calibrado para IPTV Smarters Pro, OTT Navigator e TiViMate
+ * API XTREAM CODES EMULATOR v141.0 - SINTONIZADOR SUPREMO
+ * Otimizado para incluir YouTube e Adultos na lista de IPTV
  */
 
 export async function GET(req: NextRequest) {
@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
-    // Informações de Autenticação Inicial
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -75,9 +74,9 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    const content = await getRemoteContent(true); // ForceRefresh para garantir lista atualizada
+    const content = await getRemoteContent(); 
     
-    // Mapeamento de Categorias Inteligente
+    // Mapeamento de Categorias v141.0
     const categories = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase()))).sort();
     const catMap = categories.map((name, index) => ({
       category_id: (index + 1).toString(),
@@ -85,14 +84,13 @@ export async function GET(req: NextRequest) {
       parent_id: "0"
     }));
 
-    // --- LIVE CHANNELS ---
     if (action === 'get_live_categories') {
       return NextResponse.json(catMap, { headers });
     }
 
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
-      let items = content.filter(i => i.type === 'channel' || i.type === 'series'); // Séries podem aparecer como canais se não tiverem temporadas
+      let items = content.filter(i => i.type === 'channel' || i.type === 'series');
       
       if (catId) {
         const categoryName = catMap.find(c => c.category_id === catId)?.category_name;
@@ -101,35 +99,24 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Filtro de Adultos
+      // Filtro de Adultos IPTV
       if (!userRecord.isAdultEnabled) {
         items = items.filter(i => !i.isRestricted);
       }
 
-      return NextResponse.json(items.map((i, idx) => {
-        // Inteligência de Link para IPTV
-        let streamUrl = i.directStreamUrl || i.streamUrl || "";
-        
-        // Suporte para YouTube no IPTV (Tenta forçar o sinal)
-        if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) {
-           // Apps como OttNavigator e alguns Smarters entendem o link do YouTube direto se tiverem o plugin
-        }
-
-        return {
-          num: idx + 1,
-          name: i.title.toUpperCase(),
-          stream_type: "live",
-          stream_id: i.id,
-          stream_icon: i.imageUrl || "",
-          category_id: catMap.find(c => c.category_name === (i.genre || "GERAL").toUpperCase())?.category_id || "1",
-          added: "0",
-          custom_sid: "",
-          direct_source: streamUrl
-        };
-      }), { headers });
+      return NextResponse.json(items.map((i, idx) => ({
+        num: idx + 1,
+        name: i.title.toUpperCase(),
+        stream_type: "live",
+        stream_id: i.id,
+        stream_icon: i.imageUrl || "",
+        category_id: catMap.find(c => c.category_name === (i.genre || "GERAL").toUpperCase())?.category_id || "1",
+        added: "0",
+        custom_sid: "",
+        direct_source: i.directStreamUrl || i.streamUrl || ""
+      })), { headers });
     }
 
-    // --- VOD (FILMES) ---
     if (action === 'get_vod_categories') {
       const movieCats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
       return NextResponse.json(movieCats.map((name, index) => ({
@@ -142,12 +129,6 @@ export async function GET(req: NextRequest) {
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
       let movies = content.filter(i => i.type === 'movie');
-      
-      if (catId) {
-        const catName = catId.startsWith('vod_') ? catId : null; // Simples para o Smarters
-        // Se o app pedir categoria, filtramos
-      }
-
       return NextResponse.json(movies.map((i, idx) => ({
         num: idx + 1,
         name: i.title.toUpperCase(),
@@ -161,7 +142,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // --- SERIES ---
     if (action === 'get_series_categories') {
       return NextResponse.json([{ category_id: "ser_1", category_name: "TODAS AS SÉRIES", parent_id: "0" }], { headers });
     }

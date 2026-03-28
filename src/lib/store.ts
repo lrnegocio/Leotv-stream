@@ -63,10 +63,12 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v139.0 - PROTEÇÃO DE COTA SUPABASE
+// CACHE MASTER v141.0 - PROTEÇÃO DE COTA SUPABASE
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para economizar EGRESS
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar EGRESS
+
+const URL_SEPARATOR = '|IPTV|';
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -103,7 +105,18 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     return contentCache;
   }
 
-  const data = await fetchAllRecords('content', 'title');
+  const rawData = await fetchAllRecords('content', 'title');
+  
+  // TRUQUE DO SEPARADOR v141.0: Recupera Link Web e Link IPTV da mesma coluna
+  const data = rawData.map(item => {
+    if (item.streamUrl && item.streamUrl.includes(URL_SEPARATOR)) {
+      const parts = item.streamUrl.split(URL_SEPARATOR);
+      item.streamUrl = parts[0] || "";
+      item.directStreamUrl = parts[1] || "";
+    }
+    return item;
+  });
+
   if (data.length > 0) {
     contentCache = data;
     lastFetchTime = now;
@@ -119,12 +132,13 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   return await fetchAllRecords('resellers', 'name');
 }
 
-/**
- * SALVAMENTO BLINDADO v139.0
- * Tenta salvar com directStreamUrl, se falhar por falta de coluna, tenta o modo compatível.
- */
 export async function saveContent(item: ContentItem) {
   try {
+    // TRUQUE DO SEPARADOR v141.0: Salva os dois links na mesma coluna do banco
+    const combinedUrl = item.directStreamUrl 
+      ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
+      : (item.streamUrl || "");
+
     const payload: any = {
       id: item.id,
       title: item.title,
@@ -133,31 +147,18 @@ export async function saveContent(item: ContentItem) {
       genre: item.genre || "",
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
+      streamUrl: combinedUrl,
+      episodes: Array.isArray(item.episodes) ? item.episodes : [],
+      seasons: Array.isArray(item.seasons) ? item.seasons : [],
     };
 
-    if (item.type === 'series' || item.type === 'multi-season') {
-      payload.episodes = Array.isArray(item.episodes) ? item.episodes : [];
-      payload.seasons = Array.isArray(item.seasons) ? item.seasons : [];
-      payload.streamUrl = null;
-    } else {
-      payload.streamUrl = item.streamUrl || null;
-      payload.episodes = [];
-      payload.seasons = [];
+    const { error } = await supabase.from('content').upsert(payload);
+    
+    if (!error) {
+      contentCache = null; 
+      return true;
     }
-
-    // Tenta primeiro com a nova coluna de IPTV
-    const fullPayload = { ...payload, directStreamUrl: item.directStreamUrl || null };
-    
-    const { error: firstError } = await supabase.from('content').upsert(fullPayload);
-    
-    if (firstError) {
-      // Se deu erro de coluna inexistente, salva apenas o payload básico
-      const { error: secondError } = await supabase.from('content').upsert(payload);
-      if (secondError) return false;
-    }
-    
-    contentCache = null; 
-    return true;
+    return false;
   } catch (e) {
     return false;
   }
@@ -289,29 +290,30 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
+      // PRIORIDADE IPTV v141.0
+      const url = item.directStreamUrl || item.streamUrl;
+      if (!url) return;
+
       if (item.type === 'channel' || item.type === 'movie') {
-        // Prioridade para o Link Direto (IPTV)
-        const url = item.directStreamUrl || item.streamUrl;
-        if (!url) return;
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
         m3uLines.push(url);
       } else if (item.type === 'series' || item.type === 'multi-season') {
         if (Array.isArray(item.episodes)) {
           item.episodes.forEach((ep: Episode) => {
-            const url = ep.directStreamUrl || ep.streamUrl;
-            if (!url) return;
+            const epUrl = ep.directStreamUrl || ep.streamUrl;
+            if (!epUrl) return;
             m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}`);
-            m3uLines.push(url);
+            m3uLines.push(epUrl);
           });
         }
         if (Array.isArray(item.seasons)) {
           item.seasons.forEach((s: Season) => {
             if (Array.isArray(s.episodes)) {
               s.episodes.forEach(ep => {
-                const url = ep.directStreamUrl || ep.streamUrl;
-                if (!url) return;
+                const epUrl = ep.directStreamUrl || ep.streamUrl;
+                if (!epUrl) return;
                 m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}`);
-                m3uLines.push(url);
+                m3uLines.push(epUrl);
               });
             }
           });
@@ -404,7 +406,8 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         imageUrl: logoMatch ? logoMatch[1] : undefined,
         isRestricted: isAdult || isTerror,
         description: `Importado via M3U Master - Grupo: ${genre}`,
-        directStreamUrl: "" // Preenchido no próximo passo
+        streamUrl: "",
+        directStreamUrl: "" 
       };
     } else if (line.startsWith('http') && currentItem) {
       currentItem.streamUrl = line;
@@ -419,23 +422,25 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
-    // Tenta salvar o batch de forma resiliente
+    // TRUQUE DO SEPARADOR v141.0 NA IMPORTAÇÃO
+    const fixedBatch = batch.map(item => {
+      const combinedUrl = item.directStreamUrl 
+        ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
+        : (item.streamUrl || "");
+      
+      return {
+        ...item,
+        streamUrl: combinedUrl,
+        directStreamUrl: undefined // Remove para não dar erro de coluna
+      };
+    });
+
     try {
-      const { error } = await supabase.from('content').upsert(batch);
-      if (error) {
-        // Se falhar (provavelmente por causa da coluna directStreamUrl), remove essa chave e tenta de novo
-        const cleanBatch = batch.map(item => {
-          const { directStreamUrl, ...rest } = item as any;
-          return rest;
-        });
-        const { error: secondError } = await supabase.from('content').upsert(cleanBatch);
-        if (!secondError) successCount += batch.length;
-        else failedCount += batch.length;
-      } else {
-        successCount += batch.length;
-      }
+      const { error } = await supabase.from('content').upsert(fixedBatch);
+      if (!error) successCount += fixedBatch.length;
+      else failedCount += fixedBatch.length;
     } catch (e) {
-      failedCount += batch.length;
+      failedCount += fixedBatch.length;
     }
     
     if (i % 500 === 0) {

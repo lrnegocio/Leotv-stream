@@ -175,7 +175,7 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // TRAVA PARENTAL v140.0: Pede senha TODA VEZ em canal restrito
+    // TRAVA PARENTAL v141.0: Pede senha TODA VEZ em canal restrito
     if (item.isRestricted) {
       setPendingItem(item)
       setIsPinDialogOpen(true)
@@ -404,7 +404,7 @@ export default function HomeContent() {
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Monitor className="h-6 w-6 text-secondary mx-auto mb-2" />
                 <h4 className="font-black uppercase text-[10px]">Smart TV</h4>
-                <p className="text-[8px] opacity-40 mt-1">Menu &rarr; Instalar</p>
+                <p className="text-[8px] opacity-40 mt-1">Menu &gt; Instalar</p>
               </div>
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />
