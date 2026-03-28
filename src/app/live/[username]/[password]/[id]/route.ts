@@ -10,7 +10,9 @@ export async function GET(
 ) {
   try {
     const { username, password, id } = await params;
-    const streamId = id.split('.')[0]; // Remove .ts se houver
+    
+    // SINTONIZADOR XUI v159: Remove .ts ou .m3u8 do final para encontrar o ID real no banco
+    const streamId = id.split('.')[0]; 
 
     const login = await validateDeviceLogin(username, "xtream_api_call");
     if (login.error) return new NextResponse("Acesso Negado", { status: 403 });
@@ -23,8 +25,9 @@ export async function GET(
     const streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
 
+    // REDIRECIONAMENTO MASTER: Envia para a fonte original com os headers de vídeo
     return NextResponse.redirect(streamUrl);
   } catch (error) {
-    return new NextResponse("Erro Interno", { status: 500 });
+    return new NextResponse("Erro Interno de Sintonização", { status: 500 });
   }
 }
