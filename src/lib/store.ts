@@ -443,7 +443,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let successCount = 0;
   let failedCount = 0;
 
-  // PROCESSAMENTO EM BLOCOS PARA 50 MIL CANAIS
   for (let i = 0; i < items.length; i += 100) {
     const batch = items.slice(i, i + 100);
     const fixedBatch = batch.map(item => {
@@ -471,7 +470,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // BATCH MASTER REFORMULADO - INCLUINDO TODOS OS CANAIS ENVIADOS PELO MESTRE
   const premiumChannels: ContentItem[] = [
     { id: 'leo_cazetv', title: 'CazéTV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'Transmissões ao vivo do Cazé.' },
     { id: 'leo_globo_sp', title: 'Globo SP', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Globo-SP.png', description: 'Rede Globo São Paulo.' },

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -54,11 +55,12 @@ function VoiceSearchContent() {
     recognition.continuous = false
     recognition.interimResults = false
 
+    // CONFIGURAÇÃO ESPECIAL PARA SMART TV
     recognition.onstart = () => {
       setIsListening(true)
       toast({ 
         title: "Pode falar...", 
-        description: "Estou ouvindo o sinal.",
+        description: "Estou ouvindo o sinal Master.",
         className: "bg-primary text-white rounded-2xl border-none font-bold uppercase text-[10px]"
       })
     }
