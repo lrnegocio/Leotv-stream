@@ -144,20 +144,21 @@ export default function HomeContent() {
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
         setIsInstallDialogOpen(false);
-        toast({ title: "Instalação Iniciada", description: "O Léo TV está sendo adicionado ao seu dispositivo." });
+        toast({ title: "INSTALAÇÃO INICIADA!", description: "O Léo TV está sendo adicionado como um programa ao seu sistema." });
       }
     } else {
       toast({ 
-        title: "Instalação PWA", 
-        description: "Use a opção 'Adicionar à Tela de Início' no menu do seu navegador para usar o app como um programa nativo." 
+        title: "USE O MENU DO NAVEGADOR", 
+        description: "Vá em Opções e clique em 'Instalar App' ou 'Adicionar à Tela de Início' para abrir como programa.",
+        variant: "default"
       });
     }
   };
 
   const handleDownloadAPK = () => {
     toast({ 
-      title: "Download Indisponível", 
-      description: "O arquivo APK oficial deve ser configurado pelo Mestre Léo na pasta public. Use a instalação nativa abaixo!",
+      title: "INSTALAÇÃO DIRETA PWA", 
+      description: "O modo PWA é superior ao APK pois atualiza sozinho. Use o botão acima 'INSTALAR AGORA'!",
       variant: "destructive"
     });
   }
@@ -271,7 +272,7 @@ export default function HomeContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   const isMaster = user?.pin === 'adm77x2p';
-  const displayPin = isMaster ? 'DIGITE_O_PIN_DO_CLIENTE' : (user?.pin || '');
+  const displayPin = isMaster ? 'PIN_DO_CLIENTE' : (user?.pin || '');
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPin}`;
 
   return (
@@ -367,19 +368,14 @@ export default function HomeContent() {
             <div className="w-20 h-20 bg-primary rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30">
               <Download className="h-10 w-10 text-white animate-bounce" />
             </div>
-            <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalar Sistema Léo</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Central Master de Transmissão</DialogDescription>
+            <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalação Nativa</DialogTitle>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Clique no botão abaixo para instalar como um aplicativo nativo no seu Android ou Smart TV.</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
             <div className="grid gap-4">
               <Button onClick={handleInstallClick} className="w-full h-20 bg-primary hover:bg-primary/90 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
                  <Zap className="h-8 w-8 text-white animate-pulse" />
                  INSTALAR AGORA NO DISPOSITIVO
-              </Button>
-              
-              <Button onClick={handleDownloadAPK} variant="outline" className="w-full h-16 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase rounded-3xl text-xs flex items-center justify-center gap-3">
-                 <ArrowDownToLine className="h-5 w-5" />
-                 BAIXAR APK PARA ANDROID / TV BOX
               </Button>
             </div>
 
@@ -388,14 +384,14 @@ export default function HomeContent() {
                 <Monitor className="h-10 w-10 text-secondary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> para abrir como um programa independente.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou <b>"Instalar Aplicativo"</b>.</p>
                 </div>
               </div>
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
                 <Smartphone className="h-10 w-10 text-primary" />
                 <div>
-                  <h4 className="font-black uppercase text-sm">iPhone / iPad</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Pressione <Share className="inline h-3 w-3" /> no Safari e selecione <b>"Adicionar à Tela de Início"</b> para remover as barras do navegador.</p>
+                  <h4 className="font-black uppercase text-sm">Celular & Android TV</h4>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">O Google Chrome criará um atalho de programa que abre em tela cheia e carrega mais rápido.</p>
                 </div>
               </div>
             </div>
@@ -411,11 +407,6 @@ export default function HomeContent() {
                    <Key className="h-4 w-4 text-primary" />
                  </Button>
                </div>
-               {isMaster && (
-                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-center">
-                   <p className="text-[9px] font-bold text-destructive uppercase">MESTRE LÉO: Seu PIN Master está oculto por segurança.</p>
-                 </div>
-               )}
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/20">

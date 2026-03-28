@@ -11,6 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'any',
     background_color: '#1E161D',
     theme_color: '#DF4CD9',
+    scope: '/',
     icons: [
       {
         src: 'https://picsum.photos/seed/leo/192/192',

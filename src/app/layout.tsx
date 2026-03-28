@@ -34,6 +34,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#1E161D" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
       </head>
       <body className="font-body antialiased bg-background text-foreground">
