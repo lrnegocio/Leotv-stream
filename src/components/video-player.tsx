@@ -27,19 +27,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v132.0: SINTONIZADOR SUPREMO v10 - COMPATIBILIDADE COM MERCADO LIVRE E BYPASS DE SEGURANÇA
+  // v133.0: SINTONIZADOR SUPREMO v11 - COMPATIBILIDADE MERCADO LIVRE PLAY
   const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // DETECÇÃO MERCADO LIVRE PLAY
+    // DETECÇÃO MERCADO LIVRE PLAY (Hitman e outros filmes)
     if (targetUrl.includes('mercadolivre.com.br')) {
       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
     }
 
     // DETECÇÃO DE SIGMA / SUPREMO / WEBPLAYER
-    const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.');
+    const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.') || targetUrl.includes('blder.');
 
     // DETECÇÃO DE VÍDEO DIRETO
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]);

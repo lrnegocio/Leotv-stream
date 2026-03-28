@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ECONOMIA DE DADOS: Cache de 1 hora para o arquivo M3U
+    // ECONOMIA DE DADOS: Cache de 1 hora para o arquivo M3U (v133.0)
     const m3uContent = await generateM3UPlaylist(pin);
     
     return new NextResponse(m3uContent, {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
         'Content-Disposition': 'attachment; filename="playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600', // Cache Master
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600', // Cache Master para evitar Egress Exceeded
       },
     });
   } catch (error: any) {

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share, ArrowDownToLine, X } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share, ArrowDownToLine, X, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -155,14 +155,6 @@ export default function HomeContent() {
     }
   };
 
-  const handleDownloadAPK = () => {
-    toast({ 
-      title: "INSTALAÇÃO DIRETA PWA", 
-      description: "O modo PWA é superior ao APK pois atualiza sozinho. Use o botão acima 'INSTALAR AGORA'!",
-      variant: "destructive"
-    });
-  }
-
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       if (item.isRestricted && user && !user.isAdultEnabled) return false;
@@ -271,8 +263,9 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
+  // BLINDAGEM MESTRE: Proteção do PIN Admin nos links
   const isMaster = user?.pin === 'adm77x2p';
-  const displayPin = isMaster ? 'PIN_DO_CLIENTE' : (user?.pin || '');
+  const displayPin = isMaster ? 'COLOQUE_O_PIN_AQUI' : (user?.pin || '');
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPin}`;
 
   return (
@@ -369,7 +362,7 @@ export default function HomeContent() {
               <Download className="h-10 w-10 text-white animate-bounce" />
             </div>
             <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalação Nativa</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Clique no botão abaixo para instalar como um aplicativo nativo no seu Android ou Smart TV.</DialogDescription>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Clique no botão abaixo para instalar como um programa no seu dispositivo.</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
             <div className="grid gap-4">
@@ -384,14 +377,14 @@ export default function HomeContent() {
                 <Monitor className="h-10 w-10 text-secondary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou <b>"Instalar Aplicativo"</b>.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, selecione <b>"Instalar App"</b> ou <b>"Adicionar à Tela Inicial"</b> para abrir em tela cheia.</p>
                 </div>
               </div>
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
                 <Smartphone className="h-10 w-10 text-primary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">Celular & Android TV</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">O Google Chrome criará um atalho de programa que abre em tela cheia e carrega mais rápido.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">O app abrirá como um programa real, sem as barras do navegador, garantindo mais velocidade.</p>
                 </div>
               </div>
             </div>
@@ -401,9 +394,15 @@ export default function HomeContent() {
                  <Globe className="h-5 w-5 text-primary" />
                  <span className="text-[11px] font-black uppercase text-primary tracking-widest">Link IPTV Individual Master</span>
                </div>
+               {isMaster && (
+                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-3">
+                   <ShieldAlert className="h-4 w-4 text-destructive" />
+                   <p className="text-[9px] font-black uppercase text-destructive">Admin: Use o PIN do cliente no link abaixo para vender o acesso.</p>
+                 </div>
+               )}
                <div className="relative">
                  <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl" />
-                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { if(isMaster) { toast({ title: "Admin: Copie o link e coloque o PIN do cliente!" }); } else { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); } }}>
+                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); }}>
                    <Key className="h-4 w-4 text-primary" />
                  </Button>
                </div>

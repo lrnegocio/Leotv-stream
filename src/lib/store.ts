@@ -61,10 +61,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS)
+// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v133.0
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar cota Supabase
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar cota Supabase (Egress Exceeded Fix)
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -91,13 +91,13 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    // FALLBACK: Se o Supabase estiver sem cota, retorna cache se existir
     return contentCache || [];
   }
 }
 
 export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
   const now = Date.now();
+  // Se não for um refresh forçado e tivermos cache válido, usa ele (ECONOMIA DE DADOS MASTER)
   if (!forceRefresh && contentCache && (now - lastFetchTime < CACHE_DURATION)) {
     return contentCache;
   }
@@ -210,7 +210,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
-    // Se o Supabase der erro de cota, mas o PIN estiver certo na memória (fallback simples)
     if (error && error.code === '402') return { error: "BANCO DE DADOS SEM COTA. CONTATE O MESTRE LÉO." };
     
     if (error || !user) return { error: "CÓDIGO INVÁLIDO." };
@@ -310,7 +309,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER (VERIFIQUE COTA SUPABASE)";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER";
   }
 }
 
@@ -336,12 +335,14 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  const safePin = pin === 'adm77x2p' ? 'ACESSO_RESTRITO' : pin;
-  const prodUrl = "https://leotv-streaming.vercel.app";
-  const playlistUrl = `${prodUrl}/api/playlist?pin=${safePin}`;
+  // SEGURANÇA MESTRE: Se o PIN for o master, não gera mensagem de venda.
+  if (pin === 'adm77x2p') return "ERRO: O PIN MASTER NÃO PODE SER VENDIDO.";
+  
+  const prodUrl = baseUrl;
+  const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${safePin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
+  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
 }
 
 export async function renewUserSubscription(userId: string, resellerId: string) {
