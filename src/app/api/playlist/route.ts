@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const pin = searchParams.get('pin');
 
     if (!pin) {
-      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK\n", { 
+      return new NextResponse("#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK LEO TV\n", { 
         status: 200,
         headers: { 
           'Content-Type': 'application/x-mpegurl; charset=utf-8',
@@ -19,21 +19,21 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ECONOMIA DE DADOS: Cache de 1 hora para o arquivo M3U (v133.0)
+    // ECONOMIA DE DADOS: Cache de 1 hora para o arquivo M3U para evitar sobrecarga (v158.0)
     const m3uContent = await generateM3UPlaylist(pin);
     
     return new NextResponse(m3uContent, {
       status: 200,
       headers: {
         'Content-Type': 'application/x-mpegurl; charset=utf-8',
-        'Content-Disposition': 'attachment; filename="playlist.m3u"',
+        'Content-Disposition': 'attachment; filename="leotv_playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600', // Cache Master para evitar Egress Exceeded
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600', 
       },
     });
   } catch (error: any) {
-    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n", { 
+    return new NextResponse("#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER LEO TV\n", { 
       status: 200,
       headers: { 
         'Content-Type': 'application/x-mpegurl; charset=utf-8',

@@ -65,7 +65,7 @@ export interface Reseller {
 
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache
+const CACHE_DURATION = 1000 * 60 * 10; // 10 Minutos para Velocidade P2P
 
 const URL_SEPARATOR = '|IPTV|';
 
@@ -134,7 +134,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    // LIMPEZA MASTER v154: Remove espaços e corrige URLs nulas
     const cleanStreamUrl = (item.streamUrl || "").trim();
     const cleanDirectUrl = (item.directStreamUrl || "").trim();
 
@@ -356,7 +355,7 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   
-  return `🚀 *LÉO TV - ACESSO LIBERADO!* 🚀
+  return `🚀 *LÉO TV STREAM - ACESSO LIBERADO!* 🚀
 
 🔑 *SEU CÓDIGO:* \`${pin}\`
 📅 *PLANO:* ${planoText}
@@ -429,7 +428,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         genre: genreUpper,
         imageUrl: logoMatch ? logoMatch[1] : undefined,
         isRestricted: isAdult || isTerror,
-        description: `Importado via M3U Master - Grupo: ${genre}`,
+        description: `Importado Léo Tv Stream - Grupo: ${genre}`,
         streamUrl: "",
         directStreamUrl: "" 
       };
