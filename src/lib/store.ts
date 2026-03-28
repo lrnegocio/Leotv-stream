@@ -280,7 +280,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     }
 
     const content = await getRemoteContent();
-    if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA OU BANCO SEM COTA";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
@@ -289,29 +289,29 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
-      const url = item.directStreamUrl || item.streamUrl;
-      if (!url) return;
+      const getProxyUrl = (type: string, id: string, ext: string = 'ts') => {
+        return `${baseUrl}/${type}/${normalizedPin}/${normalizedPin}/${id}.${ext}`;
+      };
 
-      if (item.type === 'channel' || item.type === 'movie') {
+      if (item.type === 'channel') {
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(url);
+        m3uLines.push(getProxyUrl('live', item.id));
+      } else if (item.type === 'movie') {
+        m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
+        m3uLines.push(getProxyUrl('movie', item.id, 'mp4'));
       } else if (item.type === 'series' || item.type === 'multi-season') {
         if (Array.isArray(item.episodes)) {
           item.episodes.forEach((ep: Episode) => {
-            const epUrl = ep.directStreamUrl || ep.streamUrl;
-            if (!epUrl) return;
             m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}`);
-            m3uLines.push(epUrl);
+            m3uLines.push(getProxyUrl('series', ep.id, 'mp4'));
           });
         }
         if (Array.isArray(item.seasons)) {
           item.seasons.forEach((s: Season) => {
             if (Array.isArray(s.episodes)) {
               s.episodes.forEach(ep => {
-                const epUrl = ep.directStreamUrl || ep.streamUrl;
-                if (!epUrl) return;
                 m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}`);
-                m3uLines.push(epUrl);
+                m3uLines.push(getProxyUrl('series', ep.id, 'mp4'));
               });
             }
           });

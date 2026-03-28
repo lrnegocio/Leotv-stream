@@ -47,7 +47,6 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
-  // v146.0 - BLINDAGEM ANTI-ROUBO E SEGURANÇA TOTAL
   React.useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -200,7 +199,7 @@ export default function HomeContent() {
 
   const handleItemClick = (item: ContentItem) => {
     if (item.isRestricted) {
-      setActiveVideo(null); // Fecha o player antes de pedir PIN
+      setActiveVideo(null);
       setPendingItem(item);
       setIsPinDialogOpen(true);
       return;
@@ -215,7 +214,7 @@ export default function HomeContent() {
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
     if (series.isRestricted) {
-      setActiveVideo(null); // Fecha player antes de pedir PIN
+      setActiveVideo(null);
       setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
       setIsPinDialogOpen(true);
       return;

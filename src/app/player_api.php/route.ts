@@ -6,8 +6,8 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v147.0 - SINTONIZADOR VOD ULTRA-SMART
- * Agora com suporte total a categorias dinâmicas e sintonização de sinais brutos.
+ * API XTREAM CODES EMULATOR v150.0 - SINTONIZADOR PRO
+ * Agora com suporte a rotas de redirecionamento para maior compatibilidade.
  */
 
 function getExtension(url: string | undefined): string {
@@ -86,7 +86,6 @@ export async function GET(req: NextRequest) {
 
     const content = await getRemoteContent(); 
     
-    // MAPEAMENTO DINÂMICO REFORÇADO v147.0
     const liveCategories = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => (i.genre || "GERAL").toUpperCase()))).sort();
     const liveCatMap = liveCategories.map((name, index) => ({ category_id: (index + 1).toString(), category_name: name, parent_id: "0" }));
 
