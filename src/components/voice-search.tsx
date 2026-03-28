@@ -40,7 +40,7 @@ function VoiceSearchContent() {
   }
 
   const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       toast({ 
         variant: "destructive", 
         title: "Microfone não suportado", 
@@ -50,12 +50,13 @@ function VoiceSearchContent() {
       return
     }
 
-    const recognition = new (window as any).webkitSpeechRecognition()
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR'
     recognition.continuous = false
     recognition.interimResults = false
 
-    // CONFIGURAÇÃO ESPECIAL PARA SMART TV
+    // CONFIGURAÇÃO ESPECIAL PARA SMART TV: Aumenta o tempo de espera
     recognition.onstart = () => {
       setIsListening(true)
       toast({ 
@@ -82,8 +83,8 @@ function VoiceSearchContent() {
     recognition.onerror = (event: any) => {
       setIsListening(false)
       console.error("Erro no microfone:", event.error);
-      if (event.error === 'not-allowed') {
-        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Ative o microfone nas configurações da sua TV." })
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Ative o microfone nas configurações da sua TV ou navegador." })
       }
     }
 
@@ -101,20 +102,19 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busca Master por voz ou texto..."
+          placeholder="Busca por voz ou texto..."
           className="pl-12 pr-12 bg-black/40 border-white/5 focus:ring-primary rounded-2xl h-14 text-xs font-bold uppercase tracking-widest shadow-2xl"
           value={query}
           onChange={handleInputChange}
         />
         {query && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 opacity-50 hover:opacity-100" 
+          <button 
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 opacity-50 hover:opacity-100 flex items-center justify-center" 
             onClick={() => { setQuery(""); triggerSearch(""); }}
           >
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         )}
         {isProcessing && <Loader2 className="absolute right-12 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary" />}
       </div>

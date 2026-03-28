@@ -145,6 +145,7 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
+    // TRAVA IMPLACÁVEL: SEMPRE PEDE PIN PARA RESTRITOS
     if (item.isRestricted) {
       setActiveVideo(null); 
       setPendingItem(item);
@@ -348,7 +349,7 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-tight">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 sm:space-y-6 custom-scroll">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 sm:space-y-6 custom-scroll block">
                 {selectedSeries.type === 'series' && (
                   <div className="grid gap-4">
                     {selectedSeries.episodes?.map((ep, idx) => (
