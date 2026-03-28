@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap, Trophy, RefreshCcw } from "lucide-react"
-import { getGlobalSettings, updateGlobalSettings, processM3UImport, syncLiveSports } from "@/lib/store"
+import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap, Trophy, RefreshCcw, Database } from "lucide-react"
+import { getGlobalSettings, updateGlobalSettings, processM3UImport, syncLiveSports, importPremiumBundle } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
@@ -16,11 +16,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = React.useState(true)
   const [importing, setImporting] = React.useState(false)
   const [syncingSports, setSyncingSports] = React.useState(false)
+  const [importingPremium, setImportingPremium] = React.useState(false)
 
   React.useEffect(() => {
     const load = async () => {
       const settings = await getGlobalSettings()
-      setParentalPin(settings.parentalPin)
+      setParentalPin(settings.parentalPin || "")
       setLoading(false)
     }
     load()
@@ -72,6 +73,18 @@ export default function SettingsPage() {
     }
   }
 
+  const handleImportPremium = async () => {
+    setImportingPremium(true);
+    try {
+      const result = await importPremiumBundle();
+      toast({ title: "PACOTE PREMIUM INSTALADO!", description: `${result.success} canais master adicionados à sua biblioteca.` });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro no Pacote" });
+    } finally {
+      setImportingPremium(false);
+    }
+  }
+
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
@@ -82,6 +95,37 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-8">
+        {/* IMPORTADOR PREMIUM MASTER */}
+        <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden border-2">
+          <CardHeader className="bg-emerald-500/20 border-b border-emerald-500/20 p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/30">
+                <Database className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="uppercase text-lg font-black italic">Fábrica de Canais Léo TV</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Injeta o melhor conteúdo do mercado na sua biblioteca.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex gap-4">
+              <Info className="h-6 w-6 text-emerald-500 shrink-0" />
+              <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
+                Este comando injeta centenas de canais (Premiere, HBO, Telecine, Adultos, Terror) extraídos de fontes de elite. Tudo organizado com logos e categorias.
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleImportPremium} 
+              disabled={importingPremium}
+              className="w-full h-20 bg-emerald-500 hover:bg-emerald-600 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-emerald-500/20 flex items-center justify-center gap-4"
+            >
+              {importingPremium ? <Loader2 className="h-8 w-8 animate-spin" /> : <><Zap className="h-8 w-8" /> INJETAR CANAIS PREMIUM AGORA</>}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* RADAR DE ESPORTES MASTER */}
         <Card className="bg-primary/5 border-primary/20 shadow-2xl rounded-3xl overflow-hidden border-2">
           <CardHeader className="bg-primary/10 border-b border-primary/20 p-6">
@@ -99,7 +143,7 @@ export default function SettingsPage() {
             <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4">
               <RefreshCcw className="h-6 w-6 text-primary shrink-0 animate-spin-slow" />
               <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
-                Este sistema busca na API do Rei dos Canais todos os jogos que estão acontecendo agora e os cadastra na categoria "FUTEBOL AO VIVO".
+                Busca os jogos que estão acontecendo agora e os cadastra na categoria "FUTEBOL AO VIVO".
               </p>
             </div>
 
