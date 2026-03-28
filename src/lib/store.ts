@@ -63,10 +63,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v141.0 - PROTEÇÃO DE COTA SUPABASE
+// CACHE MASTER v144.0 - ECONOMIA SUPREMA
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar EGRESS
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
 
 const URL_SEPARATOR = '|IPTV|';
 
@@ -107,12 +107,14 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
 
   const rawData = await fetchAllRecords('content', 'title');
   
-  // TRUQUE DO SEPARADOR v141.0: Recupera Link Web e Link IPTV da mesma coluna
+  // SINTONIZADOR DUAL-LINK v144.0: Extrai Link Web e Link IPTV da mesma coluna de forma inquebrável
   const data = rawData.map(item => {
-    if (item.streamUrl && item.streamUrl.includes(URL_SEPARATOR)) {
+    if (item.streamUrl && typeof item.streamUrl === 'string' && item.streamUrl.includes(URL_SEPARATOR)) {
       const parts = item.streamUrl.split(URL_SEPARATOR);
       item.streamUrl = parts[0] || "";
       item.directStreamUrl = parts[1] || "";
+    } else {
+      item.directStreamUrl = item.streamUrl; // Se não tem separador, duplica por segurança
     }
     return item;
   });
@@ -134,7 +136,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    // TRUQUE DO SEPARADOR v141.0: Salva os dois links na mesma coluna do banco
+    // SALVAMENTO BLINDADO v144.0: Encapsula os dois sinais na mesma coluna
     const combinedUrl = item.directStreamUrl 
       ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
       : (item.streamUrl || "");
@@ -290,7 +292,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
-      // PRIORIDADE IPTV v141.0
+      // PRIORIDADE IPTV v144.0
       const url = item.directStreamUrl || item.streamUrl;
       if (!url) return;
 
@@ -422,7 +424,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
-    // TRUQUE DO SEPARADOR v141.0 NA IMPORTAÇÃO
+    // TRUQUE DO SEPARADOR v144.0 NA IMPORTAÇÃO
     const fixedBatch = batch.map(item => {
       const combinedUrl = item.directStreamUrl 
         ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`

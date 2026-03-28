@@ -6,9 +6,19 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v143.0 - SINTONIZADOR SUPREMO VOD & SERIES
- * Resolvido erro de 'No Record Found' em Filmes e Séries adicionando metadados de episódios.
+ * API XTREAM CODES EMULATOR v144.0 - SINTONIZADOR UNIVERSAL AUTO-FORMATO
+ * Detecta automaticamente se o link é M3U8, TS, MP4 ou Web (YouTube/Sigma).
  */
+
+function getExtension(url: string | undefined): string {
+  if (!url) return "mp4";
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  if (cleanUrl.endsWith('.m3u8')) return "m3u8";
+  if (cleanUrl.endsWith('.ts')) return "ts";
+  if (cleanUrl.endsWith('.mkv')) return "mkv";
+  if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) return "mp4"; // Emula como mp4 para o app tentar abrir
+  return "mp4";
+}
 
 export async function GET(req: NextRequest) {
   const headers = {
@@ -49,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
-    // 1. LOGIN / SERVER INFO
+    // 1. LOGIN / SERVER INFO - AUTO-Habilitar todos os formatos
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -91,7 +101,7 @@ export async function GET(req: NextRequest) {
     if (action === 'get_vod_categories') return NextResponse.json(movieCatMap, { headers });
     if (action === 'get_series_categories') return NextResponse.json(seriesCatMap, { headers });
 
-    // 2. LIVE STREAMS
+    // 2. LIVE STREAMS com AUTO-DETECÇÃO
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
       let items = content.filter(i => i.type === 'channel');
@@ -114,7 +124,7 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 3. VOD STREAMS (FILMES)
+    // 3. VOD STREAMS (FILMES) com AUTO-FORMATO
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
       let movies = content.filter(i => i.type === 'movie');
@@ -124,18 +134,21 @@ export async function GET(req: NextRequest) {
       }
       if (!userRecord.isAdultEnabled) movies = movies.filter(i => !i.isRestricted);
 
-      return NextResponse.json(movies.map((i, idx) => ({
-        num: idx + 1,
-        name: i.title.toUpperCase(),
-        stream_type: "movie",
-        stream_id: i.id,
-        stream_icon: i.imageUrl || "",
-        category_id: movieCatMap.find(c => (i.genre || "FILMES").toUpperCase() === c.category_name)?.category_id || "vod_1",
-        added: "0",
-        container_extension: "mp4",
-        rating: "10",
-        direct_source: i.directStreamUrl || i.streamUrl || ""
-      })), { headers });
+      return NextResponse.json(movies.map((i, idx) => {
+        const url = i.directStreamUrl || i.streamUrl;
+        return {
+          num: idx + 1,
+          name: i.title.toUpperCase(),
+          stream_type: "movie",
+          stream_id: i.id,
+          stream_icon: i.imageUrl || "",
+          category_id: movieCatMap.find(c => (i.genre || "FILMES").toUpperCase() === c.category_name)?.category_id || "vod_1",
+          added: "0",
+          container_extension: getExtension(url),
+          rating: "10",
+          direct_source: url || ""
+        };
+      }), { headers });
     }
 
     // 4. SERIES LIST
@@ -163,7 +176,7 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 5. SERIES INFO (FUNDAMENTAL PARA EVITAR 'NO RECORD FOUND')
+    // 5. SERIES INFO (Sintonizador Dinâmico de Episódios)
     if (action === 'get_series_info') {
       const seriesId = searchParams.get('series_id');
       const item = content.find(i => i.id === seriesId);
@@ -185,23 +198,29 @@ export async function GET(req: NextRequest) {
 
       if (item.type === 'series' && item.episodes) {
         seasonsList.push({ season_number: 1, name: "Temporada 1", episode_count: item.episodes.length });
-        episodesList["1"] = item.episodes.map(ep => ({
-          id: ep.id,
-          episode_num: ep.number,
-          title: ep.title || `Episódio ${ep.number}`,
-          container_extension: "mp4",
-          direct_source: ep.directStreamUrl || ep.streamUrl
-        }));
-      } else if (item.type === 'multi-season' && item.seasons) {
-        item.seasons.forEach(s => {
-          seasonsList.push({ season_number: s.number, name: `Temporada ${s.number}`, episode_count: s.episodes.length });
-          episodesList[s.number.toString()] = s.episodes.map(ep => ({
+        episodesList["1"] = item.episodes.map(ep => {
+          const url = ep.directStreamUrl || ep.streamUrl;
+          return {
             id: ep.id,
             episode_num: ep.number,
             title: ep.title || `Episódio ${ep.number}`,
-            container_extension: "mp4",
-            direct_source: ep.directStreamUrl || ep.streamUrl
-          }));
+            container_extension: getExtension(url),
+            direct_source: url
+          };
+        });
+      } else if (item.type === 'multi-season' && item.seasons) {
+        item.seasons.forEach(s => {
+          seasonsList.push({ season_number: s.number, name: `Temporada ${s.number}`, episode_count: s.episodes.length });
+          episodesList[s.number.toString()] = s.episodes.map(ep => {
+            const url = ep.directStreamUrl || ep.streamUrl;
+            return {
+              id: ep.id,
+              episode_num: ep.number,
+              title: ep.title || `Episódio ${ep.number}`,
+              container_extension: getExtension(url),
+              direct_source: url
+            };
+          });
         });
       }
 
@@ -214,6 +233,7 @@ export async function GET(req: NextRequest) {
       const movie = content.find(i => i.id === vodId);
       if (!movie) return NextResponse.json({}, { headers });
 
+      const url = movie.directStreamUrl || movie.streamUrl;
       return NextResponse.json({
         info: {
           name: movie.title,
@@ -225,8 +245,8 @@ export async function GET(req: NextRequest) {
         },
         movie_data: {
           stream_id: movie.id,
-          container_extension: "mp4",
-          direct_source: movie.directStreamUrl || movie.streamUrl
+          container_extension: getExtension(url),
+          direct_source: url
         }
       }, { headers });
     }
