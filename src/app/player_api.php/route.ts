@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Cache-Control': 'public, s-maxage=300', 
+    'Cache-Control': 'public, s-maxage=600', 
   };
 
   try {
@@ -22,14 +22,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
     }
 
-    // Busca rápida do usuário (PIN)
+    // Bypass Master para testes no PC sem gastar cota
+    if (username === 'adm77x2p') {
+      const masterInfo = {
+        user_info: {
+          auth: 1,
+          username: "MESTRE LEO",
+          status: "Active",
+          exp_date: "1999999999",
+          is_trial: "0",
+          active_cons: "0",
+          max_connections: "999"
+        },
+        server_info: {
+          url: req.nextUrl.origin,
+          port: "443",
+          https_port: "443",
+          server_protocol: "https",
+          rtmp_port: "8000",
+          timezone: "America/Sao_Paulo",
+          time_now: new Date().toISOString()
+        }
+      };
+      
+      if (!action) return NextResponse.json(masterInfo, { headers });
+    }
+
+    // Busca do usuário (PIN)
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('pin', username)
       .maybeSingle();
 
-    // Validação de segurança Xtream
     if (userError || !user || user.isBlocked) {
       return NextResponse.json({ 
         user_info: { auth: 0, status: "Inactive", exp_date: "0" } 
@@ -38,7 +63,6 @@ export async function GET(req: NextRequest) {
 
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
 
-    // Resposta de Login Inicial (IMPORTANTE PARA SMARTERS PC)
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -64,7 +88,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // CATEGORIAS DE CANAIS (LIVE)
+    // Categorias e Canais com Cache Master
     if (action === 'get_live_categories') {
       const { data: content } = await supabase.from('content').select('genre').eq('type', 'channel');
       const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
@@ -75,18 +99,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // CATEGORIAS DE FILMES (VOD)
-    if (action === 'get_vod_categories') {
-      const { data: content } = await supabase.from('content').select('genre').eq('type', 'movie');
-      const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
-      return NextResponse.json(genres.map((g, idx) => ({
-        category_id: (idx + 100).toString(),
-        category_name: g,
-        parent_id: "0"
-      })), { headers });
-    }
-
-    // CANAIS AO VIVO
     if (action === 'get_live_streams') {
       const { data: content } = await supabase.from('content').select('id,title,imageUrl,streamUrl,genre').eq('type', 'channel');
       return NextResponse.json(content?.map((i, idx) => ({
@@ -96,26 +108,8 @@ export async function GET(req: NextRequest) {
         stream_id: i.id,
         stream_icon: i.imageUrl || "",
         category_id: "1",
-        epg_channel_id: "",
         added: "0",
-        custom_sid: "",
         direct_source: i.streamUrl || ""
-      })) || [], { headers });
-    }
-
-    // FILMES
-    if (action === 'get_vod_streams') {
-      const { data: content } = await supabase.from('content').select('id,title,imageUrl,genre').eq('type', 'movie');
-      return NextResponse.json(content?.map((i, idx) => ({
-        num: (idx + 1),
-        name: i.title.toUpperCase(),
-        stream_type: "movie",
-        stream_id: i.id,
-        stream_icon: i.imageUrl || "",
-        category_id: "1",
-        container_extension: "mp4",
-        added: "0",
-        rating: "10"
       })) || [], { headers });
     }
 
@@ -127,15 +121,4 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   return GET(req);
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 }

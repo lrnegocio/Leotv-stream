@@ -263,7 +263,6 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
-  // SIGILO MASTER: Proteção total do PIN Admin nos links da Home
   const isMaster = user?.pin === 'adm77x2p';
   const displayPinForUrl = isMaster ? 'COLOQUE_O_PIN_AQUI' : (user?.pin || 'PIN_DO_CLIENTE');
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPinForUrl}`;
@@ -362,38 +361,42 @@ export default function HomeContent() {
               <Download className="h-10 w-10 text-white animate-bounce" />
             </div>
             <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalação Nativa</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Instale o Léo TV como um programa no seu dispositivo.</DialogDescription>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme o Léo TV em um Programa Nativo (Sem Navegador).</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+               <p className="text-[10px] font-black uppercase text-emerald-500 text-center">TECNOLOGIA PWA: Funciona como um programa real na Smart TV e Android.</p>
+            </div>
+
             <div className="grid gap-4">
               <Button onClick={handleInstallClick} className="w-full h-20 bg-primary hover:bg-primary/90 font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
                  <Zap className="h-8 w-8 text-white animate-pulse" />
-                 INSTALAR AGORA NO DISPOSITIVO
+                 ATIVAR PROGRAMA AGORA
               </Button>
             </div>
 
             <div className="p-6 bg-black/40 border border-primary/20 rounded-3xl space-y-4">
                <div className="flex items-center gap-2">
                  <Globe className="h-5 w-5 text-primary" />
-                 <span className="text-[11px] font-black uppercase text-primary tracking-widest">Seu Link Individual IPTV</span>
+                 <span className="text-[11px] font-black uppercase text-primary tracking-widest">Link para Apps de Terceiros</span>
                </div>
                
                {isMaster ? (
                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex flex-col gap-2">
                    <div className="flex items-center gap-3">
                      <ShieldAlert className="h-5 w-5 text-destructive" />
-                     <p className="text-[10px] font-black uppercase text-destructive">AVISO MESTRE: OCULTANDO SEU PIN</p>
+                     <p className="text-[10px] font-black uppercase text-destructive">SIGILO MASTER ATIVO</p>
                    </div>
-                   <p className="text-[9px] opacity-60 leading-relaxed uppercase">O link abaixo está como um modelo. Para o cliente, ele aparecerá com o PIN real que você gerou para ele.</p>
+                   <p className="text-[9px] opacity-60 leading-relaxed uppercase">Seu PIN master foi ocultado. Use o PIN do cliente na TV dele.</p>
                  </div>
                ) : (
-                 <p className="text-[9px] font-bold uppercase opacity-40">Use este link no seu app de TV favorito (Smarters, OTT, etc).</p>
+                 <p className="text-[9px] font-bold uppercase opacity-40">Use o servidor: {window.location.origin}</p>
                )}
 
                <div className="relative">
                  <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl text-primary" />
                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Link Copiado!" }); }}>
-                   <Key className="h-4 w-4 text-primary" />
+                   <ArrowDownToLine className="h-4 w-4 text-primary" />
                  </Button>
                </div>
             </div>
@@ -402,17 +405,17 @@ export default function HomeContent() {
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Monitor className="h-6 w-6 text-secondary mx-auto mb-2" />
                 <h4 className="font-black uppercase text-[10px]">Smart TV</h4>
-                <p className="text-[8px] opacity-40 mt-1">Add à Tela Inicial</p>
+                <p className="text-[8px] opacity-40 mt-1">Menu -> Instalar</p>
               </div>
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />
                 <h4 className="font-black uppercase text-[10px]">Android/iOS</h4>
-                <p className="text-[8px] opacity-40 mt-1">WebAPK Nativo</p>
+                <p className="text-[8px] opacity-40 mt-1">Add Tela Inicial</p>
               </div>
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/20">
-             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full h-14 bg-white/5 border border-white/10 font-black uppercase rounded-2xl text-xs hover:bg-white/10 transition-all">FECHAR PAINEL</Button>
+             <Button onClick={() => setIsInstallDialogOpen(false)} className="w-full h-14 bg-white/5 border border-white/10 font-black uppercase rounded-2xl text-xs hover:bg-white/10 transition-all">VOLTAR AO STREAMING</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

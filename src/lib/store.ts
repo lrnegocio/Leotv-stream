@@ -60,10 +60,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v135.0
+// CACHE AGRESSIVO v136.0 (Salva o Supabase do bloqueio)
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache (Fix Egress Exceeded)
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para Canais (Proteção Máxima)
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -201,7 +201,6 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
-    // BLINDAGEM ANTI-COTA: Bypass Master PIN
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
@@ -209,7 +208,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
     if (error && error.code === '402') return { error: "BANCO DE DADOS SEM COTA. CONTATE O MESTRE LÉO." };
-    
     if (error || !user) return { error: "CÓDIGO INVÁLIDO." };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO." };
 
