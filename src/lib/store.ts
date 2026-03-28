@@ -63,7 +63,7 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v144.0 - ECONOMIA SUPREMA
+// CACHE MASTER v145.0 - ECONOMIA SUPREMA
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
@@ -107,14 +107,13 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
 
   const rawData = await fetchAllRecords('content', 'title');
   
-  // SINTONIZADOR DUAL-LINK v144.0: Extrai Link Web e Link IPTV da mesma coluna de forma inquebrável
   const data = rawData.map(item => {
     if (item.streamUrl && typeof item.streamUrl === 'string' && item.streamUrl.includes(URL_SEPARATOR)) {
       const parts = item.streamUrl.split(URL_SEPARATOR);
       item.streamUrl = parts[0] || "";
       item.directStreamUrl = parts[1] || "";
     } else {
-      item.directStreamUrl = item.streamUrl; // Se não tem separador, duplica por segurança
+      item.directStreamUrl = item.streamUrl; 
     }
     return item;
   });
@@ -136,7 +135,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    // SALVAMENTO BLINDADO v144.0: Encapsula os dois sinais na mesma coluna
     const combinedUrl = item.directStreamUrl 
       ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
       : (item.streamUrl || "");
@@ -292,7 +290,6 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
-      // PRIORIDADE IPTV v144.0
       const url = item.directStreamUrl || item.streamUrl;
       if (!url) return;
 
@@ -349,6 +346,7 @@ export const generateRandomPin = (length: number = 11) => {
   return result;
 };
 
+// v145.0 - GERADOR DE MENSAGEM SUPREMO MULTI-PLATAFORMA
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   if (pin === 'adm77x2p') return "ERRO: O PIN MASTER NÃO PODE SER VENDIDO.";
   
@@ -356,7 +354,29 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
   const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   
-  return `🚀 *LÉO STREAM - ACESSO LIBERADO!* 🚀\n\n🔑 *SEU CÓDIGO:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *LIMITE:* ${screens} tela(s)\n\n📺 *SISTEMA:* ${prodUrl}\n📺 *LINK IPTV:* \n${playlistUrl}\n\n⚠️ _Sinal blindado de alta performance._`;
+  return `🚀 *LÉO TV - ACESSO LIBERADO!* 🚀
+
+🔑 *SEU CÓDIGO:* \`${pin}\`
+📅 *PLANO:* ${planoText}
+🖥️ *LIMITE:* ${screens} tela(s)
+
+---
+💻 *PC E CELULAR (APLICATIVO PRÓPRIO):*
+Abra o link abaixo e clique em "INSTALAR APP" no menu:
+🔗 ${prodUrl}
+
+---
+📺 *SMART TV / TV BOX / ROKU (IPTV SMARTERS):*
+Use os dados abaixo no seu app de IPTV:
+🌐 *SERVIDOR:* ${prodUrl}
+👤 *USUÁRIO:* ${pin}
+🔑 *SENHA:* ${pin}
+
+---
+🔗 *LINK DA LISTA M3U8 (COPIE E COLE):*
+${playlistUrl}
+
+⚠️ _Sinal blindado de alta performance. Proibido compartilhar o PIN._`;
 }
 
 export async function renewUserSubscription(userId: string, resellerId: string) {
@@ -424,7 +444,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
-    // TRUQUE DO SEPARADOR v144.0 NA IMPORTAÇÃO
     const fixedBatch = batch.map(item => {
       const combinedUrl = item.directStreamUrl 
         ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
@@ -433,7 +452,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       return {
         ...item,
         streamUrl: combinedUrl,
-        directStreamUrl: undefined // Remove para não dar erro de coluna
+        directStreamUrl: undefined 
       };
     });
 
@@ -442,7 +461,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       if (!error) successCount += fixedBatch.length;
       else failedCount += fixedBatch.length;
     } catch (e) {
-      failedCount += fixedBatch.length;
+      failedCount += failedCount;
     }
     
     if (i % 500 === 0) {

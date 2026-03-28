@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -19,6 +19,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMuted, setIsMuted] = React.useState(true)
   const [hasError, setHasError] = React.useState(false)
 
+  // v145.0 - SIGILO DE LINK: O link original é processado e ocultado do visual
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
@@ -27,24 +28,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v141.0: SINTONIZADOR SUPREMO v13 - RECUPERAÇÃO DE SINAL
   const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // DETECÇÃO MERCADO LIVRE PLAY
     if (targetUrl.includes('mercadolivre.com.br')) {
       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
     }
 
-    // DETECÇÃO DE SIGMA / SUPREMO / WEBPLAYER
     const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.') || targetUrl.includes('blder.');
-
-    // DETECÇÃO DE VÍDEO DIRETO
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]);
 
-    // YouTube
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -56,7 +51,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // XVideos & Pornhub
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
       if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
@@ -96,13 +90,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   return (
-    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5">
+    <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SUPREMACIA...</span>
         </div>
       )}
+
+      <div className="absolute top-4 left-4 z-[70] flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full border border-primary/20 pointer-events-none">
+         <Lock className="h-3 w-3 text-primary" />
+         <span className="text-[8px] font-black uppercase text-primary tracking-widest">Sinal Blindado Léo TV</span>
+      </div>
 
       {isMixedContent || isSigmaLink || isMercadoLivre ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
@@ -114,9 +113,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               {isMercadoLivre ? "Sinal Mercado Livre" : "Sinal Externo Detectado"}
             </h3>
             <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-              {isMercadoLivre 
-                ? "Este filme exige o player oficial do Mercado Livre para rodar sem bloqueios." 
-                : "Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios."}
+              Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios.
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary hover:bg-primary/90 h-16 px-12 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/40 hover:scale-105 transition-all">
@@ -130,6 +127,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay
           muted={isMuted}
           controls
+          controlsList="nodownload noremoteplayback"
+          disablePictureInPicture
           className="h-full w-full object-contain relative z-10"
           onLoadedData={() => setLoading(false)}
           onError={() => { setLoading(false); setHasError(true); }}

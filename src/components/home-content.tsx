@@ -46,6 +46,24 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
+  // v145.0 - BLINDAGEM ANTI-ROUBO DE SINAL
+  React.useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
+        e.preventDefault();
+        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "O console foi bloqueado por segurança." });
+      }
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const handleLogout = React.useCallback(async () => {
     localStorage.removeItem("user_session")
     router.push("/login")
@@ -266,7 +284,7 @@ export default function HomeContent() {
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPinForUrl}`;
 
   return (
-    <div className="min-h-screen bg-cinematic text-foreground pb-20">
+    <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/30 rotate-2 hover:rotate-0 transition-transform"><Tv className="h-7 w-7 text-white" /></div>
