@@ -61,7 +61,7 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v133.0
+// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v134.0
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar cota Supabase (Egress Exceeded Fix)

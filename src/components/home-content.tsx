@@ -263,10 +263,10 @@ export default function HomeContent() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
-  // BLINDAGEM MESTRE: Proteção do PIN Admin nos links
+  // SIGILO MASTER: Proteção total do PIN Admin nos links da Home
   const isMaster = user?.pin === 'adm77x2p';
-  const displayPin = isMaster ? 'COLOQUE_O_PIN_AQUI' : (user?.pin || '');
-  const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPin}`;
+  const displayPinForUrl = isMaster ? 'COLOQUE_O_PIN_AQUI' : (user?.pin || 'PIN_DO_CLIENTE');
+  const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPinForUrl}`;
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20">
@@ -362,7 +362,7 @@ export default function HomeContent() {
               <Download className="h-10 w-10 text-white animate-bounce" />
             </div>
             <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Instalação Nativa</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Clique no botão abaixo para instalar como um programa no seu dispositivo.</DialogDescription>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Instale o Léo TV como um programa no seu dispositivo.</DialogDescription>
           </div>
           <div className="p-8 space-y-6">
             <div className="grid gap-4">
@@ -372,40 +372,43 @@ export default function HomeContent() {
               </Button>
             </div>
 
-            <div className="grid gap-4">
-              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
-                <Monitor className="h-10 w-10 text-secondary" />
-                <div>
-                  <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, selecione <b>"Instalar App"</b> ou <b>"Adicionar à Tela Inicial"</b> para abrir em tela cheia.</p>
-                </div>
-              </div>
-              <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
-                <Smartphone className="h-10 w-10 text-primary" />
-                <div>
-                  <h4 className="font-black uppercase text-sm">Celular & Android TV</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">O app abrirá como um programa real, sem as barras do navegador, garantindo mais velocidade.</p>
-                </div>
-              </div>
-            </div>
-
             <div className="p-6 bg-black/40 border border-primary/20 rounded-3xl space-y-4">
                <div className="flex items-center gap-2">
                  <Globe className="h-5 w-5 text-primary" />
-                 <span className="text-[11px] font-black uppercase text-primary tracking-widest">Link IPTV Individual Master</span>
+                 <span className="text-[11px] font-black uppercase text-primary tracking-widest">Seu Link Individual IPTV</span>
                </div>
-               {isMaster && (
-                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-3">
-                   <ShieldAlert className="h-4 w-4 text-destructive" />
-                   <p className="text-[9px] font-black uppercase text-destructive">Admin: Use o PIN do cliente no link abaixo para vender o acesso.</p>
+               
+               {isMaster ? (
+                 <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex flex-col gap-2">
+                   <div className="flex items-center gap-3">
+                     <ShieldAlert className="h-5 w-5 text-destructive" />
+                     <p className="text-[10px] font-black uppercase text-destructive">AVISO MESTRE: OCULTANDO SEU PIN</p>
+                   </div>
+                   <p className="text-[9px] opacity-60 leading-relaxed uppercase">O link abaixo está como um modelo. Para o cliente, ele aparecerá com o PIN real que você gerou para ele.</p>
                  </div>
+               ) : (
+                 <p className="text-[9px] font-bold uppercase opacity-40">Use este link no seu app de TV favorito (Smarters, OTT, etc).</p>
                )}
+
                <div className="relative">
-                 <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl" />
-                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Copiado!" }); }}>
+                 <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl text-primary" />
+                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-primary/20" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Link Copiado!" }); }}>
                    <Key className="h-4 w-4 text-primary" />
                  </Button>
                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
+                <Monitor className="h-6 w-6 text-secondary mx-auto mb-2" />
+                <h4 className="font-black uppercase text-[10px]">Smart TV</h4>
+                <p className="text-[8px] opacity-40 mt-1">Add à Tela Inicial</p>
+              </div>
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
+                <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />
+                <h4 className="font-black uppercase text-[10px]">Android/iOS</h4>
+                <p className="text-[8px] opacity-40 mt-1">WebAPK Nativo</p>
+              </div>
             </div>
           </div>
           <DialogFooter className="p-8 bg-black/20">
