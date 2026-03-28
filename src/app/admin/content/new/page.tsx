@@ -154,7 +154,7 @@ function NewContentForm() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Nome do Conteúdo</Label>
               <Input 
-                value={formData.title} 
+                value={formData.title || ""} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
                 placeholder="Ex: HBO Family ou Stranger Things" required
                 className="h-12 bg-black/40 border-white/5 font-bold uppercase"
@@ -176,7 +176,7 @@ function NewContentForm() {
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Categoria</Label>
-                <Input value={formData.genre} onChange={e => setFormData({...formData, genre: e.target.value})} placeholder="Ex: ESPORTES" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+                <Input value={formData.genre || ""} onChange={e => setFormData({...formData, genre: e.target.value})} placeholder="Ex: ESPORTES" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
               </div>
             </div>
 
@@ -187,7 +187,7 @@ function NewContentForm() {
                   {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />} IA
                 </Button>
               </div>
-              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
+              <Textarea value={formData.description || ""} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
             </div>
           </div>
 
@@ -195,11 +195,11 @@ function NewContentForm() {
             <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
               <div className="space-y-2">
                 <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Iframe / Sigma / Supremo)</h3>
-                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (IPTV Apps / m3u8)</h3>
-                <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="http://...m3u8" className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="http://...m3u8" className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
               </div>
             </div>
           )}
@@ -217,12 +217,12 @@ function NewContentForm() {
                       <span className="text-[10px] font-black text-primary">EPISÓDIO {ep.number}</span>
                       <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Input placeholder="Link Web (Player)" value={ep.streamUrl} onChange={e => {
+                    <Input placeholder="Link Web (Player)" value={ep.streamUrl || ""} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-9 bg-black/40 border-white/5 font-mono text-[10px]" />
-                    <Input placeholder="Link Direto (m3u8)" value={ep.directStreamUrl} onChange={e => {
+                    <Input placeholder="Link Direto (m3u8)" value={ep.directStreamUrl || ""} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].directStreamUrl = e.target.value;
                       setEpisodes(newEps);
@@ -256,12 +256,12 @@ function NewContentForm() {
                               setSeasons(newSeasons);
                            }}><Trash2 className="h-3 w-3" /></Button>
                         </div>
-                        <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
+                        <Input placeholder="Link Web" value={ep.streamUrl || ""} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
                         }} className="h-8 bg-black/40 text-[9px]" />
-                        <Input placeholder="Link IPTV" value={ep.directStreamUrl} onChange={e => {
+                        <Input placeholder="Link IPTV" value={ep.directStreamUrl || ""} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
                           setSeasons(newSeasons);
@@ -298,7 +298,7 @@ function NewContentForm() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">URL da Capa (Manual)</Label>
               <Input 
-                value={formData.imageUrl} 
+                value={formData.imageUrl || ""} 
                 onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
                 placeholder="https://imagem.com/poster.jpg"
                 className="h-10 bg-black/40 border-white/5 text-[10px]"

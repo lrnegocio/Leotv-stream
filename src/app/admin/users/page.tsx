@@ -109,10 +109,10 @@ export default function UserManagementPage() {
   const handleEditUser = (user: User) => {
     setEditingUserId(user.id)
     setNewUser({
-      pin: user.pin,
+      pin: user.pin || "",
       tier: user.subscriptionTier,
       hours: "6",
-      screens: user.maxScreens.toString(),
+      screens: (user.maxScreens || 1).toString(),
       isAdultEnabled: user.isAdultEnabled ?? true
     })
     setIsDialogOpen(true)
@@ -154,7 +154,7 @@ export default function UserManagementPage() {
               <div className="grid gap-2">
                 <Label className="uppercase text-[10px] font-bold opacity-70">Código PIN Master</Label>
                 <div className="flex gap-2">
-                  <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
+                  <Input value={newUser.pin || ""} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
                   <Button variant="outline" onClick={handleGeneratePin} className="border-white/10 h-14 rounded-xl">
                     <RefreshCcw className="h-4 w-4 text-primary" />
                   </Button>
@@ -174,7 +174,7 @@ export default function UserManagementPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label className="uppercase text-[10px] font-bold opacity-70">Telas Simultâneas</Label>
-                  <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5 h-12 rounded-xl" />
+                  <Input type="number" value={newUser.screens || ""} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="bg-black/40 border-white/5 h-12 rounded-xl" />
                 </div>
               </div>
 

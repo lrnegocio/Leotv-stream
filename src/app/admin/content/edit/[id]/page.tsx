@@ -137,7 +137,7 @@ export default function EditContentPage() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Nome do Conteúdo</Label>
               <Input 
-                value={formData.title} 
+                value={formData.title || ""} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
                 required
                 className="h-12 bg-black/40 border-white/5 font-bold uppercase"
@@ -159,7 +159,7 @@ export default function EditContentPage() {
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Pasta / Categoria</Label>
-                <Input value={formData.genre} onChange={e => setFormData({...formData, genre: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+                <Input value={formData.genre || ""} onChange={e => setFormData({...formData, genre: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
               </div>
             </div>
 
@@ -170,7 +170,7 @@ export default function EditContentPage() {
                   {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />} IA
                 </Button>
               </div>
-              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
+              <Textarea value={formData.description || ""} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
             </div>
           </div>
 
@@ -200,12 +200,12 @@ export default function EditContentPage() {
                       <span className="text-[10px] font-black text-primary">EPISÓDIO {ep.number}</span>
                       <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
+                    <Input placeholder="Link Web" value={ep.streamUrl || ""} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-9 bg-black/40 border-white/5 font-mono text-[10px]" />
-                    <Input placeholder="Link IPTV" value={ep.directStreamUrl} onChange={e => {
+                    <Input placeholder="Link IPTV" value={ep.directStreamUrl || ""} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].directStreamUrl = e.target.value;
                       setEpisodes(newEps);
@@ -239,12 +239,12 @@ export default function EditContentPage() {
                               setSeasons(newSeasons);
                            }}><Trash2 className="h-3 w-3" /></Button>
                         </div>
-                        <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
+                        <Input placeholder="Link Web" value={ep.streamUrl || ""} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
                         }} className="h-8 bg-black/40 text-[9px]" />
-                        <Input placeholder="Link IPTV" value={ep.directStreamUrl} onChange={e => {
+                        <Input placeholder="Link IPTV" value={ep.directStreamUrl || ""} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
                           setSeasons(newSeasons);
