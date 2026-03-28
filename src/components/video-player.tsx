@@ -54,9 +54,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     if (targetUrl.includes('tokyvideo.com')) {
-      // Pega o ID no final da URL ou no meio do embed
-      const parts = targetUrl.split('/');
-      const id = parts[parts.length - 1];
+      // Extração de ID melhorada para slugs do Tokyvideo
+      const id = targetUrl.split('/').pop()?.split('?')[0];
       return {
         processedUrl: `https://www.tokyvideo.com/embed/${id}`,
         isDirectVideo: false,
@@ -121,7 +120,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       <div className="absolute top-4 left-4 z-[70] flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full border border-primary/20 pointer-events-none">
          <Lock className="h-3 w-3 text-primary" />
-         <span className="text-[8px] font-black uppercase text-primary tracking-widest">Sinal Blindado Léo TV Stream</span>
+         <span className="text-[8px] font-black uppercase text-primary tracking-widest">Sinal Blindado Léo Tv Stream</span>
       </div>
 
       {isMixedContent || isSigmaLink || isMercadoLivre ? (

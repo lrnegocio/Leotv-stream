@@ -5,9 +5,9 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// MEMÓRIA MASTER: Cache de 5 minutos no servidor para velocidade P2P real
+// MEMÓRIA MASTER v156: Aumento do cache para 10 minutos para velocidade absoluta
 let serverCache: { data: ContentItem[], time: number } | null = null;
-const CACHE_TTL = 1000 * 60 * 5; 
+const CACHE_TTL = 1000 * 60 * 10; 
 
 async function getFastContent() {
   const now = Date.now();
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60', 
+    'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=120', 
   };
 
   try {
@@ -80,11 +80,6 @@ export async function GET(req: NextRequest) {
       let items = content.filter(i => i.type === 'channel');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       
-      const catId = searchParams.get('category_id');
-      if (catId && catId !== "0") {
-        // Filtro opcional por categoria para velocidade
-      }
-
       return NextResponse.json(items.map(i => {
         const streamUrl = i.directStreamUrl || i.streamUrl || "";
         const ext = streamUrl.toLowerCase().includes('.m3u8') ? 'm3u8' : 'ts';
@@ -164,7 +159,7 @@ export async function GET(req: NextRequest) {
       }
 
       return NextResponse.json({ 
-        info: { name: item.title, cover: item.imageUrl, plot: item.description, cast: "Mestre Léo", director: "Léo TV Stream", genre: item.genre, releaseDate: "2024", last_modified: "1700000000", rating: "10" }, 
+        info: { name: item.title, cover: item.imageUrl, plot: item.description, cast: "Mestre Léo", director: "Léo Tv Stream", genre: item.genre, releaseDate: "2024", last_modified: "1700000000", rating: "10" }, 
         seasons: seasonsList, 
         episodes: episodesList 
       }, { headers });

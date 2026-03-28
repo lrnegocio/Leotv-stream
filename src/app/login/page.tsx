@@ -71,7 +71,7 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-primary/30 border border-white/10 rotate-3">
             <Tv className="h-12 w-12 text-white -rotate-3" />
           </div>
-          <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo TV Stream</CardTitle>
+          <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo Tv Stream</CardTitle>
           <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Sistema de Transmissão Master</CardDescription>
         </CardHeader>
 

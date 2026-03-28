@@ -199,7 +199,7 @@ export default function HomeContent() {
 
   const handleItemClick = (item: ContentItem) => {
     if (item.isRestricted) {
-      setActiveVideo(null);
+      setActiveVideo(null); // Fecha o player atual obrigatoriamente
       setPendingItem(item);
       setIsPinDialogOpen(true);
       return;
@@ -214,7 +214,7 @@ export default function HomeContent() {
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
     if (series.isRestricted) {
-      setActiveVideo(null);
+      setActiveVideo(null); // Fecha o player
       setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
       setIsPinDialogOpen(true);
       return;
@@ -308,7 +308,7 @@ export default function HomeContent() {
         <div className="flex items-center gap-4">
           <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/30 rotate-2 hover:rotate-0 transition-transform"><Tv className="h-7 w-7 text-white" /></div>
           <div className="hidden lg:block">
-            <span className="text-2xl font-black text-primary font-headline uppercase italic tracking-tighter block leading-none">Léo Stream</span>
+            <span className="text-2xl font-black text-primary font-headline uppercase italic tracking-tighter block leading-none">Léo Tv Stream</span>
             <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-black/40 border border-primary/20 text-primary">
                <Timer className="h-3 w-3 animate-pulse" />
                <span className="text-[9px] font-black uppercase tracking-widest">{timeLeft}</span>
