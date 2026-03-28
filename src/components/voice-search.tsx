@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Mic, Search, Loader2, X } from "lucide-react"
+import { Mic, Search, Loader2, X, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
@@ -30,7 +29,7 @@ function VoiceSearchContent() {
       if (value) params.set('q', value)
       else params.delete('q')
       router.replace(`?${params.toString()}`, { scroll: false })
-    }, 50) // Reduzido para resposta instantânea
+    }, 100)
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,16 +40,27 @@ function VoiceSearchContent() {
 
   const startListening = () => {
     if (!('webkitSpeechRecognition' in window)) {
-      toast({ variant: "destructive", title: "Não suportado", description: "Use o Chrome para pesquisa por voz." })
+      toast({ 
+        variant: "destructive", 
+        title: "Microfone não suportado", 
+        description: "Certifique-se de estar usando Chrome ou Android TV.",
+        className: "bg-destructive text-white rounded-2xl border-none font-bold uppercase text-[10px]"
+      })
       return
     }
 
     const recognition = new (window as any).webkitSpeechRecognition()
     recognition.lang = 'pt-BR'
     recognition.continuous = false
+    recognition.interimResults = false
 
     recognition.onstart = () => {
       setIsListening(true)
+      toast({ 
+        title: "Pode falar...", 
+        description: "Estou ouvindo o sinal.",
+        className: "bg-primary text-white rounded-2xl border-none font-bold uppercase text-[10px]"
+      })
     }
 
     recognition.onresult = async (event: any) => {
@@ -67,18 +77,30 @@ function VoiceSearchContent() {
       }
     }
 
-    recognition.onerror = () => setIsListening(false)
+    recognition.onerror = (event: any) => {
+      setIsListening(false)
+      console.error("Erro no microfone:", event.error);
+      if (event.error === 'not-allowed') {
+        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Ative o microfone nas configurações da sua TV." })
+      }
+    }
+
     recognition.onend = () => setIsListening(false)
-    recognition.start()
+    
+    try {
+      recognition.start()
+    } catch (e) {
+      setIsListening(false)
+    }
   }
 
   return (
-    <div className="relative flex w-full max-w-md items-center gap-2 group">
+    <div className="relative flex w-full max-w-md items-center gap-3 group">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="Busca Master..."
-          className="pl-10 pr-10 bg-card/50 border-white/5 focus:ring-primary rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest"
+          placeholder="Busca Master por voz ou texto..."
+          className="pl-12 pr-12 bg-black/40 border-white/5 focus:ring-primary rounded-2xl h-14 text-xs font-bold uppercase tracking-widest shadow-2xl"
           value={query}
           onChange={handleInputChange}
         />
@@ -86,21 +108,22 @@ function VoiceSearchContent() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-50 hover:opacity-100" 
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 opacity-50 hover:opacity-100" 
             onClick={() => { setQuery(""); triggerSearch(""); }}
           >
-            <X className="h-3 w-3" />
+            <X className="h-4 w-4" />
           </Button>
         )}
-        {isProcessing && <Loader2 className="absolute right-10 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />}
+        {isProcessing && <Loader2 className="absolute right-12 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary" />}
       </div>
       <Button
         variant={isListening ? "destructive" : "secondary"}
         size="icon"
-        className={`rounded-xl h-10 w-10 border border-white/5 shadow-lg ${isListening ? "animate-pulse scale-110 bg-destructive text-white" : "hover:bg-primary/10"}`}
+        className={`rounded-2xl h-14 w-14 border-2 border-white/5 shadow-2xl transition-all ${isListening ? "animate-pulse scale-110 bg-destructive text-white border-white/20" : "hover:bg-primary/10 hover:border-primary/20"}`}
         onClick={startListening}
+        title="Busca por Voz"
       >
-        <Mic className={`h-5 w-5 ${isListening ? "text-white" : "text-primary"}`} />
+        {isListening ? <Volume2 className="h-6 w-6 text-white" /> : <Mic className={`h-6 w-6 ${isListening ? 'text-white' : 'text-primary'}`} />}
       </Button>
     </div>
   )
@@ -108,7 +131,7 @@ function VoiceSearchContent() {
 
 export function VoiceSearch() {
   return (
-    <React.Suspense fallback={<div className="h-10 w-full max-w-md bg-white/5 rounded-xl animate-pulse" />}>
+    <React.Suspense fallback={<div className="h-14 w-full max-w-md bg-white/5 rounded-2xl animate-pulse" />}>
       <VoiceSearchContent />
     </React.Suspense>
   )

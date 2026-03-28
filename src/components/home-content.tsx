@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -130,7 +129,6 @@ export default function HomeContent() {
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
       const matchesSearch = titleMatch || genreMatch;
-      // Se for restrito e o modo adulto estiver desligado, oculta
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
@@ -146,7 +144,6 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // TRAVA PARENTAL IMPLACÁVEL v162: Sempre pede PIN no clique do canal restrito (Terror ou Adulto)
     if (item.isRestricted) {
       setActiveVideo(null); 
       setPendingItem(item);
@@ -265,6 +262,12 @@ export default function HomeContent() {
       </header>
 
       <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
+        {categoriesWithCounts.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center py-40 opacity-20">
+            <Tv className="h-20 w-20 mb-4" />
+            <p className="font-black uppercase tracking-widest text-sm">Nenhum sinal localizado</p>
+          </div>
+        )}
         {categoriesWithCounts.map(([category, count]) => {
           const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
           const isTerrorCat = category.includes('TERROR') || category.includes('HORROR');
@@ -337,14 +340,14 @@ export default function HomeContent() {
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden">
           {selectedSeries && (
             <div className="flex flex-col h-[85vh]">
-              <div className="relative h-64 w-full">
+              <div className="relative h-64 w-full shrink-0">
                 {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt={selectedSeries.title} fill className="object-cover" unoptimized />}
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
                   <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-2">Sintonizando Temporadas</span>
-                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
+                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-tight">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 sm:space-y-6 custom-scroll">
                 {selectedSeries.type === 'series' && (
                   <div className="grid gap-4">
                     {selectedSeries.episodes?.map((ep, idx) => (
@@ -352,6 +355,23 @@ export default function HomeContent() {
                         <span className="font-black uppercase text-sm tracking-widest">{ep.title || `Episódio ${ep.number}`}</span>
                         <PlayCircle className="h-6 w-6 text-primary group-hover:text-white" />
                       </Button>
+                    ))}
+                  </div>
+                )}
+                {selectedSeries.type === 'multi-season' && (
+                  <div className="space-y-10">
+                    {selectedSeries.seasons?.map((season) => (
+                      <div key={season.id} className="space-y-4">
+                        <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4">Temporada {season.number}</h3>
+                        <div className="grid gap-3">
+                          {season.episodes.map((ep, idx) => (
+                            <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx, season.number)} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-6 group">
+                              <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
+                              <PlayCircle className="h-5 w-5 text-primary group-hover:text-white" />
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
