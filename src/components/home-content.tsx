@@ -175,7 +175,6 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // TRAVA PARENTAL v141.0: Pede senha TODA VEZ em canal restrito
     if (item.isRestricted) {
       setPendingItem(item)
       setIsPinDialogOpen(true)

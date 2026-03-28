@@ -6,8 +6,8 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v142.0 - SINTONIZADOR VOD TURBO
- * Resolvido erro de 'No Record Found' em Filmes e Séries
+ * API XTREAM CODES EMULATOR v143.0 - SINTONIZADOR SUPREMO VOD & SERIES
+ * Resolvido erro de 'No Record Found' em Filmes e Séries adicionando metadados de episódios.
  */
 
 export async function GET(req: NextRequest) {
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
+    // 1. LOGIN / SERVER INFO
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
           is_trial: userRecord.subscriptionTier === 'test' ? "1" : "0",
           active_cons: "0",
           max_connections: userRecord.maxScreens?.toString() || "1",
-          allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
+          allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4", "mkv"]
         },
         server_info: {
           url: req.nextUrl.origin,
@@ -76,45 +77,28 @@ export async function GET(req: NextRequest) {
 
     const content = await getRemoteContent(); 
     
-    // 1. LIVE CATEGORIES
+    // MAPEAMENTO DE CATEGORIAS DINÂMICO
     const liveCategories = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => (i.genre || "GERAL").toUpperCase()))).sort();
-    const liveCatMap = liveCategories.map((name, index) => ({
-      category_id: (index + 1).toString(),
-      category_name: name,
-      parent_id: "0"
-    }));
+    const liveCatMap = liveCategories.map((name, index) => ({ category_id: (index + 1).toString(), category_name: name, parent_id: "0" }));
 
-    // 2. VOD CATEGORIES (Filmes)
     const movieCategories = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
-    const movieCatMap = movieCategories.map((name, index) => ({
-      category_id: "vod_" + (index + 1),
-      category_name: name,
-      parent_id: "0"
-    }));
+    const movieCatMap = movieCategories.map((name, index) => ({ category_id: "vod_" + (index + 1), category_name: name, parent_id: "0" }));
 
-    // 3. SERIES CATEGORIES
     const seriesCategories = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => (i.genre || "SÉRIES").toUpperCase()))).sort();
-    const seriesCatMap = seriesCategories.map((name, index) => ({
-      category_id: "ser_" + (index + 1),
-      category_name: name,
-      parent_id: "0"
-    }));
+    const seriesCatMap = seriesCategories.map((name, index) => ({ category_id: "ser_" + (index + 1), category_name: name, parent_id: "0" }));
 
     if (action === 'get_live_categories') return NextResponse.json(liveCatMap, { headers });
     if (action === 'get_vod_categories') return NextResponse.json(movieCatMap, { headers });
     if (action === 'get_series_categories') return NextResponse.json(seriesCatMap, { headers });
 
+    // 2. LIVE STREAMS
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
       let items = content.filter(i => i.type === 'channel');
-      
       if (catId) {
         const categoryName = liveCatMap.find(c => c.category_id === catId)?.category_name;
-        if (categoryName) {
-          items = items.filter(i => (i.genre || "GERAL").toUpperCase() === categoryName);
-        }
+        if (categoryName) items = items.filter(i => (i.genre || "GERAL").toUpperCase() === categoryName);
       }
-
       if (!userRecord.isAdultEnabled) items = items.filter(i => !i.isRestricted);
 
       return NextResponse.json(items.map((i, idx) => ({
@@ -130,17 +114,14 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
+    // 3. VOD STREAMS (FILMES)
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
       let movies = content.filter(i => i.type === 'movie');
-      
       if (catId) {
         const categoryName = movieCatMap.find(c => c.category_id === catId)?.category_name;
-        if (categoryName) {
-          movies = movies.filter(i => (i.genre || "FILMES").toUpperCase() === categoryName);
-        }
+        if (categoryName) movies = movies.filter(i => (i.genre || "FILMES").toUpperCase() === categoryName);
       }
-
       if (!userRecord.isAdultEnabled) movies = movies.filter(i => !i.isRestricted);
 
       return NextResponse.json(movies.map((i, idx) => ({
@@ -152,19 +133,18 @@ export async function GET(req: NextRequest) {
         category_id: movieCatMap.find(c => (i.genre || "FILMES").toUpperCase() === c.category_name)?.category_id || "vod_1",
         added: "0",
         container_extension: "mp4",
+        rating: "10",
         direct_source: i.directStreamUrl || i.streamUrl || ""
       })), { headers });
     }
 
+    // 4. SERIES LIST
     if (action === 'get_series') {
       const catId = searchParams.get('category_id');
       let series = content.filter(i => i.type === 'multi-season' || i.type === 'series');
-
       if (catId) {
         const categoryName = seriesCatMap.find(c => c.category_id === catId)?.category_name;
-        if (categoryName) {
-          series = series.filter(i => (i.genre || "SÉRIES").toUpperCase() === categoryName);
-        }
+        if (categoryName) series = series.filter(i => (i.genre || "SÉRIES").toUpperCase() === categoryName);
       }
 
       return NextResponse.json(series.map((i, idx) => ({
@@ -181,6 +161,74 @@ export async function GET(req: NextRequest) {
         rating: "10",
         category_id: seriesCatMap.find(c => (i.genre || "SÉRIES").toUpperCase() === c.category_name)?.category_id || "ser_1"
       })), { headers });
+    }
+
+    // 5. SERIES INFO (FUNDAMENTAL PARA EVITAR 'NO RECORD FOUND')
+    if (action === 'get_series_info') {
+      const seriesId = searchParams.get('series_id');
+      const item = content.find(i => i.id === seriesId);
+      if (!item) return NextResponse.json({}, { headers });
+
+      const info = {
+        name: item.title,
+        cover: item.imageUrl || "",
+        plot: item.description || "",
+        genre: item.genre,
+        director: "Mestre Léo",
+        cast: "Léo Stream Cast",
+        rating: "10",
+        releaseDate: ""
+      };
+
+      const seasonsList: any[] = [];
+      const episodesList: Record<string, any[]> = {};
+
+      if (item.type === 'series' && item.episodes) {
+        seasonsList.push({ season_number: 1, name: "Temporada 1", episode_count: item.episodes.length });
+        episodesList["1"] = item.episodes.map(ep => ({
+          id: ep.id,
+          episode_num: ep.number,
+          title: ep.title || `Episódio ${ep.number}`,
+          container_extension: "mp4",
+          direct_source: ep.directStreamUrl || ep.streamUrl
+        }));
+      } else if (item.type === 'multi-season' && item.seasons) {
+        item.seasons.forEach(s => {
+          seasonsList.push({ season_number: s.number, name: `Temporada ${s.number}`, episode_count: s.episodes.length });
+          episodesList[s.number.toString()] = s.episodes.map(ep => ({
+            id: ep.id,
+            episode_num: ep.number,
+            title: ep.title || `Episódio ${ep.number}`,
+            container_extension: "mp4",
+            direct_source: ep.directStreamUrl || ep.streamUrl
+          }));
+        });
+      }
+
+      return NextResponse.json({ info, seasons: seasonsList, episodes: episodesList }, { headers });
+    }
+
+    // 6. VOD INFO
+    if (action === 'get_vod_info') {
+      const vodId = searchParams.get('vod_id');
+      const movie = content.find(i => i.id === vodId);
+      if (!movie) return NextResponse.json({}, { headers });
+
+      return NextResponse.json({
+        info: {
+          name: movie.title,
+          cover: movie.imageUrl || "",
+          plot: movie.description || "",
+          genre: movie.genre,
+          director: "Mestre Léo",
+          rating: "10"
+        },
+        movie_data: {
+          stream_id: movie.id,
+          container_extension: "mp4",
+          direct_source: movie.directStreamUrl || movie.streamUrl
+        }
+      }, { headers });
     }
 
     return NextResponse.json([], { headers });
