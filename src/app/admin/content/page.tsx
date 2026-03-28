@@ -27,7 +27,7 @@ export default function ContentManagementPage() {
   const loadItems = React.useCallback(async () => {
     setLoading(true)
     try {
-      const data = await getRemoteContent()
+      const data = await getRemoteContent(true)
       setItems(data)
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos." })

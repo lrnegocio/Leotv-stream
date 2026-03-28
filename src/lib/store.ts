@@ -65,7 +65,7 @@ export interface Reseller {
 
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para economizar Supabase
 
 const URL_SEPARATOR = '|IPTV|';
 
@@ -441,6 +441,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let successCount = 0;
   let failedCount = 0;
 
+  // Importação em lotes de 50 para não estourar o Supabase
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
     const fixedBatch = batch.map(item => {
@@ -467,10 +468,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   return { success: successCount, failed: failedCount };
 }
 
-/**
- * RADAR DE ESPORTES MASTER v148.0
- * Busca jogos ao vivo da API Rei dos Canais e sincroniza no painel.
- */
 export async function syncLiveSports(): Promise<{ success: number; error?: string }> {
   try {
     const response = await fetch("https://api.reidoscanais.ooo/sports");
@@ -480,8 +477,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       return { success: 0, error: "Nenhum jogo encontrado na API agora." };
     }
 
-    const sportsItems: ContentItem[] = data.data.map((evento: any, index: number) => {
-      // Pega o primeiro link de embed disponível
+    const sportsItems: ContentItem[] = data.data.map((evento: any) => {
       const firstEmbed = evento.embeds?.[0]?.embed_url || "";
       
       return {
@@ -492,13 +488,11 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
         description: `${evento.category} - Início: ${new Date(evento.start_time).toLocaleString()}`,
         imageUrl: evento.poster,
         isRestricted: false,
-        streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, // Dual Link Inteligente
+        streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, 
       };
     });
 
-    // Limpa o cache e faz o upsert
     const { error } = await supabase.from('content').upsert(sportsItems);
-    
     if (error) throw error;
     
     contentCache = null;
