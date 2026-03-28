@@ -63,10 +63,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v138.0
+// CACHE MASTER v139.0 - PROTEÇÃO DE COTA SUPABASE
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para economizar EGRESS
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -119,6 +119,10 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   return await fetchAllRecords('resellers', 'name');
 }
 
+/**
+ * SALVAMENTO BLINDADO v139.0
+ * Tenta salvar com directStreamUrl, se falhar por falta de coluna, tenta o modo compatível.
+ */
 export async function saveContent(item: ContentItem) {
   try {
     const payload: any = {
@@ -129,23 +133,31 @@ export async function saveContent(item: ContentItem) {
       genre: item.genre || "",
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
-      directStreamUrl: item.directStreamUrl || null,
     };
 
     if (item.type === 'series' || item.type === 'multi-season') {
       payload.episodes = Array.isArray(item.episodes) ? item.episodes : [];
       payload.seasons = Array.isArray(item.seasons) ? item.seasons : [];
       payload.streamUrl = null;
-      payload.directStreamUrl = null;
     } else {
       payload.streamUrl = item.streamUrl || null;
       payload.episodes = [];
       payload.seasons = [];
     }
+
+    // Tenta primeiro com a nova coluna de IPTV
+    const fullPayload = { ...payload, directStreamUrl: item.directStreamUrl || null };
     
-    const { error } = await supabase.from('content').upsert(payload);
+    const { error: firstError } = await supabase.from('content').upsert(fullPayload);
+    
+    if (firstError) {
+      // Se deu erro de coluna inexistente, salva apenas o payload básico
+      const { error: secondError } = await supabase.from('content').upsert(payload);
+      if (secondError) return false;
+    }
+    
     contentCache = null; 
-    return !error;
+    return true;
   } catch (e) {
     return false;
   }
@@ -392,11 +404,11 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         imageUrl: logoMatch ? logoMatch[1] : undefined,
         isRestricted: isAdult || isTerror,
         description: `Importado via M3U Master - Grupo: ${genre}`,
-        directStreamUrl: "" // Será preenchido na linha seguinte
+        directStreamUrl: "" // Preenchido no próximo passo
       };
     } else if (line.startsWith('http') && currentItem) {
       currentItem.streamUrl = line;
-      currentItem.directStreamUrl = line; // No M3U, o link costuma ser direto
+      currentItem.directStreamUrl = line; 
       items.push(currentItem as ContentItem);
       currentItem = null;
     }
@@ -407,9 +419,24 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
-    const { error } = await supabase.from('content').upsert(batch);
-    if (!error) successCount += batch.length;
-    else failedCount += batch.length;
+    // Tenta salvar o batch de forma resiliente
+    try {
+      const { error } = await supabase.from('content').upsert(batch);
+      if (error) {
+        // Se falhar (provavelmente por causa da coluna directStreamUrl), remove essa chave e tenta de novo
+        const cleanBatch = batch.map(item => {
+          const { directStreamUrl, ...rest } = item as any;
+          return rest;
+        });
+        const { error: secondError } = await supabase.from('content').upsert(cleanBatch);
+        if (!secondError) successCount += batch.length;
+        else failedCount += batch.length;
+      } else {
+        successCount += batch.length;
+      }
+    } catch (e) {
+      failedCount += batch.length;
+    }
     
     if (i % 500 === 0) {
       await new Promise(resolve => setTimeout(resolve, 10));

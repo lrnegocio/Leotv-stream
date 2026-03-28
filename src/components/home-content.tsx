@@ -185,7 +185,6 @@ export default function HomeContent() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
     } else {
-      // Prioridade para o Link Web no Site
       setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type })
     }
   }
