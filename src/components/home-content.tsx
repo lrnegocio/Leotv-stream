@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, Smartphone, Monitor, Globe, Download, Zap, ArrowDownToLine } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, Smartphone, Monitor, Globe, Download, Zap, ArrowDownToLine, Ghost } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -106,7 +106,7 @@ export default function HomeContent() {
       const diff = expiry.getTime() - now.getTime();
       if (diff <= 0) { setTimeLeft("SINAL EXPIRADO"); handleLogout(); return; }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
@@ -130,6 +130,7 @@ export default function HomeContent() {
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
       const matchesSearch = titleMatch || genreMatch;
+      // Se for restrito e o modo adulto estiver desligado, oculta
       if (item.isRestricted && !showAdult) return false;
       return matchesSearch;
     })
@@ -145,7 +146,7 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // TRAVA PARENTAL IMPLACÁVEL v157: Sempre pede PIN no clique do canal restrito
+    // TRAVA PARENTAL IMPLACÁVEL v162: Sempre pede PIN no clique do canal restrito (Terror ou Adulto)
     if (item.isRestricted) {
       setActiveVideo(null); 
       setPendingItem(item);
@@ -266,12 +267,17 @@ export default function HomeContent() {
       <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
         {categoriesWithCounts.map(([category, count]) => {
           const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
+          const isTerrorCat = category.includes('TERROR') || category.includes('HORROR');
           return (
             <section key={category} className="space-y-6">
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg"><Folder className="h-6 w-6 text-primary" /></div>
-                  <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    {isTerrorCat ? <Ghost className="h-6 w-6 text-primary" /> : <Folder className="h-6 w-6 text-primary" />}
+                  </div>
+                  <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">
+                    {category} {isTerrorCat && <span className="text-[8px] text-primary border border-primary/20 px-2 rounded-md ml-2">RESTRITO</span>}
+                  </h2>
                 </div>
                 <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest">
                   {count} SINAIS ATIVOS

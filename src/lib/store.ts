@@ -65,7 +65,7 @@ export interface Reseller {
 
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 10; 
+const CACHE_DURATION = 1000 * 60 * 5; 
 
 const URL_SEPARATOR = '|IPTV|';
 
@@ -146,7 +146,7 @@ export async function saveContent(item: ContentItem) {
       title: item.title,
       type: item.type,
       description: item.description || "",
-      genre: item.genre || "",
+      genre: (item.genre || "GERAL").toUpperCase(),
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
       streamUrl: combinedUrl,
@@ -443,8 +443,9 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let successCount = 0;
   let failedCount = 0;
 
-  for (let i = 0; i < items.length; i += 50) {
-    const batch = items.slice(i, i + 50);
+  // PROCESSAMENTO EM BLOCOS PARA 50 MIL CANAIS
+  for (let i = 0; i < items.length; i += 100) {
+    const batch = items.slice(i, i + 100);
     const fixedBatch = batch.map(item => {
       const combinedUrl = item.directStreamUrl 
         ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
@@ -462,7 +463,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       if (!error) successCount += fixedBatch.length;
       else failedCount += fixedBatch.length;
     } catch (e) {
-      failedCount += failedCount;
+      failedCount += batch.length;
     }
   }
   contentCache = null;
@@ -470,17 +471,18 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // BATCH MASTER: Canais de Elite extraídos das fontes do Mestre Léo
+  // BATCH MASTER REFORMULADO - INCLUINDO TODOS OS CANAIS ENVIADOS PELO MESTRE
   const premiumChannels: ContentItem[] = [
     { id: 'leo_cazetv', title: 'CazéTV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'Transmissões ao vivo do Cazé.' },
     { id: 'leo_globo_sp', title: 'Globo SP', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Globo-SP.png', description: 'Rede Globo São Paulo.' },
     { id: 'leo_sbt', title: 'SBT', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/sbt-online-01/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/SBT.png', description: 'SBT Nacional.' },
+    { id: 'leo_record_news', title: 'Record News', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/record-news/', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI84Ty2-c5a0Cy6_37FhJFQ2frSUXAkHfklFclNih8lfgsXw0kZRyjNUOZQg16TjmcBiQOaLmwDlDKemQM6gC9HYCFAf-6xIHdP6IruKL31cAaNI01FcPxQQnxMRi7NYVnTFEkevV45BEGui2ABhxh81-N6vWzsR-rACG8pZDESxJZR1nJMu0fmSNmYvg/w385-h184-p-k-no-nu/RECORD%20NEWS.webp', description: 'Notícias 24h.' },
     { id: 'leo_hbo', title: 'HBO', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/hbo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/HBO.png', description: 'HBO Filmes e Séries.' },
     { id: 'leo_telecine_p', title: 'Telecine Premium', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/telecine-premium-hd/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Telecine-Premium-HD.png', description: 'Os melhores filmes.' },
     { id: 'leo_otaku', title: 'Otaku Sign TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp', description: 'Canal 24h de Animes.' },
     { id: 'leo_retro_cartoon', title: 'Retrô Cartoon', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
+    { id: 'leo_tv_one', title: 'TV One', type: 'channel', genre: 'VARIEDADES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2020/04/tv-one.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjLy7HhupoGU0Ddwu2c8R-_bpUgj-AaeJ8NxdjanzPZPm5uZiQ24do8-gB9B1N0vufThxuKoyRA6h2n-EPNf_MiKTQvW5kFNrzn0usqqsAaCtrJUq35oX-_4W4ljuQ1gkR4N-Oy-BSaB-JQ3w_XobpxUteS9_iMr-VJkmmdndWrq-JipuvdN25qxoy_kbQ/w385-h184-p-k-no-nu/TV%20ONE.webp', description: 'Canal regional de variedades.' },
     { id: 'leo_ph_brazzers', title: 'Brazzers TV', type: 'channel', genre: 'ADULTOS', isRestricted: true, streamUrl: 'https://pornhub.com/channels/brazzers', imageUrl: 'https://ei.phncdn.com/(m=bLGmidK)(mh=hFyV5Tf75aRqNbo7)bf7b2336-5cd0-4635-8c08-f82060342019.jpg', description: 'Canal adulto restrito.' },
-    { id: 'leo_ph_bangbros', title: 'Bang Bros Network', type: 'channel', genre: 'ADULTOS', isRestricted: true, streamUrl: 'https://pornhub.com/channels/bangbrosnetwork', imageUrl: 'https://ei.phncdn.com/(m=bLGmidK)(mh=zcEsCBzCAsZ7g6rk)5f44f2c6-4b1a-4e62-9bfc-afd428601269.jpg', description: 'Canal adulto restrito.' },
     { id: 'leo_horror_movies', title: 'Horror Channel', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Filmes de terror 24h.' },
   ];
 
