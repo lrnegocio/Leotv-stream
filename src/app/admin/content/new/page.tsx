@@ -294,6 +294,16 @@ function NewContentForm() {
                 </Button>
               )}
             </div>
+            
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black opacity-60">URL da Capa (Manual)</Label>
+              <Input 
+                value={formData.imageUrl} 
+                onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
+                placeholder="https://imagem.com/poster.jpg"
+                className="h-10 bg-black/40 border-white/5 text-[10px]"
+              />
+            </div>
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">

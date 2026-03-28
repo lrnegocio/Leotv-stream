@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Link as LinkIcon, Layers, Plus, Zap } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Link as LinkIcon, Layers, Plus, Zap, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -260,9 +260,18 @@ export default function EditContentPage() {
 
         <div className="space-y-6">
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 text-center">
-             <h3 className="font-bold uppercase text-xs flex items-center justify-center gap-2 text-primary tracking-widest">Capa Atual</h3>
+             <h3 className="font-bold uppercase text-xs flex items-center justify-center gap-2 text-primary tracking-widest"><ImageIcon className="h-4 w-4" /> Capa</h3>
              <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-white/5">
                 {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20">SEM CAPA</div>}
+             </div>
+             <div className="space-y-2 mt-4 text-left">
+                <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem</Label>
+                <Input 
+                  value={formData.imageUrl || ""} 
+                  onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
+                  placeholder="https://imagem.com/poster.jpg"
+                  className="h-10 bg-black/40 border-white/5 text-[10px]"
+                />
              </div>
           </div>
 
@@ -274,7 +283,7 @@ export default function EditContentPage() {
             </div>
           </div>
           <Button type="submit" className="w-full h-16 bg-primary font-bold text-lg uppercase shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] transition-transform" disabled={loading}>
-            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-6 w-6 mr-2" />} ATUALIZAR
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} ATUALIZAR
           </Button>
         </div>
       </form>
