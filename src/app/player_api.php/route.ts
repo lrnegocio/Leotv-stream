@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 
@@ -10,6 +9,7 @@ export async function GET(req: NextRequest) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'public, s-maxage=300', // Cache de 5 min para API
   };
 
   try {
@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
 
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
 
-    // Resposta básica de login
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -63,17 +62,10 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // Busca de conteúdo limitada para evitar 500
-    const { data: content, error: contentError } = await supabase
-      .from('content')
-      .select('*')
-      .limit(2000)
-      .order('title');
-
-    if (contentError || !content) return NextResponse.json([], { headers });
-
+    // OTIMIZAÇÃO: Só busca conteúdo se a ação exigir lista completa
     if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
-      const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase())));
+      const { data: content } = await supabase.from('content').select('genre').order('genre');
+      const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
       return NextResponse.json(genres.map((g, idx) => ({
         category_id: (idx + 1).toString(),
         category_name: g,
@@ -82,7 +74,8 @@ export async function GET(req: NextRequest) {
     }
 
     if (action === 'get_live_streams') {
-      return NextResponse.json(content.filter(i => i.type === 'channel').map((i, idx) => ({
+      const { data: content } = await supabase.from('content').select('id,title,imageUrl,streamUrl,genre').eq('type', 'channel');
+      return NextResponse.json(content?.map((i, idx) => ({
         num: (idx + 1),
         name: i.title.toUpperCase(),
         stream_type: "live",
@@ -93,11 +86,12 @@ export async function GET(req: NextRequest) {
         added: "0",
         custom_sid: "",
         direct_source: i.streamUrl || ""
-      })), { headers });
+      })) || [], { headers });
     }
 
     if (action === 'get_vod_streams') {
-      return NextResponse.json(content.filter(i => i.type === 'movie').map((i, idx) => ({
+      const { data: content } = await supabase.from('content').select('id,title,imageUrl,genre').eq('type', 'movie');
+      return NextResponse.json(content?.map((i, idx) => ({
         num: (idx + 1),
         name: i.title.toUpperCase(),
         stream_type: "movie",
@@ -107,7 +101,7 @@ export async function GET(req: NextRequest) {
         container_extension: "mp4",
         added: "0",
         rating: "10"
-      })), { headers });
+      })) || [], { headers });
     }
 
     return NextResponse.json([], { headers });

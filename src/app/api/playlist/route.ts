@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { generateM3UPlaylist } from '@/lib/store';
 
@@ -19,11 +18,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // timeout para evitar 500 em processamento longo
-    const m3uContent = await Promise.race([
-      generateM3UPlaylist(pin),
-      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
-    ]);
+    // ECONOMIA DE DADOS: Cache de 1 hora para o arquivo M3U
+    const m3uContent = await generateM3UPlaylist(pin);
     
     return new NextResponse(m3uContent, {
       status: 200,
@@ -32,9 +28,7 @@ export async function GET(req: NextRequest) {
         'Content-Disposition': 'attachment; filename="playlist.m3u"',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=600', // Cache Master
       },
     });
   } catch (error: any) {

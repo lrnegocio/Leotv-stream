@@ -60,6 +60,11 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
+// CACHE GLOBAL PARA ECONOMIZAR SUPABASE EGRESS
+let contentCache: ContentItem[] | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 1000 * 60 * 5; // 5 minutos de cache
+
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
@@ -89,8 +94,16 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
   }
 }
 
-export async function getRemoteContent(): Promise<ContentItem[]> {
-  return await fetchAllRecords('content', 'title');
+export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
+  const now = Date.now();
+  if (!forceRefresh && contentCache && (now - lastFetchTime < CACHE_DURATION)) {
+    return contentCache;
+  }
+
+  const data = await fetchAllRecords('content', 'title');
+  contentCache = data;
+  lastFetchTime = now;
+  return data;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
@@ -128,6 +141,7 @@ export async function saveContent(item: ContentItem) {
     }
     
     const { error } = await supabase.from('content').upsert(payload);
+    contentCache = null; // Limpa cache após salvar
     return !error;
   } catch (e) {
     return false;
@@ -136,17 +150,20 @@ export async function saveContent(item: ContentItem) {
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
+  contentCache = null;
   return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   const { error } = await supabase.from('content').delete().in('id', ids);
+  contentCache = null;
   return !error;
 }
 
 export async function clearAllM3UContent() {
   const { error } = await supabase.from('content').delete().like('id', 'm3u_%');
+  contentCache = null;
   return !error;
 }
 
@@ -182,7 +199,6 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
-    // PIN MASTER LÉO - ACESSO TOTAL
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
@@ -239,10 +255,7 @@ export async function validateResellerLogin(username: string, pass: string) {
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-    
-    // Se não achar no banco, verifica se é o Master
     const isMaster = pin === 'adm77x2p';
-    
     if (!isMaster && (!user || user.isBlocked)) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
 
     const content = await getRemoteContent();
@@ -250,9 +263,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
-      // Regra de Adulto para Playlist
       if (item.isRestricted && !isMaster && user && !user.isAdultEnabled) return;
-
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
@@ -310,7 +321,6 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  // BLINDAGEM: Se alguém tentar gerar mensagem com o PIN master, bloqueia.
   const safePin = pin === 'adm77x2p' ? 'ACESSO_RESTRITO' : pin;
   const prodUrl = "https://leotv-streaming.vercel.app";
   const playlistUrl = `${prodUrl}/api/playlist?pin=${safePin}`;
@@ -340,10 +350,6 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   }
 }
 
-/**
- * IMPORTADOR M3U SUPREMO v127.0 - ULTRA-LIGHT TURBO
- * Otimizado para 40k+ itens e trava parental automática para Terror e Adultos.
- */
 export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
   const items: ContentItem[] = [];
@@ -361,7 +367,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const genreUpper = genre.toUpperCase();
       const nameUpper = name.toUpperCase();
 
-      // REGRA MESTRE: Detecção automática de restrição para Terror e Adultos
       const isAdult = genreUpper.includes('ADULT') || genreUpper.includes('XXX') || genreUpper.includes('HOT') || nameUpper.includes('XXX') || nameUpper.includes('ADULTO');
       const isTerror = genreUpper.includes('TERROR') || genreUpper.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
 
@@ -394,6 +399,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
-
+  contentCache = null;
   return { success: successCount, failed: failedCount };
 }
