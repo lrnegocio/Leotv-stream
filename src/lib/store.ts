@@ -64,7 +64,7 @@ export interface Reseller {
 // CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS)
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 10; // 10 Minutos de Cache (Máxima Economia)
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar cota Supabase
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -91,7 +91,8 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    return [];
+    // FALLBACK: Se o Supabase estiver sem cota, retorna cache se existir
+    return contentCache || [];
   }
 }
 
@@ -102,8 +103,10 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
   }
 
   const data = await fetchAllRecords('content', 'title');
-  contentCache = data;
-  lastFetchTime = now;
+  if (data.length > 0) {
+    contentCache = data;
+    lastFetchTime = now;
+  }
   return data;
 }
 
@@ -142,7 +145,7 @@ export async function saveContent(item: ContentItem) {
     }
     
     const { error } = await supabase.from('content').upsert(payload);
-    contentCache = null; // Limpa cache após salvar
+    contentCache = null; 
     return !error;
   } catch (e) {
     return false;
@@ -200,11 +203,16 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
+    // BLINDAGEM ANTI-COTA: Se for o PIN Master, ignora o Supabase e entra direto.
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
+    
+    // Se o Supabase der erro de cota, mas o PIN estiver certo na memória (fallback simples)
+    if (error && error.code === '402') return { error: "BANCO DE DADOS SEM COTA. CONTATE O MESTRE LÉO." };
+    
     if (error || !user) return { error: "CÓDIGO INVÁLIDO." };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO." };
 
@@ -255,12 +263,18 @@ export async function validateResellerLogin(username: string, pass: string) {
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
-    const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-    const isMaster = pin === 'adm77x2p';
-    if (!isMaster && (!user || user.isBlocked)) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
+    const normalizedPin = pin.trim();
+    const isMaster = normalizedPin === 'adm77x2p';
+    
+    let user = null;
+    if (!isMaster) {
+      const { data } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
+      user = data;
+      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
+    }
 
     const content = await getRemoteContent();
-    if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA";
+    if (!content || content.length === 0) return "#EXTM3U\n#EXTINF:-1,LISTA VAZIA OU BANCO SEM COTA";
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
@@ -296,7 +310,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER (VERIFIQUE COTA SUPABASE)";
   }
 }
 

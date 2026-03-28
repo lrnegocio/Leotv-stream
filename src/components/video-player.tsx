@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -26,11 +27,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  // v126.0: SINTONIZADOR SUPREMO v8 - COMPATIBILIDADE TOTAL COM SIGMA E SUPREMO
-  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false }
+  // v132.0: SINTONIZADOR SUPREMO v10 - COMPATIBILIDADE COM MERCADO LIVRE E BYPASS DE SEGURANÇA
+  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
+
+    // DETECÇÃO MERCADO LIVRE PLAY
+    if (targetUrl.includes('mercadolivre.com.br')) {
+      return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
+    }
 
     // DETECÇÃO DE SIGMA / SUPREMO / WEBPLAYER
     const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.');
@@ -45,25 +51,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
         isDirectVideo: false,
         isExternalPage: false,
-        isSigmaLink: false
+        isSigmaLink: false,
+        isMercadoLivre: false
       }
     }
 
     // XVideos & Pornhub (Recalibrados)
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false };
+      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
     }
     if (targetUrl.includes('pornhub.com')) {
       const viewKey = new URL(targetUrl).searchParams.get('viewkey');
-      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false };
+      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
     }
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
       isExternalPage: !isDirect || isSigma,
-      isSigmaLink: isSigma
+      isSigmaLink: isSigma,
+      isMercadoLivre: false
     };
   }, [url, isMuted])
 
@@ -96,15 +104,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {isMixedContent || isSigmaLink ? (
+      {isMixedContent || isSigmaLink || isMercadoLivre ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
           <div className="p-6 bg-primary/10 rounded-full animate-pulse">
             <Zap className="h-16 w-16 text-primary" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">Sinal Sigma Detectado</h3>
+            <h3 className="text-2xl font-black uppercase italic text-primary">
+              {isMercadoLivre ? "Sinal Mercado Livre" : "Sinal Externo Detectado"}
+            </h3>
             <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-              Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios.
+              {isMercadoLivre 
+                ? "Este filme exige o player oficial do Mercado Livre para rodar sem bloqueios." 
+                : "Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios."}
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary hover:bg-primary/90 h-16 px-12 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/40 hover:scale-105 transition-all">
@@ -134,7 +146,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {hasError && !isMixedContent && !isSigmaLink && (
+      {hasError && !isMixedContent && !isSigmaLink && !isMercadoLivre && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[70] p-6 text-center">
            <ShieldAlert className="h-12 w-12 text-destructive mb-4" />
            <p className="text-primary font-black uppercase text-xs mb-4">Falha Crítica na Sintonia</p>
