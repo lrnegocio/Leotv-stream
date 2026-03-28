@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -60,10 +61,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE GLOBAL PARA ECONOMIZAR SUPABASE EGRESS
+// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS)
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 5; // 5 minutos de cache
+const CACHE_DURATION = 1000 * 60 * 10; // 10 Minutos de Cache (Máxima Economia)
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];

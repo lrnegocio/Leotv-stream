@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share, ArrowDownToLine } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Search, Folder, EyeOff, Eye, Timer, Key, ListOrdered, ChevronRight, PlayCircle, ShieldAlert, Smartphone, Monitor, Globe, Download, Info, Zap, Share, ArrowDownToLine, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -148,17 +148,18 @@ export default function HomeContent() {
       }
     } else {
       toast({ 
-        title: "Aviso de Compatibilidade", 
-        description: "Seu navegador não permite instalação automática. Use a opção 'Adicionar à Tela de Início' no menu do navegador." 
+        title: "Instalação PWA", 
+        description: "Use a opção 'Adicionar à Tela de Início' no menu do seu navegador para usar o app como um programa nativo." 
       });
     }
   };
 
   const handleDownloadAPK = () => {
-    // URL Placeholder para o APK do Mestre
-    const apkUrl = "https://leotv-streaming.vercel.app/leo-tv-master.apk"; 
-    window.open(apkUrl, '_blank');
-    toast({ title: "Download Iniciado", description: "Baixando o arquivo APK para Android/TV Box." });
+    toast({ 
+      title: "Download Indisponível", 
+      description: "O arquivo APK oficial deve ser configurado pelo Mestre Léo na pasta public. Use a instalação nativa abaixo!",
+      variant: "destructive"
+    });
   }
 
   const filteredContent = React.useMemo(() => {
@@ -387,14 +388,14 @@ export default function HomeContent() {
                 <Monitor className="h-10 w-10 text-secondary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">Smart TV (Samsung/LG/Roku)</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> ou use o link M3U abaixo.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">No navegador da TV, abra o menu e selecione <b>"Adicionar à Tela Inicial"</b> para abrir como um programa independente.</p>
                 </div>
               </div>
               <div className="p-5 bg-white/5 border border-white/5 rounded-3xl flex items-center gap-5 hover:bg-white/10 transition-colors">
                 <Smartphone className="h-10 w-10 text-primary" />
                 <div>
                   <h4 className="font-black uppercase text-sm">iPhone / iPad</h4>
-                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Pressione <Share className="inline h-3 w-3" /> no Safari e selecione <b>"Adicionar à Tela de Início"</b>.</p>
+                  <p className="text-[10px] opacity-60 mt-1 leading-relaxed">Pressione <Share className="inline h-3 w-3" /> no Safari e selecione <b>"Adicionar à Tela de Início"</b> para remover as barras do navegador.</p>
                 </div>
               </div>
             </div>
