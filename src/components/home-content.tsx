@@ -40,13 +40,14 @@ export default function HomeContent() {
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
   const [pendingEpisodeData, setPendingEpisodeData] = React.useState<{ep: Episode, series: ContentItem, eIdx: number, sIdx?: number} | null>(null)
+  const [pendingAdultToggle, setPendingAdultToggle] = React.useState(false)
   const [timeLeft, setTimeLeft] = React.useState("SINTONIZANDO...")
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
-  // v145.0 - BLINDAGEM ANTI-ROUBO DE SINAL
+  // v146.0 - BLINDAGEM ANTI-ROUBO E SEGURANÇA TOTAL
   React.useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -102,7 +103,12 @@ export default function HomeContent() {
           const item = data.find(i => i.id === contentId);
           if (item) {
             if (item.type === 'channel' || item.type === 'movie') {
-              setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
+              if (item.isRestricted) {
+                setPendingItem(item);
+                setIsPinDialogOpen(true);
+              } else {
+                setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
+              }
             } else {
               setSelectedSeries(item);
             }
@@ -194,23 +200,25 @@ export default function HomeContent() {
 
   const handleItemClick = (item: ContentItem) => {
     if (item.isRestricted) {
-      setPendingItem(item)
-      setIsPinDialogOpen(true)
-      return
+      setActiveVideo(null); // Fecha o player antes de pedir PIN
+      setPendingItem(item);
+      setIsPinDialogOpen(true);
+      return;
     }
     updateURL(item.id);
     if (item.type === 'series' || item.type === 'multi-season') {
-      setSelectedSeries(item)
+      setSelectedSeries(item);
     } else {
-      setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type })
+      setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
     }
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
     if (series.isRestricted) {
-      setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex })
-      setIsPinDialogOpen(true)
-      return
+      setActiveVideo(null); // Fecha player antes de pedir PIN
+      setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
+      setIsPinDialogOpen(true);
+      return;
     }
     setActiveVideo({ 
       url: ep.streamUrl || ep.directStreamUrl || "", 
@@ -258,22 +266,34 @@ export default function HomeContent() {
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
-      if (pendingEpisodeData) {
+      if (pendingAdultToggle) {
+        setShowAdult(true);
+        setPendingAdultToggle(false);
+      } else if (pendingEpisodeData) {
         const { ep, series, eIdx, sIdx } = pendingEpisodeData;
-        setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type })
-        setPendingEpisodeData(null)
+        setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type });
+        setPendingEpisodeData(null);
       } else if (pendingItem) {
         const item = pendingItem;
         updateURL(item.id);
-        if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
-        else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type })
+        if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
+        else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
+        setPendingItem(null);
       }
-      setIsPinDialogOpen(false)
-      setPinInput("")
-      setPendingItem(null)
+      setIsPinDialogOpen(false);
+      setPinInput("");
     } else {
-      toast({ variant: "destructive", title: "PIN INCORRETO" })
-      setPinInput("")
+      toast({ variant: "destructive", title: "PIN INCORRETO" });
+      setPinInput("");
+    }
+  }
+
+  const handleAdultToggleRequest = (checked: boolean) => {
+    if (checked) {
+      setPendingAdultToggle(true);
+      setIsPinDialogOpen(true);
+    } else {
+      setShowAdult(false);
     }
   }
 
@@ -312,7 +332,7 @@ export default function HomeContent() {
                   {showAdult ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />}
                   ADULTO: {showAdult ? "ON" : "OFF"}
                </Label>
-               <Switch id="adult-mode" checked={showAdult} onCheckedChange={setShowAdult} />
+               <Switch id="adult-mode" checked={showAdult} onCheckedChange={handleAdultToggleRequest} />
             </div>
           )}
           <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 rounded-2xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
@@ -490,7 +510,15 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+      <Dialog open={isPinDialogOpen} onOpenChange={(open) => {
+        setIsPinDialogOpen(open);
+        if (!open) {
+          setPendingItem(null);
+          setPendingEpisodeData(null);
+          setPendingAdultToggle(false);
+          setPinInput("");
+        }
+      }}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Lock className="h-10 w-10 text-primary" />
