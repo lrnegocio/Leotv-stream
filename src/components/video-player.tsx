@@ -16,7 +16,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [isMuted, setIsMuted] = React.useState(true)
+  const [isMuted, setIsMuted] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
 
   React.useEffect(() => {
@@ -27,13 +27,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre, isTokyVideo } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false }
+  const { processedUrl, isDirectVideo, isSigmaLink, isMercadoLivre, isTokyVideo } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false }
     let targetUrl = url.trim()
-    const muteVal = isMuted ? "1" : "0"
 
     if (targetUrl.includes('mercadolivre.com.br')) {
-      return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true, isTokyVideo: false };
+      return { processedUrl: targetUrl, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: true, isTokyVideo: false };
     }
 
     const isSigma = targetUrl.includes('webplayer.one') || 
@@ -48,18 +47,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
+        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false
       }
     }
 
     if (targetUrl.includes('tokyvideo.com')) {
-      // Extração de ID melhorada para slugs do Tokyvideo
-      const id = targetUrl.split('/').pop()?.split('?')[0];
+      // SINTONIZADOR TOKYVIDEO MASTER v157
+      let id = targetUrl.split('/').pop()?.split('?')[0];
+      if (targetUrl.includes('/embed/')) id = targetUrl.split('/embed/').pop()?.split('?')[0];
+      
       return {
         processedUrl: `https://www.tokyvideo.com/embed/${id}`,
         isDirectVideo: false,
-        isExternalPage: false,
         isSigmaLink: false,
         isMercadoLivre: false,
         isTokyVideo: true
@@ -68,26 +68,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
-    }
-    if (targetUrl.includes('pornhub.com')) {
-      const viewKey = new URL(targetUrl).searchParams.get('viewkey');
-      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
-    }
-
-    if (targetUrl.includes('/embed/') || targetUrl.includes('iframe')) {
-       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
+      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
     }
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
-      isExternalPage: !isDirect || isSigma,
       isSigmaLink: isSigma,
       isMercadoLivre: false,
       isTokyVideo: false
     };
-  }, [url, isMuted])
+  }, [url])
 
   const openExternal = () => {
     window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
@@ -114,7 +105,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SUPREMACIA...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO LÉO TV STREAM...</span>
         </div>
       )}
 
@@ -129,11 +120,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             <Zap className="h-16 w-16 text-primary" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">
-              {isMercadoLivre ? "Sinal Mercado Livre" : isSigmaLink ? "Sinal Sigma Master" : "Sinal Externo Detectado"}
-            </h3>
+            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL EXTERNO DETECTADO</h3>
             <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-              Este sinal exige sintonização externa para evitar bloqueios do navegador.
+              Este sinal exige sintonização externa para evitar bloqueios do sistema.
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary hover:bg-primary/90 h-16 px-12 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/40 hover:scale-105 transition-all">
@@ -178,14 +167,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                O link expirou ou o servidor bloqueou o acesso direto.
              </p>
            </div>
-           <div className="flex gap-3">
-             <Button onClick={openExternal} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] rounded-2xl h-14 px-8 hover:bg-primary/10">
-               Tentar Abrir Externo
-             </Button>
-             <Button onClick={() => window.location.reload()} variant="ghost" className="text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8">
-               <RefreshCcw className="mr-2 h-4 w-4" /> Recarregar
-             </Button>
-           </div>
+           <Button onClick={() => window.location.reload()} variant="ghost" className="text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8">
+             <RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR SINAL
+           </Button>
         </div>
       )}
       

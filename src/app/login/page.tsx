@@ -89,7 +89,7 @@ export default function LoginPage() {
                   <Input 
                     placeholder="CÓDIGO DE ACESSO" 
                     className="pl-16 h-20 text-center text-2xl tracking-[0.3em] font-black bg-black/40 border-white/5 rounded-3xl focus:ring-primary focus:border-primary" 
-                    value={pin} 
+                    value={pin || ""} 
                     onChange={e => setPin(e.target.value)} 
                     required 
                     maxLength={11}
