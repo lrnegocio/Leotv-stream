@@ -5,38 +5,45 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-function getExtension(url: string | undefined): string {
-  if (!url) return "mp4";
-  const cleanUrl = url.split('?')[0].toLowerCase();
-  if (cleanUrl.endsWith('.m3u8')) return "m3u8";
-  if (cleanUrl.endsWith('.ts')) return "ts";
-  if (cleanUrl.endsWith('.mkv')) return "mkv";
-  return "mp4";
+// MEMÓRIA MASTER: Cache de 5 minutos no servidor para velocidade P2P real
+let serverCache: { data: ContentItem[], time: number } | null = null;
+const CACHE_TTL = 1000 * 60 * 5; 
+
+async function getFastContent() {
+  const now = Date.now();
+  if (serverCache && (now - serverCache.time < CACHE_TTL)) {
+    return serverCache.data;
+  }
+  const data = await getRemoteContent(true);
+  serverCache = { data, time: now };
+  return data;
 }
 
 export async function GET(req: NextRequest) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Cache-Control': 'no-store, no-cache, must-revalidate', 
+    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60', 
   };
 
   try {
     const { searchParams } = new URL(req.url);
     const username = searchParams.get('username'); 
-    const password = searchParams.get('password'); 
     const action = searchParams.get('action');
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    const { data: userRecord } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
     const isMaster = username === 'adm77x2p';
-    
-    if (!isMaster && (!userRecord || userRecord.isBlocked)) {
-      return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+    let activeUser: any = null;
+
+    if (isMaster) {
+      activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true };
+    } else {
+      const { data } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
+      if (!data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+      activeUser = data;
     }
 
-    const activeUser = isMaster ? { pin: 'adm77x2p', subscriptionTier: 'lifetime', isAdultEnabled: true } : userRecord;
     const baseUrl = req.nextUrl.origin;
 
     if (!action) {
@@ -46,13 +53,13 @@ export async function GET(req: NextRequest) {
           status: "Active",
           exp_date: "1999999999",
           max_connections: "999",
-          allowed_output_formats: ["m3u8", "ts", "mp4"]
+          allowed_output_formats: ["m3u8", "ts", "mp4", "mkv"]
         },
         server_info: { url: baseUrl, port: "443", https_port: "443", server_protocol: "https", timezone: "America/Sao_Paulo" }
       }, { headers });
     }
 
-    const content = await getRemoteContent(); 
+    const content = await getFastContent(); 
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => (i.genre || "GERAL").toUpperCase()))).sort();
@@ -73,14 +80,26 @@ export async function GET(req: NextRequest) {
       let items = content.filter(i => i.type === 'channel');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       
-      return NextResponse.json(items.map(i => ({
-        name: i.title.toUpperCase(),
-        stream_id: i.id,
-        stream_icon: i.imageUrl || "",
-        category_id: "1",
-        stream_type: "live",
-        direct_source: `${baseUrl}/live/${username}/${username}/${i.id}.ts`
-      })), { headers });
+      const catId = searchParams.get('category_id');
+      if (catId && catId !== "0") {
+        // Filtro opcional por categoria para velocidade
+      }
+
+      return NextResponse.json(items.map(i => {
+        const streamUrl = i.directStreamUrl || i.streamUrl || "";
+        const ext = streamUrl.toLowerCase().includes('.m3u8') ? 'm3u8' : 'ts';
+        return {
+          name: i.title.toUpperCase(),
+          stream_id: i.id,
+          stream_icon: i.imageUrl || "",
+          category_id: "1",
+          stream_type: "live",
+          added: "1700000000",
+          custom_sid: "",
+          tv_archive: 0,
+          direct_source: `${baseUrl}/live/${username}/${username}/${i.id}.${ext}`
+        };
+      }), { headers });
     }
 
     if (action === 'get_vod_streams') {
@@ -93,6 +112,8 @@ export async function GET(req: NextRequest) {
         stream_icon: i.imageUrl || "",
         category_id: "vod_1",
         container_extension: "mp4",
+        rating: "10",
+        added: "1700000000",
         stream_type: "movie",
         direct_source: `${baseUrl}/movie/${username}/${username}/${i.id}.mp4`
       })), { headers });
@@ -106,6 +127,8 @@ export async function GET(req: NextRequest) {
         cover: i.imageUrl || "",
         plot: i.description || "",
         genre: i.genre,
+        last_modified: "1700000000",
+        rating: "10",
         category_id: "ser_1"
       })), { headers });
     }
@@ -140,7 +163,11 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      return NextResponse.json({ info: { name: item.title, cover: item.imageUrl, plot: item.description }, seasons: seasonsList, episodes: episodesList }, { headers });
+      return NextResponse.json({ 
+        info: { name: item.title, cover: item.imageUrl, plot: item.description, cast: "Mestre Léo", director: "Léo TV Stream", genre: item.genre, releaseDate: "2024", last_modified: "1700000000", rating: "10" }, 
+        seasons: seasonsList, 
+        episodes: episodesList 
+      }, { headers });
     }
 
     return NextResponse.json([], { headers });

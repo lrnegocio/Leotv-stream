@@ -20,7 +20,6 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null)
   const router = useRouter()
 
-  // Carrega PIN salvo ao iniciar (MEMÓRIA MASTER)
   React.useEffect(() => {
     const saved = localStorage.getItem("p2p_saved_pin")
     if (saved) {
@@ -34,14 +33,12 @@ export default function LoginPage() {
     setError(null)
 
     if (loginType === 'user') {
-      // Salva o PIN se o usuário marcou a opção (SEM DICAS DE DIGITOS)
       if (rememberMe) {
         localStorage.setItem("p2p_saved_pin", pin)
       } else {
         localStorage.removeItem("p2p_saved_pin")
       }
 
-      // Gera ou recupera o ID único deste aparelho (VÍNCULO DE HARDWARE)
       let deviceId = localStorage.getItem("p2p_device_id") || "dev_" + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("p2p_device_id", deviceId);
       
@@ -74,7 +71,7 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-primary/30 border border-white/10 rotate-3">
             <Tv className="h-12 w-12 text-white -rotate-3" />
           </div>
-          <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo Stream</CardTitle>
+          <CardTitle className="text-5xl font-black text-primary font-headline italic uppercase tracking-tighter">Léo TV Stream</CardTitle>
           <CardDescription className="text-[10px] uppercase tracking-[0.4em] font-bold opacity-40 mt-3">Sistema de Transmissão Master</CardDescription>
         </CardHeader>
 
@@ -116,11 +113,11 @@ export default function LoginPage() {
               <div className="space-y-4">
                 <div className="relative">
                   <User className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
-                  <Input placeholder="USUÁRIO MESTRE" className="pl-16 h-16 bg-black/40 border-white/5 rounded-2xl font-black uppercase text-xs" value={username} onChange={e => setUsername(e.target.value)} required />
+                  <Input placeholder="USUÁRIO MESTRE" className="pl-16 h-16 bg-black/40 border-white/5 rounded-2xl font-black uppercase text-xs" value={username || ""} onChange={e => setUsername(e.target.value)} required />
                 </div>
                 <div className="relative">
                   <Key className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
-                  <Input type="password" placeholder="SENHA DE ACESSO" className="pl-16 h-16 bg-black/40 border-white/5 rounded-2xl font-black uppercase text-xs" value={password} onChange={e => setPassword(e.target.value)} required />
+                  <Input type="password" placeholder="SENHA DE ACESSO" className="pl-16 h-16 bg-black/40 border-white/5 rounded-2xl font-black uppercase text-xs" value={password || ""} onChange={e => setPassword(e.target.value)} required />
                 </div>
               </div>
             )}

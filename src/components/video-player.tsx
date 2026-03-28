@@ -27,17 +27,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false }
+  const { processedUrl, isDirectVideo, isExternalPage, isSigmaLink, isMercadoLivre, isTokyVideo } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false }
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
-    // DETECÇÃO MERCADO LIVRE
     if (targetUrl.includes('mercadolivre.com.br')) {
-      return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
+      return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true, isTokyVideo: false };
     }
 
-    // DETECÇÃO SIGMA / WEBPLAYER / BLINDER (SUPREMACIA SIGMA v154)
     const isSigma = targetUrl.includes('webplayer.one') || 
                     targetUrl.includes('sigma') || 
                     targetUrl.includes('blinder.') || 
@@ -45,40 +43,41 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                     targetUrl.includes('cloudplayer') ||
                     targetUrl.includes('fplay.');
     
-    // DETECÇÃO VÍDEO DIRETO (M3U8, TS, MP4)
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8');
 
-    // DETECÇÃO YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false
+        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false
       }
     }
 
-    // DETECÇÃO TOKYVIDEO
     if (targetUrl.includes('tokyvideo.com')) {
-      const id = targetUrl.split('/').pop();
+      // Pega o ID no final da URL ou no meio do embed
+      const parts = targetUrl.split('/');
+      const id = parts[parts.length - 1];
       return {
         processedUrl: `https://www.tokyvideo.com/embed/${id}`,
-        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false
+        isDirectVideo: false,
+        isExternalPage: false,
+        isSigmaLink: false,
+        isMercadoLivre: false,
+        isTokyVideo: true
       }
     }
 
-    // DETECÇÃO ADULTO (XVIDEOS / PORNHUB)
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
+      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
     }
     if (targetUrl.includes('pornhub.com')) {
       const viewKey = new URL(targetUrl).searchParams.get('viewkey');
-      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
+      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
     }
 
-    // SUPORTE A EMBEDS GENÉRICOS
     if (targetUrl.includes('/embed/') || targetUrl.includes('iframe')) {
-       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
+       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false };
     }
 
     return { 
@@ -86,7 +85,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       isDirectVideo: isDirect, 
       isExternalPage: !isDirect || isSigma,
       isSigmaLink: isSigma,
-      isMercadoLivre: false
+      isMercadoLivre: false,
+      isTokyVideo: false
     };
   }, [url, isMuted])
 
@@ -121,7 +121,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       <div className="absolute top-4 left-4 z-[70] flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full border border-primary/20 pointer-events-none">
          <Lock className="h-3 w-3 text-primary" />
-         <span className="text-[8px] font-black uppercase text-primary tracking-widest">Sinal Blindado Léo TV</span>
+         <span className="text-[8px] font-black uppercase text-primary tracking-widest">Sinal Blindado Léo TV Stream</span>
       </div>
 
       {isMixedContent || isSigmaLink || isMercadoLivre ? (
@@ -162,6 +162,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           title={title} 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
           allowFullScreen 
+          loading="eager"
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }}
         />
