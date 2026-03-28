@@ -1,31 +1,26 @@
 'use server';
 /**
- * @fileOverview AI Flow for generating high-quality channel covers/posters.
+ * @fileOverview IA para gerar capas blindada contra erros de chave.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, isAiReady} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const GenerateChannelImageInputSchema = z.object({
-  title: z.string().describe('The name of the TV channel or movie.'),
-  genre: z.string().describe('The genre or category.'),
-});
-export type GenerateChannelImageInput = z.infer<typeof GenerateChannelImageInputSchema>;
+export async function generateChannelImage(input: { title: string; genre: string }) {
+  if (!isAiReady) {
+    throw new Error('API KEY não configurada. Configure GOOGLE_GENAI_API_KEY no Vercel.');
+  }
 
-const GenerateChannelImageOutputSchema = z.object({
-  imageUrl: z.string().describe('The base64 data URI of the generated image.'),
-});
-export type GenerateChannelImageOutput = z.infer<typeof GenerateChannelImageOutputSchema>;
+  try {
+    const { media } = await ai.generate({
+      model: 'googleai/imagen-4.0-fast-generate-001',
+      prompt: `Streaming poster for "${input.title}" genre "${input.genre}", cinematic style, high quality, no text.`,
+    });
 
-export async function generateChannelImage(input: GenerateChannelImageInput): Promise<GenerateChannelImageOutput> {
-  const { media } = await ai.generate({
-    model: 'googleai/imagen-4.0-fast-generate-001',
-    prompt: `Create a cinematic, professional and high-quality streaming service poster for a channel named "${input.title}". 
-    The theme should be related to "${input.genre}". 
-    Use vibrant lighting, 4k resolution style, no text on the image, and a dark aesthetic background.`,
-  });
-
-  if (!media) throw new Error('Falha ao gerar imagem.');
-
-  return { imageUrl: media.url };
+    if (!media) throw new Error('Imagem não retornada pela IA.');
+    return { imageUrl: media.url };
+  } catch (error: any) {
+    console.error("Erro ao gerar imagem:", error);
+    throw new Error("Falha na IA de Imagem: " + (error.message || "Erro desconhecido"));
+  }
 }
