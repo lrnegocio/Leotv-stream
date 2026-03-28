@@ -7,8 +7,8 @@ export interface Episode {
   id: string;
   title: string;
   number: number;
-  streamUrl: string; // Link para Web/Iframe
-  directStreamUrl?: string; // Link direto para IPTV Apps (m3u8/ts)
+  streamUrl: string;
+  directStreamUrl?: string;
 }
 
 export interface Season {
@@ -24,8 +24,8 @@ export interface ContentItem {
   description: string;
   genre: string;
   isRestricted: boolean; 
-  streamUrl?: string; // Link para Web/Iframe
-  directStreamUrl?: string; // Link direto para IPTV Apps (m3u8/ts)
+  streamUrl?: string; 
+  directStreamUrl?: string;
   imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
@@ -63,7 +63,6 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v147.0 - ECONOMIA SUPREMA & SINCRONIA TOTAL
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
@@ -432,7 +431,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       };
     } else if (line.startsWith('http') && currentItem) {
       const url = line;
-      // v147.0 - Grava o link em ambos os campos para compatibilidade total
       currentItem.streamUrl = url;
       currentItem.directStreamUrl = url; 
       items.push(currentItem as ContentItem);
@@ -464,11 +462,48 @@ export async function processM3UImport(content: string): Promise<{ success: numb
     } catch (e) {
       failedCount += fixedBatch.length;
     }
-    
-    if (i % 500 === 0) {
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
   }
   contentCache = null;
   return { success: successCount, failed: failedCount };
+}
+
+/**
+ * RADAR DE ESPORTES MASTER v148.0
+ * Busca jogos ao vivo da API Rei dos Canais e sincroniza no painel.
+ */
+export async function syncLiveSports(): Promise<{ success: number; error?: string }> {
+  try {
+    const response = await fetch("https://api.reidoscanais.ooo/sports");
+    const data = await response.json();
+
+    if (!data.success || !data.data) {
+      return { success: 0, error: "Nenhum jogo encontrado na API agora." };
+    }
+
+    const sportsItems: ContentItem[] = data.data.map((evento: any, index: number) => {
+      // Pega o primeiro link de embed disponível
+      const firstEmbed = evento.embeds?.[0]?.embed_url || "";
+      
+      return {
+        id: "radar_sport_" + evento.id,
+        title: evento.title.toUpperCase(),
+        type: 'channel',
+        genre: "FUTEBOL AO VIVO",
+        description: `${evento.category} - Início: ${new Date(evento.start_time).toLocaleString()}`,
+        imageUrl: evento.poster,
+        isRestricted: false,
+        streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, // Dual Link Inteligente
+      };
+    });
+
+    // Limpa o cache e faz o upsert
+    const { error } = await supabase.from('content').upsert(sportsItems);
+    
+    if (error) throw error;
+    
+    contentCache = null;
+    return { success: sportsItems.length };
+  } catch (err: any) {
+    return { success: 0, error: err.message };
+  }
 }
