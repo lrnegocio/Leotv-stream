@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock, AlertTriangle } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock, AlertTriangle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -32,24 +32,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let targetUrl = url.trim()
     const muteVal = isMuted ? "1" : "0"
 
+    // DETECÇÃO MERCADO LIVRE
     if (targetUrl.includes('mercadolivre.com.br')) {
       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
     }
 
+    // DETECÇÃO SIGLA / WEBPLAYER
     const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.') || targetUrl.includes('blder.');
-    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]);
+    
+    // DETECÇÃO VÍDEO DIRETO (M3U8, TS, MP4)
+    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8');
 
+    // DETECÇÃO YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=${muteVal}&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false,
-        isExternalPage: false,
-        isSigmaLink: false,
-        isMercadoLivre: false
+        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false
       }
     }
 
+    // DETECÇÃO TOKYVIDEO
+    if (targetUrl.includes('tokyvideo.com')) {
+      const id = targetUrl.split('/').pop();
+      return {
+        processedUrl: `https://www.tokyvideo.com/embed/${id}`,
+        isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false
+      }
+    }
+
+    // DETECÇÃO ADULTO (XVIDEOS / PORNHUB)
     if (targetUrl.includes('xvideos.com')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
       if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
@@ -57,6 +69,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (targetUrl.includes('pornhub.com')) {
       const viewKey = new URL(targetUrl).searchParams.get('viewkey');
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
+    }
+
+    // SUPORTE A EMBEDS GENÉRICOS
+    if (targetUrl.includes('/embed/') || targetUrl.includes('iframe')) {
+       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: false, isSigmaLink: false, isMercadoLivre: false };
     }
 
     return { 
@@ -112,7 +129,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               {isMercadoLivre ? "Sinal Mercado Livre" : "Sinal Externo Detectado"}
             </h3>
             <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-              Este servidor exige sintonização externa para ignorar bloqueios de segurança e anúncios.
+              Este sinal exige sintonização externa para evitar bloqueios do navegador.
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary hover:bg-primary/90 h-16 px-12 rounded-2xl font-black uppercase text-sm shadow-2xl shadow-primary/40 hover:scale-105 transition-all">
@@ -153,12 +170,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
            <div className="space-y-2">
              <h3 className="text-2xl font-black uppercase italic text-destructive">SINAL FORA DO AR</h3>
              <p className="text-[11px] font-black text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-               Este link expirou ou foi cortado pelo servidor de origem. Avise o Mestre Léo para atualizar a lista!
+               O link expirou ou o servidor bloqueou o acesso direto.
              </p>
            </div>
-           <Button onClick={openExternal} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] rounded-2xl h-14 px-8 hover:bg-primary/10">
-             Tentar Abrir Externo
-           </Button>
+           <div className="flex gap-3">
+             <Button onClick={openExternal} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] rounded-2xl h-14 px-8 hover:bg-primary/10">
+               Tentar Abrir Externo
+             </Button>
+             <Button onClick={() => window.location.reload()} variant="ghost" className="text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8">
+               <RefreshCcw className="mr-2 h-4 w-4" /> Recarregar
+             </Button>
+           </div>
         </div>
       )}
       

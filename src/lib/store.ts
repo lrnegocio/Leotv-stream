@@ -65,7 +65,7 @@ export interface Reseller {
 
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para economizar Supabase
+const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache
 
 const URL_SEPARATOR = '|IPTV|';
 
@@ -441,7 +441,6 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let successCount = 0;
   let failedCount = 0;
 
-  // Importação em lotes de 50 para não estourar o Supabase
   for (let i = 0; i < items.length; i += 50) {
     const batch = items.slice(i, i + 50);
     const fixedBatch = batch.map(item => {
