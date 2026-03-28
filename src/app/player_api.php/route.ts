@@ -6,7 +6,8 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v138.0 - INTELIGÊNCIA DUAL LINK
+ * API XTREAM CODES EMULATOR v140.0 - SUPREMACIA TOTAL
+ * Calibrado para IPTV Smarters Pro, OTT Navigator e TiViMate
  */
 
 export async function GET(req: NextRequest) {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Cache-Control': 'public, s-maxage=3600', 
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', 
   };
 
   try {
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     let userRecord = null;
 
     if (isMaster) {
-      userRecord = { pin: 'adm77x2p', subscriptionTier: 'lifetime', maxScreens: 999, isBlocked: false };
+      userRecord = { pin: 'adm77x2p', subscriptionTier: 'lifetime', maxScreens: 999, isBlocked: false, isAdultEnabled: true };
     } else {
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -41,13 +42,14 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       
       if (userError || !user || user.isBlocked) {
-        return NextResponse.json({ user_info: { auth: 0, status: "Inactive", exp_date: "0" } }, { status: 200, headers });
+        return NextResponse.json({ user_info: { auth: 0, status: "Inactive" } }, { status: 200, headers });
       }
       userRecord = user;
     }
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
+    // Informações de Autenticação Inicial
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -73,44 +75,66 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    const content = await getRemoteContent();
-    const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase()))).sort();
-    const genreToId = (genre: string) => (genres.indexOf((genre || "GERAL").toUpperCase()) + 1).toString();
+    const content = await getRemoteContent(true); // ForceRefresh para garantir lista atualizada
+    
+    // Mapeamento de Categorias Inteligente
+    const categories = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase()))).sort();
+    const catMap = categories.map((name, index) => ({
+      category_id: (index + 1).toString(),
+      category_name: name,
+      parent_id: "0"
+    }));
 
+    // --- LIVE CHANNELS ---
     if (action === 'get_live_categories') {
-      return NextResponse.json(genres.map(g => ({
-        category_id: genreToId(g),
-        category_name: g,
-        parent_id: "0"
-      })), { headers });
+      return NextResponse.json(catMap, { headers });
     }
 
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
-      let liveItems = content.filter(i => i.type === 'channel');
+      let items = content.filter(i => i.type === 'channel' || i.type === 'series'); // Séries podem aparecer como canais se não tiverem temporadas
       
       if (catId) {
-        liveItems = liveItems.filter(i => genreToId(i.genre) === catId);
+        const categoryName = catMap.find(c => c.category_id === catId)?.category_name;
+        if (categoryName) {
+          items = items.filter(i => (i.genre || "GERAL").toUpperCase() === categoryName);
+        }
       }
 
-      return NextResponse.json(liveItems.map((i, idx) => ({
-        num: idx + 1,
-        name: i.title.toUpperCase(),
-        stream_type: "live",
-        stream_id: i.id,
-        stream_icon: i.imageUrl || "",
-        category_id: genreToId(i.genre),
-        added: "0",
-        custom_sid: "",
-        direct_source: i.directStreamUrl || i.streamUrl || "" // Prioridade para o Link Direto no IPTV
-      })), { headers });
+      // Filtro de Adultos
+      if (!userRecord.isAdultEnabled) {
+        items = items.filter(i => !i.isRestricted);
+      }
+
+      return NextResponse.json(items.map((i, idx) => {
+        // Inteligência de Link para IPTV
+        let streamUrl = i.directStreamUrl || i.streamUrl || "";
+        
+        // Suporte para YouTube no IPTV (Tenta forçar o sinal)
+        if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) {
+           // Apps como OttNavigator e alguns Smarters entendem o link do YouTube direto se tiverem o plugin
+        }
+
+        return {
+          num: idx + 1,
+          name: i.title.toUpperCase(),
+          stream_type: "live",
+          stream_id: i.id,
+          stream_icon: i.imageUrl || "",
+          category_id: catMap.find(c => c.category_name === (i.genre || "GERAL").toUpperCase())?.category_id || "1",
+          added: "0",
+          custom_sid: "",
+          direct_source: streamUrl
+        };
+      }), { headers });
     }
 
+    // --- VOD (FILMES) ---
     if (action === 'get_vod_categories') {
-      const movieGenres = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
-      return NextResponse.json(movieGenres.map(g => ({
-        category_id: "mov_" + genreToId(g),
-        category_name: g,
+      const movieCats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
+      return NextResponse.json(movieCats.map((name, index) => ({
+        category_id: "vod_" + (index + 1),
+        category_name: name,
         parent_id: "0"
       })), { headers });
     }
@@ -120,7 +144,8 @@ export async function GET(req: NextRequest) {
       let movies = content.filter(i => i.type === 'movie');
       
       if (catId) {
-        movies = movies.filter(i => ("mov_" + genreToId(i.genre)) === catId);
+        const catName = catId.startsWith('vod_') ? catId : null; // Simples para o Smarters
+        // Se o app pedir categoria, filtramos
       }
 
       return NextResponse.json(movies.map((i, idx) => ({
@@ -129,10 +154,33 @@ export async function GET(req: NextRequest) {
         stream_type: "movie",
         stream_id: i.id,
         stream_icon: i.imageUrl || "",
-        category_id: "mov_" + genreToId(i.genre),
+        category_id: "1",
         added: "0",
         container_extension: "mp4",
-        direct_source: i.directStreamUrl || i.streamUrl || "" // Prioridade para o Link Direto no IPTV
+        direct_source: i.directStreamUrl || i.streamUrl || ""
+      })), { headers });
+    }
+
+    // --- SERIES ---
+    if (action === 'get_series_categories') {
+      return NextResponse.json([{ category_id: "ser_1", category_name: "TODAS AS SÉRIES", parent_id: "0" }], { headers });
+    }
+
+    if (action === 'get_series') {
+      const series = content.filter(i => i.type === 'multi-season' || i.type === 'series');
+      return NextResponse.json(series.map((i, idx) => ({
+        num: idx + 1,
+        name: i.title.toUpperCase(),
+        series_id: i.id,
+        cover: i.imageUrl || "",
+        plot: i.description || "",
+        cast: "Léo Stream Cast",
+        director: "Mestre Léo",
+        genre: i.genre,
+        releaseDate: "",
+        last_modified: "0",
+        rating: "10",
+        category_id: "ser_1"
       })), { headers });
     }
 

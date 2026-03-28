@@ -33,7 +33,6 @@ export default function HomeContent() {
   const [parentalPin, setParentalPin] = React.useState("")
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
-  const [isPinVerified, setIsPinVerified] = React.useState(false)
   const [isInstallDialogOpen, setIsInstallDialogOpen] = React.useState(false)
   
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null);
@@ -176,7 +175,8 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    if (item.isRestricted && !isPinVerified) {
+    // TRAVA PARENTAL v140.0: Pede senha TODA VEZ em canal restrito
+    if (item.isRestricted) {
       setPendingItem(item)
       setIsPinDialogOpen(true)
       return
@@ -190,7 +190,7 @@ export default function HomeContent() {
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
-    if (series.isRestricted && !isPinVerified) {
+    if (series.isRestricted) {
       setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex })
       setIsPinDialogOpen(true)
       return
@@ -241,7 +241,6 @@ export default function HomeContent() {
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
-      setIsPinVerified(true)
       if (pendingEpisodeData) {
         const { ep, series, eIdx, sIdx } = pendingEpisodeData;
         setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type })
