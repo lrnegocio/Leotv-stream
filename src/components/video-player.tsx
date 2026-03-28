@@ -37,8 +37,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { processedUrl: targetUrl, isDirectVideo: false, isExternalPage: true, isSigmaLink: false, isMercadoLivre: true };
     }
 
-    // DETECÇÃO SIGLA / WEBPLAYER
-    const isSigma = targetUrl.includes('webplayer.one') || targetUrl.includes('sigma') || targetUrl.includes('blinder.') || targetUrl.includes('blder.');
+    // DETECÇÃO SIGMA / WEBPLAYER / BLINDER (SUPREMACIA SIGMA v154)
+    const isSigma = targetUrl.includes('webplayer.one') || 
+                    targetUrl.includes('sigma') || 
+                    targetUrl.includes('blinder.') || 
+                    targetUrl.includes('blder.') ||
+                    targetUrl.includes('cloudplayer') ||
+                    targetUrl.includes('fplay.');
     
     // DETECÇÃO VÍDEO DIRETO (M3U8, TS, MP4)
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8');
@@ -126,7 +131,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           </div>
           <div className="space-y-2">
             <h3 className="text-2xl font-black uppercase italic text-primary">
-              {isMercadoLivre ? "Sinal Mercado Livre" : "Sinal Externo Detectado"}
+              {isMercadoLivre ? "Sinal Mercado Livre" : isSigmaLink ? "Sinal Sigma Master" : "Sinal Externo Detectado"}
             </h3>
             <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
               Este sinal exige sintonização externa para evitar bloqueios do navegador.

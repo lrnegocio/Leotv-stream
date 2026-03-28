@@ -134,9 +134,13 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    const combinedUrl = item.directStreamUrl 
-      ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
-      : (item.streamUrl || "");
+    // LIMPEZA MASTER v154: Remove espaços e corrige URLs nulas
+    const cleanStreamUrl = (item.streamUrl || "").trim();
+    const cleanDirectUrl = (item.directStreamUrl || "").trim();
+
+    const combinedUrl = cleanDirectUrl 
+      ? `${cleanStreamUrl}${URL_SEPARATOR}${cleanDirectUrl}`
+      : cleanStreamUrl;
 
     const payload: any = {
       id: item.id,
@@ -460,7 +464,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       if (!error) successCount += fixedBatch.length;
       else failedCount += fixedBatch.length;
     } catch (e) {
-      failedCount += fixedBatch.length;
+      failedCount += failedCount;
     }
   }
   contentCache = null;
