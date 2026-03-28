@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -60,10 +61,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE AGRESSIVO v136.0 (Salva o Supabase do bloqueio)
+// CACHE AGRESSIVO v137.0 (Sintonizado para 40k+ canais)
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 Horas de Cache para Canais (Proteção Máxima)
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache (Proteção Contra Egress Exceeded)
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -105,7 +106,7 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     contentCache = data;
     lastFetchTime = now;
   }
-  return data;
+  return data || [];
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
@@ -219,7 +220,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     let devices = Array.isArray(user.activeDevices) ? user.activeDevices : [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
-    if (!isThisDeviceLinked && deviceId !== "xtream_api_call") {
+    if (!isThisDeviceLinked && deviceId !== "xtream_api_call" && deviceId !== "pc_smarters_call") {
       if (devices.length >= (user.maxScreens || 1)) {
         return { error: "LIMITE DE TELAS EXCEDIDO." };
       }

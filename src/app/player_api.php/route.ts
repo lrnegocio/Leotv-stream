@@ -1,7 +1,15 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
+import { getRemoteContent, ContentItem } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * API XTREAM CODES EMULATOR v137.0 - SUPREMACIA MASTER
+ * Esta rota transforma seu banco de dados em um servidor Xtream Codes real.
+ * Compatível com IPTV Smarters, OTT Navigator, XCIPTV e outros.
+ */
 
 export async function GET(req: NextRequest) {
   const headers = {
@@ -9,7 +17,7 @@ export async function GET(req: NextRequest) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Cache-Control': 'public, s-maxage=600', 
+    'Cache-Control': 'public, s-maxage=3600', 
   };
 
   try {
@@ -22,58 +30,39 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
     }
 
-    // Bypass Master para testes no PC sem gastar cota
-    if (username === 'adm77x2p') {
-      const masterInfo = {
-        user_info: {
-          auth: 1,
-          username: "MESTRE LEO",
-          status: "Active",
-          exp_date: "1999999999",
-          is_trial: "0",
-          active_cons: "0",
-          max_connections: "999"
-        },
-        server_info: {
-          url: req.nextUrl.origin,
-          port: "443",
-          https_port: "443",
-          server_protocol: "https",
-          rtmp_port: "8000",
-          timezone: "America/Sao_Paulo",
-          time_now: new Date().toISOString()
-        }
-      };
+    // --- AUTENTICAÇÃO BLINDADA ---
+    let isMaster = username === 'adm77x2p';
+    let userRecord = null;
+
+    if (isMaster) {
+      userRecord = { pin: 'adm77x2p', subscriptionTier: 'lifetime', maxScreens: 999, isBlocked: false };
+    } else {
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('pin', username)
+        .maybeSingle();
       
-      if (!action) return NextResponse.json(masterInfo, { headers });
+      if (userError || !user || user.isBlocked) {
+        return NextResponse.json({ user_info: { auth: 0, status: "Inactive", exp_date: "0" } }, { status: 200, headers });
+      }
+      userRecord = user;
     }
 
-    // Busca do usuário (PIN)
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('pin', username)
-      .maybeSingle();
+    const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
-    if (userError || !user || user.isBlocked) {
-      return NextResponse.json({ 
-        user_info: { auth: 0, status: "Inactive", exp_date: "0" } 
-      }, { status: 200, headers });
-    }
-
-    const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
-
+    // --- INFO INICIAL DO SERVIDOR ---
     if (!action) {
       return NextResponse.json({
         user_info: {
           auth: 1,
-          username: user.pin,
-          password: user.pin,
+          username: userRecord.pin,
+          password: userRecord.pin,
           status: "Active",
           exp_date: expiry,
-          is_trial: user.subscriptionTier === 'test' ? "1" : "0",
+          is_trial: userRecord.subscriptionTier === 'test' ? "1" : "0",
           active_cons: "0",
-          max_connections: user.maxScreens?.toString() || "1",
+          max_connections: userRecord.maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
         },
         server_info: {
@@ -88,29 +77,84 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // Categorias e Canais com Cache Master
+    // --- CARREGAMENTO DE CONTEÚDO COM CACHE MASTER ---
+    const content = await getRemoteContent();
+    
+    // Mapeamento de categorias (Cria IDs únicos para cada gênero)
+    const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase()))).sort();
+    const genreToId = (genre: string) => (genres.indexOf((genre || "GERAL").toUpperCase()) + 1).toString();
+
+    // 1. CATEGORIAS DE CANAIS AO VIVO
     if (action === 'get_live_categories') {
-      const { data: content } = await supabase.from('content').select('genre').eq('type', 'channel');
-      const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
-      return NextResponse.json(genres.map((g, idx) => ({
-        category_id: (idx + 1).toString(),
+      return NextResponse.json(genres.map(g => ({
+        category_id: genreToId(g),
         category_name: g,
         parent_id: "0"
       })), { headers });
     }
 
+    // 2. CANAIS AO VIVO
     if (action === 'get_live_streams') {
-      const { data: content } = await supabase.from('content').select('id,title,imageUrl,streamUrl,genre').eq('type', 'channel');
-      return NextResponse.json(content?.map((i, idx) => ({
-        num: (idx + 1),
+      const catId = searchParams.get('category_id');
+      let liveItems = content.filter(i => i.type === 'channel');
+      
+      if (catId) {
+        liveItems = liveItems.filter(i => genreToId(i.genre) === catId);
+      }
+
+      return NextResponse.json(liveItems.map((i, idx) => ({
+        num: idx + 1,
         name: i.title.toUpperCase(),
         stream_type: "live",
         stream_id: i.id,
         stream_icon: i.imageUrl || "",
-        category_id: "1",
+        category_id: genreToId(i.genre),
         added: "0",
+        custom_sid: "",
         direct_source: i.streamUrl || ""
-      })) || [], { headers });
+      })), { headers });
+    }
+
+    // 3. CATEGORIAS DE FILMES (VOD)
+    if (action === 'get_vod_categories') {
+      const movieGenres = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
+      return NextResponse.json(movieGenres.map(g => ({
+        category_id: "mov_" + genreToId(g),
+        category_name: g,
+        parent_id: "0"
+      })), { headers });
+    }
+
+    // 4. FILMES (VOD)
+    if (action === 'get_vod_streams') {
+      const catId = searchParams.get('category_id');
+      let movies = content.filter(i => i.type === 'movie');
+      
+      if (catId) {
+        movies = movies.filter(i => ("mov_" + genreToId(i.genre)) === catId);
+      }
+
+      return NextResponse.json(movies.map((i, idx) => ({
+        num: idx + 1,
+        name: i.title.toUpperCase(),
+        stream_type: "movie",
+        stream_id: i.id,
+        stream_icon: i.imageUrl || "",
+        category_id: "mov_" + genreToId(i.genre),
+        added: "0",
+        container_extension: "mp4",
+        direct_source: i.streamUrl || ""
+      })), { headers });
+    }
+
+    // 5. SERIES
+    if (action === 'get_series_categories') {
+      const seriesGenres = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => (i.genre || "SERIES").toUpperCase()))).sort();
+      return NextResponse.json(seriesGenres.map(g => ({
+        category_id: "ser_" + genreToId(g),
+        category_name: g,
+        parent_id: "0"
+      })), { headers });
     }
 
     return NextResponse.json([], { headers });
