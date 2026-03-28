@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -61,10 +60,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v134.0
+// CACHE GLOBAL DE ALTA PERFORMANCE (ANTI-EGRESS) - v135.0
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache para economizar cota Supabase (Egress Exceeded Fix)
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache (Fix Egress Exceeded)
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -97,7 +96,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
 
 export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
   const now = Date.now();
-  // Se não for um refresh forçado e tivermos cache válido, usa ele (ECONOMIA DE DADOS MASTER)
   if (!forceRefresh && contentCache && (now - lastFetchTime < CACHE_DURATION)) {
     return contentCache;
   }
@@ -203,7 +201,7 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
     const normalizedPin = pin.trim();
-    // BLINDAGEM ANTI-COTA: Se for o PIN Master, ignora o Supabase e entra direto.
+    // BLINDAGEM ANTI-COTA: Bypass Master PIN
     if (normalizedPin === 'adm77x2p') {
       return { user: { id: 'master-leo', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [{id: deviceId, lastActive: new Date().toISOString()}], isBlocked: false, isAdultEnabled: true } };
     }
@@ -223,15 +221,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     let devices = Array.isArray(user.activeDevices) ? user.activeDevices : [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
-    if (!isThisDeviceLinked) {
+    if (!isThisDeviceLinked && deviceId !== "xtream_api_call") {
       if (devices.length >= (user.maxScreens || 1)) {
         return { error: "LIMITE DE TELAS EXCEDIDO." };
       }
       devices.push({ id: deviceId, lastActive: now.toISOString() });
       user.activeDevices = devices;
-    } else {
-      user.activeDevices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: now.toISOString() } : d);
-    }
+    } 
     
     if (!user.activatedAt) {
       user.activatedAt = now.toISOString();
@@ -335,7 +331,6 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  // SEGURANÇA MESTRE: Se o PIN for o master, não gera mensagem de venda.
   if (pin === 'adm77x2p') return "ERRO: O PIN MASTER NÃO PODE SER VENDIDO.";
   
   const prodUrl = baseUrl;

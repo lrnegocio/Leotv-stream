@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Cache-Control': 'public, s-maxage=300', // Cache de 5 min para API
+    'Cache-Control': 'public, s-maxage=300', 
   };
 
   try {
@@ -22,13 +22,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
     }
 
-    // Busca rápida do usuário
+    // Busca rápida do usuário (PIN)
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('pin', username)
       .maybeSingle();
 
+    // Validação de segurança Xtream
     if (userError || !user || user.isBlocked) {
       return NextResponse.json({ 
         user_info: { auth: 0, status: "Inactive", exp_date: "0" } 
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
 
     const expiry = user.expiryDate ? Math.floor(new Date(user.expiryDate).getTime() / 1000).toString() : "0";
 
+    // Resposta de Login Inicial (IMPORTANTE PARA SMARTERS PC)
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -62,9 +64,9 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // OTIMIZAÇÃO: Só busca conteúdo se a ação exigir lista completa
-    if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
-      const { data: content } = await supabase.from('content').select('genre').order('genre');
+    // CATEGORIAS DE CANAIS (LIVE)
+    if (action === 'get_live_categories') {
+      const { data: content } = await supabase.from('content').select('genre').eq('type', 'channel');
       const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
       return NextResponse.json(genres.map((g, idx) => ({
         category_id: (idx + 1).toString(),
@@ -73,6 +75,18 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
+    // CATEGORIAS DE FILMES (VOD)
+    if (action === 'get_vod_categories') {
+      const { data: content } = await supabase.from('content').select('genre').eq('type', 'movie');
+      const genres = Array.from(new Set(content?.map(i => (i.genre || "GERAL").toUpperCase()) || []));
+      return NextResponse.json(genres.map((g, idx) => ({
+        category_id: (idx + 100).toString(),
+        category_name: g,
+        parent_id: "0"
+      })), { headers });
+    }
+
+    // CANAIS AO VIVO
     if (action === 'get_live_streams') {
       const { data: content } = await supabase.from('content').select('id,title,imageUrl,streamUrl,genre').eq('type', 'channel');
       return NextResponse.json(content?.map((i, idx) => ({
@@ -89,6 +103,7 @@ export async function GET(req: NextRequest) {
       })) || [], { headers });
     }
 
+    // FILMES
     if (action === 'get_vod_streams') {
       const { data: content } = await supabase.from('content').select('id,title,imageUrl,genre').eq('type', 'movie');
       return NextResponse.json(content?.map((i, idx) => ({
