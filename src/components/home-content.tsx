@@ -85,7 +85,7 @@ export default function HomeContent() {
           const item = data.find(i => i.id === contentId);
           if (item) {
             if (item.type === 'channel' || item.type === 'movie') {
-              setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type });
+              setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
             } else {
               setSelectedSeries(item);
             }
@@ -185,7 +185,8 @@ export default function HomeContent() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item)
     } else {
-      setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
+      // Prioridade para o Link Web no Site
+      setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type })
     }
   }
 
@@ -196,7 +197,7 @@ export default function HomeContent() {
       return
     }
     setActiveVideo({ 
-      url: ep.streamUrl, 
+      url: ep.streamUrl || ep.directStreamUrl || "", 
       title: `${series.title} - EP ${ep.number}`, 
       itemId: series.id,
       episodeIndex: epIndex,
@@ -244,13 +245,13 @@ export default function HomeContent() {
       setIsPinVerified(true)
       if (pendingEpisodeData) {
         const { ep, series, eIdx, sIdx } = pendingEpisodeData;
-        setActiveVideo({ url: ep.streamUrl, title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type })
+        setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type })
         setPendingEpisodeData(null)
       } else if (pendingItem) {
         const item = pendingItem;
         updateURL(item.id);
         if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
-        else setActiveVideo({ url: item.streamUrl || "", title: item.title, itemId: item.id, type: item.type })
+        else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type })
       }
       setIsPinDialogOpen(false)
       setPinInput("")
@@ -405,7 +406,7 @@ export default function HomeContent() {
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Monitor className="h-6 w-6 text-secondary mx-auto mb-2" />
                 <h4 className="font-black uppercase text-[10px]">Smart TV</h4>
-                <p className="text-[8px] opacity-40 mt-1">Menu -> Instalar</p>
+                <p className="text-[8px] opacity-40 mt-1">Menu &rarr; Instalar</p>
               </div>
               <div className="p-4 bg-white/5 border border-white/5 rounded-2xl text-center">
                 <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />

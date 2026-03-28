@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Link as LinkIcon, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,6 +29,7 @@ function NewContentForm() {
     genre: "",
     description: "",
     streamUrl: "",
+    directStreamUrl: "",
     isRestricted: false,
     imageUrl: ""
   })
@@ -45,7 +46,8 @@ function NewContentForm() {
             id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
             title: `Episódio ${nextNum}`,
             number: nextNum,
-            streamUrl: ""
+            streamUrl: "",
+            directStreamUrl: ""
           };
           return { ...s, episodes: [...s.episodes, newEp] };
         }
@@ -57,7 +59,8 @@ function NewContentForm() {
         id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
         title: `Episódio ${nextNum}`,
         number: nextNum,
-        streamUrl: ""
+        streamUrl: "",
+        directStreamUrl: ""
       };
       setEpisodes(prev => [...prev, newEp]);
     }
@@ -149,7 +152,7 @@ function NewContentForm() {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">Nome do Canal, Filme ou Série</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60">Nome do Conteúdo</Label>
               <Input 
                 value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
@@ -160,7 +163,7 @@ function NewContentForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Tipo de Conteúdo</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">Tipo</Label>
                 <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
                   <SelectTrigger className="h-12 border-white/5 bg-black/40 font-bold"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
@@ -172,19 +175,14 @@ function NewContentForm() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Categoria (Pasta)</Label>
-                <Input 
-                  value={formData.genre} 
-                  onChange={e => setFormData({...formData, genre: e.target.value})} 
-                  placeholder="Ex: ESPORTES, INFANTIL, 4K"
-                  className="h-12 bg-black/40 border-white/5 font-bold uppercase"
-                />
+                <Label className="uppercase text-[10px] font-black opacity-60">Categoria</Label>
+                <Input value={formData.genre} onChange={e => setFormData({...formData, genre: e.target.value})} placeholder="Ex: ESPORTES" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label className="uppercase text-[10px] font-black opacity-60">Descrição / Sinopse</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">Descrição</Label>
                 <Button type="button" variant="outline" size="sm" onClick={generateAI} disabled={generating} className="h-8 border-primary/20 text-primary">
                   {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />} IA
                 </Button>
@@ -194,44 +192,41 @@ function NewContentForm() {
           </div>
 
           {showMainStreamUrl && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-              <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Principal (Sinal Direto)</h3>
-              <Input 
-                value={formData.streamUrl} 
-                onChange={e => setFormData({...formData, streamUrl: e.target.value})}
-                placeholder="https://sua-stream.m3u8" 
-                required
-                className="h-12 bg-black/40 border-white/5 font-mono text-xs"
-              />
+            <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
+              <div className="space-y-2">
+                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Iframe / Sigma / Supremo)</h3>
+                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (IPTV Apps / m3u8)</h3>
+                <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="http://...m3u8" className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+              </div>
             </div>
           )}
-
-          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
-            <h3 className="font-bold uppercase text-xs flex items-center gap-2 text-primary tracking-widest"><LinkIcon className="h-4 w-4" /> URL da Capa</h3>
-            <Input 
-              value={formData.imageUrl} 
-              onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-              placeholder="https://exemplo.com/capa.jpg" 
-              className="h-12 bg-black/40 border-white/5 font-mono text-xs"
-            />
-          </div>
 
           {formData.type === 'series' && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="font-bold uppercase text-xs flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Lista de Episódios</h3>
-                <Button type="button" size="sm" onClick={() => addEpisode()} className="bg-primary/10 text-primary hover:bg-primary/20"><Plus className="h-4 w-4 mr-1" /> Add Episódio</Button>
+                <h3 className="font-bold uppercase text-xs flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Episódios</h3>
+                <Button type="button" size="sm" onClick={() => addEpisode()} className="bg-primary/10 text-primary"><Plus className="h-4 w-4 mr-1" /> Add Ep</Button>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {episodes.map((ep, idx) => (
-                  <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-3 rounded-lg border border-white/5">
-                    <span className="text-[10px] opacity-40">EP {ep.number}</span>
-                    <Input placeholder="URL do Episódio" value={ep.streamUrl} onChange={e => {
+                  <div key={ep.id} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-primary">EPISÓDIO {ep.number}</span>
+                      <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                    <Input placeholder="Link Web (Player)" value={ep.streamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
-                    }} className="h-9 bg-black/40 border-white/5 font-mono text-xs flex-1" />
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
+                    }} className="h-9 bg-black/40 border-white/5 font-mono text-[10px]" />
+                    <Input placeholder="Link Direto (m3u8)" value={ep.directStreamUrl} onChange={e => {
+                      const newEps = [...episodes];
+                      newEps[idx].directStreamUrl = e.target.value;
+                      setEpisodes(newEps);
+                    }} className="h-9 bg-emerald-500/5 border-emerald-500/10 font-mono text-[10px]" />
                   </div>
                 ))}
               </div>
@@ -248,22 +243,29 @@ function NewContentForm() {
                 <div key={season.id} className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
                   <div className="flex justify-between items-center">
                     <h4 className="font-black uppercase text-[10px] text-primary">Temporada {season.number}</h4>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)} className="h-7 text-[8px] uppercase font-bold"><Plus className="h-3 w-3 mr-1" /> Add Episódio</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)} className="h-7 text-[8px] uppercase font-bold"><Plus className="h-3 w-3 mr-1" /> Add Ep</Button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {season.episodes.map((ep, eIdx) => (
-                      <div key={ep.id} className="flex gap-2 items-center">
-                        <span className="text-[10px] opacity-40">EP {ep.number}</span>
-                        <Input placeholder={`URL do EP ${ep.number}`} value={ep.streamUrl} onChange={e => {
+                      <div key={ep.id} className="grid gap-2 border-l-2 border-white/5 pl-3">
+                        <div className="flex justify-between items-center">
+                           <span className="text-[9px] font-bold opacity-40 uppercase">Ep {ep.number}</span>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
+                              const newSeasons = [...seasons];
+                              newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
+                              setSeasons(newSeasons);
+                           }}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                        <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
-                        }} className="h-9 bg-black/40 border-white/5 font-mono text-xs flex-1" />
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
-                           const newSeasons = [...seasons];
-                           newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
-                           setSeasons(newSeasons);
-                        }}><Trash2 className="h-3 w-3" /></Button>
+                        }} className="h-8 bg-black/40 text-[9px]" />
+                        <Input placeholder="Link IPTV" value={ep.directStreamUrl} onChange={e => {
+                          const newSeasons = [...seasons];
+                          newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
+                          setSeasons(newSeasons);
+                        }} className="h-8 bg-emerald-500/5 text-[9px]" />
                       </div>
                     ))}
                   </div>
@@ -303,7 +305,7 @@ function NewContentForm() {
           </div>
 
           <Button type="submit" className="w-full h-16 bg-primary text-lg font-black uppercase shadow-2xl shadow-primary/20 rounded-2xl" disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} SALVAR
+            {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} SALVAR CONTEÚDO
           </Button>
         </div>
       </form>

@@ -7,7 +7,8 @@ export interface Episode {
   id: string;
   title: string;
   number: number;
-  streamUrl: string;
+  streamUrl: string; // Link para Web/Iframe
+  directStreamUrl?: string; // Link direto para IPTV Apps (m3u8/ts)
 }
 
 export interface Season {
@@ -23,7 +24,8 @@ export interface ContentItem {
   description: string;
   genre: string;
   isRestricted: boolean; 
-  streamUrl?: string; 
+  streamUrl?: string; // Link para Web/Iframe
+  directStreamUrl?: string; // Link direto para IPTV Apps (m3u8/ts)
   imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
@@ -61,10 +63,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE AGRESSIVO v137.0 (Sintonizado para 40k+ canais)
+// CACHE MASTER v138.0
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache (Proteção Contra Egress Exceeded)
+const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -127,16 +129,14 @@ export async function saveContent(item: ContentItem) {
       genre: item.genre || "",
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
+      directStreamUrl: item.directStreamUrl || null,
     };
 
     if (item.type === 'series' || item.type === 'multi-season') {
-      payload.episodes = Array.isArray(item.episodes) ? item.episodes.map((e, idx) => ({ ...e, number: idx + 1 })) : [];
-      payload.seasons = Array.isArray(item.seasons) ? item.seasons.map((s, sIdx) => ({ 
-        ...s, 
-        number: sIdx + 1, 
-        episodes: Array.isArray(s.episodes) ? s.episodes.map((e, eIdx) => ({ ...e, number: eIdx + 1 })) : []
-      })) : [];
+      payload.episodes = Array.isArray(item.episodes) ? item.episodes : [];
+      payload.seasons = Array.isArray(item.seasons) ? item.seasons : [];
       payload.streamUrl = null;
+      payload.directStreamUrl = null;
     } else {
       payload.streamUrl = item.streamUrl || null;
       payload.episodes = [];
@@ -278,24 +278,28 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const title = item.title.toUpperCase();
 
       if (item.type === 'channel' || item.type === 'movie') {
-        if (!item.streamUrl) return;
+        // Prioridade para o Link Direto (IPTV)
+        const url = item.directStreamUrl || item.streamUrl;
+        if (!url) return;
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(item.streamUrl);
+        m3uLines.push(url);
       } else if (item.type === 'series' || item.type === 'multi-season') {
         if (Array.isArray(item.episodes)) {
           item.episodes.forEach((ep: Episode) => {
-            if (!ep.streamUrl) return;
+            const url = ep.directStreamUrl || ep.streamUrl;
+            if (!url) return;
             m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}`);
-            m3uLines.push(ep.streamUrl);
+            m3uLines.push(url);
           });
         }
         if (Array.isArray(item.seasons)) {
           item.seasons.forEach((s: Season) => {
             if (Array.isArray(s.episodes)) {
               s.episodes.forEach(ep => {
-                if (!ep.streamUrl) return;
+                const url = ep.directStreamUrl || ep.streamUrl;
+                if (!url) return;
                 m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}`);
-                m3uLines.push(ep.streamUrl);
+                m3uLines.push(url);
               });
             }
           });
@@ -387,10 +391,12 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         genre: genreUpper,
         imageUrl: logoMatch ? logoMatch[1] : undefined,
         isRestricted: isAdult || isTerror,
-        description: `Importado via M3U Master - Grupo: ${genre}`
+        description: `Importado via M3U Master - Grupo: ${genre}`,
+        directStreamUrl: "" // Será preenchido na linha seguinte
       };
     } else if (line.startsWith('http') && currentItem) {
       currentItem.streamUrl = line;
+      currentItem.directStreamUrl = line; // No M3U, o link costuma ser direto
       items.push(currentItem as ContentItem);
       currentItem = null;
     }

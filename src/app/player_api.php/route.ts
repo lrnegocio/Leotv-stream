@@ -6,9 +6,7 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v137.0 - SUPREMACIA MASTER
- * Esta rota transforma seu banco de dados em um servidor Xtream Codes real.
- * Compatível com IPTV Smarters, OTT Navigator, XCIPTV e outros.
+ * API XTREAM CODES EMULATOR v138.0 - INTELIGÊNCIA DUAL LINK
  */
 
 export async function GET(req: NextRequest) {
@@ -30,7 +28,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0 } }, { status: 200, headers });
     }
 
-    // --- AUTENTICAÇÃO BLINDADA ---
     let isMaster = username === 'adm77x2p';
     let userRecord = null;
 
@@ -51,7 +48,6 @@ export async function GET(req: NextRequest) {
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
-    // --- INFO INICIAL DO SERVIDOR ---
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -77,14 +73,10 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // --- CARREGAMENTO DE CONTEÚDO COM CACHE MASTER ---
     const content = await getRemoteContent();
-    
-    // Mapeamento de categorias (Cria IDs únicos para cada gênero)
     const genres = Array.from(new Set(content.map(i => (i.genre || "GERAL").toUpperCase()))).sort();
     const genreToId = (genre: string) => (genres.indexOf((genre || "GERAL").toUpperCase()) + 1).toString();
 
-    // 1. CATEGORIAS DE CANAIS AO VIVO
     if (action === 'get_live_categories') {
       return NextResponse.json(genres.map(g => ({
         category_id: genreToId(g),
@@ -93,7 +85,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 2. CANAIS AO VIVO
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
       let liveItems = content.filter(i => i.type === 'channel');
@@ -111,11 +102,10 @@ export async function GET(req: NextRequest) {
         category_id: genreToId(i.genre),
         added: "0",
         custom_sid: "",
-        direct_source: i.streamUrl || ""
+        direct_source: i.directStreamUrl || i.streamUrl || "" // Prioridade para o Link Direto no IPTV
       })), { headers });
     }
 
-    // 3. CATEGORIAS DE FILMES (VOD)
     if (action === 'get_vod_categories') {
       const movieGenres = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => (i.genre || "FILMES").toUpperCase()))).sort();
       return NextResponse.json(movieGenres.map(g => ({
@@ -125,7 +115,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 4. FILMES (VOD)
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
       let movies = content.filter(i => i.type === 'movie');
@@ -143,17 +132,7 @@ export async function GET(req: NextRequest) {
         category_id: "mov_" + genreToId(i.genre),
         added: "0",
         container_extension: "mp4",
-        direct_source: i.streamUrl || ""
-      })), { headers });
-    }
-
-    // 5. SERIES
-    if (action === 'get_series_categories') {
-      const seriesGenres = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => (i.genre || "SERIES").toUpperCase()))).sort();
-      return NextResponse.json(seriesGenres.map(g => ({
-        category_id: "ser_" + genreToId(g),
-        category_name: g,
-        parent_id: "0"
+        direct_source: i.directStreamUrl || i.streamUrl || "" // Prioridade para o Link Direto no IPTV
       })), { headers });
     }
 
