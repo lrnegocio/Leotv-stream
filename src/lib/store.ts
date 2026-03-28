@@ -63,7 +63,7 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-// CACHE MASTER v145.0 - ECONOMIA SUPREMA
+// CACHE MASTER v147.0 - ECONOMIA SUPREMA & SINCRONIA TOTAL
 let contentCache: ContentItem[] | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 1000 * 60 * 60; // 1 Hora de Cache
@@ -346,7 +346,6 @@ export const generateRandomPin = (length: number = 11) => {
   return result;
 };
 
-// v145.0 - GERADOR DE MENSAGEM SUPREMO MULTI-PLATAFORMA
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   if (pin === 'adm77x2p') return "ERRO: O PIN MASTER NÃO PODE SER VENDIDO.";
   
@@ -432,8 +431,10 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         directStreamUrl: "" 
       };
     } else if (line.startsWith('http') && currentItem) {
-      currentItem.streamUrl = line;
-      currentItem.directStreamUrl = line; 
+      const url = line;
+      // v147.0 - Grava o link em ambos os campos para compatibilidade total
+      currentItem.streamUrl = url;
+      currentItem.directStreamUrl = url; 
       items.push(currentItem as ContentItem);
       currentItem = null;
     }
@@ -461,7 +462,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       if (!error) successCount += fixedBatch.length;
       else failedCount += fixedBatch.length;
     } catch (e) {
-      failedCount += failedCount;
+      failedCount += fixedBatch.length;
     }
     
     if (i % 500 === 0) {

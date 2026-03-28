@@ -6,8 +6,8 @@ import { getRemoteContent, ContentItem } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API XTREAM CODES EMULATOR v144.0 - SINTONIZADOR UNIVERSAL AUTO-FORMATO
- * Detecta automaticamente se o link é M3U8, TS, MP4 ou Web (YouTube/Sigma).
+ * API XTREAM CODES EMULATOR v147.0 - SINTONIZADOR VOD ULTRA-SMART
+ * Agora com suporte total a categorias dinâmicas e sintonização de sinais brutos.
  */
 
 function getExtension(url: string | undefined): string {
@@ -16,7 +16,7 @@ function getExtension(url: string | undefined): string {
   if (cleanUrl.endsWith('.m3u8')) return "m3u8";
   if (cleanUrl.endsWith('.ts')) return "ts";
   if (cleanUrl.endsWith('.mkv')) return "mkv";
-  if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) return "mp4"; // Emula como mp4 para o app tentar abrir
+  if (cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) return "mp4";
   return "mp4";
 }
 
@@ -59,7 +59,6 @@ export async function GET(req: NextRequest) {
 
     const expiry = userRecord.expiryDate ? Math.floor(new Date(userRecord.expiryDate).getTime() / 1000).toString() : "1999999999";
 
-    // 1. LOGIN / SERVER INFO - AUTO-Habilitar todos os formatos
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -87,7 +86,7 @@ export async function GET(req: NextRequest) {
 
     const content = await getRemoteContent(); 
     
-    // MAPEAMENTO DE CATEGORIAS DINÂMICO
+    // MAPEAMENTO DINÂMICO REFORÇADO v147.0
     const liveCategories = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => (i.genre || "GERAL").toUpperCase()))).sort();
     const liveCatMap = liveCategories.map((name, index) => ({ category_id: (index + 1).toString(), category_name: name, parent_id: "0" }));
 
@@ -101,7 +100,6 @@ export async function GET(req: NextRequest) {
     if (action === 'get_vod_categories') return NextResponse.json(movieCatMap, { headers });
     if (action === 'get_series_categories') return NextResponse.json(seriesCatMap, { headers });
 
-    // 2. LIVE STREAMS com AUTO-DETECÇÃO
     if (action === 'get_live_streams') {
       const catId = searchParams.get('category_id');
       let items = content.filter(i => i.type === 'channel');
@@ -124,7 +122,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 3. VOD STREAMS (FILMES) com AUTO-FORMATO
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
       let movies = content.filter(i => i.type === 'movie');
@@ -151,7 +148,6 @@ export async function GET(req: NextRequest) {
       }), { headers });
     }
 
-    // 4. SERIES LIST
     if (action === 'get_series') {
       const catId = searchParams.get('category_id');
       let series = content.filter(i => i.type === 'multi-season' || i.type === 'series');
@@ -176,7 +172,6 @@ export async function GET(req: NextRequest) {
       })), { headers });
     }
 
-    // 5. SERIES INFO (Sintonizador Dinâmico de Episódios)
     if (action === 'get_series_info') {
       const seriesId = searchParams.get('series_id');
       const item = content.find(i => i.id === seriesId);
@@ -227,7 +222,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ info, seasons: seasonsList, episodes: episodesList }, { headers });
     }
 
-    // 6. VOD INFO
     if (action === 'get_vod_info') {
       const vodId = searchParams.get('vod_id');
       const movie = content.find(i => i.id === vodId);

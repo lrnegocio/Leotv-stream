@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -19,7 +19,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMuted, setIsMuted] = React.useState(true)
   const [hasError, setHasError] = React.useState(false)
 
-  // v145.0 - SIGILO DE LINK: O link original é processado e ocultado do visual
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
@@ -142,15 +141,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
           allowFullScreen 
           onLoad={() => setLoading(false)} 
+          onError={() => { setLoading(false); setHasError(true); }}
         />
       )}
 
-      {hasError && !isMixedContent && !isSigmaLink && !isMercadoLivre && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[70] p-6 text-center">
-           <ShieldAlert className="h-12 w-12 text-destructive mb-4" />
-           <p className="text-primary font-black uppercase text-xs mb-4">Falha Crítica na Sintonia</p>
-           <Button onClick={openExternal} variant="outline" className="border-primary text-primary font-black uppercase text-[10px] rounded-xl h-12">
-             Tentar Modo Externo
+      {hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
+           <div className="p-6 bg-destructive/10 rounded-full">
+             <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
+           </div>
+           <div className="space-y-2">
+             <h3 className="text-2xl font-black uppercase italic text-destructive">SINAL FORA DO AR</h3>
+             <p className="text-[11px] font-black text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
+               Este link expirou ou foi cortado pelo servidor de origem. Avise o Mestre Léo para atualizar a lista!
+             </p>
+           </div>
+           <Button onClick={openExternal} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] rounded-2xl h-14 px-8 hover:bg-primary/10">
+             Tentar Abrir Externo
            </Button>
         </div>
       )}
