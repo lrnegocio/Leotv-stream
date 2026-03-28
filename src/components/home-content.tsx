@@ -45,12 +45,17 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.toLowerCase() || ""
 
+  const handleLogout = React.useCallback(async () => {
+    localStorage.removeItem("user_session")
+    router.push("/login")
+  }, [router])
+
   React.useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
         e.preventDefault();
-        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "O console foi bloqueado por segurança." });
+        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Protocolo de segurança Léo Tv ativo." });
       }
     };
     window.addEventListener('contextmenu', handleContextMenu);
@@ -60,11 +65,6 @@ export default function HomeContent() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
-  const handleLogout = React.useCallback(async () => {
-    localStorage.removeItem("user_session")
-    router.push("/login")
-  }, [router])
 
   React.useEffect(() => {
     const handleBeforeInstall = (e: any) => {
@@ -114,24 +114,13 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') { setDeferredPrompt(null); setIsInstallDialogOpen(false); }
-    } else {
-      toast({ title: "USE O MENU DO NAVEGADOR", description: "Vá em Opções e clique em 'Instalar App'.", variant: "default" });
-    }
-  };
-
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       if (item.isRestricted && user && !user.isAdultEnabled) return false;
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
-      const matchesSearch = titleMatch || genreMatch;
       if (item.isRestricted && !showAdult) return false;
-      return matchesSearch;
+      return titleMatch || genreMatch;
     })
   }, [content, searchQuery, showAdult, user])
 
@@ -144,9 +133,18 @@ export default function HomeContent() {
     return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
   }, [filteredContent])
 
+  const isRestrictedCategory = (item: ContentItem) => {
+    const genre = (item.genre || "").toUpperCase();
+    const title = (item.title || "").toUpperCase();
+    return item.isRestricted || 
+           genre.includes("TERROR") || 
+           genre.includes("HORROR") || 
+           title.includes("TERROR") || 
+           title.includes("HORROR");
+  }
+
   const handleItemClick = (item: ContentItem) => {
-    // TRAVA IMPLACÁVEL: SEMPRE PEDE PIN PARA RESTRITOS
-    if (item.isRestricted) {
+    if (isRestrictedCategory(item)) {
       setActiveVideo(null); 
       setPendingItem(item);
       setIsPinDialogOpen(true);
@@ -160,7 +158,7 @@ export default function HomeContent() {
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
-    if (series.isRestricted) {
+    if (isRestrictedCategory(series)) {
       setActiveVideo(null);
       setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
       setIsPinDialogOpen(true);
@@ -174,19 +172,6 @@ export default function HomeContent() {
       seasonIndex: seasonIndex,
       type: series.type
     })
-  }
-
-  const navigateContent = (direction: 'next' | 'prev') => {
-    if (!activeVideo) return
-    const currentItem = content.find(i => i.id === activeVideo.itemId);
-    if (!currentItem) return;
-
-    const currentIndex = filteredContent.findIndex(i => i.id === activeVideo.itemId)
-    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
-    if (nextIndex >= filteredContent.length) nextIndex = 0
-    if (nextIndex < 0) nextIndex = filteredContent.length - 1
-    const nextItem = filteredContent[nextIndex]
-    if (nextItem) handleItemClick(nextItem)
   }
 
   const verifyPin = () => {
@@ -207,7 +192,7 @@ export default function HomeContent() {
       setIsPinDialogOpen(false);
       setPinInput("");
     } else {
-      toast({ variant: "destructive", title: "PIN INCORRETO" });
+      toast({ variant: "destructive", title: "CÓDIGO INCORRETO", description: "Verifique sua senha parental." });
       setPinInput("");
     }
   }
@@ -224,7 +209,7 @@ export default function HomeContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#1E161D]"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   const isMaster = user?.pin === 'adm77x2p';
-  const displayPinForUrl = isMaster ? 'COLOQUE_O_PIN_AQUI' : (user?.pin || 'PIN_DO_CLIENTE');
+  const displayPinForUrl = isMaster ? 'SEU_PIN' : (user?.pin || 'PIN');
   const userPlaylistUrl = `${window.location.origin}/api/playlist?pin=${displayPinForUrl}`;
 
   return (
@@ -300,7 +285,7 @@ export default function HomeContent() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                       <div className="flex items-center justify-between mb-1">
                          <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary transition-colors flex-1">{item.title}</h3>
-                         {item.isRestricted && <Lock className="h-4 w-4 text-primary ml-2 drop-shadow-[0_0_8px_rgba(223,76,217,0.8)]" />}
+                         {isRestrictedCategory(item) && <Lock className="h-4 w-4 text-primary ml-2 drop-shadow-[0_0_8px_rgba(223,76,217,0.8)]" />}
                       </div>
                       <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
                     </div>
@@ -315,31 +300,8 @@ export default function HomeContent() {
         })}
       </main>
 
-      <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
-        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[3rem] overflow-hidden p-0">
-          <div className="bg-primary/10 p-10 border-b border-white/5 text-center">
-            <div className="w-20 h-20 bg-primary rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30"><Download className="h-10 w-10 text-white animate-bounce" /></div>
-            <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Léo Tv Stream PWA</DialogTitle>
-            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme seu streaming em um programa nativo.</DialogDescription>
-          </div>
-          <div className="p-8 space-y-6">
-            <Button onClick={handleInstallClick} className="w-full h-20 bg-primary font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
-               <Zap className="h-8 w-8 text-white animate-pulse" /> ATIVAR PROGRAMA AGORA
-            </Button>
-            <div className="p-6 bg-black/40 border border-primary/20 rounded-3xl space-y-4">
-               <div className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /><span className="text-[11px] font-black uppercase text-primary tracking-widest">Link para Apps de Terceiros</span></div>
-               <div className="relative">
-                 <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl text-primary" />
-                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Link Copiado!" }); }}><ArrowDownToLine className="h-4 w-4 text-primary" /></Button>
-               </div>
-            </div>
-          </div>
-          <DialogFooter className="p-8 bg-black/20"><Button onClick={() => setIsInstallDialogOpen(false)} className="w-full h-14 bg-white/5 border border-white/10 font-black uppercase rounded-2xl text-xs">VOLTAR AO STREAMING</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) { setSelectedSeries(null); } }}>
-        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
             <div className="flex flex-col h-[85vh]">
               <div className="relative h-64 w-full shrink-0">
@@ -391,14 +353,37 @@ export default function HomeContent() {
           <div className="py-6 flex justify-center">
              <input type="password" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary transition-all" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
           </div>
-          <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl mt-4">DESBLOQUEAR AGORA</Button>
+          <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl mt-4 shadow-xl">DESBLOQUEAR AGORA</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[3rem] overflow-hidden p-0">
+          <div className="bg-primary/10 p-10 border-b border-white/5 text-center">
+            <div className="w-20 h-20 bg-primary rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30"><Download className="h-10 w-10 text-white animate-bounce" /></div>
+            <DialogTitle className="text-3xl font-black uppercase italic text-primary tracking-tighter">Léo Tv Stream PWA</DialogTitle>
+            <DialogDescription className="text-[11px] uppercase font-bold opacity-60 mt-2">Transforme seu streaming em um programa nativo.</DialogDescription>
+          </div>
+          <div className="p-8 space-y-6">
+            <Button onClick={() => deferredPrompt?.prompt()} className="w-full h-20 bg-primary font-black uppercase rounded-3xl text-lg shadow-2xl shadow-primary/20 flex items-center justify-center gap-4 transition-transform active:scale-95">
+               <Zap className="h-8 w-8 text-white animate-pulse" /> ATIVAR PROGRAMA AGORA
+            </Button>
+            <div className="p-6 bg-black/40 border border-primary/20 rounded-3xl space-y-4">
+               <div className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /><span className="text-[11px] font-black uppercase text-primary tracking-widest">Link para Apps de Terceiros</span></div>
+               <div className="relative">
+                 <Input readOnly value={userPlaylistUrl} className="bg-black/60 border-white/10 font-mono text-[10px] h-14 pr-12 rounded-2xl text-primary" />
+                 <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { navigator.clipboard.writeText(userPlaylistUrl); toast({ title: "Link Copiado!" }); }}><ArrowDownToLine className="h-4 w-4 text-primary" /></Button>
+               </div>
+            </div>
+          </div>
+          <DialogFooter className="p-8 bg-black/20"><Button onClick={() => setIsInstallDialogOpen(false)} className="w-full h-14 bg-white/5 border border-white/10 font-black uppercase rounded-2xl text-xs">VOLTAR AO STREAMING</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={(open) => { if(!open) { setActiveVideo(null); } }}>
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-            <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={() => navigateContent('next')} onPrev={() => navigateContent('prev')} />
+            <VideoPlayer url={activeVideo.url} title={activeVideo.title} />
           </DialogContent>
         </Dialog>
       )}

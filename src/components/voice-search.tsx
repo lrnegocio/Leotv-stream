@@ -52,16 +52,16 @@ function VoiceSearchContent() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR'
-    recognition.continuous = false
-    recognition.interimResults = false
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
 
-    // CONFIGURAÇÃO ESPECIAL PARA SMART TV: Aumenta o tempo de espera
+    // Configuração de sensibilidade para Smart TVs
     recognition.onstart = () => {
       setIsListening(true)
       toast({ 
         title: "Pode falar...", 
-        description: "Estou ouvindo o sinal Master.",
+        description: "O sinal de voz Léo Tv está ativo.",
         className: "bg-primary text-white rounded-2xl border-none font-bold uppercase text-[10px]"
       })
     }
@@ -104,7 +104,7 @@ function VoiceSearchContent() {
         <Input
           placeholder="Busca por voz ou texto..."
           className="pl-12 pr-12 bg-black/40 border-white/5 focus:ring-primary rounded-2xl h-14 text-xs font-bold uppercase tracking-widest shadow-2xl"
-          value={query}
+          value={query || ""}
           onChange={handleInputChange}
         />
         {query && (

@@ -279,7 +279,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     if (!isMaster) {
       const { data } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
       user = data;
-      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO BLOQUEADO";
+      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK LEO TV\n";
     }
 
     const content = await getRemoteContent();
@@ -323,7 +323,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n";
   }
 }
 
@@ -406,6 +406,10 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   const items: ContentItem[] = [];
   let currentItem: Partial<ContentItem> | null = null;
 
+  // Carrega IDs existentes para evitar duplicatas
+  const existingItems = await fetchAllRecords('content', 'id');
+  const existingIds = new Set(existingItems.map(i => i.id));
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.startsWith('#EXTINF:')) {
@@ -420,8 +424,11 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const isAdult = genre.includes('ADULT') || genre.includes('XXX') || genre.includes('HOT') || nameUpper.includes('XXX') || nameUpper.includes('ADULTO') || nameUpper.includes('EROTICO');
       const isTerror = genre.includes('TERROR') || genre.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
 
+      // Gera ID baseado no nome para evitar duplicata
+      const itemPid = "m3u_" + name.toLowerCase().replace(/\s+/g, '_').substring(0, 30);
+
       currentItem = {
-        id: "m3u_" + Math.random().toString(36).substring(2, 10) + "_" + i,
+        id: itemPid,
         title: name,
         type: genre.includes('FILME') || genre.includes('MOVIE') ? 'movie' : 'channel',
         genre: genre,
@@ -432,10 +439,11 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         directStreamUrl: "" 
       };
     } else if (line.startsWith('http') && currentItem) {
-      const url = line;
-      currentItem.streamUrl = url;
-      currentItem.directStreamUrl = url; 
-      items.push(currentItem as ContentItem);
+      if (!existingIds.has(currentItem.id!)) {
+        currentItem.streamUrl = line;
+        currentItem.directStreamUrl = line; 
+        items.push(currentItem as ContentItem);
+      }
       currentItem = null;
     }
   }
@@ -470,7 +478,11 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // CLONAGEM MASTER DAS FONTES ENVIADAS (CXTV + REI DOS CANAIS + OLHOS NA TV)
+  // Carrega IDs existentes para evitar duplicatas
+  const existingItems = await fetchAllRecords('content', 'id');
+  const existingIds = new Set(existingItems.map(i => i.id));
+
+  // CLONAGEM MASTER DAS FONTES ENVIADAS (CXTV + REI DOS CANAIS + OLHOS NA TV + PLUTO)
   const premiumChannels: ContentItem[] = [
     { id: 'leo_cazetv', title: 'CazéTV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'Transmissões ao vivo do Cazé.' },
     { id: 'leo_globo_sp', title: 'Globo SP', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Globo-SP.png', description: 'Rede Globo São Paulo.' },
@@ -485,19 +497,23 @@ export async function importPremiumBundle(): Promise<{ success: number }> {
     { id: 'leo_horror_movies', title: 'Horror Channel', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Filmes de terror 24h.' },
     { id: 'leo_tv_brasil', title: 'TV Brasil', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/tv-brasil', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/041a53eb1b2c6c9d65151c102342544b.webp', description: 'TV pública nacional.' },
     { id: 'leo_abc_news', title: 'ABC News', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://d1zx6l1dn8vaj5.cloudfront.net/out/v1/b89cc37caa6d418eb423cf092a2ef970/index_4.m3u8', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/ec432b3a9f86ac0b68d68ce11c20dd99.webp', description: 'Notícias dos Estados Unidos.' },
-    { id: 'leo_reuters', title: 'Reuters TV', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/reuters-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/39e53ff4eb0078728bfbe6e72dbbb90d.webp', description: 'Reuters Global News.' },
-    { id: 'leo_bloomberg', title: 'Bloomberg TV', type: 'channel', genre: 'ECONOMIA', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/bloomberg-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/a024c9bc44f4adf14389bbfeab689cd2.webp', description: 'Notícias financeiras globais.' },
     { id: 'leo_euronews', title: 'Euronews PT', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/euronews-pt', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/fee4bcbe6932805a9862a46b1773a0c1.webp', description: 'Notícias da Europa em Português.' },
-    { id: 'leo_redbull', title: 'Red Bull TV', type: 'channel', genre: 'ESPORTES RADICAIS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/red-bull-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/e0ff78240cc23f1868ce2a008a92c58d.webp', description: 'Esportes e ação extrema.' },
     { id: 'leo_nhk', title: 'NHK World', type: 'channel', genre: 'INTERNACIONAL', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/nhk-world', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/87ab2cae62f1210235beccb4bb75e35b.webp', description: 'Canal oficial do Japão.' },
-    { id: 'leo_tn_arg', title: 'TN Argentina', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/tn-argentina', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/84d21d4d9f8ecc06440b54712dd2e404.webp', description: 'Notícias da Argentina.' },
+    { id: 'leo_bloomberg', title: 'Bloomberg TV', type: 'channel', genre: 'ECONOMIA', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/bloomberg-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/a024c9bc44f4adf14389bbfeab689cd2.webp', description: 'Notícias financeiras globais.' },
+    { id: 'leo_reuters', title: 'Reuters TV', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/reuters-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/39e53ff4eb0078728bfbe6e72dbbb90d.webp', description: 'Reuters Global News.' },
     { id: 'leo_boomerang', title: 'Boomerang UK', type: 'channel', genre: 'INFANTIL', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/boomerang-uk', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/1d525204b1e092a830410bb9e9ccb339.webp', description: 'Desenhos clássicos.' },
+    { id: 'leo_redbull', title: 'Red Bull TV', type: 'channel', genre: 'ESPORTES RADICAIS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/red-bull-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/e0ff78240cc23f1868ce2a008a92c58d.webp', description: 'Esportes e ação extrema.' },
+    { id: 'leo_cnn_portugal', title: 'CNN Portugal', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/cnn-portugal', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/b6904191bba4cd4428ac6f08a5716aec.webp', description: 'Notícias de Portugal.' },
   ];
 
+  let added = 0;
   for (const ch of premiumChannels) {
-    await saveContent(ch);
+    if (!existingIds.has(ch.id)) {
+      await saveContent(ch);
+      added++;
+    }
   }
-  return { success: premiumChannels.length };
+  return { success: added };
 }
 
 export async function syncLiveSports(): Promise<{ success: number; error?: string }> {
@@ -509,11 +525,17 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       return { success: 0, error: "Nenhum jogo encontrado na API agora." };
     }
 
+    const existingItems = await fetchAllRecords('content', 'id');
+    const existingIds = new Set(existingItems.map(i => i.id));
+
     const sportsItems: ContentItem[] = data.data.map((evento: any) => {
       const firstEmbed = evento.embeds?.[0]?.embed_url || "";
+      const sid = "radar_sport_" + evento.id;
       
+      if (existingIds.has(sid)) return null;
+
       return {
-        id: "radar_sport_" + evento.id,
+        id: sid,
         title: evento.title.toUpperCase(),
         type: 'channel',
         genre: "FUTEBOL AO VIVO",
@@ -522,10 +544,12 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
         isRestricted: false,
         streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, 
       };
-    });
+    }).filter((i: any) => i !== null);
 
-    const { error } = await supabase.from('content').upsert(sportsItems);
-    if (error) throw error;
+    if (sportsItems.length > 0) {
+      const { error } = await supabase.from('content').upsert(sportsItems);
+      if (error) throw error;
+    }
     
     contentCache = null;
     return { success: sportsItems.length };
