@@ -40,7 +40,10 @@ function VoiceSearchContent() {
   }
 
   const startListening = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    // BLINDAGEM TV: Suporte amplo para reconhecimento de voz
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
       toast({ 
         variant: "destructive", 
         title: "Microfone não suportado", 
@@ -50,13 +53,11 @@ function VoiceSearchContent() {
       return
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR';
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    // Configuração de sensibilidade para Smart TVs
     recognition.onstart = () => {
       setIsListening(true)
       toast({ 

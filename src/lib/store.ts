@@ -407,11 +407,13 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let currentItem: Partial<ContentItem> | null = null;
 
   // Carrega IDs existentes para evitar duplicatas
-  const existingItems = await fetchAllRecords('content', 'id');
-  const existingIds = new Set(existingItems.map(i => i.id));
+  const { data: existingData } = await supabase.from('content').select('id');
+  const existingIds = new Set(existingData?.map(i => i.id) || []);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+    if (!line) continue;
+
     if (line.startsWith('#EXTINF:')) {
       const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
       const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
@@ -425,7 +427,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const isTerror = genre.includes('TERROR') || genre.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
 
       // Gera ID baseado no nome para evitar duplicata
-      const itemPid = "m3u_" + name.toLowerCase().replace(/\s+/g, '_').substring(0, 30);
+      const itemPid = "m3u_" + name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 50);
 
       currentItem = {
         id: itemPid,
@@ -451,6 +453,7 @@ export async function processM3UImport(content: string): Promise<{ success: numb
   let successCount = 0;
   let failedCount = 0;
 
+  // Processamento em lotes para performance P2P
   for (let i = 0; i < items.length; i += 100) {
     const batch = items.slice(i, i + 100);
     const fixedBatch = batch.map(item => {
@@ -459,9 +462,16 @@ export async function processM3UImport(content: string): Promise<{ success: numb
         : (item.streamUrl || "");
       
       return {
-        ...item,
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        genre: item.genre,
+        imageUrl: item.imageUrl || null,
+        isRestricted: item.isRestricted,
+        description: item.description,
         streamUrl: combinedUrl,
-        directStreamUrl: undefined 
+        episodes: [],
+        seasons: []
       };
     });
 
@@ -478,32 +488,24 @@ export async function processM3UImport(content: string): Promise<{ success: numb
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // Carrega IDs existentes para evitar duplicatas
-  const existingItems = await fetchAllRecords('content', 'id');
-  const existingIds = new Set(existingItems.map(i => i.id));
+  const { data: existingData } = await supabase.from('content').select('id');
+  const existingIds = new Set(existingData?.map(i => i.id) || []);
 
-  // CLONAGEM MASTER DAS FONTES ENVIADAS (CXTV + REI DOS CANAIS + OLHOS NA TV + PLUTO)
   const premiumChannels: ContentItem[] = [
-    { id: 'leo_cazetv', title: 'CazéTV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'Transmissões ao vivo do Cazé.' },
-    { id: 'leo_globo_sp', title: 'Globo SP', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Globo-SP.png', description: 'Rede Globo São Paulo.' },
-    { id: 'leo_sbt', title: 'SBT', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/sbt-online-01/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/SBT.png', description: 'SBT Nacional.' },
-    { id: 'leo_record_news', title: 'Record News', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/record-news/', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhI84Ty2-c5a0Cy6_37FhJFQ2frSUXAkHfklFclNih8lfgsXw0kZRyjNUOZQg16TjmcBiQOaLmwDlDKemQM6gC9HYCFAf-6xIHdP6IruKL31cAaNI01FcPxQQnxMRi7NYVnTFEkevV45BEGui2ABhxh81-N6vWzsR-rACG8pZDESxJZR1nJMu0fmSNmYvg/w385-h184-p-k-no-nu/RECORD%20NEWS.webp', description: 'Notícias 24h.' },
-    { id: 'leo_hbo', title: 'HBO', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/hbo/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/HBO.png', description: 'HBO Filmes e Séries.' },
-    { id: 'leo_telecine_p', title: 'Telecine Premium', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/telecine-premium-hd/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2023/12/Telecine-Premium-HD.png', description: 'Os melhores filmes.' },
-    { id: 'leo_otaku', title: 'Otaku Sign TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp', description: 'Canal 24h de Animes.' },
-    { id: 'leo_retro_cartoon', title: 'Retrô Cartoon', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
-    { id: 'leo_tv_one', title: 'TV One', type: 'channel', genre: 'VARIEDADES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2020/04/tv-one.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjLy7HhupoGU0Ddwu2c8R-_bpUgj-AaeJ8NxdjanzPZPm5uZiQ24do8-gB9B1N0vufThxuKoyRA6h2n-EPNf_MiKTQvW5kFNrzn0usqqsAaCtrJUq35oX-_4W4ljuQ1gkR4N-Oy-BSaB-JQ3w_XobpxUteS9_iMr-VJkmmdndWrq-JipuvdN25qxoy_kbQ/w385-h184-p-k-no-nu/TV%20ONE.webp', description: 'Canal regional de variedades.' },
-    { id: 'leo_ph_brazzers', title: 'Brazzers TV', type: 'channel', genre: 'ADULTOS', isRestricted: true, streamUrl: 'https://pornhub.com/channels/brazzers', imageUrl: 'https://ei.phncdn.com/(m=bLGmidK)(mh=hFyV5Tf75aRqNbo7)bf7b2336-5cd0-4635-8c08-f82060342019.jpg', description: 'Canal adulto restrito.' },
-    { id: 'leo_horror_movies', title: 'Horror Channel', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Filmes de terror 24h.' },
-    { id: 'leo_tv_brasil', title: 'TV Brasil', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/tv-brasil', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/041a53eb1b2c6c9d65151c102342544b.webp', description: 'TV pública nacional.' },
-    { id: 'leo_abc_news', title: 'ABC News', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://d1zx6l1dn8vaj5.cloudfront.net/out/v1/b89cc37caa6d418eb423cf092a2ef970/index_4.m3u8', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/ec432b3a9f86ac0b68d68ce11c20dd99.webp', description: 'Notícias dos Estados Unidos.' },
-    { id: 'leo_euronews', title: 'Euronews PT', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/euronews-pt', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/fee4bcbe6932805a9862a46b1773a0c1.webp', description: 'Notícias da Europa em Português.' },
-    { id: 'leo_nhk', title: 'NHK World', type: 'channel', genre: 'INTERNACIONAL', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/nhk-world', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/87ab2cae62f1210235beccb4bb75e35b.webp', description: 'Canal oficial do Japão.' },
-    { id: 'leo_bloomberg', title: 'Bloomberg TV', type: 'channel', genre: 'ECONOMIA', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/bloomberg-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/a024c9bc44f4adf14389bbfeab689cd2.webp', description: 'Notícias financeiras globais.' },
-    { id: 'leo_reuters', title: 'Reuters TV', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/reuters-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/39e53ff4eb0078728bfbe6e72dbbb90d.webp', description: 'Reuters Global News.' },
-    { id: 'leo_boomerang', title: 'Boomerang UK', type: 'channel', genre: 'INFANTIL', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/boomerang-uk', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/1d525204b1e092a830410bb9e9ccb339.webp', description: 'Desenhos clássicos.' },
-    { id: 'leo_redbull', title: 'Red Bull TV', type: 'channel', genre: 'ESPORTES RADICAIS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/red-bull-tv', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/e0ff78240cc23f1868ce2a008a92c58d.webp', description: 'Esportes e ação extrema.' },
-    { id: 'leo_cnn_portugal', title: 'CNN Portugal', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/cnn-portugal', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/b6904191bba4cd4428ac6f08a5716aec.webp', description: 'Notícias de Portugal.' },
+    { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo São Paulo 4K.' },
+    { id: 'leo_sbt', title: 'SBT FHD', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/sbt-online-01/', imageUrl: 'http://contfree.shop:80/images/a3418b3c391884505f6034724cbc2e43.png', description: 'SBT Nacional Full HD.' },
+    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K Ultra HD.' },
+    { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'O melhor do futebol em 4K.' },
+    { id: 'leo_combate_4k', title: 'COMBATE 4K', type: 'channel', genre: 'LUTAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698415.ts', imageUrl: 'http://contfree.shop:80/images/31791acb79e4821c4c203bf95f6404ef.png', description: 'UFC e Boxe em 4K.' },
+    { id: 'leo_animal_4k', title: 'ANIMAL PLANET 4K', type: 'channel', genre: 'DOCUMENTARIOS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698407.ts', imageUrl: 'http://contfree.shop:80/images/ac8530c1c4c5959785cc87d79da18310.png', description: 'Vida selvagem em 4K.' },
+    { id: 'leo_jovem_pan_4k', title: 'JOVEM PAN NEWS 4K', type: 'channel', genre: 'NOTICIAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698433.ts', imageUrl: 'http://contfree.shop:80/images/f74354fd9c9ffb12a64d86d760f446b3.png', description: 'Notícias 24h em 4K.' },
+    { id: 'leo_cnn_4k', title: 'CNN BRASIL 4K', type: 'channel', genre: 'NOTICIAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698414.ts', imageUrl: 'http://contfree.shop:80/images/9240c4b4c89f931c2907fb9b0e77b91a.png', description: 'Notícias do Brasil e Mundo 4K.' },
+    { id: 'leo_cartoon_4k', title: 'CARTOON NETWORK 4K', type: 'channel', genre: 'INFANTIL', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698413.ts', imageUrl: 'http://contfree.shop:80/images/912cedc265ab56388565c18ffa0f0e20.png', description: 'Desenhos 24h em 4K.' },
+    { id: 'leo_axn_4k', title: 'AXN 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698408.ts', imageUrl: 'http://contfree.shop:80/images/bc25b3ce198e1c529633e0035c164c7b.png', description: 'Séries de investigação em 4K.' },
+    { id: 'leo_megapix_4k', title: 'MEGAPIX 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698435.ts', imageUrl: 'http://contfree.shop:80/images/4bd33fbf4a00fd1567758a3edad3802f.png', description: 'Os melhores filmes em 4K.' },
+    { id: 'leo_otaku_sign', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp', description: 'Canal 24h de Animes.' },
+    { id: 'leo_retro_cartoon', title: 'RETRO CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
+    { id: 'leo_horror_pluto', title: 'HORROR CHANNEL', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Terror 24h (PIN Obrigatório).' },
   ];
 
   let added = 0;
@@ -525,8 +527,8 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       return { success: 0, error: "Nenhum jogo encontrado na API agora." };
     }
 
-    const existingItems = await fetchAllRecords('content', 'id');
-    const existingIds = new Set(existingItems.map(i => i.id));
+    const { data: existingData } = await supabase.from('content').select('id');
+    const existingIds = new Set(existingData?.map(i => i.id) || []);
 
     const sportsItems: ContentItem[] = data.data.map((evento: any) => {
       const firstEmbed = evento.embeds?.[0]?.embed_url || "";

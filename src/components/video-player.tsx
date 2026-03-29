@@ -40,6 +40,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                     targetUrl.includes('blinder.') || 
                     targetUrl.includes('blder.') ||
                     targetUrl.includes('cloudplayer') ||
+                    targetUrl.includes('contfree') ||
                     targetUrl.includes('fplay.');
     
     const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8');
@@ -68,7 +69,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     if (targetUrl.includes('tokyvideo.com')) {
-      let id = targetUrl.split('/').pop()?.split('?')[0];
+      let parts = targetUrl.split('/');
+      let id = parts[parts.length - 1]?.split('?')[0];
       if (targetUrl.includes('/embed/')) id = targetUrl.split('/embed/').pop()?.split('?')[0];
       
       return {
