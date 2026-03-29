@@ -63,12 +63,16 @@ export interface Reseller {
   credits: number;
   totalSold: number;
   isBlocked: boolean;
+  email?: string;
+  phone?: string;
+  cpf?: string;
+  birthDate?: string;
 }
 
 const URL_SEPARATOR = '|IPTV|';
 const CACHE_KEY = 'leo_stream_content_cache';
 const CACHE_TIME_KEY = 'leo_stream_cache_timestamp';
-const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA ECONOMIZAR SUPABASE
+const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA SALVAR O SUPABASE
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
