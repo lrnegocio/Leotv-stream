@@ -73,7 +73,7 @@ export default function HomeContent() {
       const session = localStorage.getItem("user_session")
       if (!session) return;
       const u = JSON.parse(session);
-      if (u.subscriptionTier === 'lifetime' || u.pin === 'adm77x2p') { setTimeLeft("ACESSO VITALÍCIO"); return; }
+      if (u.subscriptionTier === 'lifetime' || u.pin === 'adm77x2p') { setTimeLeft("SINAL VITALÍCIO"); return; }
       const now = new Date();
       const expiry = new Date(u.expiryDate || "");
       const diff = expiry.getTime() - now.getTime();
@@ -227,8 +227,7 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
                 </div>
               </div>
-              {/* BARRA DE ROLAGEM FORÇADA NEON */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll" style={{ display: 'block', maxHeight: '100%' }}>
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll" style={{ display: 'block' }}>
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>

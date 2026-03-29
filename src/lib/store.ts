@@ -70,9 +70,9 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp';
-const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA SALVAR O SUPABASE
+const CACHE_KEY = 'leo_stream_content_cache_v2';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v2';
+const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA SALVAR O EGRESS DO SUPABASE
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -99,6 +99,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
+    console.error(`Erro ao buscar ${table}:`, e);
     return [];
   }
 }
@@ -111,7 +112,11 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
     
     if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
-      return JSON.parse(cachedData);
+      try {
+        return JSON.parse(cachedData);
+      } catch (e) {
+        localStorage.removeItem(CACHE_KEY);
+      }
     }
   }
 
@@ -129,8 +134,13 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
   });
 
   if (typeof window !== 'undefined') {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    localStorage.setItem(CACHE_TIME_KEY, now.toString());
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(CACHE_TIME_KEY, now.toString());
+    } catch (e) {
+      // Se estourar o localStorage (5MB+), limpa o cache antigo
+      localStorage.removeItem(CACHE_KEY);
+    }
   }
   
   return data || [];
@@ -144,6 +154,14 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   return await fetchAllRecords('resellers', 'name');
 }
 
+const generateSafeId = (name: string) => {
+  return "leo_" + name.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, '_')
+    .substring(0, 50) + "_" + Math.random().toString(36).substring(2, 7);
+};
+
 export async function saveContent(item: ContentItem) {
   try {
     const cleanStreamUrl = (item.streamUrl || "").trim();
@@ -154,10 +172,10 @@ export async function saveContent(item: ContentItem) {
       : cleanStreamUrl;
 
     const payload: any = {
-      id: item.id,
+      id: item.id || generateSafeId(item.title),
       title: item.title,
       type: item.type,
-      description: item.description || "",
+      description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "GERAL").toUpperCase(),
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
@@ -235,13 +253,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
-    if (error) return { error: "ERRO DE CONEXÃO MASTER." };
+    if (error) return { error: "ERRO DE CONEXÃO SUPABASE." };
     if (!user) return { error: "CÓDIGO INVÁLIDO." };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO." };
+    if (user.isBlocked) return { error: "ACESSO BLOQUEADO PELO SISTEMA." };
 
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-      return { error: "SINAL EXPIRADO." };
+      return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
     }
 
     let userIp = "0.0.0.0";
@@ -256,7 +274,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
     if (!isThisDeviceLinked && deviceId !== "xtream_api_call") {
       if (devices.length >= (user.maxScreens || 1)) {
-        return { error: "LIMITE DE TELAS EXCEDIDO." };
+        return { error: "LIMITE DE TELAS EXCEDIDO NESTE PIN." };
       }
       devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'TV/Box' });
       user.activeDevices = devices;
@@ -276,7 +294,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
     return { user };
   } catch (e) {
-    return { error: "ERRO CRÍTICO DE SISTEMA." };
+    return { error: "ERRO CRÍTICO NO LOGIN MASTER." };
   }
 }
 
@@ -284,11 +302,54 @@ export async function validateResellerLogin(username: string, pass: string) {
   try {
     const { data: res, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', pass).maybeSingle();
     if (error || !res) return { error: "LOGIN INVÁLIDO." };
-    if (res.isBlocked) return { error: "REVENDA SUSPENSA." };
+    if (res.isBlocked) return { error: "SUA REVENDA ESTÁ SUSPENSA." };
     return { reseller: res };
   } catch (e) {
-    return { error: "ERRO DE REDE." };
+    return { error: "ERRO DE CONEXÃO COM O BANCO." };
   }
+}
+
+export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
+  const lines = content.split('\n');
+  const items: any[] = [];
+  let currentItem: any = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('#EXTINF:')) {
+      const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
+      const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
+      const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
+      const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
+      currentItem = {
+        id: generateSafeId(name),
+        title: name,
+        type: genre.includes('FILME') ? 'movie' : genre.includes('SERIE') ? 'series' : 'channel',
+        genre: genre,
+        imageUrl: logoMatch ? logoMatch[1] : null,
+        isRestricted: genre.includes('ADULT') || genre.includes('XXX'),
+        description: "Sinal Master Léo Tv",
+        streamUrl: ""
+      };
+    } else if (line.startsWith('http') && currentItem) {
+      currentItem.streamUrl = line + URL_SEPARATOR + line;
+      items.push(currentItem);
+      currentItem = null;
+    }
+  }
+
+  let successCount = 0;
+  const batchSize = 100; // LOTES DE 100 PARA NÃO TRAVAR
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    onProgress?.(`Injetando ${i} de ${items.length} canais...`);
+    const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) successCount += batch.length;
+    await new Promise(r => setTimeout(r, 100)); // PAUSA PARA O NAVEGADOR RESPIRAR
+  }
+  
+  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
+  return { success: successCount, failed: items.length - successCount };
 }
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
@@ -312,7 +373,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR\n";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n";
   }
 }
 
@@ -343,64 +404,15 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
   return `🚀 *LÉO TV STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${baseUrl}\n👤 *USUÁRIO:* ${pin}\n🔑 *SENHA:* ${pin}\n\nSinal blindado de alta performance.`;
 }
 
-export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
-  const lines = content.split('\n');
-  const items: any[] = [];
-  let currentItem: any = null;
-
-  const generateSafeId = (name: string) => {
-    return "m3u_" + name.toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, '_')
-      .substring(0, 40) + "_" + Math.random().toString(36).substring(2, 7);
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('#EXTINF:')) {
-      const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
-      const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
-      const name = line.split(',').pop()?.trim() || "Canal";
-      const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
-      currentItem = {
-        id: generateSafeId(name),
-        title: name,
-        type: genre.includes('FILME') ? 'movie' : 'channel',
-        genre: genre,
-        imageUrl: logoMatch ? logoMatch[1] : null,
-        isRestricted: genre.includes('ADULT') || genre.includes('XXX'),
-        description: "Sinal Master",
-        streamUrl: ""
-      };
-    } else if (line.startsWith('http') && currentItem) {
-      currentItem.streamUrl = line + URL_SEPARATOR + line;
-      items.push(currentItem);
-      currentItem = null;
-    }
-  }
-
-  let successCount = 0;
-  const batchSize = 100; 
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Processando ${i} de ${items.length}...`);
-    const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
-    if (!error) successCount += batch.length;
-    await new Promise(r => setTimeout(r, 50));
-  }
-  
-  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
-  return { success: successCount, failed: items.length - successCount };
-}
-
 export async function importPremiumBundle(): Promise<{ success: number }> {
+  // LISTA EXPANDIDA COM OS CANAIS DA CXTV E REI DOS CANAIS
   const premiumChannels: ContentItem[] = [
     { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
     { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
     { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' },
-    { id: 'leo_cazetv', title: 'CAZÉ TV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp' },
-    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp' }
+    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/record-news', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/86600ed6f09e4bf48be4e55a0cd01536.webp' },
+    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp' },
+    { id: 'leo_retro_cartoon', title: 'RETRO CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/retro-cartoon', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/a1e4076264abe6b6ccde87a587966abe.webp' }
   ];
   
   let added = 0;
@@ -414,7 +426,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
   try {
     const response = await fetch("https://api.reidoscanais.ooo/sports");
     const data = await response.json();
-    if (!data.success || !data.data) return { success: 0, error: "Sem jogos agora." };
+    if (!data.success || !data.data) return { success: 0, error: "Sem jogos no radar." };
     const sportsItems = data.data.map((evento: any) => ({
       id: "radar_" + evento.id,
       title: evento.title.toUpperCase(),
@@ -424,9 +436,9 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       isRestricted: false,
       streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")
     }));
-    await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
+    const { error } = await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
     if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
-    return { success: sportsItems.length };
+    return { success: error ? 0 : sportsItems.length };
   } catch (e) {
     return { success: 0 };
   }

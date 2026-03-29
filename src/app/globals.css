@@ -39,25 +39,29 @@
 @layer utilities {
   /* BARRA DE ROLAGEM MESTRE - SEMPRE VISÍVEL E NEON */
   .custom-scroll {
-    scrollbar-width: thin !important;
+    scrollbar-width: auto !important;
     scrollbar-color: hsl(var(--primary)) transparent !important;
     overflow-y: auto !important;
   }
+  
   .custom-scroll::-webkit-scrollbar {
-    width: 8px !important;
+    width: 10px !important;
     display: block !important;
   }
+  
   .custom-scroll::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05) !important;
     border-radius: 10px !important;
   }
+  
   .custom-scroll::-webkit-scrollbar-thumb {
     background: hsl(var(--primary)) !important;
     border-radius: 10px !important;
     border: 2px solid transparent !important;
     background-clip: padding-box !important;
-    box-shadow: 0 0 10px hsl(var(--primary)) !important;
+    box-shadow: 0 0 15px hsl(var(--primary)) !important;
   }
+
   .bg-cinematic {
     background: radial-gradient(circle at center, #2a1d29 0%, #1e161d 100%);
   }
