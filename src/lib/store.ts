@@ -70,14 +70,14 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache_v3';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v3';
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS DE CACHE PARA SEGURANÇA TOTAL
+const CACHE_KEY = 'leo_stream_content_cache_v4';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v4';
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS DE CACHE PARA ECONOMIZAR EGRESS
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
-  const step = 1000;
+  const step = 500; // REDUZIDO PARA EVITAR TIMEOUT NO SUPABASE BLOQUEADO
   let hasMore = true;
 
   try {
@@ -89,7 +89,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .order(orderBy, { ascending: true });
 
       if (error) {
-        // Se der erro de cota ou rede, paramos e deixamos o cache assumir
         hasMore = false;
         break;
       }
@@ -100,6 +99,9 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
       } else {
         hasMore = false;
       }
+      
+      // TRAVA DE SEGURANÇA: Se a lista for muito grande, paramos para não estourar a RAM do cliente
+      if (allData.length > 50000) break;
     }
     return allData;
   } catch (e) {
@@ -107,10 +109,22 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
   }
 }
 
+// NOVA FUNÇÃO MASTER: Pega o total de canais sem baixar os dados (Gasta 0 egress)
+export async function getTotalContentCount(): Promise<number> {
+  try {
+    const { count, error } = await supabase
+      .from('content')
+      .select('*', { count: 'exact', head: true });
+    if (error) return 0;
+    return count || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
 export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
   const now = Date.now();
   
-  // VERIFICAÇÃO DE CACHE PRIMEIRO (Para salvar o Supabase)
   if (typeof window !== 'undefined') {
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
@@ -124,10 +138,8 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     }
   }
 
-  // TENTA BUSCAR DO BANCO
   const rawData = await fetchAllRecords('content', 'title');
   
-  // SE O BANCO RETORNAR VAZIO (BLOQUEIO), MAS TIVERMOS CACHE ANTIGO, USA O CACHE
   if (rawData.length === 0 && typeof window !== 'undefined') {
     const backup = localStorage.getItem(CACHE_KEY);
     if (backup) return JSON.parse(backup);
@@ -144,7 +156,6 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     return item;
   });
 
-  // ATUALIZA O CACHE
   if (typeof window !== 'undefined' && data.length > 0) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -163,12 +174,14 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   return await fetchAllRecords('resellers', 'name');
 }
 
+// GERADOR DE ID BLINDADO CONTRA ERRO 500
 const generateSafeId = (name: string) => {
-  return "leo_" + name.toLowerCase()
+  const clean = name.toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, '_')
-    .substring(0, 50) + "_" + Math.random().toString(36).substring(2, 7);
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/[^a-z0-9]/g, '_') // Remove símbolos como ✮ e emojis
+    .substring(0, 50);
+  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
 export async function saveContent(item: ContentItem) {
@@ -262,13 +275,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
-    if (error) return { error: "ERRO DE CONEXÃO SUPABASE." };
-    if (!user) return { error: "CÓDIGO INVÁLIDO." };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO PELO SISTEMA." };
+    if (error) return { error: "ERRO DE CONEXÃO." };
+    if (!user) return { error: "PIN INVÁLIDO." };
+    if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now && user.subscriptionTier !== 'lifetime') {
-      return { error: "SINAL EXPIRADO. RENOVE COM SEU REVENDEDOR." };
+      return { error: "SINAL EXPIRADO." };
     }
 
     let userIp = "0.0.0.0";
@@ -281,11 +294,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     let devices = Array.isArray(user.activeDevices) ? user.activeDevices : [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
-    if (!isThisDeviceLinked && deviceId !== "xtream_api_call") {
+    if (!isThisDeviceLinked) {
       if (devices.length >= (user.maxScreens || 1)) {
-        return { error: "LIMITE DE TELAS EXCEDIDO NESTE PIN." };
+        return { error: "LIMITE DE TELAS EXCEDIDO." };
       }
-      devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'TV/Box' });
+      devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp });
       user.activeDevices = devices;
     } else {
       user.activeDevices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: now.toISOString(), ip: userIp } : d);
@@ -303,7 +316,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
     return { user };
   } catch (e) {
-    return { error: "ERRO CRÍTICO NO LOGIN MASTER." };
+    return { error: "ERRO CRÍTICO NO LOGIN." };
   }
 }
 
@@ -311,10 +324,10 @@ export async function validateResellerLogin(username: string, pass: string) {
   try {
     const { data: res, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', pass).maybeSingle();
     if (error || !res) return { error: "LOGIN INVÁLIDO." };
-    if (res.isBlocked) return { error: "SUA REVENDA ESTÁ SUSPENSA." };
+    if (res.isBlocked) return { error: "REVENDA SUSPENSA." };
     return { reseller: res };
   } catch (e) {
-    return { error: "ERRO DE CONEXÃO COM O BANCO." };
+    return { error: "ERRO DE BANCO." };
   }
 }
 
@@ -348,13 +361,13 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   }
 
   let successCount = 0;
-  const batchSize = 100; // LOTES DE 100 PARA NÃO TRAVAR
+  const batchSize = 100;
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Injetando ${i} de ${items.length} canais...`);
+    onProgress?.(`Processando ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
     if (!error) successCount += batch.length;
-    await new Promise(r => setTimeout(r, 100)); // PAUSA PARA O NAVEGADOR RESPIRAR
+    await new Promise(r => setTimeout(r, 100)); 
   }
   
   if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
@@ -364,7 +377,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
     const content = await getRemoteContent();
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || '');
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
@@ -382,7 +395,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR\n";
   }
 }
 
@@ -408,7 +421,6 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  if (pin === 'adm77x2p') return "ERRO: PIN MASTER.";
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
   return `🚀 *LÉO TV STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${baseUrl}\n👤 *USUÁRIO:* ${pin}\n🔑 *SENHA:* ${pin}\n\nSinal blindado de alta performance.`;
 }
@@ -432,7 +444,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
   try {
     const response = await fetch("https://api.reidoscanais.ooo/sports");
     const data = await response.json();
-    if (!data.success || !data.data) return { success: 0, error: "Sem jogos no radar." };
+    if (!data.success || !data.data) return { success: 0, error: "Sem jogos." };
     const sportsItems = data.data.map((evento: any) => ({
       id: "radar_" + evento.id,
       title: evento.title.toUpperCase(),

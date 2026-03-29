@@ -85,16 +85,18 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  const isRestrictedCategory = (item: ContentItem) => {
+  const isAdultCategory = (item: ContentItem) => {
     const genre = (item.genre || "").toUpperCase();
     return genre.includes("ADULTO") || genre.includes("XXX");
   }
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
-      const isAdultCat = isRestrictedCategory(item);
-      if (isAdultCat && user && !user.isAdultEnabled) return false;
-      if (isAdultCat && !showAdult) return false;
+      const isAdult = isAdultCategory(item);
+      
+      // REGRA MASTER: Se não liberou adultos, o canal XXX some. Terror aparece normal.
+      if (isAdult && user && !user.isAdultEnabled) return false;
+      if (isAdult && !showAdult) return false;
       
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
       const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
@@ -112,7 +114,8 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    if (isRestrictedCategory(item)) {
+    // SÓ ADULTO PEDE SENHA. TERROR É NORMAL.
+    if (isAdultCategory(item)) {
       setPendingItem(item);
       setIsPinDialogOpen(true);
       return;
@@ -125,7 +128,7 @@ export default function HomeContent() {
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
-    if (isRestrictedCategory(series)) {
+    if (isAdultCategory(series)) {
       setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
       setIsPinDialogOpen(true);
       return;
@@ -209,7 +212,7 @@ export default function HomeContent() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                       <div className="flex items-center justify-between mb-1">
                          <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary flex-1">{item.title}</h3>
-                         {isRestrictedCategory(item) && <Lock className="h-4 w-4 text-primary ml-2" />}
+                         {isAdultCategory(item) && <Lock className="h-4 w-4 text-primary ml-2" />}
                       </div>
                       <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
                     </div>
@@ -231,7 +234,8 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll block !visible">
+              {/* SCROLL MASTER NEON FIXADO */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll block !visible scrollbar-visible">
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>

@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getRemoteUsers, getRemoteContent, getRemoteResellers, User, ContentItem, Reseller } from "@/lib/store"
+import { getRemoteUsers, getRemoteContent, getRemoteResellers, getTotalContentCount, User, ContentItem, Reseller } from "@/lib/store"
 
 export default function AdminDashboard() {
-  const [content, setContent] = React.useState<ContentItem[]>([])
+  const [totalContent, setTotalContent] = React.useState(0)
   const [users, setUsers] = React.useState<User[]>([])
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -17,14 +17,16 @@ export default function AdminDashboard() {
   React.useEffect(() => {
     const load = async () => {
       try {
+        // PEGANDO CONTAGEM REAL VIA HEAD-COUNT (0 EGRESS)
+        const count = await getTotalContentCount()
         const u = await getRemoteUsers()
-        const c = await getRemoteContent()
         const r = await getRemoteResellers()
+        
+        setTotalContent(count)
         setUsers(u)
-        setContent(c)
         setResellers(r)
       } catch (err) {
-        // Fallback para não quebrar o painel
+        // Fallback
       } finally {
         setLoading(false)
       }
@@ -38,24 +40,10 @@ export default function AdminDashboard() {
     </div>
   )
 
-  const totalEpisodes = content.reduce((acc, item) => {
-    let count = 0;
-    if (item.type === 'series' && Array.isArray(item.episodes)) {
-      count = item.episodes.length;
-    } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
-      count = item.seasons.reduce((sAcc, s) => sAcc + (Array.isArray(s.episodes) ? s.episodes.length : 0), 0);
-    }
-    return acc + count;
-  }, 0);
-
-  const totalChannels = content.filter(c => c.type === 'channel').length;
-  const totalMovies = content.filter(c => c.type === 'movie').length;
-  const totalSignals = totalChannels + totalEpisodes + totalMovies;
-
   const stats = [
     { title: "Clientes", value: users.length.toString(), icon: Users, color: "text-blue-400" },
-    { title: "Sinais Ativos", value: totalSignals.toString(), icon: Zap, color: "text-yellow-400" },
-    { title: "Canais TV", value: totalChannels.toString(), icon: Tv, color: "text-primary" },
+    { title: "Sinais Ativos", value: totalContent.toLocaleString(), icon: Zap, color: "text-yellow-400" },
+    { title: "Canais TV", value: totalContent.toLocaleString(), icon: Tv, color: "text-primary" },
     { title: "Revendedores", value: resellers.length.toString(), icon: Briefcase, color: "text-emerald-400" },
   ]
 
