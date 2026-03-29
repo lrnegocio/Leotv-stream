@@ -36,6 +36,8 @@ export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
 export interface ActiveDevice {
   id: string;
   lastActive: string;
+  ip?: string;
+  userAgent?: string;
 }
 
 export interface User {
@@ -174,7 +176,7 @@ export async function removeContent(id: string) {
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
-  const { error } = await supabase.from('content').delete().in('id', ids);
+  const { error } = await supabase.from('content').delete().in(ids);
   contentCache = null;
   return !error;
 }
@@ -223,8 +225,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
-    if (error && error.code === '402') return { error: "BANCO DE DADOS SEM COTA. CONTATE O MESTRE LÉO." };
-    if (error || !user) return { error: "CÓDIGO INVÁLIDO." };
+    if (error) return { error: "ERRO DE CONEXÃO MASTER." };
+    if (!user) return { error: "CÓDIGO INVÁLIDO." };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO." };
 
     const now = new Date();
@@ -232,16 +234,25 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       return { error: "SINAL EXPIRADO." };
     }
 
+    let userIp = "0.0.0.0";
+    try {
+      const ipRes = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipRes.json();
+      userIp = ipData.ip;
+    } catch(e) {}
+
     let devices = Array.isArray(user.activeDevices) ? user.activeDevices : [];
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
-    if (!isThisDeviceLinked && deviceId !== "xtream_api_call" && deviceId !== "pc_smarters_call") {
+    if (!isThisDeviceLinked && deviceId !== "xtream_api_call") {
       if (devices.length >= (user.maxScreens || 1)) {
         return { error: "LIMITE DE TELAS EXCEDIDO." };
       }
-      devices.push({ id: deviceId, lastActive: now.toISOString() });
+      devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp, userAgent: navigator.userAgent });
       user.activeDevices = devices;
-    } 
+    } else {
+      user.activeDevices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: now.toISOString(), ip: userIp } : d);
+    }
     
     if (!user.activatedAt) {
       user.activatedAt = now.toISOString();
@@ -255,7 +266,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(user);
     return { user };
   } catch (e) {
-    return { error: "ERRO DE CONEXÃO MASTER." };
+    return { error: "ERRO CRÍTICO DE SISTEMA." };
   }
 }
 
@@ -279,15 +290,19 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     if (!isMaster) {
       const { data } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
       user = data;
-      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,PIN OBRIGATORIO NO LINK LEO TV\n";
+      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,PIN BLOQUEADO LEO TV\n";
     }
 
     const content = await getRemoteContent();
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || '');
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
-      if (item.isRestricted && !isMaster && user && !user.isAdultEnabled) return;
+      const genre = (item.genre || "").toUpperCase();
+      const isAdult = item.isRestricted || genre.includes("XXX") || genre.includes("ADULTO");
+      
+      if (isAdult && !isMaster && user && !user.isAdultEnabled) return;
+      
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
@@ -302,28 +317,11 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       } else if (item.type === 'movie') {
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
         m3uLines.push(getProxyUrl('movie', item.id, 'mp4'));
-      } else if (item.type === 'series' || item.type === 'multi-season') {
-        if (Array.isArray(item.episodes)) {
-          item.episodes.forEach((ep: Episode) => {
-            m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title}",${title} EP ${ep.number}`);
-            m3uLines.push(getProxyUrl('series', ep.id, 'mp4'));
-          });
-        }
-        if (Array.isArray(item.seasons)) {
-          item.seasons.forEach((s: Season) => {
-            if (Array.isArray(s.episodes)) {
-              s.episodes.forEach(ep => {
-                m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${title} T${s.number}",${title} T${s.number} EP ${ep.number}`);
-                m3uLines.push(getProxyUrl('series', ep.id, 'mp4'));
-              });
-            }
-          });
-        }
       }
     });
     return m3uLines.join('\n');
   } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR MASTER\n";
+    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR\n";
   }
 }
 
@@ -349,109 +347,40 @@ export const generateRandomPin = (length: number = 11) => {
 };
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
-  if (pin === 'adm77x2p') return "ERRO: O PIN MASTER NÃO PODE SER VENDIDO.";
-  
-  const prodUrl = baseUrl;
-  const playlistUrl = `${prodUrl}/api/playlist?pin=${pin}`;
+  if (pin === 'adm77x2p') return "ERRO: PIN MASTER.";
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
-  
-  return `🚀 *LÉO TV STREAM - ACESSO LIBERADO!* 🚀
-
-🔑 *SEU CÓDIGO:* \`${pin}\`
-📅 *PLANO:* ${planoText}
-🖥️ *LIMITE:* ${screens} tela(s)
-
----
-💻 *PC E CELULAR (APLICATIVO PRÓPRIO):*
-Abra o link abaixo e clique em "INSTALAR APP" no menu:
-🔗 ${prodUrl}
-
----
-📺 *SMART TV / TV BOX / ROKU (IPTV SMARTERS):*
-Use os dados abaixo no seu app de IPTV:
-🌐 *SERVIDOR:* ${prodUrl}
-👤 *USUÁRIO:* ${pin}
-🔑 *SENHA:* ${pin}
-
----
-🔗 *LINK DA LISTA M3U8 (COPIE E COLE):*
-${playlistUrl}
-
-⚠️ _Sinal blindado de alta performance. Proibido compartilhar o PIN._`;
+  return `🚀 *LÉO TV STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${baseUrl}\n👤 *USUÁRIO:* ${pin}\n🔑 *SENHA:* ${pin}\n\nSinal blindado de alta performance.`;
 }
 
-export async function renewUserSubscription(userId: string, resellerId: string) {
-  try {
-    const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
-    const { data: reseller } = await supabase.from('resellers').select('*').eq('id', resellerId).single();
-    if (!user || !reseller) return { error: "Erro." };
-    const cost = user.maxScreens || 1;
-    if (reseller.credits < cost) return { error: "Sem créditos." };
-    const now = new Date();
-    let baseDate = now;
-    if (user.expiryDate && new Date(user.expiryDate) > now) baseDate = new Date(user.expiryDate);
-    const newExpiry = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const updatedUser = { ...user, subscriptionTier: 'monthly', expiryDate: newExpiry.toISOString(), isBlocked: false };
-    const updatedReseller = { ...reseller, credits: reseller.credits - cost, totalSold: (reseller.totalSold || 0) + 1 };
-    await supabase.from('users').upsert(updatedUser);
-    await supabase.from('resellers').upsert(updatedReseller);
-    return { success: true, user: updatedUser, reseller: updatedReseller };
-  } catch (e) {
-    return { error: "FALHA." };
-  }
-}
-
-/**
- * IMPORTADOR MASSIVO MASTER v169
- * Blindado contra caracteres especiais para evitar Erro 500 (btoa error).
- */
 export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
   const items: any[] = [];
   let currentItem: any = null;
 
-  onProgress?.("Iniciando análise da lista...");
-
   const generateSafeId = (name: string) => {
-    // Normaliza e remove caracteres não permitidos para criar um ID estável e seguro
-    const clean = name.toLowerCase()
+    // Gerador de ID imune a Erro 500 (remove caracteres especiais e acentos)
+    return "m3u_" + name.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]/g, '_')
-      .substring(0, 50);
-    return "m3u_" + clean + "_" + Math.random().toString(36).substring(2, 7);
+      .substring(0, 40) + "_" + Math.random().toString(36).substring(2, 7);
   };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line || line.startsWith('#EXT-X-SESSION')) continue;
-
     if (line.startsWith('#EXTINF:')) {
       const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
       const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
-      const nameParts = line.split(',');
-      const name = nameParts[nameParts.length - 1]?.trim() || "Canal Importado";
-      
+      const name = line.split(',').pop()?.trim() || "Canal";
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
-      const nameUpper = name.toUpperCase();
-
-      const isRestricted = genre.includes('ADULT') || 
-                           genre.includes('XXX') || 
-                           genre.includes('HOT') || 
-                           genre.includes('TERROR') || 
-                           genre.includes('HORROR') ||
-                           nameUpper.includes('XXX') || 
-                           nameUpper.includes('ADULTO') || 
-                           nameUpper.includes('TERROR');
-
       currentItem = {
         id: generateSafeId(name),
         title: name,
-        type: genre.includes('FILME') || genre.includes('MOVIE') ? 'movie' : 'channel',
+        type: genre.includes('FILME') ? 'movie' : 'channel',
         genre: genre,
         imageUrl: logoMatch ? logoMatch[1] : null,
-        isRestricted: isRestricted,
-        description: `Importado Léo Tv Stream - Grupo: ${genre}`,
+        isRestricted: genre.includes('ADULT') || genre.includes('XXX'),
+        description: "Sinal Master",
         streamUrl: ""
       };
     } else if (line.startsWith('http') && currentItem) {
@@ -462,48 +391,32 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   }
 
   let successCount = 0;
-  let failedCount = 0;
-  const batchSize = 100;
-
+  const batchSize = 200; // Lotes pequenos para não travar o PC
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Importando Lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(items.length/batchSize)}...`);
-    
-    try {
-      // ignoreDuplicates garante que não trave se o ID já existir
-      const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
-      if (!error) successCount += batch.length;
-      else failedCount += batch.length;
-    } catch (e) {
-      failedCount += batch.length;
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 50));
+    onProgress?.(`Salvando Lote ${Math.floor(i/batchSize) + 1}...`);
+    // Upsert com ignoreDuplicates para não duplicar canais
+    const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
+    if (!error) successCount += batch.length;
+    // Pequeno delay para aliviar o processador do usuário
+    await new Promise(r => setTimeout(r, 30));
   }
-
   contentCache = null;
-  return { success: successCount, failed: failedCount };
+  return { success: successCount, failed: items.length - successCount };
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // LISTA AMPLIADA COM FONTES CXTV E REI DOS CANAIS (v169)
   const premiumChannels: ContentItem[] = [
-    { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo São Paulo 4K.' },
-    { id: 'leo_sbt', title: 'SBT FHD', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/sbt-online-01/', imageUrl: 'http://contfree.shop:80/images/a3418b3c391884505f6034724cbc2e43.png', description: 'SBT Nacional Full HD.' },
-    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K Ultra HD.' },
-    { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'O melhor do futebol em 4K.' },
-    { id: 'leo_combate_4k', title: 'COMBATE 4K', type: 'channel', genre: 'LUTAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698415.ts', imageUrl: 'http://contfree.shop:80/images/31791acb79e4821c4c203bf95f6404ef.png', description: 'UFC e Boxe em 4K.' },
-    { id: 'leo_retro_cartoon', title: 'RETRÔ CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
-    { id: 'leo_horror_pluto', title: 'HORROR CHANNEL', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Terror 24h (PIN Obrigatório).' },
-    { id: 'leo_cazetv', title: 'CAZÉ TV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'CazéTV ao vivo.' },
-    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/record-news/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/06/assistir-record-news-ao-vivo.webp', description: 'Notícias 24h.' },
-    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/s200/OTAKU%20SIGN%20TV.webp', description: 'Animes 24h.' },
+    { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
+    { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
+    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' },
+    { id: 'leo_cazetv', title: 'CAZÉ TV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp' },
+    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp' }
   ];
-
+  
   let added = 0;
   for (const ch of premiumChannels) {
-    const success = await saveContent(ch);
-    if (success) added++;
+    if (await saveContent(ch)) added++;
   }
   return { success: added };
 }
@@ -512,35 +425,20 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
   try {
     const response = await fetch("https://api.reidoscanais.ooo/sports");
     const data = await response.json();
-
-    if (!data.success || !data.data) {
-      return { success: 0, error: "Nenhum jogo encontrado na API agora." };
-    }
-
-    const sportsItems: any[] = data.data.map((evento: any) => {
-      const firstEmbed = evento.embeds?.[0]?.embed_url || "";
-      const sid = "radar_sport_" + evento.id;
-      
-      return {
-        id: sid,
-        title: evento.title.toUpperCase(),
-        type: 'channel',
-        genre: "FUTEBOL AO VIVO",
-        description: `${evento.category} - Início: ${new Date(evento.start_time).toLocaleString()}`,
-        imageUrl: evento.poster,
-        isRestricted: false,
-        streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, 
-      };
-    });
-
-    if (sportsItems.length > 0) {
-      const { error } = await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
-      if (error) throw error;
-    }
-    
+    if (!data.success || !data.data) return { success: 0, error: "Sem jogos agora." };
+    const sportsItems = data.data.map((evento: any) => ({
+      id: "radar_" + evento.id,
+      title: evento.title.toUpperCase(),
+      type: 'channel',
+      genre: "FUTEBOL AO VIVO",
+      imageUrl: evento.poster,
+      isRestricted: false,
+      streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")
+    }));
+    await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
     contentCache = null;
     return { success: sportsItems.length };
-  } catch (err: any) {
-    return { success: 0, error: err.message };
+  } catch (e) {
+    return { success: 0 };
   }
 }
