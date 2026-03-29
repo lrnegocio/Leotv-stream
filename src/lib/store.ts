@@ -65,11 +65,10 @@ export interface Reseller {
   isBlocked: boolean;
 }
 
-let contentCache: ContentItem[] | null = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 5; 
-
 const URL_SEPARATOR = '|IPTV|';
+const CACHE_KEY = 'leo_stream_content_cache';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp';
+const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA ECONOMIZAR SUPABASE
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -96,14 +95,20 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    return contentCache || [];
+    return [];
   }
 }
 
 export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
   const now = Date.now();
-  if (!forceRefresh && contentCache && (now - lastFetchTime < CACHE_DURATION)) {
-    return contentCache;
+  
+  if (typeof window !== 'undefined' && !forceRefresh) {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+    
+    if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
+      return JSON.parse(cachedData);
+    }
   }
 
   const rawData = await fetchAllRecords('content', 'title');
@@ -119,10 +124,11 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     return item;
   });
 
-  if (data.length > 0) {
-    contentCache = data;
-    lastFetchTime = now;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(CACHE_TIME_KEY, now.toString());
   }
+  
   return data || [];
 }
 
@@ -159,7 +165,7 @@ export async function saveContent(item: ContentItem) {
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
     
     if (!error) {
-      contentCache = null; 
+      if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
       return true;
     }
     return false;
@@ -170,20 +176,20 @@ export async function saveContent(item: ContentItem) {
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
-  contentCache = null;
+  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   const { error } = await supabase.from('content').delete().in(ids);
-  contentCache = null;
+  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
 
 export async function clearAllM3UContent() {
   const { error } = await supabase.from('content').delete().like('id', 'm3u_%');
-  contentCache = null;
+  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
 
@@ -248,7 +254,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       if (devices.length >= (user.maxScreens || 1)) {
         return { error: "LIMITE DE TELAS EXCEDIDO." };
       }
-      devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp, userAgent: navigator.userAgent });
+      devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'TV/Box' });
       user.activeDevices = devices;
     } else {
       user.activeDevices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: now.toISOString(), ip: userIp } : d);
@@ -283,40 +289,21 @@ export async function validateResellerLogin(username: string, pass: string) {
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   try {
-    const normalizedPin = pin.trim();
-    const isMaster = normalizedPin === 'adm77x2p';
-    
-    let user = null;
-    if (!isMaster) {
-      const { data } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
-      user = data;
-      if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,PIN BLOQUEADO LEO TV\n";
-    }
-
     const content = await getRemoteContent();
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || '');
 
     let m3uLines = ["#EXTM3U"];
     content.forEach(item => {
-      const genre = (item.genre || "").toUpperCase();
-      const isAdult = item.isRestricted || genre.includes("XXX") || genre.includes("ADULTO");
-      
-      if (isAdult && !isMaster && user && !user.isAdultEnabled) return;
-      
       const logo = item.imageUrl || "";
       const cat = (item.genre || "GERAL").toUpperCase();
       const title = item.title.toUpperCase();
 
-      const getProxyUrl = (type: string, id: string, ext: string = 'ts') => {
-        return `${baseUrl}/${type}/${normalizedPin}/${normalizedPin}/${id}.${ext}`;
-      };
-
       if (item.type === 'channel') {
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(getProxyUrl('live', item.id));
+        m3uLines.push(`${baseUrl}/live/${pin}/${pin}/${item.id}.ts`);
       } else if (item.type === 'movie') {
         m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(getProxyUrl('movie', item.id, 'mp4'));
+        m3uLines.push(`${baseUrl}/movie/${pin}/${pin}/${item.id}.mp4`);
       }
     });
     return m3uLines.join('\n');
@@ -358,7 +345,6 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   let currentItem: any = null;
 
   const generateSafeId = (name: string) => {
-    // Gerador de ID imune a Erro 500 (remove caracteres especiais e acentos)
     return "m3u_" + name.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -391,17 +377,16 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   }
 
   let successCount = 0;
-  const batchSize = 200; // Lotes pequenos para não travar o PC
+  const batchSize = 100; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Salvando Lote ${Math.floor(i/batchSize) + 1}...`);
-    // Upsert com ignoreDuplicates para não duplicar canais
+    onProgress?.(`Processando ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
     if (!error) successCount += batch.length;
-    // Pequeno delay para aliviar o processador do usuário
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise(r => setTimeout(r, 50));
   }
-  contentCache = null;
+  
+  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return { success: successCount, failed: items.length - successCount };
 }
 
@@ -436,7 +421,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")
     }));
     await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
-    contentCache = null;
+    if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
     return { success: sportsItems.length };
   } catch (e) {
     return { success: 0 };

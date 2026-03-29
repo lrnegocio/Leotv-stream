@@ -3,11 +3,10 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, Smartphone, Monitor, Globe, Download, Zap, ArrowDownToLine, Ghost } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, SkipBack, SkipForward, Volume2, VolumeX, Maximize, ExternalLink, ShieldAlert, Zap, Ghost } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -89,16 +88,13 @@ export default function HomeContent() {
 
   const isRestrictedCategory = (item: ContentItem) => {
     const genre = (item.genre || "").toUpperCase();
-    // Terror agora é livre conforme sua ordem, Mestre.
     return item.isRestricted || genre.includes("ADULTO") || genre.includes("XXX");
   }
 
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       const isAdultCat = isRestrictedCategory(item);
-      // Se o botão Adulto no cadastro do cliente estiver desligado, oculta os canais.
       if (isAdultCat && user && !user.isAdultEnabled) return false;
-      // Se o usuário ocultou no switch temporário, oculta também.
       if (isAdultCat && !showAdult) return false;
       
       const titleMatch = item.title.toLowerCase().includes(searchQuery);
@@ -231,7 +227,8 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll" style={{ display: 'block' }}>
+              {/* BARRA DE ROLAGEM FORÇADA NEON */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll" style={{ display: 'block', maxHeight: '100%' }}>
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>
