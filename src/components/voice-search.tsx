@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Mic, Search, Loader2, X, Volume2 } from "lucide-react"
+import { Mic, Search, Loader2, X, Volume2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
@@ -40,14 +40,14 @@ function VoiceSearchContent() {
   }
 
   const startListening = () => {
-    // BLINDAGEM TV: Suporte amplo para reconhecimento de voz
+    // SUPORTE AMPLIADO PARA SMART TV (Samsung, LG, Android TV)
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
       toast({ 
         variant: "destructive", 
-        title: "Microfone não suportado", 
-        description: "Certifique-se de estar usando Chrome ou Android TV.",
+        title: "Dispositivo não suportado", 
+        description: "Use o Chrome ou Android TV para usar o microfone.",
         className: "bg-destructive text-white rounded-2xl border-none font-bold uppercase text-[10px]"
       })
       return
@@ -61,8 +61,8 @@ function VoiceSearchContent() {
     recognition.onstart = () => {
       setIsListening(true)
       toast({ 
-        title: "Pode falar...", 
-        description: "O sinal de voz Léo Tv está ativo.",
+        title: "Sinal de Voz Ativo", 
+        description: "Pode falar agora, Mestre.",
         className: "bg-primary text-white rounded-2xl border-none font-bold uppercase text-[10px]"
       })
     }
@@ -84,8 +84,8 @@ function VoiceSearchContent() {
     recognition.onerror = (event: any) => {
       setIsListening(false)
       console.error("Erro no microfone:", event.error);
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Ative o microfone nas configurações da sua TV ou navegador." })
+      if (event.error === 'not-allowed') {
+        toast({ variant: "destructive", title: "ACESSO NEGADO", description: "Ative o microfone nas configurações da sua TV." })
       }
     }
 

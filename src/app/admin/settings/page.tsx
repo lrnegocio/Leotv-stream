@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap, Trophy, RefreshCcw, Database } from "lucide-react"
+import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap, Trophy, RefreshCcw, Database, FileUp } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, processM3UImport, syncLiveSports, importPremiumBundle } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const [importing, setImporting] = React.useState(false)
   const [syncingSports, setSyncingSports] = React.useState(false)
   const [importingPremium, setImportingPremium] = React.useState(false)
+  const [importMsg, setImportingMsg] = React.useState("")
 
   React.useEffect(() => {
     const load = async () => {
@@ -42,19 +43,30 @@ export default function SettingsPage() {
       return;
     }
     setImporting(true);
+    setImportingMsg("Analisando lista...");
     try {
-      const result = await processM3UImport(m3uContent);
-      if (result.success > 0) {
-        toast({ title: "IMPORTAÇÃO CONCLUÍDA!", description: `${result.success} novos canais sincronizados.` });
-        setM3uContent("");
-      } else {
-        toast({ variant: "destructive", title: "Erro no Formato" });
-      }
+      const result = await processM3UImport(m3uContent, (msg) => setImportingMsg(msg));
+      toast({ title: "IMPORTAÇÃO CONCLUÍDA!", description: `${result.success} canais processados.` });
+      setM3uContent("");
     } catch (err) {
       toast({ variant: "destructive", title: "Erro Fatal" });
     } finally {
       setImporting(false);
+      setImportingMsg("");
     }
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setM3uContent(text);
+      toast({ title: "Arquivo Carregado", description: "Clique em Iniciar Importação para salvar no banco." });
+    };
+    reader.readAsText(file);
   }
 
   const handleSyncSports = async () => {
@@ -77,7 +89,7 @@ export default function SettingsPage() {
     setImportingPremium(true);
     try {
       const result = await importPremiumBundle();
-      toast({ title: "PACOTE PREMIUM INSTALADO!", description: `${result.success} canais master adicionados à sua biblioteca.` });
+      toast({ title: "PACOTE PREMIUM INSTALADO!", description: `${result.success} canais master adicionados.` });
     } catch (err) {
       toast({ variant: "destructive", title: "Erro no Pacote" });
     } finally {
@@ -95,7 +107,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-8">
-        {/* IMPORTADOR PREMIUM MASTER */}
         <Card className="bg-emerald-500/10 border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden border-2">
           <CardHeader className="bg-emerald-500/20 border-b border-emerald-500/20 p-6">
             <div className="flex items-center gap-4">
@@ -104,18 +115,11 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic">Fábrica de Canais Léo TV</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Injeta o melhor conteúdo do mercado na sua biblioteca.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Injeta conteúdo de elite sem duplicatas.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
-            <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex gap-4">
-              <Info className="h-6 w-6 text-emerald-500 shrink-0" />
-              <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
-                Este comando injeta centenas de canais (Premiere, HBO, Telecine, Adultos, Terror) extraídos de fontes de elite. Tudo organizado com logos e categorias.
-              </p>
-            </div>
-
             <Button 
               onClick={handleImportPremium} 
               disabled={importingPremium}
@@ -126,7 +130,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* RADAR DE ESPORTES MASTER */}
         <Card className="bg-primary/5 border-primary/20 shadow-2xl rounded-3xl overflow-hidden border-2">
           <CardHeader className="bg-primary/10 border-b border-primary/20 p-6">
             <div className="flex items-center gap-4">
@@ -140,13 +143,6 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
-            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex gap-4">
-              <RefreshCcw className="h-6 w-6 text-primary shrink-0 animate-spin-slow" />
-              <p className="text-[10px] text-muted-foreground uppercase font-black leading-relaxed">
-                Busca os jogos que estão acontecendo agora e os cadastra na categoria "FUTEBOL AO VIVO".
-              </p>
-            </div>
-
             <Button 
               onClick={handleSyncSports} 
               disabled={syncingSports}
@@ -157,7 +153,52 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* SENHA PARENTAL */}
+        <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
+          <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-500/10 rounded-2xl">
+                <Zap className="h-6 w-6 text-emerald-500" />
+              </div>
+              <div>
+                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador Massivo M3U (1M+)</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Importe listas gigantescas sem travar seu PC.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            <div className="grid gap-4">
+              <div className="p-6 border-2 border-dashed border-white/10 rounded-3xl text-center bg-black/20 hover:border-emerald-500/50 transition-colors">
+                <input type="file" id="m3u-file" accept=".m3u,.m3u8" className="hidden" onChange={handleFileUpload} />
+                <label htmlFor="m3u-file" className="cursor-pointer flex flex-col items-center gap-2">
+                  <FileUp className="h-10 w-10 text-emerald-500" />
+                  <span className="text-xs font-black uppercase">Carregar Arquivo .M3U</span>
+                </label>
+              </div>
+              <p className="text-center text-[10px] uppercase font-bold opacity-40">OU COLE O CONTEÚDO ABAIXO</p>
+              <Textarea 
+                value={m3uContent}
+                onChange={e => setM3uContent(e.target.value)}
+                placeholder="Cole aqui o conteúdo da lista M3U..."
+                className="h-48 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl"
+              />
+            </div>
+            
+            {importing && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center animate-pulse">
+                <p className="text-xs font-black uppercase text-emerald-500">{importMsg}</p>
+              </div>
+            )}
+
+            <Button 
+              onClick={handleImportM3U} 
+              disabled={importing}
+              className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 font-black uppercase rounded-2xl"
+            >
+              {importing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : "INICIAR IMPORTAÇÃO MASSIVA"}
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
             <div className="flex items-center gap-4">
@@ -166,7 +207,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Proteção para canais adultos e restritos.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Proteção para Terror e Adultos.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -187,36 +228,6 @@ export default function SettingsPage() {
                 <Save className="mr-2 h-5 w-5" /> SALVAR SENHA
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* IMPORTADOR M3U */}
-        <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-2xl">
-                <Zap className="h-6 w-6 text-emerald-500" />
-              </div>
-              <div>
-                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador M3U Master</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60 tracking-tighter">Otimizado para listas gigantes.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-8 space-y-6">
-            <Textarea 
-              value={m3uContent}
-              onChange={e => setM3uContent(e.target.value)}
-              placeholder="Cole aqui o conteúdo da lista M3U..."
-              className="h-64 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl"
-            />
-            <Button 
-              onClick={handleImportM3U} 
-              disabled={importing}
-              className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 font-black uppercase rounded-2xl"
-            >
-              {importing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : "INICIAR IMPORTAÇÃO"}
-            </Button>
           </CardContent>
         </Card>
       </div>

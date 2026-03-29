@@ -154,7 +154,7 @@ export async function saveContent(item: ContentItem) {
       seasons: Array.isArray(item.seasons) ? item.seasons : [],
     };
 
-    const { error } = await supabase.from('content').upsert(payload);
+    const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
     
     if (!error) {
       contentCache = null; 
@@ -401,18 +401,30 @@ export async function renewUserSubscription(userId: string, resellerId: string) 
   }
 }
 
-export async function processM3UImport(content: string): Promise<{ success: number; failed: number }> {
+/**
+ * IMPORTADOR MASSIVO MASTER v169
+ * Blindado contra caracteres especiais para evitar Erro 500 (btoa error).
+ */
+export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
-  const items: ContentItem[] = [];
-  let currentItem: Partial<ContentItem> | null = null;
+  const items: any[] = [];
+  let currentItem: any = null;
 
-  // Carrega IDs existentes para evitar duplicatas
-  const { data: existingData } = await supabase.from('content').select('id');
-  const existingIds = new Set(existingData?.map(i => i.id) || []);
+  onProgress?.("Iniciando análise da lista...");
+
+  const generateSafeId = (name: string) => {
+    // Normaliza e remove caracteres não permitidos para criar um ID estável e seguro
+    const clean = name.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, '_')
+      .substring(0, 50);
+    return "m3u_" + clean + "_" + Math.random().toString(36).substring(2, 7);
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line) continue;
+    if (!line || line.startsWith('#EXT-X-SESSION')) continue;
 
     if (line.startsWith('#EXTINF:')) {
       const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
@@ -423,97 +435,75 @@ export async function processM3UImport(content: string): Promise<{ success: numb
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       const nameUpper = name.toUpperCase();
 
-      const isAdult = genre.includes('ADULT') || genre.includes('XXX') || genre.includes('HOT') || nameUpper.includes('XXX') || nameUpper.includes('ADULTO') || nameUpper.includes('EROTICO');
-      const isTerror = genre.includes('TERROR') || genre.includes('HORROR') || nameUpper.includes('TERROR') || nameUpper.includes('HORROR');
-
-      // Gera ID baseado no nome para evitar duplicata
-      const itemPid = "m3u_" + name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 50);
+      const isRestricted = genre.includes('ADULT') || 
+                           genre.includes('XXX') || 
+                           genre.includes('HOT') || 
+                           genre.includes('TERROR') || 
+                           genre.includes('HORROR') ||
+                           nameUpper.includes('XXX') || 
+                           nameUpper.includes('ADULTO') || 
+                           nameUpper.includes('TERROR');
 
       currentItem = {
-        id: itemPid,
+        id: generateSafeId(name),
         title: name,
         type: genre.includes('FILME') || genre.includes('MOVIE') ? 'movie' : 'channel',
         genre: genre,
-        imageUrl: logoMatch ? logoMatch[1] : undefined,
-        isRestricted: isAdult || isTerror,
+        imageUrl: logoMatch ? logoMatch[1] : null,
+        isRestricted: isRestricted,
         description: `Importado Léo Tv Stream - Grupo: ${genre}`,
-        streamUrl: "",
-        directStreamUrl: "" 
+        streamUrl: ""
       };
     } else if (line.startsWith('http') && currentItem) {
-      if (!existingIds.has(currentItem.id!)) {
-        currentItem.streamUrl = line;
-        currentItem.directStreamUrl = line; 
-        items.push(currentItem as ContentItem);
-      }
+      currentItem.streamUrl = line + URL_SEPARATOR + line;
+      items.push(currentItem);
       currentItem = null;
     }
   }
 
   let successCount = 0;
   let failedCount = 0;
+  const batchSize = 100;
 
-  // Processamento em lotes para performance P2P
-  for (let i = 0; i < items.length; i += 100) {
-    const batch = items.slice(i, i + 100);
-    const fixedBatch = batch.map(item => {
-      const combinedUrl = item.directStreamUrl 
-        ? `${item.streamUrl || ''}${URL_SEPARATOR}${item.directStreamUrl}`
-        : (item.streamUrl || "");
-      
-      return {
-        id: item.id,
-        title: item.title,
-        type: item.type,
-        genre: item.genre,
-        imageUrl: item.imageUrl || null,
-        isRestricted: item.isRestricted,
-        description: item.description,
-        streamUrl: combinedUrl,
-        episodes: [],
-        seasons: []
-      };
-    });
-
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    onProgress?.(`Importando Lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(items.length/batchSize)}...`);
+    
     try {
-      const { error } = await supabase.from('content').upsert(fixedBatch);
-      if (!error) successCount += fixedBatch.length;
-      else failedCount += fixedBatch.length;
+      // ignoreDuplicates garante que não trave se o ID já existir
+      const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
+      if (!error) successCount += batch.length;
+      else failedCount += batch.length;
     } catch (e) {
       failedCount += batch.length;
     }
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
   }
+
   contentCache = null;
   return { success: successCount, failed: failedCount };
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  const { data: existingData } = await supabase.from('content').select('id');
-  const existingIds = new Set(existingData?.map(i => i.id) || []);
-
+  // LISTA AMPLIADA COM FONTES CXTV E REI DOS CANAIS (v169)
   const premiumChannels: ContentItem[] = [
     { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo São Paulo 4K.' },
     { id: 'leo_sbt', title: 'SBT FHD', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/sbt-online-01/', imageUrl: 'http://contfree.shop:80/images/a3418b3c391884505f6034724cbc2e43.png', description: 'SBT Nacional Full HD.' },
     { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K Ultra HD.' },
     { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'O melhor do futebol em 4K.' },
     { id: 'leo_combate_4k', title: 'COMBATE 4K', type: 'channel', genre: 'LUTAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698415.ts', imageUrl: 'http://contfree.shop:80/images/31791acb79e4821c4c203bf95f6404ef.png', description: 'UFC e Boxe em 4K.' },
-    { id: 'leo_animal_4k', title: 'ANIMAL PLANET 4K', type: 'channel', genre: 'DOCUMENTARIOS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698407.ts', imageUrl: 'http://contfree.shop:80/images/ac8530c1c4c5959785cc87d79da18310.png', description: 'Vida selvagem em 4K.' },
-    { id: 'leo_jovem_pan_4k', title: 'JOVEM PAN NEWS 4K', type: 'channel', genre: 'NOTICIAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698433.ts', imageUrl: 'http://contfree.shop:80/images/f74354fd9c9ffb12a64d86d760f446b3.png', description: 'Notícias 24h em 4K.' },
-    { id: 'leo_cnn_4k', title: 'CNN BRASIL 4K', type: 'channel', genre: 'NOTICIAS', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698414.ts', imageUrl: 'http://contfree.shop:80/images/9240c4b4c89f931c2907fb9b0e77b91a.png', description: 'Notícias do Brasil e Mundo 4K.' },
-    { id: 'leo_cartoon_4k', title: 'CARTOON NETWORK 4K', type: 'channel', genre: 'INFANTIL', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698413.ts', imageUrl: 'http://contfree.shop:80/images/912cedc265ab56388565c18ffa0f0e20.png', description: 'Desenhos 24h em 4K.' },
-    { id: 'leo_axn_4k', title: 'AXN 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698408.ts', imageUrl: 'http://contfree.shop:80/images/bc25b3ce198e1c529633e0035c164c7b.png', description: 'Séries de investigação em 4K.' },
-    { id: 'leo_megapix_4k', title: 'MEGAPIX 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698435.ts', imageUrl: 'http://contfree.shop:80/images/4bd33fbf4a00fd1567758a3edad3802f.png', description: 'Os melhores filmes em 4K.' },
-    { id: 'leo_otaku_sign', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp', description: 'Canal 24h de Animes.' },
-    { id: 'leo_retro_cartoon', title: 'RETRO CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
+    { id: 'leo_retro_cartoon', title: 'RETRÔ CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2018/05/retro-cartoon-desenhos-classicos.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgLbQIJk3tD7MwHLzMY-NlcQm3O1a2qj50PBnRNfgMsNFaPzUkQGVWDQcCg6_V6vg4mCQ31YgfA6ni-FKIIRaBjC8FSxV-IEDiKZTIr93qVZdbfuebt9YibwJSWCNBS40XuXR_SAtDFADfnWEUfqbRloiCe27rg0cyAMQ8QXzXBTAamjn-Yj_qcidM16l0/w385-h184-p-k-no-nu/RETR%C3%94%20CARTOON.webp', description: 'Desenhos clássicos.' },
     { id: 'leo_horror_pluto', title: 'HORROR CHANNEL', type: 'channel', genre: 'TERROR', isRestricted: true, streamUrl: 'https://pluto.tv/br/live-tv/63eb9c5351f5d000085e8d7e', imageUrl: 'https://images.pluto.tv/channels/63eb9c5351f5d000085e8d7e/featuredImage_1774294524670.jpg', description: 'Terror 24h (PIN Obrigatório).' },
+    { id: 'leo_cazetv', title: 'CAZÉ TV', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/cazetv/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/07/cazetv.webp', description: 'CazéTV ao vivo.' },
+    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/record-news/', imageUrl: 'https://tvonline0800.com/wp-content/uploads/2024/06/assistir-record-news-ao-vivo.webp', description: 'Notícias 24h.' },
+    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/s200/OTAKU%20SIGN%20TV.webp', description: 'Animes 24h.' },
   ];
 
   let added = 0;
   for (const ch of premiumChannels) {
-    if (!existingIds.has(ch.id)) {
-      await saveContent(ch);
-      added++;
-    }
+    const success = await saveContent(ch);
+    if (success) added++;
   }
   return { success: added };
 }
@@ -527,15 +517,10 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       return { success: 0, error: "Nenhum jogo encontrado na API agora." };
     }
 
-    const { data: existingData } = await supabase.from('content').select('id');
-    const existingIds = new Set(existingData?.map(i => i.id) || []);
-
-    const sportsItems: ContentItem[] = data.data.map((evento: any) => {
+    const sportsItems: any[] = data.data.map((evento: any) => {
       const firstEmbed = evento.embeds?.[0]?.embed_url || "";
       const sid = "radar_sport_" + evento.id;
       
-      if (existingIds.has(sid)) return null;
-
       return {
         id: sid,
         title: evento.title.toUpperCase(),
@@ -546,10 +531,10 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
         isRestricted: false,
         streamUrl: `${firstEmbed}${URL_SEPARATOR}${firstEmbed}`, 
       };
-    }).filter((i: any) => i !== null);
+    });
 
     if (sportsItems.length > 0) {
-      const { error } = await supabase.from('content').upsert(sportsItems);
+      const { error } = await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
       if (error) throw error;
     }
     

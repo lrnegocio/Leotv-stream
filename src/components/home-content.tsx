@@ -311,9 +311,9 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-tight">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 sm:space-y-6 custom-scroll block" style={{ scrollbarWidth: 'thin' }}>
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-4 sm:space-y-6 custom-scroll block min-h-[300px]" style={{ scrollbarWidth: 'thin', display: 'block' }}>
                 {selectedSeries.type === 'series' && (
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 pb-10">
                     {selectedSeries.episodes?.map((ep, idx) => (
                       <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-[1.5rem] px-8 group">
                         <span className="font-black uppercase text-sm tracking-widest">{ep.title || `Episódio ${ep.number}`}</span>
@@ -323,7 +323,7 @@ export default function HomeContent() {
                   </div>
                 )}
                 {selectedSeries.type === 'multi-season' && (
-                  <div className="space-y-10">
+                  <div className="space-y-10 pb-10">
                     {selectedSeries.seasons?.map((season) => (
                       <div key={season.id} className="space-y-4">
                         <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4">Temporada {season.number}</h3>
@@ -351,7 +351,7 @@ export default function HomeContent() {
           <div className="text-2xl font-black uppercase italic text-primary mb-2">Trava Parental Léo Tv Stream</div>
           <p className="text-[10px] uppercase font-bold opacity-40 mb-8">Digite o código secreto para liberar este sinal.</p>
           <div className="py-6 flex justify-center">
-             <input type="password" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary transition-all" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
+             <input type="password" title="Senha Parental" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary transition-all" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && verifyPin()} autoFocus />
           </div>
           <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl mt-4 shadow-xl">DESBLOQUEAR AGORA</Button>
         </DialogContent>
