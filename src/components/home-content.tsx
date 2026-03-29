@@ -62,7 +62,6 @@ export default function HomeContent() {
         setLoading(false)
       } catch (err) {
         setLoading(false)
-        toast({ variant: "destructive", title: "Erro de Sintonização" })
       }
     }
     load()
@@ -88,7 +87,7 @@ export default function HomeContent() {
 
   const isRestrictedCategory = (item: ContentItem) => {
     const genre = (item.genre || "").toUpperCase();
-    return item.isRestricted || genre.includes("ADULTO") || genre.includes("XXX");
+    return genre.includes("ADULTO") || genre.includes("XXX");
   }
 
   const filteredContent = React.useMemo(() => {
@@ -187,6 +186,11 @@ export default function HomeContent() {
       </header>
 
       <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
+        {categoriesWithCounts.length === 0 && !loading && (
+          <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">
+            Nenhum conteúdo sintonizado no momento.
+          </div>
+        )}
         {categoriesWithCounts.map(([category, count]) => {
           const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
           return (
@@ -227,7 +231,7 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll" style={{ display: 'block' }}>
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll block !visible">
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>

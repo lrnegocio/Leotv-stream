@@ -70,9 +70,9 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache_v2';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v2';
-const CACHE_TTL = 1000 * 60 * 60; // 1 HORA DE CACHE PARA SALVAR O EGRESS DO SUPABASE
+const CACHE_KEY = 'leo_stream_content_cache_v3';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v3';
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS DE CACHE PARA SEGURANÇA TOTAL
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
@@ -88,7 +88,11 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         .range(from, from + step - 1)
         .order(orderBy, { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        // Se der erro de cota ou rede, paramos e deixamos o cache assumir
+        hasMore = false;
+        break;
+      }
       if (data && data.length > 0) {
         allData = allData.concat(data);
         from += step;
@@ -99,7 +103,6 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
     }
     return allData;
   } catch (e) {
-    console.error(`Erro ao buscar ${table}:`, e);
     return [];
   }
 }
@@ -107,11 +110,12 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
 export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
   const now = Date.now();
   
-  if (typeof window !== 'undefined' && !forceRefresh) {
+  // VERIFICAÇÃO DE CACHE PRIMEIRO (Para salvar o Supabase)
+  if (typeof window !== 'undefined') {
     const cachedData = localStorage.getItem(CACHE_KEY);
     const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
     
-    if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
+    if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
       try {
         return JSON.parse(cachedData);
       } catch (e) {
@@ -120,8 +124,15 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     }
   }
 
+  // TENTA BUSCAR DO BANCO
   const rawData = await fetchAllRecords('content', 'title');
   
+  // SE O BANCO RETORNAR VAZIO (BLOQUEIO), MAS TIVERMOS CACHE ANTIGO, USA O CACHE
+  if (rawData.length === 0 && typeof window !== 'undefined') {
+    const backup = localStorage.getItem(CACHE_KEY);
+    if (backup) return JSON.parse(backup);
+  }
+
   const data = rawData.map(item => {
     if (item.streamUrl && typeof item.streamUrl === 'string' && item.streamUrl.includes(URL_SEPARATOR)) {
       const parts = item.streamUrl.split(URL_SEPARATOR);
@@ -133,17 +144,15 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     return item;
   });
 
-  if (typeof window !== 'undefined') {
+  // ATUALIZA O CACHE
+  if (typeof window !== 'undefined' && data.length > 0) {
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
       localStorage.setItem(CACHE_TIME_KEY, now.toString());
-    } catch (e) {
-      // Se estourar o localStorage (5MB+), limpa o cache antigo
-      localStorage.removeItem(CACHE_KEY);
-    }
+    } catch (e) {}
   }
   
-  return data || [];
+  return data;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
@@ -405,14 +414,11 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
-  // LISTA EXPANDIDA COM OS CANAIS DA CXTV E REI DOS CANAIS
   const premiumChannels: ContentItem[] = [
     { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
     { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
-    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' },
-    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/record-news', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/86600ed6f09e4bf48be4e55a0cd01536.webp' },
-    { id: 'leo_otaku_tv', title: 'OTAKU SIGN TV', type: 'channel', genre: 'ANIMES', isRestricted: false, streamUrl: 'https://www.olhosnatv.com.br/2022/10/otaku-sign-tv.html', imageUrl: 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWzsaBbPTqt4Y65Q5dWlHOkqeTjU7YEbHGOSMzQVUqCxyFC9xHUo-7ZVK6Tzd1Ea_uDuF_cNEd94yD2t3MRv2XG9nHjqZ_OUy8O21z0h2gn83tfI1SMXb7lmYGgPF-NejpcZWOmlBqIT1nszsVfuTmNd5Gwm_AMGob8wIUDWsv7HvLgbNeKnjpzJRbzmc/w385-h184-p-k-no-nu/OTAKU%20SIGN%20TV.webp' },
-    { id: 'leo_retro_cartoon', title: 'RETRO CARTOON', type: 'channel', genre: 'DESENHOS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/retro-cartoon', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-l/a1e4076264abe6b6ccde87a587966abe.webp' }
+    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'HBO', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' },
+    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/record-news', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/86600ed6f09e4bf48be4e55a0cd01536.webp' }
   ];
   
   let added = 0;

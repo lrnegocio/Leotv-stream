@@ -24,6 +24,7 @@ export default function AdminDashboard() {
         setContent(c)
         setResellers(r)
       } catch (err) {
+        // Fallback para não quebrar o painel
       } finally {
         setLoading(false)
       }
@@ -37,7 +38,6 @@ export default function AdminDashboard() {
     </div>
   )
 
-  // CÁLCULO DE SINAIS TOTAIS (Canais + Filmes + Todos os Episódios de Séries) - v118.0
   const totalEpisodes = content.reduce((acc, item) => {
     let count = 0;
     if (item.type === 'series' && Array.isArray(item.episodes)) {
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <h4 className="font-bold text-lg uppercase tracking-tight italic">Status Master de Rede</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando com {totalSignals} sinais blindados de alta performance.</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Operando com sinais blindados de alta performance.</p>
               </div>
             </div>
           </CardContent>
