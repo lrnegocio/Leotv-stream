@@ -71,9 +71,6 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
-/**
- * LIMPEZA DE CACHE MESTRE: Remove todas as entradas de cache local
- */
 const clearLocalCache = () => {
   if (typeof window !== 'undefined') {
     Object.keys(localStorage).forEach(key => {
@@ -84,9 +81,6 @@ const clearLocalCache = () => {
   }
 };
 
-/**
- * GERADOR DE ID BLINDADO: Remove 100% de símbolos especiais (✮, emojis, acentos)
- */
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -110,9 +104,6 @@ export async function getTotalContentCount(): Promise<number> {
   }
 }
 
-/**
- * BUSCA ON-DEMAND BLINDADA: Filtra no servidor para economizar Egress.
- */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
     const cacheKey = `p2p_content_cache_${searchQuery || 'all'}`;
@@ -121,7 +112,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 60 * 2) return data; // 2 horas de cache
+        if (Date.now() - timestamp < 1000 * 60 * 60 * 24) return data; // 24 horas de cache
       }
     }
 
@@ -131,7 +122,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(1000); 
     } else {
-      query = query.limit(500); // Home leve
+      query = query.limit(500); 
     }
 
     const { data: rawData, error } = await query;
@@ -216,9 +207,6 @@ export async function removeContent(id: string) {
   return !error;
 }
 
-/**
- * EXCLUSÃO EM LOTES ULTRA-REDUZIDOS (Batch de 20): Evita bloqueios do Supabase.
- */
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   
@@ -229,7 +217,6 @@ export async function bulkRemoveContent(ids: string[]) {
     const batch = ids.slice(i, i + batchSize);
     const { error } = await supabase.from('content').delete().in('id', batch);
     if (error) {
-      console.error("Erro no lote de exclusão:", error);
       allSuccess = false;
     }
   }
@@ -238,9 +225,6 @@ export async function bulkRemoveContent(ids: string[]) {
   return allSuccess;
 }
 
-/**
- * LIMPEZA TOTAL M3U: Apaga todos os canais importados (leo_*)
- */
 export async function clearAllM3UContent() {
   try {
     const { error } = await supabase.from('content').delete().like('id', 'leo_%');
@@ -342,9 +326,6 @@ export async function validateResellerLogin(username: string, pass: string) {
   }
 }
 
-/**
- * IMPORTADOR MASTER 1M+: Padroniza para LÉO TV e agrupa episódios.
- */
 export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
   const itemsMap = new Map<string, any>();
@@ -364,7 +345,9 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       else if (rawGenre.includes('SERIE') || rawGenre.includes('DORAMA') || rawGenre.includes('ANIME')) finalGenre = "LÉO TV SERIES";
       else if (rawGenre.includes('ESPORTE') || rawGenre.includes('SPORTS')) finalGenre = "LÉO TV ESPORTES";
       else if (rawGenre.includes('DESENHO') || rawGenre.includes('KIDS') || rawGenre.includes('INFANTIL')) finalGenre = "LÉO TV DESENHOS";
-      else if (rawGenre.includes('CLIPES') || rawGenre.includes('MUSIC')) finalGenre = "LÉO TV VÍDEO CLIPES";
+      else if (rawGenre.includes('CLIPES')) finalGenre = "LÉO TV VÍDEO CLIPES";
+      else if (rawGenre.includes('MUSICA')) finalGenre = "LÉO TV MUSICAS";
+      else if (rawGenre.includes('RADIO')) finalGenre = "LÉO TV RÁDIOS";
       else if (rawGenre.includes('NOVELA')) finalGenre = "LÉO TV NOVELAS";
 
       currentItemData = {
@@ -443,7 +426,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
 
   const items = Array.from(itemsMap.values());
   let successCount = 0;
-  const batchSize = 50; 
+  const batchSize = 100; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     if (onProgress) onProgress(`Sincronizando: ${i} de ${items.length}...`);

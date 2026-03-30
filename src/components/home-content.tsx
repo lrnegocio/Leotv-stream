@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Search, Zap, AlertTriangle } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Search, Zap, AlertTriangle, Radio } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -24,7 +24,9 @@ const MASTER_CATEGORIES = [
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
-  { id: 'MUSIC', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'MUSIC_CLIPS', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'MUSICAS', name: 'LÉO TV MUSICAS', icon: Music, color: 'bg-indigo-500', genre: 'LÉO TV MUSICAS' },
+  { id: 'RADIOS', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
   { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS' },
 ]
@@ -67,13 +69,11 @@ export default function HomeContent() {
 
         // BUSCA BLINDADA: Tenta carregar do banco ou cache local
         const data = await getRemoteContent(false, searchQuery)
+        setContent(data)
         if (data.length === 0 && !searchQuery) {
-           // Se estiver zerado e não for busca, pode ser erro de cota
-           const retryData = await getRemoteContent(true, ""); // Força uma tentativa limpa
+           // Fallback se estiver zerado
+           const retryData = await getRemoteContent(true, ""); 
            setContent(retryData)
-           if (retryData.length === 0) setError(true)
-        } else {
-           setContent(data)
         }
       } catch (err) {
         setError(true)
@@ -102,17 +102,18 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  // CÁLCULO DE SINAIS POR CATEGORIA (CONTANDO EPISÓDIOS)
+  // CÁLCULO DE SINAIS POR CATEGORIA (CONTANDO CADA EPISÓDIO COMO UM CANAL)
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     MASTER_CATEGORIES.forEach(cat => {
       const items = content.filter(i => (i.genre || "").toUpperCase() === cat.genre);
       let total = 0;
       items.forEach(item => {
-        if (item.type === 'series' && item.episodes) {
-          total += item.episodes.length;
-        } else if (item.type === 'multi-season' && item.seasons) {
-          item.seasons.forEach(s => total += s.episodes.length);
+        if ((item.type === 'series' || item.type === 'multi-season')) {
+          if (item.episodes) total += item.episodes.length;
+          if (item.seasons) item.seasons.forEach(s => total += s.episodes.length);
+          // Se não tiver episódios cadastrados ainda, conta como 1
+          if (!item.episodes && !item.seasons) total += 1;
         } else {
           total += 1;
         }
@@ -219,7 +220,7 @@ export default function HomeContent() {
             <div className="space-y-2">
               <h3 className="text-2xl font-black uppercase italic text-destructive">LIMITE DE CONEXÃO EXCEDIDO</h3>
               <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-                O banco de dados do Império atingiu o limite de saída. Tente buscar o canal pelo nome ou aguarde o reset da cota.
+                O banco de dados atingiu a cota diária. Use a busca ou aguarde o reset do sinal.
               </p>
             </div>
             <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black px-10 h-14 rounded-2xl">RECARREGAR SINAL</Button>
