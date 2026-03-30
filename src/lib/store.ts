@@ -71,13 +71,18 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
+/**
+ * LIMPEZA DE TEXTO MASTER: Remove símbolos como ✮, emojis e acentos
+ * para evitar Erro 500 no servidor e IDs inválidos.
+ */
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") 
     .replace(/[^a-z0-9]/g, '_') 
     .replace(/_+/g, '_')
-    .substring(0, 60);
+    .trim()
+    .substring(0, 100);
   return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
@@ -93,20 +98,25 @@ export async function getTotalContentCount(): Promise<number> {
   }
 }
 
+/**
+ * BUSCA ON-DEMAND BLINDADA: Filtra no servidor para economizar Egress do Supabase.
+ * Cache de 24 horas para navegação instantânea.
+ */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
     const cacheKey = `p2p_content_cache_${searchQuery || 'all'}`;
-    if (!forceRefresh && !searchQuery) {
+    
+    if (!forceRefresh) {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 60) return data; 
+        if (Date.now() - timestamp < 1000 * 60 * 60 * 24) return data; 
       }
     }
 
     let query = supabase.from('content').select('*').order('title', { ascending: true });
 
-    if (searchQuery && searchQuery.length > 1) {
+    if (searchQuery && searchQuery.length > 0) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(1000); 
     } else {
@@ -127,10 +137,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       return item;
     });
 
-    if (!searchQuery) {
-      localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
-    }
-
+    localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
     return processed;
   } catch (e) {
     return [];
@@ -185,6 +192,10 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
+    if (!error) {
+      // Limpa cache para refletir mudanças
+      Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
+    }
     return !error;
   } catch (e) {
     return false;
@@ -193,15 +204,39 @@ export async function saveContent(item: ContentItem) {
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
+  if (!error) {
+    Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
+  }
   return !error;
 }
 
+/**
+ * EXCLUSÃO EM LOTES (BATCH DELETE): Evita erro de limite de requisição
+ * e limpa o cache local obrigatoriamente.
+ */
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
-  const { error } = await supabase.from('content').delete().in(ids);
-  return !error;
+  
+  const batchSize = 50;
+  let allSuccess = true;
+
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const batch = ids.slice(i, i + batchSize);
+    const { error } = await supabase.from('content').delete().in(batch);
+    if (error) allSuccess = false;
+  }
+
+  if (allSuccess) {
+    Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
+  }
+  
+  return allSuccess;
 }
 
+/**
+ * LIMPEZA TOTAL M3U: Apaga todos os canais importados (leo_*)
+ * e limpa 100% da memória local.
+ */
 export async function clearAllM3UContent() {
   try {
     const { error } = await supabase.from('content').delete().like('id', 'leo_%');
@@ -303,6 +338,10 @@ export async function validateResellerLogin(username: string, pass: string) {
   }
 }
 
+/**
+ * IMPORTADOR MASTER 1M+: Agrupa episódios automaticamente,
+ * padroniza gêneros para LÉO TV e salva em lotes de 100.
+ */
 export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
   const itemsMap = new Map<string, any>();
@@ -316,6 +355,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const rawGenre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
+      // PADRONIZAÇÃO LÉO TV
       let finalGenre = `LÉO TV ${rawGenre}`;
       if (rawGenre.includes('FILME') || rawGenre.includes('MOVIES')) finalGenre = "LÉO TV FILMES";
       else if (rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT')) finalGenre = "LÉO TV ADULTOS";
@@ -334,6 +374,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const { title, genre, imageUrl, isRestricted } = currentItemData;
       const streamUrl = line + URL_SEPARATOR + line;
 
+      // MOTOR DE AGRUPAMENTO DE EPISÓDIOS
       const seriesMatch = title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           title.match(/(.*?)\s+Episode\s+(\d+)/i) || 
                           title.match(/(.*?)\s+Episodio\s+(\d+)/i);
@@ -403,7 +444,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   const batchSize = 100; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    if (onProgress) onProgress(`Salvando: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sincronizando: ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id' });
     if (!error) successCount += batch.length;
     await new Promise(r => setTimeout(r, 100)); 

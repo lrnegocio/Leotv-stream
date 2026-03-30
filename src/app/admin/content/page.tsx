@@ -23,10 +23,10 @@ export default function ContentManagementPage() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  const loadItems = React.useCallback(async (query = "") => {
+  const loadItems = React.useCallback(async (query = "", force = false) => {
     setLoading(true)
     try {
-      const data = await getRemoteContent(true, query)
+      const data = await getRemoteContent(force, query)
       setItems(data)
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos." })
@@ -55,9 +55,11 @@ export default function ContentManagementPage() {
       setIsDeleting(true)
       const success = await bulkRemoveContent(selectedIds)
       if (success) {
-        setItems(prev => prev.filter(i => !selectedIds.includes(i.id)))
         setSelectedIds([])
+        await loadItems(searchTerm, true)
         toast({ title: "Limpeza Concluída", description: "Canais removidos do banco." })
+      } else {
+        toast({ variant: "destructive", title: "Erro", description: "Alguns itens não puderam ser excluídos." })
       }
       setIsDeleting(false)
     }
@@ -68,7 +70,8 @@ export default function ContentManagementPage() {
       setIsDeleting(true)
       const success = await clearAllM3UContent()
       if (success) {
-        await loadItems()
+        setSelectedIds([])
+        await loadItems("", true)
         toast({ title: "Fábrica Limpa!", description: "Todos os canais M3U foram deletados." })
       }
       setIsDeleting(false)
@@ -99,11 +102,11 @@ export default function ContentManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline uppercase">Sua Biblioteca P2P</h1>
-          <p className="text-muted-foreground uppercase text-[10px]">Busca inteligente nos 300k+ Canais e Filmes.</p>
+          <h1 className="text-3xl font-bold font-headline uppercase italic text-primary">Sua Biblioteca P2P</h1>
+          <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">Busca inteligente nos 300k+ Canais e Filmes.</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <Button variant="outline" onClick={() => loadItems(searchTerm)} className="border-primary/20 text-primary hover:bg-primary/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
+          <Button variant="outline" onClick={() => loadItems(searchTerm, true)} className="border-primary/20 text-primary hover:bg-primary/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
             <RefreshCcw className="mr-2 h-3 w-3" /> Sincronizar Império
           </Button>
           <Button variant="outline" onClick={handleClearAllImported} disabled={isDeleting} className="border-destructive/20 text-destructive hover:bg-destructive/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
@@ -114,7 +117,7 @@ export default function ContentManagementPage() {
               <Trash2 className="mr-2 h-3 w-3" /> Excluir ({selectedIds.length})
             </Button>
           )}
-          <Button asChild className="bg-primary h-10 px-6 rounded-xl uppercase text-[9px] font-black">
+          <Button asChild className="bg-primary h-10 px-6 rounded-xl uppercase text-[9px] font-black shadow-xl shadow-primary/20">
             <Link href="/admin/content/new">
               <Plus className="mr-2 h-4 w-4" /> Novo Conteúdo
             </Link>
@@ -126,20 +129,23 @@ export default function ContentManagementPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Digite para pesquisar nos 300 mil canais..." 
+            placeholder="PESQUISAR NO SEU IMPÉRIO..." 
             className="pl-10 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
         <Button variant="outline" onClick={toggleSelectAll} className="h-12 border-white/5 rounded-xl uppercase text-[9px] font-black">
-          {selectedIds.length === items.length && items.length > 0 ? <CheckSquare className="mr-2 h-4 w-4" /> : <Square className="mr-2 h-4 w-4" />}
+          {selectedIds.length === items.length && items.length > 0 ? <CheckSquare className="mr-2 h-4 w-4 text-primary" /> : <Square className="mr-2 h-4 w-4" />}
           {selectedIds.length === items.length && items.length > 0 ? "Desmarcar Todos" : "Marcar Todos"}
         </Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase opacity-40">Localizando Conteúdo...</p>
+        </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {items.length === 0 ? (
@@ -150,18 +156,18 @@ export default function ContentManagementPage() {
             items.map((item) => {
               const isSelected = selectedIds.includes(item.id);
               return (
-                <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary' : 'border-white/5'} rounded-xl p-0 group hover:border-primary/50 transition-all flex flex-col overflow-hidden relative`}>
+                <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl p-0 group hover:border-primary/50 transition-all flex flex-col overflow-hidden relative shadow-lg`}>
                   <div className="absolute top-2 left-2 z-10">
                     <Checkbox 
                       checked={isSelected} 
                       onCheckedChange={() => toggleSelect(item.id)} 
-                      className="bg-black/60 border-white/20 w-5 h-5"
+                      className="bg-black/60 border-white/20 w-5 h-5 data-[state=checked]:bg-primary"
                     />
                   </div>
                   
                   <div className="aspect-[2/3] relative bg-black/40 cursor-pointer" onClick={() => toggleSelect(item.id)}>
                     {item.imageUrl ? (
-                      <Image src={item.imageUrl} alt={item.title} fill className="object-cover" unoptimized />
+                      <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform" unoptimized />
                     ) : (
                       <div className="flex items-center justify-center h-full opacity-20"><Film className="h-10 w-10" /></div>
                     )}
@@ -216,13 +222,14 @@ export default function ContentManagementPage() {
                 onClick={() => { setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - EP ${ep.number}` }); }}
                 className="h-14 justify-start bg-white/5 border-white/5 hover:border-primary hover:bg-primary/10 rounded-2xl px-6 group transition-all"
               >
-                <PlayCircle className="h-5 w-5 mr-4 text-primary group-hover:scale-110 transition-transform" />
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary mr-4">{ep.number}</div>
                 <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                <PlayCircle className="ml-auto h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
               </Button>
             ))}
             {previewItem?.type === 'multi-season' && previewItem.seasons?.sort((a,b) => a.number - b.number).map(s => (
                <div key={s.id} className="space-y-2 mt-4 first:mt-0">
-                 <h4 className="text-[10px] font-black uppercase text-primary/60 px-2 tracking-tighter">Temporada {s.number}</h4>
+                 <h4 className="text-[10px] font-black uppercase text-primary/60 px-2 tracking-tighter border-l-2 border-primary ml-1 pl-2 mb-3">Temporada {s.number}</h4>
                  {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
                     <Button 
                       key={ep.id} 
@@ -230,8 +237,9 @@ export default function ContentManagementPage() {
                       onClick={() => { setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - T${s.number} EP ${ep.number}` }); }}
                       className="h-12 justify-start bg-white/5 border-white/5 hover:border-primary hover:bg-primary/10 rounded-xl px-6 group w-full"
                     >
-                      <Layers className="h-4 w-4 mr-4 text-secondary group-hover:scale-110 transition-transform" />
-                      <span className="font-bold uppercase text-[10px]">T{s.number} - EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                      <div className="w-6 h-6 rounded-full bg-primary/5 flex items-center justify-center font-black text-[8px] text-primary mr-4">{ep.number}</div>
+                      <span className="font-bold uppercase text-[10px]">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                      <PlayCircle className="ml-auto h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
                     </Button>
                  ))}
                </div>
