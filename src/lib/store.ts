@@ -67,6 +67,11 @@ export interface Reseller {
   birthDate?: string;
 }
 
+// LIMPEZA DE NOMES MASTER
+const cleanName = (name: string) => {
+  return name.replace(/[.",]/g, '').trim().toUpperCase();
+};
+
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -138,7 +143,7 @@ export async function saveContent(item: ContentItem) {
   try {
     const payload = {
       id: item.id || generateSafeId(item.title),
-      title: item.title,
+      title: cleanName(item.title),
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV CANAIS AO VIVO").toUpperCase(),
@@ -151,7 +156,11 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (!error && typeof window !== 'undefined') localStorage.clear();
+    if (!error && typeof window !== 'undefined') {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('p2p_cache')) localStorage.removeItem(key);
+      });
+    }
     return !error;
   } catch (e) { return false; }
 }
@@ -246,6 +255,50 @@ export async function validateResellerLogin(username: string, password: string):
   return { reseller: data };
 }
 
+// IMPORTAÇÃO HTML SNIPER MASTER
+export async function processHTMLImport(html: string, onProgress?: (m: string) => void) {
+  const items: any[] = [];
+  const div = document.createElement('div');
+  div.innerHTML = html;
+
+  // Busca todos os cards de canais (baseado no snippet Supremo)
+  const links = div.querySelectorAll('a.btn-stream');
+  
+  onProgress?.(`Analisando ${links.length} sinais...`);
+
+  links.forEach((link, idx) => {
+    const titleEl = link.querySelector('.col.d-flex.align-items-center');
+    const imgEl = link.querySelector('img');
+    
+    if (titleEl) {
+      const rawTitle = titleEl.textContent?.replace(/^\d+/, '').trim() || `Canal ${idx}`;
+      const title = cleanName(rawTitle);
+      const imageUrl = imgEl?.getAttribute('src') || '';
+      
+      items.push({
+        id: generateSafeId(title),
+        title,
+        type: 'channel',
+        genre: 'LÉO TV CANAIS AO VIVO',
+        description: 'Sinal Master Léo Tv',
+        imageUrl,
+        isRestricted: false,
+        streamUrl: 'OFFLINE_MANUAL', // O HTML não traz o link direto, precisa ser atualizado depois
+        directStreamUrl: ''
+      });
+    }
+  });
+
+  // Salva no banco em lotes de 20
+  for (let i = 0; i < items.length; i += 20) {
+    if (onProgress) onProgress(`Sintonizando HTML: ${i} de ${items.length}...`);
+    await supabase.from('content').upsert(items.slice(i, i + 20));
+  }
+
+  if (typeof window !== 'undefined') localStorage.clear();
+  return { success: items.length };
+}
+
 export async function processM3UImport(content: string, onProgress?: (m: string) => void) {
   const lines = content.split('\n');
   const itemsMap = new Map<string, any>();
@@ -269,21 +322,21 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
       else if (group.includes('RADIO')) genre = "LÉO TV RÁDIOS";
       else if (group.includes('NOVELA')) genre = "LÉO TV NOVELAS";
 
-      current = { title: name, genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
+      current = { title: cleanName(name), genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
     } else if (line.startsWith('http') && current) {
       const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           current.title.match(/(.*?)\s+Episode\s+(\d+)/i) ||
                           current.title.match(/(.*?)\s+Ep\s+(\d+)/i);
       
       if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA'))) {
-        const base = seriesMatch[1].trim();
+        const base = cleanName(seriesMatch[1].trim());
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         if (!itemsMap.has(base)) {
           itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
         }
         const series = itemsMap.get(base);
         if (!series.episodes.some((e:any) => e.number === epNum)) {
-          series.episodes.push({ id: generateSafeId(current.title), title: `Episódio ${epNum}`, number: epNum, streamUrl: line, directStreamUrl: line });
+          series.episodes.push({ id: generateSafeId(current.title), title: `EPISODIO ${epNum}`, number: epNum, streamUrl: line, directStreamUrl: line });
         }
       } else {
         const id = generateSafeId(current.title);
@@ -295,7 +348,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
 
   const items = Array.from(itemsMap.values());
   for (let i = 0; i < items.length; i += 20) {
-    if (onProgress) onProgress(`Sintonizando: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sintonizando M3U: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
   if (typeof window !== 'undefined') localStorage.clear();

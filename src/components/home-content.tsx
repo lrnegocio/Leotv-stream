@@ -40,67 +40,72 @@ export default function HomeContent() {
   const q = searchParams.get('q') || ""
 
   const loadData = React.useCallback(async (queryStr = "") => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const session = localStorage.getItem("user_session")
+      const session = localStorage.getItem("user_session");
       if (!session) { router.push("/login"); return; }
-      setUser(JSON.parse(session))
-      
-      const settings = await getGlobalSettings()
-      setParentalPin(settings.parentalPin)
-      
-      const data = await getRemoteContent(false, queryStr)
-      setContent(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
+      setUser(JSON.parse(session));
+      const settings = await getGlobalSettings();
+      setParentalPin(settings.parentalPin);
+      const data = await getRemoteContent(false, queryStr);
+      setContent(data);
+    } catch (err) { } finally { setLoading(false); }
+  }, [router]);
 
-  React.useEffect(() => {
-    loadData(q)
-  }, [q, loadData])
+  React.useEffect(() => { loadData(q) }, [q, loadData]);
 
   const catCounts = React.useMemo(() => {
-    const counts: any = {}
+    const counts: any = {};
     CATEGORIES.forEach(c => {
-      const items = content.filter(i => i.genre === c.genre)
-      let total = 0
+      const items = content.filter(i => i.genre === c.genre);
+      let total = 0;
       items.forEach(i => {
-        const epCount = (i.episodes?.length || 0);
-        let seasonEpCount = 0;
-        if (i.seasons) i.seasons.forEach(s => seasonEpCount += (s.episodes?.length || 0));
-        
-        // Se for canal ou filme (sem episódios), conta 1. Se for série, conta cada episódio.
-        if (epCount === 0 && seasonEpCount === 0) total += 1;
-        else total += (epCount + seasonEpCount);
-      })
-      counts[c.id] = total
-    })
-    return counts
-  }, [content])
+        if (i.type === 'series' || i.type === 'multi-season') {
+          const epCount = (i.episodes?.length || 0);
+          let seasonEpCount = 0;
+          if (i.seasons) i.seasons.forEach(s => seasonEpCount += (s.episodes?.length || 0));
+          total += (epCount + seasonEpCount);
+        } else {
+          total += 1;
+        }
+      });
+      counts[c.id] = total;
+    });
+    return counts;
+  }, [content]);
 
   const filtered = React.useMemo(() => {
-    let list = content
+    let list = content;
     if (selectedCat) {
-      const cat = CATEGORIES.find(c => c.id === selectedCat)
-      if (cat) list = list.filter(i => i.genre === cat.genre)
+      const cat = CATEGORIES.find(c => c.id === selectedCat);
+      if (cat) list = list.filter(i => i.genre === cat.genre);
     }
-    return list.filter(i => !i.isRestricted || (user?.isAdultEnabled))
-  }, [content, selectedCat, user])
+    return list.filter(i => !i.isRestricted || (user?.isAdultEnabled));
+  }, [content, selectedCat, user]);
+
+  const handleNext = () => {
+    if (!activeVideo) return;
+    const currentIndex = activeVideo.index;
+    const nextIndex = (currentIndex + 1) % filtered.length;
+    const item = filtered[nextIndex];
+    setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: nextIndex });
+  };
+
+  const handlePrev = () => {
+    if (!activeVideo) return;
+    const currentIndex = activeVideo.index;
+    const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+    const item = filtered[prevIndex];
+    setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: prevIndex });
+  };
 
   const handleItemClick = (item: ContentItem, idx: number) => {
     if (item.type === 'series' || item.type === 'multi-season') {
-      setSelectedSeries(item)
+      setSelectedSeries(item);
     } else {
-      setActiveVideo({ 
-        url: item.directStreamUrl || item.streamUrl, 
-        title: item.title, 
-        index: idx 
-      })
+      setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: idx });
     }
-  }
+  };
 
   const verifyPin = () => {
     if (pinInput === parentalPin) { 
@@ -111,9 +116,9 @@ export default function HomeContent() {
       toast({ variant: "destructive", title: "PIN INCORRETO" }); 
       setPinInput(""); 
     }
-  }
+  };
 
-  if (loading) return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest">Sintonizando Rede Master...</p></div>
+  if (loading) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Canais...</p></div>
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
@@ -176,7 +181,6 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* SELETOR DE EPISÓDIOS MASTER - LISTA VERTICAL PURA */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
@@ -214,9 +218,7 @@ export default function HomeContent() {
                       </div>
                     </div>
                   ))
-                ) : (
-                  <div className="text-center py-20 opacity-20 uppercase font-black text-xs">Nenhum episódio cadastrado.</div>
-                )}
+                ) : null}
               </div>
             </div>
           )}
@@ -225,7 +227,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} />}
+          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>
 
@@ -233,16 +235,7 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Léo Tv</div>
-          <input 
-            type="password" 
-            title="PIN" 
-            maxLength={4} 
-            className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
-            value={pinInput} 
-            onChange={e => setPinInput(e.target.value)} 
-            onKeyDown={e => e.key === 'Enter' && verifyPin()} 
-            autoFocus 
-          />
+          <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} autoFocus />
           <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl">DESBLOQUEAR</Button>
         </DialogContent>
       </Dialog>
