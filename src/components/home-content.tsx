@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Search, Zap, AlertTriangle, Radio } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Search, Zap, AlertTriangle, Radio, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -23,6 +23,7 @@ const MASTER_CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV CANAIS AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
+  { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
   { id: 'MUSIC_CLIPS', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
   { id: 'MUSICAS', name: 'LÉO TV MUSICAS', icon: Music, color: 'bg-indigo-500', genre: 'LÉO TV MUSICAS' },
@@ -67,13 +68,13 @@ export default function HomeContent() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
-        // BUSCA BLINDADA: Tenta carregar do banco ou cache local
+        // BUSCA BLINDADA COM FORCE REFRESH SE ESTIVER ZERADO
         const data = await getRemoteContent(false, searchQuery)
-        setContent(data)
         if (data.length === 0 && !searchQuery) {
-           // Fallback se estiver zerado
            const retryData = await getRemoteContent(true, ""); 
            setContent(retryData)
+        } else {
+           setContent(data)
         }
       } catch (err) {
         setError(true)
@@ -102,7 +103,6 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  // CÁLCULO DE SINAIS POR CATEGORIA (CONTANDO CADA EPISÓDIO COMO UM CANAL)
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     MASTER_CATEGORIES.forEach(cat => {
@@ -112,7 +112,6 @@ export default function HomeContent() {
         if ((item.type === 'series' || item.type === 'multi-season')) {
           if (item.episodes) total += item.episodes.length;
           if (item.seasons) item.seasons.forEach(s => total += s.episodes.length);
-          // Se não tiver episódios cadastrados ainda, conta como 1
           if (!item.episodes && !item.seasons) total += 1;
         } else {
           total += 1;
@@ -218,9 +217,9 @@ export default function HomeContent() {
           <div className="flex flex-col items-center justify-center py-40 gap-6 text-center">
             <div className="p-6 bg-destructive/10 rounded-full"><AlertTriangle className="h-16 w-16 text-destructive animate-pulse" /></div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-black uppercase italic text-destructive">LIMITE DE CONEXÃO EXCEDIDO</h3>
+              <h3 className="text-2xl font-black uppercase italic text-destructive">ERRO NO SINAL MASTER</h3>
               <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-                O banco de dados atingiu a cota diária. Use a busca ou aguarde o reset do sinal.
+                Tente recarregar ou verifique sua conexão.
               </p>
             </div>
             <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black px-10 h-14 rounded-2xl">RECARREGAR SINAL</Button>

@@ -112,7 +112,8 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 60 * 24) return data; // 24 horas de cache
+        // Cache reduzido para 1 hora para garantir sincronia entre Admin e Cliente
+        if (Date.now() - timestamp < 1000 * 60 * 60) return data;
       }
     }
 
@@ -227,7 +228,8 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    const { error } = await supabase.from('content').delete().like('id', 'leo_%');
+    // LIMPEZA MASTER: Apaga absolutamente tudo da tabela de conteúdo
+    const { error } = await supabase.from('content').delete().neq('id', '0_placeholder_0');
     clearLocalCache();
     return !error;
   } catch (e) {
@@ -342,7 +344,8 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       let finalGenre = `LÉO TV CANAIS AO VIVO`;
       if (rawGenre.includes('FILME') || rawGenre.includes('MOVIES')) finalGenre = "LÉO TV FILMES";
       else if (rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT')) finalGenre = "LÉO TV ADULTOS";
-      else if (rawGenre.includes('SERIE') || rawGenre.includes('DORAMA') || rawGenre.includes('ANIME')) finalGenre = "LÉO TV SERIES";
+      else if (rawGenre.includes('DORAMA') || rawGenre.includes('K-DRAMA')) finalGenre = "LÉO TV DORAMAS";
+      else if (rawGenre.includes('SERIE') || rawGenre.includes('ANIME')) finalGenre = "LÉO TV SERIES";
       else if (rawGenre.includes('ESPORTE') || rawGenre.includes('SPORTS')) finalGenre = "LÉO TV ESPORTES";
       else if (rawGenre.includes('DESENHO') || rawGenre.includes('KIDS') || rawGenre.includes('INFANTIL')) finalGenre = "LÉO TV DESENHOS";
       else if (rawGenre.includes('CLIPES')) finalGenre = "LÉO TV VÍDEO CLIPES";
@@ -360,11 +363,12 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const { title, genre, imageUrl, isRestricted } = currentItemData;
       const streamUrl = line + URL_SEPARATOR + line;
 
+      // MOTOR DE AGRUPAMENTO MASTER
       const seriesMatch = title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           title.match(/(.*?)\s+Episode\s+(\d+)/i) || 
                           title.match(/(.*?)\s+Episodio\s+(\d+)/i);
       
-      if (seriesMatch && (genre.includes('SERIE') || genre.includes('DORAMA') || genre.includes('ANIME'))) {
+      if (seriesMatch && (genre.includes('SERIE') || genre.includes('DORAMA') || genre.includes('ANIME') || genre.includes('NOVELA'))) {
         const baseName = seriesMatch[1].trim();
         const seasonNum = seriesMatch.length === 4 ? parseInt(seriesMatch[2]) : 1;
         const epNum = seriesMatch.length === 4 ? parseInt(seriesMatch[3]) : parseInt(seriesMatch[2]);
