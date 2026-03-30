@@ -72,8 +72,20 @@ export interface Reseller {
 const URL_SEPARATOR = '|IPTV|';
 
 /**
- * LIMPEZA DE TEXTO MASTER: Remove símbolos como ✮, emojis e acentos
- * para evitar Erro 500 no servidor e IDs inválidos.
+ * LIMPEZA DE CACHE MESTRE: Remove todas as entradas de cache local
+ */
+const clearLocalCache = () => {
+  if (typeof window !== 'undefined') {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('p2p_content_cache')) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
+};
+
+/**
+ * GERADOR DE ID BLINDADO: Remove 100% de símbolos especiais (✮, emojis, acentos)
  */
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
@@ -99,8 +111,7 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 /**
- * BUSCA ON-DEMAND BLINDADA: Filtra no servidor para economizar Egress do Supabase.
- * Cache de 24 horas para navegação instantânea.
+ * BUSCA ON-DEMAND BLINDADA: Filtra no servidor para economizar Egress.
  */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
@@ -110,7 +121,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 60 * 24) return data; 
+        if (Date.now() - timestamp < 1000 * 60 * 60 * 2) return data; // 2 horas de cache
       }
     }
 
@@ -120,7 +131,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(1000); 
     } else {
-      query = query.limit(500);
+      query = query.limit(500); // Home leve
     }
 
     const { data: rawData, error } = await query;
@@ -192,10 +203,7 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
-    if (!error) {
-      // Limpa cache para refletir mudanças
-      Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
-    }
+    if (!error) clearLocalCache();
     return !error;
   } catch (e) {
     return false;
@@ -204,43 +212,39 @@ export async function saveContent(item: ContentItem) {
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
-  if (!error) {
-    Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
-  }
+  if (!error) clearLocalCache();
   return !error;
 }
 
 /**
- * EXCLUSÃO EM LOTES (BATCH DELETE): Evita erro de limite de requisição
- * e limpa o cache local obrigatoriamente.
+ * EXCLUSÃO EM LOTES ULTRA-REDUZIDOS (Batch de 20): Evita bloqueios do Supabase.
  */
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   
-  const batchSize = 50;
+  const batchSize = 20; 
   let allSuccess = true;
 
   for (let i = 0; i < ids.length; i += batchSize) {
     const batch = ids.slice(i, i + batchSize);
-    const { error } = await supabase.from('content').delete().in(batch);
-    if (error) allSuccess = false;
+    const { error } = await supabase.from('content').delete().in('id', batch);
+    if (error) {
+      console.error("Erro no lote de exclusão:", error);
+      allSuccess = false;
+    }
   }
 
-  if (allSuccess) {
-    Object.keys(localStorage).forEach(key => { if(key.startsWith('p2p_content_cache')) localStorage.removeItem(key); });
-  }
-  
+  clearLocalCache();
   return allSuccess;
 }
 
 /**
  * LIMPEZA TOTAL M3U: Apaga todos os canais importados (leo_*)
- * e limpa 100% da memória local.
  */
 export async function clearAllM3UContent() {
   try {
     const { error } = await supabase.from('content').delete().like('id', 'leo_%');
-    localStorage.clear(); 
+    clearLocalCache();
     return !error;
   } catch (e) {
     return false;
@@ -339,8 +343,7 @@ export async function validateResellerLogin(username: string, pass: string) {
 }
 
 /**
- * IMPORTADOR MASTER 1M+: Agrupa episódios automaticamente,
- * padroniza gêneros para LÉO TV e salva em lotes de 100.
+ * IMPORTADOR MASTER 1M+: Padroniza para LÉO TV e agrupa episódios.
  */
 export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
@@ -355,7 +358,6 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const rawGenre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
-      // PADRONIZAÇÃO LÉO TV
       let finalGenre = `LÉO TV ${rawGenre}`;
       if (rawGenre.includes('FILME') || rawGenre.includes('MOVIES')) finalGenre = "LÉO TV FILMES";
       else if (rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT')) finalGenre = "LÉO TV ADULTOS";
@@ -374,7 +376,6 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const { title, genre, imageUrl, isRestricted } = currentItemData;
       const streamUrl = line + URL_SEPARATOR + line;
 
-      // MOTOR DE AGRUPAMENTO DE EPISÓDIOS
       const seriesMatch = title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           title.match(/(.*?)\s+Episode\s+(\d+)/i) || 
                           title.match(/(.*?)\s+Episodio\s+(\d+)/i);
@@ -441,7 +442,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
 
   const items = Array.from(itemsMap.values());
   let successCount = 0;
-  const batchSize = 100; 
+  const batchSize = 50; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     if (onProgress) onProgress(`Sincronizando: ${i} de ${items.length}...`);
@@ -450,7 +451,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
     await new Promise(r => setTimeout(r, 100)); 
   }
   
-  localStorage.clear(); 
+  clearLocalCache();
   return { success: successCount, failed: items.length - successCount };
 }
 
@@ -509,7 +510,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")
     }));
     const { error } = await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
-    localStorage.clear();
+    clearLocalCache();
     return { success: error ? 0 : sportsItems.length };
   } catch (e) {
     return { success: 0 };

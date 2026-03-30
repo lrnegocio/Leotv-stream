@@ -53,11 +53,13 @@ export default function HomeContent() {
       try {
         const session = localStorage.getItem("user_session")
         if (!session) { router.push("/login"); return; }
-        setUser(JSON.parse(session))
+        const parsedUser = JSON.parse(session);
+        setUser(parsedUser)
 
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
+        // Força recarregamento se não houver canais (tentativa de contornar cota bloqueada)
         const data = await getRemoteContent(false, searchQuery)
         setContent(data)
       } catch (err) {
@@ -95,7 +97,9 @@ export default function HomeContent() {
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       const isAdult = isAdultCategory(item);
-      if (isAdult && user && !user.isAdultEnabled) return false;
+      // Se a chave Adulto no cadastro estiver desligada, some TUDO que for adulto.
+      if (isAdult && (!user || !user.isAdultEnabled)) return false;
+      // Se a chave Adulto no cadastro estiver ligada, mas o Switch da Home desligado, some também.
       if (isAdult && !showAdult) return false;
       return true;
     })
@@ -184,7 +188,7 @@ export default function HomeContent() {
         ) : (
           <>
             {categoriesWithCounts.length === 0 && (
-              <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">Nenhum sinal localizado nesta faixa.</div>
+              <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">Nenhum sinal localizado nesta faixa. Verifique se liberou o sinal adulto se estiver buscando por ele.</div>
             )}
             {categoriesWithCounts.map(([category, count]) => (
               <section key={category} className="space-y-6">
@@ -215,7 +219,7 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* Seletor de Episódios Master - Reordenado Verticalmente */}
+      {/* Seletor de Episódios Master - LISTA VERTICAL PURA */}
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) setSelectedSeries(null); }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (

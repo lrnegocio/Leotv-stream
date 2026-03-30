@@ -29,7 +29,7 @@ export default function ContentManagementPage() {
       const data = await getRemoteContent(force, query)
       setItems(data)
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos." })
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos do Império." })
     } finally {
       setLoading(false)
     }
@@ -40,7 +40,7 @@ export default function ContentManagementPage() {
   }, [loadItems, searchTerm])
 
   const handleDelete = async (id: string) => {
-    if (confirm("Deseja realmente excluir este canal?")) {
+    if (confirm("Deseja realmente excluir este sinal master?")) {
       const success = await removeContent(id)
       if (success) {
         setItems(prev => prev.filter(i => i.id !== id))
@@ -51,28 +51,29 @@ export default function ContentManagementPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return
-    if (confirm(`ATENÇÃO: Deseja excluir os ${selectedIds.length} canais selecionados?`)) {
+    if (confirm(`ATENÇÃO MESTRE: Deseja excluir os ${selectedIds.length} sinais selecionados? Esta ação é definitiva.`)) {
       setIsDeleting(true)
       const success = await bulkRemoveContent(selectedIds)
       if (success) {
         setSelectedIds([])
         await loadItems(searchTerm, true)
-        toast({ title: "Limpeza Concluída", description: "Canais removidos do banco." })
+        toast({ title: "Limpeza Master Concluída", description: "Os sinais foram varridos do banco." })
       } else {
-        toast({ variant: "destructive", title: "Erro", description: "Alguns itens não puderam ser excluídos." })
+        toast({ variant: "destructive", title: "Erro de Lote", description: "Alguns itens não puderam ser excluídos. Tente novamente." })
+        await loadItems(searchTerm, true)
       }
       setIsDeleting(false)
     }
   }
 
   const handleClearAllImported = async () => {
-    if (confirm("ALERTA MESTRE: Isso vai apagar TODOS os canais que foram importados via lista M3U de uma vez só. Confirmar?")) {
+    if (confirm("ALERTA MESTRE LÉO: Isso vai apagar TODOS os canais M3U do banco. Confirmar?")) {
       setIsDeleting(true)
       const success = await clearAllM3UContent()
       if (success) {
         setSelectedIds([])
         await loadItems("", true)
-        toast({ title: "Fábrica Limpa!", description: "Todos os canais M3U foram deletados." })
+        toast({ title: "Banco Resetado!", description: "Todos os canais importados foram deletados." })
       }
       setIsDeleting(false)
     }
@@ -83,7 +84,7 @@ export default function ContentManagementPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === items.length) {
+    if (selectedIds.length === items.length && items.length > 0) {
       setSelectedIds([])
     } else {
       setSelectedIds(items.map(i => i.id))
@@ -103,7 +104,7 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase italic text-primary">Sua Biblioteca P2P</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">Busca inteligente nos 300k+ Canais e Filmes.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">Gestão de 300k+ Sinais com Cache Blindado.</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <Button variant="outline" onClick={() => loadItems(searchTerm, true)} className="border-primary/20 text-primary hover:bg-primary/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
@@ -129,7 +130,7 @@ export default function ContentManagementPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="PESQUISAR NO SEU IMPÉRIO..." 
+            placeholder="BUSCAR NO SEU IMPÉRIO..." 
             className="pl-10 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -144,13 +145,13 @@ export default function ContentManagementPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase opacity-40">Localizando Conteúdo...</p>
+          <p className="text-[10px] font-black uppercase opacity-40">Sintonizando Banco de Dados...</p>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {items.length === 0 ? (
             <div className="col-span-full py-20 text-center bg-card/10 rounded-xl border border-dashed border-white/10">
-              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum conteúdo localizado nesta faixa.</p>
+              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum canal localizado na faixa visível.</p>
             </div>
           ) : (
             items.map((item) => {
@@ -207,7 +208,7 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Seletor de Episódios Master - Reordenado Verticalmente */}
+      {/* Seletor de Episódios Master - LISTA VERTICAL PURA */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
         <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-8">
           <DialogHeader className="mb-6">
