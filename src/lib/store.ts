@@ -84,8 +84,8 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (!forceRefresh && !searchQuery && !categoryGenre) {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 2) return data;
+        const parsed = JSON.parse(cached);
+        if (Date.now() - parsed.timestamp < 1000 * 60 * 5) return parsed.data;
       }
     }
 

@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, ShieldAlert, Zap, Lock, AlertTriangle, RefreshCcw } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, Zap, Lock, AlertTriangle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -27,12 +26,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isSigmaLink, isMercadoLivre, isTokyVideo, isDailymotion, isPluto } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false, isDailymotion: false, isPluto: false }
+  const { processedUrl, isDirectVideo, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false }
     let targetUrl = url.trim()
 
     if (targetUrl.includes('mercadolivre.com.br')) {
-      return { processedUrl: targetUrl, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: true, isTokyVideo: false, isDailymotion: false, isPluto: false };
+      return { processedUrl: targetUrl, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: true };
     }
 
     const isSigma = targetUrl.includes('webplayer.one') || 
@@ -50,7 +49,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false, isDailymotion: false, isPluto: false
+        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false
       }
     }
 
@@ -58,41 +57,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       let id = targetUrl.split('/').pop()?.split('_')[0];
       return {
         processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0`,
-        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false, isDailymotion: true, isPluto: false
+        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false
       }
-    }
-
-    if (targetUrl.includes('pluto.tv')) {
-      return {
-        processedUrl: targetUrl.replace('pluto.tv/br/live-tv/', 'pluto.tv/embed/live-tv/'),
-        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false, isDailymotion: false, isPluto: true
-      }
-    }
-
-    if (targetUrl.includes('tokyvideo.com')) {
-      let parts = targetUrl.split('/');
-      let id = parts[parts.length - 1]?.split('?')[0];
-      if (targetUrl.includes('/embed/')) id = targetUrl.split('/embed/').pop()?.split('?')[0];
-      
-      return {
-        processedUrl: `https://www.tokyvideo.com/embed/${id}`,
-        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: true, isDailymotion: false, isPluto: false
-      }
-    }
-
-    if (targetUrl.includes('xvideos.com')) {
-      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
-      if (match) return { processedUrl: `https://www.xvideos.com/embedframe/${match[1]}`, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false, isTokyVideo: false, isDailymotion: false, isPluto: false };
     }
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
       isSigmaLink: isSigma,
-      isMercadoLivre: false,
-      isTokyVideo: false,
-      isDailymotion: false,
-      isPluto: false
+      isMercadoLivre: false
     };
   }, [url])
 

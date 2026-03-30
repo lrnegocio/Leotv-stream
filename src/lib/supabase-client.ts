@@ -7,10 +7,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://veilblctswnnyzidirrf.supabase.co'; 
 
 /**
- * MESTRE LÉO: Cole sua "anon public key" aqui embaixo entre as aspas.
- * Pegue ela em: Supabase -> Settings -> API -> anon public key.
+ * MESTRE LÉO: Chave Anon Public ativada com sucesso.
  */
-const supabaseAnonKey = 'COLE_AQUI_SUA_CHAVE_ANON_DO_NOVO_SUPABASE'; 
+const supabaseAnonKey = 'sb_publishable_OCkZfnj39jlsA7vwFukuEA_QV3xHRU-'; 
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
