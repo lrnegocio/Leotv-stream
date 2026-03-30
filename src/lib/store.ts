@@ -69,6 +69,7 @@ export interface Reseller {
 
 // LIMPEZA DE NOMES MASTER (REMOÇÃO DE ASPAS, PONTOS, VÍRGULAS)
 const cleanName = (name: string) => {
+  if (!name) return "";
   return name
     .replace(/[.",']/g, '') // Remove aspas, pontos e vírgulas
     .replace(/^\d+/, '')    // Remove números no início do nome
@@ -87,42 +88,34 @@ const generateSafeId = (name: string) => {
   return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
+// BUSCA BLINDADA PARA GRANDES VOLUMES (SUPORTE 1 MILHÃO)
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    const cacheKey = `p2p_cache_${searchQuery || 'init'}_${categoryGenre || 'all'}`;
-    if (!forceRefresh && !searchQuery && !categoryGenre) {
-      const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Date.now() - parsed.timestamp < 1000 * 60 * 5) return parsed.data;
-      }
-    }
-
-    let query = supabase.from('content').select('*').order('title', { ascending: true });
+    // BLINDAGEM: Não usamos mais localStorage para a lista de canais, pois 50k+ canais estouram a memória do navegador.
+    // Buscamos direto do Supabase com limites inteligentes.
+    
+    let query = supabase.from('content').select('*');
 
     if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
-    if (categoryGenre) {
-      query = query.eq('genre', categoryGenre);
+      query = query.ilike('title', `%${searchQuery}%`);
+    } else if (categoryGenre) {
+      query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
-    const { data: rawData, error } = await query.limit(1000);
+    // Ordenação e Limite de segurança para não travar a tela
+    const { data: rawData, error } = await query
+      .order('title', { ascending: true })
+      .limit(searchQuery ? 1000 : 200); // Se for busca, traz mais. Se for lista geral, traz 200 para ser instantâneo.
+
     if (error || !rawData) return [];
 
-    const processed = rawData.map(item => ({
+    return rawData.map(item => ({
       ...item,
       isRestricted: item.isRestricted ?? item.is_restricted,
       streamUrl: item.streamUrl ?? item.stream_url,
       directStreamUrl: item.directStreamUrl ?? item.direct_stream_url,
       imageUrl: item.imageUrl ?? item.image_url,
     }));
-
-    if (!searchQuery && !categoryGenre && typeof window !== 'undefined') {
-      localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
-    }
-    return processed;
   } catch (e) { return []; }
 }
 
@@ -138,9 +131,19 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   };
 }
 
+// CONTAGEM REAL DO IMPÉRIO (0 CONSUMO DE MEMÓRIA)
 export async function getTotalContentCount(): Promise<number> {
-  const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
-  return count || 0;
+  try {
+    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    return count || 0;
+  } catch (e) { return 0; }
+}
+
+export async function getCategoryCount(genre: string): Promise<number> {
+  try {
+    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function saveContent(item: ContentItem) {
@@ -160,36 +163,28 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (!error && typeof window !== 'undefined') {
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('p2p_cache')) localStorage.removeItem(key);
-      });
-    }
     return !error;
   } catch (e) { return false; }
 }
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
-  if (!error && typeof window !== 'undefined') localStorage.clear();
   return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
-  // EXCLUSÃO EM LOTES DE 20 PARA NÃO TRAVAR O SUPABASE
+  // EXCLUSÃO EM LOTES DE 20 PARA NÃO TRAVAR O BANCO
   for (let i = 0; i < ids.length; i += 20) {
     const batch = ids.slice(i, i + 20);
     await supabase.from('content').delete().in('id', batch);
   }
-  if (typeof window !== 'undefined') localStorage.clear();
   return true;
 }
 
 export async function clearAllM3UContent() {
   try {
     const { error } = await supabase.from('content').delete().neq('id', '_init_');
-    if (typeof window !== 'undefined') localStorage.clear();
     return !error;
   } catch (e) { return false; }
 }
@@ -217,13 +212,10 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (error || !user) return { error: "PIN INVÁLIDO." };
     if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-    let ip = "0.0.0.0";
-    try { const res = await fetch('https://api.ipify.org?format=json'); const d = await res.json(); ip = d.ip; } catch(e) {}
-
     let devices = user.activeDevices || [];
     if (!devices.some((d: any) => d.id === deviceId)) {
       if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO." };
-      devices.push({ id: deviceId, lastActive: new Date().toISOString(), ip });
+      devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
     const update: any = { ...user, activeDevices: devices };
@@ -266,23 +258,18 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
   const div = document.createElement('div');
   div.innerHTML = html;
 
-  // Busca todos os links de canais (btn-stream)
   const links = div.querySelectorAll('a.btn-stream');
-  
   onProgress?.(`Analisando ${links.length} sinais extraídos...`);
 
   links.forEach((link, idx) => {
-    // Busca o título dentro da estrutura do Supremo
     const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
     const imgEl = link.querySelector('img');
     
     if (titleEl) {
-      // Remove o número inicial e limpa caracteres
       const rawTitle = titleEl.textContent?.replace(/^\d+/, '').trim() || `Canal ${idx}`;
       const title = cleanName(rawTitle);
       const imageUrl = imgEl?.getAttribute('src') || '';
       
-      // Categorização automática simples baseada no nome
       let genre = "LÉO TV CANAIS AO VIVO";
       if (title.includes('DORAMA') || title.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
       else if (title.includes('18+') || title.includes('XXX') || title.includes('ADULTO')) genre = "LÉO TV ADULTOS";
@@ -305,13 +292,11 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
     }
   });
 
-  // Salva no banco em lotes de 20 para segurança
   for (let i = 0; i < items.length; i += 20) {
     if (onProgress) onProgress(`Sintonizando HTML: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
 
-  if (typeof window !== 'undefined') localStorage.clear();
   return { success: items.length };
 }
 
@@ -367,7 +352,6 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
     if (onProgress) onProgress(`Sintonizando M3U: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
-  if (typeof window !== 'undefined') localStorage.clear();
   return { success: items.length };
 }
 

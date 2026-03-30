@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -34,68 +34,54 @@ export default function HomeContent() {
   const [pinInput, setPinInput] = React.useState("")
   const [parentalPin, setParentalPin] = React.useState("1234")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
+  const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
 
-  const loadData = React.useCallback(async (queryStr = "") => {
+  const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     setLoading(true);
     try {
       const session = localStorage.getItem("user_session");
       if (!session) { router.push("/login"); return; }
-      setUser(JSON.parse(session));
+      const currentUser = JSON.parse(session);
+      setUser(currentUser);
+
       const settings = await getGlobalSettings();
       setParentalPin(settings.parentalPin);
-      const data = await getRemoteContent(false, queryStr);
+
+      // BUSCA INTELIGENTE: Só traz canais da categoria selecionada ou da pesquisa
+      const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
+      const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
+
+      // Carrega contagens oficiais (apenas uma vez na home)
+      if (!categoryId && !queryStr) {
+        const counts: Record<string, number> = {};
+        for (const cat of CATEGORIES) {
+          counts[cat.id] = await getCategoryCount(cat.genre);
+        }
+        setCatCounts(counts);
+      }
     } catch (err) { } finally { setLoading(false); }
   }, [router]);
 
-  React.useEffect(() => { loadData(q) }, [q, loadData]);
-
-  const catCounts = React.useMemo(() => {
-    const counts: any = {};
-    CATEGORIES.forEach(c => {
-      const items = content.filter(i => i.genre === c.genre);
-      let total = 0;
-      items.forEach(i => {
-        if (i.type === 'series' || i.type === 'multi-season') {
-          const epCount = (i.episodes?.length || 0);
-          let seasonEpCount = 0;
-          if (i.seasons) i.seasons.forEach(s => seasonEpCount += (s.episodes?.length || 0));
-          total += (epCount + seasonEpCount);
-        } else {
-          total += 1;
-        }
-      });
-      counts[c.id] = total;
-    });
-    return counts;
-  }, [content]);
-
-  const filtered = React.useMemo(() => {
-    let list = content;
-    if (selectedCat) {
-      const cat = CATEGORIES.find(c => c.id === selectedCat);
-      if (cat) list = list.filter(i => i.genre === cat.genre);
-    }
-    return list.filter(i => !i.isRestricted || (user?.isAdultEnabled));
-  }, [content, selectedCat, user]);
+  React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
   const handleNext = () => {
-    if (!activeVideo) return;
+    if (!activeVideo || content.length === 0) return;
     const currentIndex = activeVideo.index;
-    const nextIndex = (currentIndex + 1) % filtered.length;
-    const item = filtered[nextIndex];
+    const nextIndex = (currentIndex + 1) % content.length;
+    const item = content[nextIndex];
     setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: nextIndex });
   };
 
   const handlePrev = () => {
-    if (!activeVideo) return;
+    if (!activeVideo || content.length === 0) return;
     const currentIndex = activeVideo.index;
-    const prevIndex = (currentIndex - 1 + filtered.length) % filtered.length;
-    const item = filtered[prevIndex];
+    const prevIndex = (currentIndex - 1 + content.length) % content.length;
+    const item = content[prevIndex];
     setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: prevIndex });
   };
 
@@ -118,7 +104,7 @@ export default function HomeContent() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Canais...</p></div>
+  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Canais...</p></div>
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
@@ -163,11 +149,11 @@ export default function HomeContent() {
                 {q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
               </h2>
               <div className="text-[10px] font-black uppercase bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
-                {filtered.length} ITENS LOCALIZADOS
+                {content.length} ITENS LOCALIZADOS
               </div>
             </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-              {filtered.map((item, idx) => (
+              {content.map((item, idx) => (
                 <div key={item.id} onClick={() => handleItemClick(item, idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
                   {item.imageUrl ? <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-primary/10"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">

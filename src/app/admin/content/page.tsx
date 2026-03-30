@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, ListOrdered, Layers, Trash, CheckSquare, Square, RefreshCcw } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, RefreshCcw, Trash, CheckSquare, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, clearAllM3UContent, ContentItem } from "@/lib/store"
@@ -26,6 +25,7 @@ export default function ContentManagementPage() {
   const loadItems = React.useCallback(async (query = "", force = false) => {
     setLoading(true)
     try {
+      // BUSCA DIRETA NO BANCO (Sem cache de navegador para não estourar a memória)
       const data = await getRemoteContent(force, query)
       setItems(data)
     } catch (error) {
@@ -36,8 +36,11 @@ export default function ContentManagementPage() {
   }, [])
 
   React.useEffect(() => {
-    loadItems(searchTerm)
-  }, [loadItems, searchTerm])
+    const delayDebounceFn = setTimeout(() => {
+      loadItems(searchTerm)
+    }, 500)
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchTerm, loadItems])
 
   const handleDelete = async (id: string) => {
     if (confirm("Deseja realmente excluir este sinal master?")) {
@@ -67,13 +70,13 @@ export default function ContentManagementPage() {
   }
 
   const handleClearAllImported = async () => {
-    if (confirm("ALERTA MESTRE LÉO: Isso vai apagar TODOS os canais M3U do banco. Confirmar?")) {
+    if (confirm("ALERTA MESTRE LÉO: Isso vai apagar TODOS os canais do banco. Confirmar?")) {
       setIsDeleting(true)
       const success = await clearAllM3UContent()
       if (success) {
         setSelectedIds([])
         await loadItems("", true)
-        toast({ title: "Banco Resetado!", description: "Todos os canais importados foram deletados." })
+        toast({ title: "Banco Resetado!", description: "O império foi zerado para nova importação." })
       }
       setIsDeleting(false)
     }
@@ -104,14 +107,14 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase italic text-primary">Sua Biblioteca P2P</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">Gestão de 300k+ Sinais com Cache Blindado.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">Gestão de 1 Milhão de Sinais Direto do Banco.</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <Button variant="outline" onClick={() => loadItems(searchTerm, true)} className="border-primary/20 text-primary hover:bg-primary/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
             <RefreshCcw className="mr-2 h-3 w-3" /> Sincronizar Império
           </Button>
           <Button variant="outline" onClick={handleClearAllImported} disabled={isDeleting} className="border-destructive/20 text-destructive hover:bg-destructive/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
-            <Trash className="mr-2 h-3 w-3" /> Limpar M3U
+            <Trash className="mr-2 h-3 w-3" /> Limpar Tudo
           </Button>
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete} disabled={isDeleting} className="uppercase text-[9px] font-black h-10 px-4 rounded-xl shadow-lg shadow-destructive/20">
@@ -145,13 +148,13 @@ export default function ContentManagementPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase opacity-40">Sintonizando Banco de Dados...</p>
+          <p className="text-[10px] font-black uppercase opacity-40">Sintonizando Banco de Dados Master...</p>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {items.length === 0 ? (
             <div className="col-span-full py-20 text-center bg-card/10 rounded-xl border border-dashed border-white/10">
-              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum canal localizado na faixa visível.</p>
+              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum canal localizado. Tente sincronizar ou pesquisar.</p>
             </div>
           ) : (
             items.map((item) => {
@@ -208,7 +211,7 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Seletor de Episódios Master - LISTA VERTICAL PURA */}
+      {/* Preview e Player continuam iguais */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
         <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-8">
           <DialogHeader className="mb-6">
@@ -228,38 +231,13 @@ export default function ContentManagementPage() {
                 <PlayCircle className="ml-auto h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
               </Button>
             ))}
-            {previewItem?.type === 'multi-season' && previewItem.seasons?.sort((a,b) => a.number - b.number).map(s => (
-               <div key={s.id} className="space-y-2 mt-4 first:mt-0">
-                 <h4 className="text-[10px] font-black uppercase text-primary/60 px-2 tracking-tighter border-l-2 border-primary ml-1 pl-2 mb-3">Temporada {s.number}</h4>
-                 {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                    <Button 
-                      key={ep.id} 
-                      variant="outline" 
-                      onClick={() => { setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - T${s.number} EP ${ep.number}` }); }}
-                      className="h-12 justify-start bg-white/5 border-white/5 hover:border-primary hover:bg-primary/10 rounded-xl px-6 group w-full"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-primary/5 flex items-center justify-center font-black text-[8px] text-primary mr-4">{ep.number}</div>
-                      <span className="font-bold uppercase text-[10px]">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
-                      <PlayCircle className="ml-auto h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                    </Button>
-                 ))}
-               </div>
-            ))}
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Player de Preview Master */}
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
         <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[3rem]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{activeEpisode?.title}</DialogTitle>
-          </DialogHeader>
-          {activeEpisode && (
-            <div className="p-0">
-              <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />
-            </div>
-          )}
+          {activeEpisode && <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />}
         </DialogContent>
       </Dialog>
     </div>
