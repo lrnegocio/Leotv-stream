@@ -3,13 +3,11 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap, Layers, ListOrdered, ChevronLeft, Film, Monitor, Music, Baby, Heart, Ghost, Search, X } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Search, Zap, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, Episode } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
@@ -24,11 +22,11 @@ interface ActiveVideo {
 const MASTER_CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV CANAIS AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
-  { id: 'SERIES', name: 'LÉO TV SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
+  { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
-  { id: 'MUSIC', name: 'LÉO TV CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'MUSIC', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
   { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
-  { id: 'ADULT', name: 'LÉO TV ADULTO', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS' },
+  { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS' },
 ]
 
 export default function HomeContent() {
@@ -36,8 +34,8 @@ export default function HomeContent() {
   const [user, setUser] = React.useState<User | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<ActiveVideo | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState(false)
   const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null)
-  const [showAdult, setShowAdult] = React.useState(false)
   const [parentalPin, setParentalPin] = React.useState("")
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
@@ -57,6 +55,7 @@ export default function HomeContent() {
   React.useEffect(() => {
     const load = async () => {
       setLoading(true)
+      setError(false)
       try {
         const session = localStorage.getItem("user_session")
         if (!session) { router.push("/login"); return; }
@@ -66,10 +65,18 @@ export default function HomeContent() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
+        // BUSCA BLINDADA: Tenta carregar do banco ou cache local
         const data = await getRemoteContent(false, searchQuery)
-        setContent(data)
+        if (data.length === 0 && !searchQuery) {
+           // Se estiver zerado e não for busca, pode ser erro de cota
+           const retryData = await getRemoteContent(true, ""); // Força uma tentativa limpa
+           setContent(retryData)
+           if (retryData.length === 0) setError(true)
+        } else {
+           setContent(data)
+        }
       } catch (err) {
-        console.error("Erro ao carregar conteúdo:", err)
+        setError(true)
       } finally {
         setLoading(false)
       }
@@ -95,6 +102,26 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
+  // CÁLCULO DE SINAIS POR CATEGORIA (CONTANDO EPISÓDIOS)
+  const categoryCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    MASTER_CATEGORIES.forEach(cat => {
+      const items = content.filter(i => (i.genre || "").toUpperCase() === cat.genre);
+      let total = 0;
+      items.forEach(item => {
+        if (item.type === 'series' && item.episodes) {
+          total += item.episodes.length;
+        } else if (item.type === 'multi-season' && item.seasons) {
+          item.seasons.forEach(s => total += s.episodes.length);
+        } else {
+          total += 1;
+        }
+      });
+      counts[cat.id] = total;
+    });
+    return counts;
+  }, [content]);
+
   const filteredContent = React.useMemo(() => {
     let list = content;
     if (selectedCategory) {
@@ -106,10 +133,9 @@ export default function HomeContent() {
       const genre = (item.genre || "").toUpperCase();
       const isAdult = genre.includes("ADULTO") || genre.includes("XXX") || genre.includes("HOT");
       if (isAdult && (!user || !user.isAdultEnabled)) return false;
-      if (isAdult && !showAdult) return false;
       return true;
     })
-  }, [content, selectedCategory, showAdult, user])
+  }, [content, selectedCategory, user])
 
   const handleCategoryClick = (catId: string) => {
     if (catId === 'ADULT') {
@@ -131,7 +157,6 @@ export default function HomeContent() {
   const verifyPin = () => {
     if (pinInput === parentalPin) {
       if (pendingCategory) {
-        setShowAdult(true);
         setSelectedCategory(pendingCategory);
         setPendingCategory(null);
       }
@@ -147,32 +172,22 @@ export default function HomeContent() {
     if (!activeVideo) return;
     const nextIdx = (activeVideo.index + 1) % filteredContent.length;
     const nextItem = filteredContent[nextIdx];
-    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
-       setActiveVideo(null);
-       setSelectedSeries(nextItem);
-    } else {
-       setActiveVideo({ url: nextItem.streamUrl || nextItem.directStreamUrl || "", title: nextItem.title, itemId: nextItem.id, index: nextIdx });
-    }
+    handleItemClick(nextItem, nextIdx);
   }
 
   const handlePrev = () => {
     if (!activeVideo) return;
     const prevIdx = (activeVideo.index - 1 + filteredContent.length) % filteredContent.length;
     const prevItem = filteredContent[prevIdx];
-    if (prevItem.type === 'series' || prevItem.type === 'multi-season') {
-       setActiveVideo(null);
-       setSelectedSeries(prevItem);
-    } else {
-       setActiveVideo({ url: prevItem.streamUrl || prevItem.directStreamUrl || "", title: prevItem.title, itemId: prevItem.id, index: prevIdx });
-    }
+    handleItemClick(prevItem, prevIdx);
   }
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          {selectedCategory ? (
-            <Button variant="ghost" onClick={() => setSelectedCategory(null)} className="group h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all">
+          {selectedCategory || searchQuery ? (
+            <Button variant="ghost" onClick={() => { setSelectedCategory(null); router.replace(window.location.pathname); }} className="group h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all">
               <ChevronLeft className="h-8 w-8 text-white group-hover:scale-110" />
             </Button>
           ) : (
@@ -198,37 +213,52 @@ export default function HomeContent() {
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
             <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-[0.3em]">Sintonizando Império Léo Tv...</p>
           </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-40 gap-6 text-center">
+            <div className="p-6 bg-destructive/10 rounded-full"><AlertTriangle className="h-16 w-16 text-destructive animate-pulse" /></div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black uppercase italic text-destructive">LIMITE DE CONEXÃO EXCEDIDO</h3>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
+                O banco de dados do Império atingiu o limite de saída. Tente buscar o canal pelo nome ou aguarde o reset da cota.
+              </p>
+            </div>
+            <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black px-10 h-14 rounded-2xl">RECARREGAR SINAL</Button>
+          </div>
         ) : !selectedCategory && !searchQuery ? (
-          /* MENU ESTILO SMARTERS PRO */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-500">
             {MASTER_CATEGORIES.map((cat) => {
               if (cat.id === 'ADULT' && (!user || !user.isAdultEnabled)) return null;
+              const count = categoryCounts[cat.id] || 0;
               return (
                 <button
                   key={cat.id}
                   onClick={() => handleCategoryClick(cat.id)}
-                  className={`group relative h-48 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-[1.03] shadow-2xl ${cat.color} bg-opacity-20`}
+                  className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-[1.03] shadow-2xl ${cat.color} bg-opacity-20`}
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:scale-110 transition-transform duration-500`} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
                     <div className={`p-4 rounded-3xl ${cat.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}>
                       <cat.icon className="h-10 w-10" />
                     </div>
-                    <span className="text-xl font-black uppercase italic tracking-tighter text-white group-hover:text-primary transition-colors">{cat.name}</span>
+                    <div className="space-y-1">
+                      <span className="text-xl font-black uppercase italic tracking-tighter text-white group-hover:text-primary transition-colors block">{cat.name}</span>
+                      <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase tracking-widest">
+                        {count.toLocaleString()} SINAIS ATIVOS
+                      </span>
+                    </div>
                   </div>
                 </button>
               )
             })}
           </div>
         ) : (
-          /* LISTAGEM DE CONTEÚDO FILTRADO */
           <div className="space-y-10 animate-in slide-in-from-bottom-10 duration-500">
             <div className="flex items-center justify-between border-b border-white/5 pb-6">
               <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
                 {searchQuery ? `BUSCANDO: ${searchQuery}` : MASTER_CATEGORIES.find(c => c.id === selectedCategory)?.name}
               </h2>
               <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-6 py-2 rounded-full font-black uppercase tracking-widest">
-                {filteredContent.length} SINAIS ENCONTRADOS
+                {filteredContent.length} ITENS LOCALIZADOS
               </span>
             </div>
 
@@ -254,7 +284,7 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* Seletor de Episódios Master - LISTA VERTICAL PURA */}
+      {/* SELETOR DE EPISÓDIOS - LISTA VERTICAL PURA */}
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) setSelectedSeries(null); }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
@@ -267,7 +297,7 @@ export default function HomeContent() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
-                {selectedSeries.type === 'series' && selectedSeries.episodes?.sort((a,b) => a.number - b.number).map((ep, idx) => (
+                {selectedSeries.type === 'series' && selectedSeries.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
                   <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${selectedSeries.title} - EP ${ep.number}`, itemId: selectedSeries.id, index: 0 })} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{ep.number}</div>
@@ -279,7 +309,7 @@ export default function HomeContent() {
                 {selectedSeries.type === 'multi-season' && selectedSeries.seasons?.sort((a,b) => a.number - b.number).map((season) => (
                   <div key={season.id} className="space-y-3 mb-8 last:mb-0">
                     <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4 tracking-tighter">Temporada {season.number}</h3>
-                    {season.episodes.sort((a,b) => a.number - b.number).map((ep, idx) => (
+                    {season.episodes.sort((a,b) => a.number - b.number).map((ep) => (
                       <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, itemId: selectedSeries.id, index: 0 })} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-6 group">
                         <span className="font-bold uppercase text-[10px]">T{season.number} - EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
                         <PlayCircle className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />

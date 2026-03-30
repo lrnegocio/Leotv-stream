@@ -358,13 +358,14 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const rawGenre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
-      let finalGenre = `LÉO TV ${rawGenre}`;
+      let finalGenre = `LÉO TV CANAIS AO VIVO`;
       if (rawGenre.includes('FILME') || rawGenre.includes('MOVIES')) finalGenre = "LÉO TV FILMES";
       else if (rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT')) finalGenre = "LÉO TV ADULTOS";
       else if (rawGenre.includes('SERIE') || rawGenre.includes('DORAMA') || rawGenre.includes('ANIME')) finalGenre = "LÉO TV SERIES";
       else if (rawGenre.includes('ESPORTE') || rawGenre.includes('SPORTS')) finalGenre = "LÉO TV ESPORTES";
       else if (rawGenre.includes('DESENHO') || rawGenre.includes('KIDS') || rawGenre.includes('INFANTIL')) finalGenre = "LÉO TV DESENHOS";
-      else if (rawGenre.includes('AO VIVO') || rawGenre.includes('LIVE') || rawGenre.includes('TV')) finalGenre = "LÉO TV CANAIS AO VIVO";
+      else if (rawGenre.includes('CLIPES') || rawGenre.includes('MUSIC')) finalGenre = "LÉO TV VÍDEO CLIPES";
+      else if (rawGenre.includes('NOVELA')) finalGenre = "LÉO TV NOVELAS";
 
       currentItemData = {
         title: name,
