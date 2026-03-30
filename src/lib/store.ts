@@ -71,7 +71,7 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
-// GERADOR DE ID BLINDADO (v181): Remove símbolos como ✮ e acentos para evitar Erro 500
+// GERADOR DE ID BLINDADO (v182): Remove símbolos e acentos para evitar Erro 500
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -94,19 +94,19 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 /**
- * BUSCA ON-DEMAND MASTER (v181)
- * Resolve a lentidão de 300k canais filtrando no banco de dados.
+ * BUSCA ON-DEMAND MASTER (v182)
+ * Resolve o excesso de dados filtrando 300k canais no banco.
  */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').order('title', { ascending: true });
 
     if (searchQuery && searchQuery.length > 1) {
-      // Filtra 300k canais no servidor Supabase (Gasta quase nada de Egress)
+      // Filtra 300k canais no servidor Supabase (Economiza Egress)
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(500); 
     } else {
-      // Home carrega apenas os primeiros para ser instantâneo
+      // Home carrega apenas os primeiros 500 para ser instantâneo
       query = query.limit(500);
     }
 
@@ -173,6 +173,16 @@ export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   const { error } = await supabase.from('content').delete().in(ids);
   return !error;
+}
+
+export async function clearAllM3UContent() {
+  try {
+    // Apaga todos os IDs que começam com 'leo_' (padrão de importação M3U)
+    const { error } = await supabase.from('content').delete().like('id', 'leo_%');
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function saveUser(user: User) {
@@ -279,7 +289,6 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
-      // Limpeza de símbolos para o ID
       const safeId = generateSafeId(name);
 
       currentItem = {

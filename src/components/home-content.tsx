@@ -47,7 +47,6 @@ export default function HomeContent() {
     router.push("/login")
   }, [router])
 
-  // EFEITO MASTER: Busca os canais direto do Supabase conforme o usuário digita
   React.useEffect(() => {
     const load = async () => {
       setLoading(true)
@@ -59,7 +58,6 @@ export default function HomeContent() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
-        // BUSCA ON-DEMAND: Se tem busca, vai no banco. Se não, traz os primeiros 500.
         const data = await getRemoteContent(false, searchQuery)
         setContent(data)
       } catch (err) {
