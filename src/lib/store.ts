@@ -70,11 +70,8 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache_v6';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v6';
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS
 
-// GERADOR DE ID BLINDADO CONTRA ERRO 500 E SÍMBOLOS (✮)
+// GERADOR DE ID BLINDADO (v181): Remove símbolos como ✮ e acentos para evitar Erro 500
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -97,25 +94,23 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 /**
- * BUSCA ON-DEMAND MASTER (v180)
- * Esta função é o segredo para gerir 300k canais sem estourar o Supabase.
- * Se houver busca, ela filtra no banco. Se não, traz os primeiros 500.
+ * BUSCA ON-DEMAND MASTER (v181)
+ * Resolve a lentidão de 300k canais filtrando no banco de dados.
  */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').order('title', { ascending: true });
 
-    if (searchQuery) {
-      // Se tiver busca, filtra direto no banco (Consome quase nada de dados)
+    if (searchQuery && searchQuery.length > 1) {
+      // Filtra 300k canais no servidor Supabase (Gasta quase nada de Egress)
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(500); 
     } else {
-      // Se for a home normal, traz os primeiros 500 para ser instantâneo
+      // Home carrega apenas os primeiros para ser instantâneo
       query = query.limit(500);
     }
 
     const { data: rawData, error } = await query;
-    
     if (error || !rawData) return [];
 
     return rawData.map(item => {
@@ -283,8 +278,12 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
+      
+      // Limpeza de símbolos para o ID
+      const safeId = generateSafeId(name);
+
       currentItem = {
-        id: generateSafeId(name),
+        id: safeId,
         title: name,
         type: genre.includes('FILME') ? 'movie' : genre.includes('SERIE') ? 'series' : 'channel',
         genre: genre,

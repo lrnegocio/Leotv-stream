@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, ListOrdered, Layers, Trash, CheckSquare, Square } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, ListOrdered, Layers, Trash, CheckSquare, Square, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, clearAllM3UContent, ContentItem } from "@/lib/store"
@@ -24,10 +24,10 @@ export default function ContentManagementPage() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  const loadItems = React.useCallback(async () => {
+  const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
-      const data = await getRemoteContent(true)
+      const data = await getRemoteContent(true, query)
       setItems(data)
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos." })
@@ -37,8 +37,8 @@ export default function ContentManagementPage() {
   }, [])
 
   React.useEffect(() => {
-    loadItems()
-  }, [loadItems])
+    loadItems(searchTerm)
+  }, [loadItems, searchTerm])
 
   const handleDelete = async (id: string) => {
     if (confirm("Deseja realmente excluir este canal?")) {
@@ -81,17 +81,12 @@ export default function ContentManagementPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filtered.length) {
+    if (selectedIds.length === items.length) {
       setSelectedIds([])
     } else {
-      setSelectedIds(filtered.map(i => i.id))
+      setSelectedIds(items.map(i => i.id))
     }
   }
-
-  const filtered = items.filter(i => 
-    i.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    i.genre.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   const handlePreview = (item: ContentItem) => {
     if (item.type === 'series' || item.type === 'multi-season') {
@@ -106,9 +101,12 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline uppercase">Sua Biblioteca P2P</h1>
-          <p className="text-muted-foreground uppercase text-[10px]">Gerenciamento de {items.length} Canais e Filmes.</p>
+          <p className="text-muted-foreground uppercase text-[10px]">Busca inteligente nos 300k+ Canais e Filmes.</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Button variant="outline" onClick={() => loadItems(searchTerm)} className="border-primary/20 text-primary hover:bg-primary/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
+            <RefreshCcw className="mr-2 h-3 w-3" /> Sincronizar Império
+          </Button>
           <Button variant="outline" onClick={handleClearAllImported} disabled={isDeleting} className="border-destructive/20 text-destructive hover:bg-destructive/10 uppercase text-[9px] font-black h-10 px-4 rounded-xl">
             <Trash className="mr-2 h-3 w-3" /> Limpar M3U
           </Button>
@@ -129,15 +127,15 @@ export default function ContentManagementPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Buscar canal ou categoria..." 
+            placeholder="Digite para pesquisar nos 300 mil canais..." 
             className="pl-10 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
         <Button variant="outline" onClick={toggleSelectAll} className="h-12 border-white/5 rounded-xl uppercase text-[9px] font-black">
-          {selectedIds.length === filtered.length ? <CheckSquare className="mr-2 h-4 w-4" /> : <Square className="mr-2 h-4 w-4" />}
-          {selectedIds.length === filtered.length ? "Desmarcar Todos" : "Marcar Todos"}
+          {selectedIds.length === items.length && items.length > 0 ? <CheckSquare className="mr-2 h-4 w-4" /> : <Square className="mr-2 h-4 w-4" />}
+          {selectedIds.length === items.length && items.length > 0 ? "Desmarcar Todos" : "Marcar Todos"}
         </Button>
       </div>
 
@@ -145,12 +143,12 @@ export default function ContentManagementPage() {
         <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-          {filtered.length === 0 ? (
+          {items.length === 0 ? (
             <div className="col-span-full py-20 text-center bg-card/10 rounded-xl border border-dashed border-white/10">
-              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum conteúdo cadastrado.</p>
+              <p className="text-muted-foreground uppercase text-xs font-bold">Nenhum conteúdo localizado nesta faixa.</p>
             </div>
           ) : (
-            filtered.map((item) => {
+            items.map((item) => {
               const isSelected = selectedIds.includes(item.id);
               return (
                 <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary' : 'border-white/5'} rounded-xl p-0 group hover:border-primary/50 transition-all flex flex-col overflow-hidden relative`}>
@@ -211,7 +209,7 @@ export default function ContentManagementPage() {
             <DialogTitle className="uppercase font-black italic text-primary">{previewItem?.title}</DialogTitle>
             <DialogDescription className="uppercase text-[10px] font-bold opacity-60">Escolha um episódio para testar o sinal</DialogDescription>
           </DialogHeader>
-          <div className="grid sm:grid-cols-2 gap-3 mt-4 max-h-[400px] overflow-y-auto pr-2">
+          <div className="grid sm:grid-cols-2 gap-3 mt-4 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
             {previewItem?.type === 'series' && previewItem.episodes?.map((ep, idx) => (
               <Button 
                 key={ep.id} 
