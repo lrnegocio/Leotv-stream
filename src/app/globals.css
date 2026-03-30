@@ -42,17 +42,17 @@
     overflow-y: auto !important;
   }
   
-  .custom-scroll::-webkit-scrollbar {
+  .scrollbar-visible::-webkit-scrollbar {
     width: 8px !important;
     display: block !important;
   }
   
-  .custom-scroll::-webkit-scrollbar-track {
+  .scrollbar-visible::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05) !important;
     border-radius: 10px !important;
   }
   
-  .custom-scroll::-webkit-scrollbar-thumb {
+  .scrollbar-visible::-webkit-scrollbar-thumb {
     background: hsl(var(--primary)) !important;
     border-radius: 10px !important;
     box-shadow: 0 0 10px hsl(var(--primary)) !important;

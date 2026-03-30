@@ -70,47 +70,20 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache_v5';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v5';
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS DE CACHE PARA ECONOMIZAR EGRESS
+const CACHE_KEY = 'leo_stream_content_cache_v6';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v6';
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS
 
-async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
-  let allData: any[] = [];
-  let from = 0;
-  const step = 1000; 
-  let hasMore = true;
+// GERADOR DE ID BLINDADO CONTRA ERRO 500 E SÍMBOLOS (✮)
+const generateSafeId = (name: string) => {
+  const clean = name.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") 
+    .replace(/[^a-z0-9]/g, '_') 
+    .substring(0, 50);
+  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
+};
 
-  try {
-    // ECONOMIA MASTER: Tenta carregar apenas o necessário
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .range(from, from + step - 1)
-        .order(orderBy, { ascending: true });
-
-      if (error) {
-        hasMore = false;
-        break;
-      }
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        from += step;
-        if (data.length < step) hasMore = false;
-      } else {
-        hasMore = false;
-      }
-      
-      // TRAVA DE SEGURANÇA: Limite de 50k para não travar o navegador do cliente
-      if (allData.length > 50000) break;
-    }
-    return allData;
-  } catch (e) {
-    return [];
-  }
-}
-
-// NOVA FUNÇÃO MASTER: Pega o total de canais sem baixar os dados (Gasta 0 egress)
 export async function getTotalContentCount(): Promise<number> {
   try {
     const { count, error } = await supabase
@@ -123,81 +96,58 @@ export async function getTotalContentCount(): Promise<number> {
   }
 }
 
-export async function getRemoteContent(forceRefresh = false): Promise<ContentItem[]> {
-  const now = Date.now();
-  
-  if (typeof window !== 'undefined') {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-    
-    if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
-      try {
-        return JSON.parse(cachedData);
-      } catch (e) {
-        localStorage.removeItem(CACHE_KEY);
-      }
-    }
-  }
+/**
+ * BUSCA ON-DEMAND MASTER (v180)
+ * Esta função é o segredo para gerir 300k canais sem estourar o Supabase.
+ * Se houver busca, ela filtra no banco. Se não, traz os primeiros 500.
+ */
+export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
+  try {
+    let query = supabase.from('content').select('*').order('title', { ascending: true });
 
-  // Se forçar ou cache expirar, busca os primeiros 5000 para ser rápido
-  const { data: rawData, error } = await supabase
-    .from('content')
-    .select('*')
-    .order('title', { ascending: true })
-    .limit(5000); 
-  
-  if (error || !rawData) {
-    const backup = localStorage.getItem(CACHE_KEY);
-    return backup ? JSON.parse(backup) : [];
-  }
-
-  const data = rawData.map(item => {
-    if (item.streamUrl && typeof item.streamUrl === 'string' && item.streamUrl.includes(URL_SEPARATOR)) {
-      const parts = item.streamUrl.split(URL_SEPARATOR);
-      item.streamUrl = parts[0] || "";
-      item.directStreamUrl = parts[1] || "";
+    if (searchQuery) {
+      // Se tiver busca, filtra direto no banco (Consome quase nada de dados)
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+      query = query.limit(500); 
     } else {
-      item.directStreamUrl = item.streamUrl; 
+      // Se for a home normal, traz os primeiros 500 para ser instantâneo
+      query = query.limit(500);
     }
-    return item;
-  });
 
-  if (typeof window !== 'undefined' && data.length > 0) {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-      localStorage.setItem(CACHE_TIME_KEY, now.toString());
-    } catch (e) {}
+    const { data: rawData, error } = await query;
+    
+    if (error || !rawData) return [];
+
+    return rawData.map(item => {
+      if (item.streamUrl && typeof item.streamUrl === 'string' && item.streamUrl.includes(URL_SEPARATOR)) {
+        const parts = item.streamUrl.split(URL_SEPARATOR);
+        item.streamUrl = parts[0] || "";
+        item.directStreamUrl = parts[1] || "";
+      } else {
+        item.directStreamUrl = item.streamUrl; 
+      }
+      return item;
+    });
+  } catch (e) {
+    return [];
   }
-  
-  return data;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  return await fetchAllRecords('users', 'id');
+  const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
+  return data || [];
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  return await fetchAllRecords('resellers', 'name');
+  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+  return data || [];
 }
-
-// GERADOR DE ID BLINDADO CONTRA ERRO 500 E SÍMBOLOS (✮)
-const generateSafeId = (name: string) => {
-  const clean = name.toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
-    .replace(/[^a-z0-9]/g, '_') // Remove símbolos como ✮ e emojis
-    .substring(0, 50);
-  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
-};
 
 export async function saveContent(item: ContentItem) {
   try {
     const cleanStreamUrl = (item.streamUrl || "").trim();
     const cleanDirectUrl = (item.directStreamUrl || "").trim();
-
-    const combinedUrl = cleanDirectUrl 
-      ? `${cleanStreamUrl}${URL_SEPARATOR}${cleanDirectUrl}`
-      : cleanStreamUrl;
+    const combinedUrl = cleanDirectUrl ? `${cleanStreamUrl}${URL_SEPARATOR}${cleanDirectUrl}` : cleanStreamUrl;
 
     const payload: any = {
       id: item.id || generateSafeId(item.title),
@@ -213,12 +163,7 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
-    
-    if (!error) {
-      if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
-      return true;
-    }
-    return false;
+    return !error;
   } catch (e) {
     return false;
   }
@@ -226,20 +171,12 @@ export async function saveContent(item: ContentItem) {
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
-  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   const { error } = await supabase.from('content').delete().in(ids);
-  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
-  return !error;
-}
-
-export async function clearAllM3UContent() {
-  const { error } = await supabase.from('content').delete().like('id', 'leo_m3u_%');
-  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
 
@@ -281,8 +218,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', normalizedPin).maybeSingle();
     
-    if (error) return { error: "ERRO DE CONEXÃO." };
-    if (!user) return { error: "PIN INVÁLIDO." };
+    if (error || !user) return { error: "PIN INVÁLIDO." };
     if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
     const now = new Date();
@@ -301,9 +237,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     const isThisDeviceLinked = devices.some((d: any) => d.id === deviceId);
 
     if (!isThisDeviceLinked) {
-      if (devices.length >= (user.maxScreens || 1)) {
-        return { error: "LIMITE DE TELAS EXCEDIDO." };
-      }
+      if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS EXCEDIDO." };
       devices.push({ id: deviceId, lastActive: now.toISOString(), ip: userIp });
       user.activeDevices = devices;
     } else {
@@ -367,42 +301,16 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   }
 
   let successCount = 0;
-  const batchSize = 50; // REDUZIDO PARA ESTABILIDADE TOTAL
+  const batchSize = 100; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Salvando: ${i} de ${items.length}...`);
+    onProgress?.(`Processando: ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
     if (!error) successCount += batch.length;
-    await new Promise(r => setTimeout(r, 50)); 
+    await new Promise(r => setTimeout(r, 100)); 
   }
   
-  if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return { success: successCount, failed: items.length - successCount };
-}
-
-export async function generateM3UPlaylist(pin: string): Promise<string> {
-  try {
-    const content = await getRemoteContent();
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-    let m3uLines = ["#EXTM3U"];
-    content.forEach(item => {
-      const logo = item.imageUrl || "";
-      const cat = (item.genre || "GERAL").toUpperCase();
-      const title = item.title.toUpperCase();
-
-      if (item.type === 'channel') {
-        m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(`${baseUrl}/live/${pin}/${pin}/${item.id}.ts`);
-      } else if (item.type === 'movie') {
-        m3uLines.push(`#EXTINF:-1 tvg-logo="${logo}" group-title="${cat}",${title}`);
-        m3uLines.push(`${baseUrl}/movie/${pin}/${pin}/${item.id}.mp4`);
-      }
-    });
-    return m3uLines.join('\n');
-  } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO NO SERVIDOR\n";
-  }
 }
 
 export async function getGlobalSettings() {
@@ -435,8 +343,7 @@ export async function importPremiumBundle(): Promise<{ success: number }> {
   const premiumChannels: ContentItem[] = [
     { id: 'leo_globo_sp', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
     { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
-    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'HBO', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' },
-    { id: 'leo_record_news', title: 'RECORD NEWS', type: 'channel', genre: 'NOTÍCIAS', isRestricted: false, streamUrl: 'https://www.cxtv.com.br/tv-ao-vivo/record-news', imageUrl: 'https://www.cxtv.com.br/img/Tvs/Logo/webp-m/86600ed6f09e4bf48be4e55a0cd01536.webp' }
+    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'HBO', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' }
   ];
   
   let added = 0;
@@ -461,7 +368,6 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")
     }));
     const { error } = await supabase.from('content').upsert(sportsItems, { onConflict: 'id', ignoreDuplicates: true });
-    if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
     return { success: error ? 0 : sportsItems.length };
   } catch (e) {
     return { success: 0 };

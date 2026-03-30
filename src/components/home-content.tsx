@@ -3,13 +3,13 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, SkipBack, SkipForward, Volume2, VolumeX, Maximize, ExternalLink, ShieldAlert, Zap, Ghost } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
@@ -40,32 +40,36 @@ export default function HomeContent() {
   
   const router = useRouter()
   const searchParams = useSearchParams()
-  const searchQuery = searchParams.get('q')?.toLowerCase() || ""
+  const searchQuery = searchParams.get('q') || ""
 
   const handleLogout = React.useCallback(async () => {
     localStorage.removeItem("user_session")
     router.push("/login")
   }, [router])
 
+  // EFEITO MASTER: Busca os canais direto do Supabase conforme o usuário digita
   React.useEffect(() => {
-    const session = localStorage.getItem("user_session")
-    if (!session) { router.push("/login"); return; }
-    const userData = JSON.parse(session)
-    setUser(userData)
-
     const load = async () => {
+      setLoading(true)
       try {
-        const data = await getRemoteContent()
+        const session = localStorage.getItem("user_session")
+        if (!session) { router.push("/login"); return; }
+        setUser(JSON.parse(session))
+
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
+
+        // BUSCA ON-DEMAND: Se tem busca, vai no banco. Se não, traz os primeiros 500.
+        const data = await getRemoteContent(false, searchQuery)
         setContent(data)
-        setLoading(false)
       } catch (err) {
+        console.error("Erro ao carregar conteúdo:", err)
+      } finally {
         setLoading(false)
       }
     }
     load()
-  }, [router])
+  }, [searchQuery, router])
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -93,16 +97,11 @@ export default function HomeContent() {
   const filteredContent = React.useMemo(() => {
     return content.filter(item => {
       const isAdult = isAdultCategory(item);
-      
-      // REGRA MASTER: Se não liberou adultos, o canal XXX some. Terror aparece normal.
       if (isAdult && user && !user.isAdultEnabled) return false;
       if (isAdult && !showAdult) return false;
-      
-      const titleMatch = item.title.toLowerCase().includes(searchQuery);
-      const genreMatch = item.genre && item.genre.toLowerCase().includes(searchQuery);
-      return titleMatch || genreMatch;
+      return true;
     })
-  }, [content, searchQuery, showAdult, user])
+  }, [content, showAdult, user])
 
   const categoriesWithCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -114,17 +113,13 @@ export default function HomeContent() {
   }, [filteredContent])
 
   const handleItemClick = (item: ContentItem) => {
-    // SÓ ADULTO PEDE SENHA. TERROR É NORMAL.
     if (isAdultCategory(item)) {
       setPendingItem(item);
       setIsPinDialogOpen(true);
       return;
     }
-    if (item.type === 'series' || item.type === 'multi-season') {
-      setSelectedSeries(item);
-    } else {
-      setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
-    }
+    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
+    else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
   }
 
   const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
@@ -138,10 +133,8 @@ export default function HomeContent() {
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
-      if (pendingAdultToggle) {
-        setShowAdult(true);
-        setPendingAdultToggle(false);
-      } else if (pendingEpisodeData) {
+      if (pendingAdultToggle) { setShowAdult(true); setPendingAdultToggle(false); }
+      else if (pendingEpisodeData) {
         const { ep, series, eIdx, sIdx } = pendingEpisodeData;
         setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type });
         setPendingEpisodeData(null);
@@ -151,15 +144,11 @@ export default function HomeContent() {
         else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
         setPendingItem(null);
       }
-      setIsPinDialogOpen(false);
-      setPinInput("");
+      setIsPinDialogOpen(false); setPinInput("");
     } else {
-      toast({ variant: "destructive", title: "PIN INCORRETO" });
-      setPinInput("");
+      toast({ variant: "destructive", title: "PIN INCORRETO" }); setPinInput("");
     }
   }
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
@@ -189,39 +178,43 @@ export default function HomeContent() {
       </header>
 
       <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
-        {categoriesWithCounts.length === 0 && !loading && (
-          <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">
-            Nenhum conteúdo sintonizado no momento.
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-40 gap-4">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-[0.3em]">Sintonizando Sinais do Império...</p>
           </div>
-        )}
-        {categoriesWithCounts.map(([category, count]) => {
-          const categoryItems = filteredContent.filter(item => (item.genre || "GERAL").toUpperCase() === category)
-          return (
-            <section key={category} className="space-y-6">
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg"><Folder className="h-6 w-6 text-primary" /></div>
-                  <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
-                </div>
-                <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest">{count} SINAIS</span>
-              </div>
-              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-                {categoryItems.map(item => (
-                  <div key={item.id} onClick={() => handleItemClick(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl">
-                    {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized /> : <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
-                      <div className="flex items-center justify-between mb-1">
-                         <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary flex-1">{item.title}</h3>
-                         {isAdultCategory(item) && <Lock className="h-4 w-4 text-primary ml-2" />}
-                      </div>
-                      <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
-                    </div>
+        ) : (
+          <>
+            {categoriesWithCounts.length === 0 && (
+              <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">Nenhum sinal localizado nesta faixa.</div>
+            )}
+            {categoriesWithCounts.map(([category, count]) => (
+              <section key={category} className="space-y-6">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg"><Folder className="h-6 w-6 text-primary" /></div>
+                    <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
                   </div>
-                ))}
-              </div>
-            </section>
-          )
-        })}
+                  <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest">{count} SINAIS</span>
+                </div>
+                <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+                  {filteredContent.filter(i => (i.genre || "GERAL").toUpperCase() === category).map(item => (
+                    <div key={item.id} onClick={() => handleItemClick(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl">
+                      {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized /> : <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+                        <div className="flex items-center justify-between mb-1">
+                           <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary flex-1">{item.title}</h3>
+                           {isAdultCategory(item) && <Lock className="h-4 w-4 text-primary ml-2" />}
+                        </div>
+                        <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </>
+        )}
       </main>
 
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) setSelectedSeries(null); }}>
@@ -231,10 +224,10 @@ export default function HomeContent() {
               <div className="relative h-64 shrink-0">
                 {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
-                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
+                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll scrollbar-visible">
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>
