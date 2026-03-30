@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles, Zap } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles, Zap, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -62,7 +62,6 @@ export default function HomeContent() {
     loadData(q)
   }, [q, loadData])
 
-  // CONTADOR AGRESSIVO: Conta episódios como sinais individuais
   const catCounts = React.useMemo(() => {
     const counts: any = {}
     CATEGORIES.forEach(c => {
@@ -110,30 +109,6 @@ export default function HomeContent() {
     } else { 
       toast({ variant: "destructive", title: "PIN INCORRETO" }); 
       setPinInput(""); 
-    }
-  }
-
-  const handleNext = () => {
-    if (!activeVideo) return
-    const nextIdx = (activeVideo.index + 1) % filtered.length
-    const nextItem = filtered[nextIdx]
-    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
-      setActiveVideo(null)
-      setSelectedSeries(nextItem)
-    } else {
-      setActiveVideo({ url: nextItem.directStreamUrl || nextItem.streamUrl, title: nextItem.title, index: nextIdx })
-    }
-  }
-
-  const handlePrev = () => {
-    if (!activeVideo) return
-    const prevIdx = (activeVideo.index - 1 + filtered.length) % filtered.length
-    const prevItem = filtered[prevIdx]
-    if (prevItem.type === 'series' || prevItem.type === 'multi-season') {
-      setActiveVideo(null)
-      setSelectedSeries(prevItem)
-    } else {
-      setActiveVideo({ url: prevItem.directStreamUrl || prevItem.streamUrl, title: prevItem.title, index: prevIdx })
     }
   }
 
@@ -249,7 +224,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} />}
         </DialogContent>
       </Dialog>
 

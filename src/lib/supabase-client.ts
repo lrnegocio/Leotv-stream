@@ -2,11 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * CONEXÃO OFICIAL LÉO TV - NOVO SUPABASE (1 MILHÃO DE CANAIS)
- * Mestre Léo: Cole aqui a URL e a ANON KEY do seu NOVO projeto Supabase.
- * Vá em: Settings -> API -> Project URL / anon public key.
+ * URL ATUALIZADA: veilblctswnnyzidirrf.supabase.co
  */
-const supabaseUrl = 'https://fxrzyrvnouafqdwrrsfn.supabase.co'; // ATUALIZE AQUI SE MUDAR
-const supabaseAnonKey = 'sb_publishable_zLTOvglMQ4zHTpRuFD6Iig_5S1MCChJ'; // COLE AQUI SUA NOVA CHAVE ANON
+const supabaseUrl = 'https://veilblctswnnyzidirrf.supabase.co'; 
+
+/**
+ * MESTRE LÉO: Cole sua "anon public key" aqui embaixo entre as aspas.
+ * Pegue ela em: Supabase -> Settings -> API -> anon public key.
+ */
+const supabaseAnonKey = 'COLE_AQUI_SUA_CHAVE_ANON_DO_NOVO_SUPABASE'; 
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

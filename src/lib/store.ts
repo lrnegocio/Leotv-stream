@@ -78,25 +78,6 @@ const generateSafeId = (name: string) => {
   return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
-export async function getTotalContentCount(): Promise<number> {
-  try {
-    const { data, error } = await supabase.from('content').select('episodes, seasons');
-    if (error || !data) return 0;
-    
-    let total = 0;
-    data.forEach((item: any) => {
-      const epCount = (item.episodes?.length || 0);
-      let seasonEpCount = 0;
-      if (item.seasons) item.seasons.forEach((s: any) => seasonEpCount += (s.episodes?.length || 0));
-      
-      // Se não tem episódios nem temporadas, conta como 1 sinal (canal/filme)
-      if (epCount === 0 && seasonEpCount === 0) total += 1;
-      else total += (epCount + seasonEpCount);
-    });
-    return total;
-  } catch (e) { return 0; }
-}
-
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     const cacheKey = `p2p_cache_${searchQuery || 'init'}_${categoryGenre || 'all'}`;
@@ -104,7 +85,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 5) return data;
+        if (Date.now() - timestamp < 1000 * 60 * 2) return data;
       }
     }
 
@@ -118,7 +99,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       query = query.eq('genre', categoryGenre);
     }
 
-    const { data: rawData, error } = await query.limit(searchQuery ? 1000 : 500);
+    const { data: rawData, error } = await query.limit(1000);
     if (error || !rawData) return [];
 
     const processed = rawData.map(item => ({
@@ -134,30 +115,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     }
     return processed;
   } catch (e) { return []; }
-}
-
-export async function getContentById(id: string): Promise<ContentItem | null> {
-  try {
-    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    if (error || !data) return null;
-    return {
-      ...data,
-      isRestricted: data.isRestricted ?? data.is_restricted,
-      streamUrl: data.streamUrl ?? data.stream_url,
-      directStreamUrl: data.directStreamUrl ?? data.direct_stream_url,
-      imageUrl: data.imageUrl ?? data.image_url,
-    };
-  } catch (e) { return null; }
-}
-
-export async function getRemoteUsers(): Promise<User[]> {
-  const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
-  return data || [];
-}
-
-export async function getRemoteResellers(): Promise<Reseller[]> {
-  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-  return data || [];
 }
 
 export async function saveContent(item: ContentItem) {
@@ -211,20 +168,9 @@ export async function saveUser(user: User) {
   return !error;
 }
 
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
-}
-
-export async function saveReseller(reseller: Reseller) {
-  const { error } = await supabase.from('resellers').upsert(reseller);
-  return !error;
-}
-
-export async function removeReseller(id: string) {
-  await supabase.from('users').delete().eq('resellerId', id);
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
+export async function getRemoteUsers(): Promise<User[]> {
+  const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
+  return data || [];
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
@@ -242,8 +188,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (!devices.some((d: any) => d.id === deviceId)) {
       if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO." };
       devices.push({ id: deviceId, lastActive: new Date().toISOString(), ip });
-    } else {
-      devices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: new Date().toISOString(), ip } : d);
     }
 
     const update: any = { ...user, activeDevices: devices };
@@ -256,12 +200,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     await saveUser(update);
     return { user: update };
   } catch (e) { return { error: "ERRO CRÍTICO." }; }
-}
-
-export async function validateResellerLogin(u: string, p: string) {
-  const { data, error } = await supabase.from('resellers').select('*').eq('username', u).eq('password', p).maybeSingle();
-  if (error || !data) return { error: "LOGIN INVÁLIDO." };
-  return { reseller: data };
 }
 
 export async function processM3UImport(content: string, onProgress?: (m: string) => void) {
@@ -289,12 +227,11 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
 
       current = { title: name, genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
     } else if (line.startsWith('http') && current) {
-      // AGRUPAMENTO AUTOMÁTICO DE SÉRIES/DORAMAS/NOVELAS
       const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           current.title.match(/(.*?)\s+Episode\s+(\d+)/i) ||
                           current.title.match(/(.*?)\s+Ep\s+(\d+)/i);
       
-      if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA') || current.genre.includes('ADULTOS'))) {
+      if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA'))) {
         const base = seriesMatch[1].trim();
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         if (!itemsMap.has(base)) {
@@ -313,9 +250,9 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
   }
 
   const items = Array.from(itemsMap.values());
-  for (let i = 0; i < items.length; i += 50) {
+  for (let i = 0; i < items.length; i += 20) {
     if (onProgress) onProgress(`Sintonizando: ${i} de ${items.length}...`);
-    await supabase.from('content').upsert(items.slice(i, i + 50));
+    await supabase.from('content').upsert(items.slice(i, i + 20));
   }
   localStorage.clear();
   return { success: items.length };
@@ -326,12 +263,4 @@ export async function getGlobalSettings() {
   return data?.value || { parentalPin: '1234' };
 }
 
-export async function updateGlobalSettings(v: any) {
-  await supabase.from('settings').upsert({ key: 'global', value: v });
-  return true;
-}
-
 export const generateRandomPin = () => Math.random().toString().substring(2, 13);
-
-export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => 
-  `🚀 *LÉO TV STREAM - ATIVADO!*\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${tier}\n📺 *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${url}\nSinal blindado de alta performance.`;
