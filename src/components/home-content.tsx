@@ -40,20 +40,28 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
 
-  React.useEffect(() => {
-    const load = async () => {
-      setLoading(true)
+  const loadData = React.useCallback(async (queryStr = "") => {
+    setLoading(true)
+    try {
       const session = localStorage.getItem("user_session")
       if (!session) { router.push("/login"); return; }
       setUser(JSON.parse(session))
+      
       const settings = await getGlobalSettings()
       setParentalPin(settings.parentalPin)
-      const data = await getRemoteContent(false, q)
+      
+      const data = await getRemoteContent(false, queryStr)
       setContent(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
       setLoading(false)
     }
-    load()
-  }, [q, router])
+  }, [router])
+
+  React.useEffect(() => {
+    loadData(q)
+  }, [q, loadData])
 
   const catCounts = React.useMemo(() => {
     const counts: any = {}
@@ -82,13 +90,50 @@ export default function HomeContent() {
   }, [content, selectedCat, user])
 
   const handleItemClick = (item: ContentItem, idx: number) => {
-    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item)
-    else setActiveVideo({ url: item.streamUrl || item.directStreamUrl, title: item.title, index: idx })
+    if (item.type === 'series' || item.type === 'multi-season') {
+      setSelectedSeries(item)
+    } else {
+      setActiveVideo({ 
+        url: item.directStreamUrl || item.streamUrl, 
+        title: item.title, 
+        index: idx 
+      })
+    }
   }
 
   const verifyPin = () => {
-    if (pinInput === parentalPin) { setSelectedCat('ADULT'); setIsPinOpen(false); setPinInput(""); }
-    else { toast({ variant: "destructive", title: "PIN INCORRETO" }); setPinInput(""); }
+    if (pinInput === parentalPin) { 
+      setSelectedCat('ADULT'); 
+      setIsPinOpen(false); 
+      setPinInput(""); 
+    } else { 
+      toast({ variant: "destructive", title: "PIN INCORRETO" }); 
+      setPinInput(""); 
+    }
+  }
+
+  const handleNext = () => {
+    if (!activeVideo) return
+    const nextIdx = (activeVideo.index + 1) % filtered.length
+    const nextItem = filtered[nextIdx]
+    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
+      setActiveVideo(null)
+      setSelectedSeries(nextItem)
+    } else {
+      setActiveVideo({ url: nextItem.directStreamUrl || nextItem.streamUrl, title: nextItem.title, index: nextIdx })
+    }
+  }
+
+  const handlePrev = () => {
+    if (!activeVideo) return
+    const prevIdx = (activeVideo.index - 1 + filtered.length) % filtered.length
+    const prevItem = filtered[prevIdx]
+    if (prevItem.type === 'series' || prevItem.type === 'multi-season') {
+      setActiveVideo(null)
+      setSelectedSeries(prevItem)
+    } else {
+      setActiveVideo({ url: prevItem.directStreamUrl || prevItem.streamUrl, title: prevItem.title, index: prevIdx })
+    }
   }
 
   if (loading) return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest">Sintonizando Rede Master...</p></div>
@@ -99,14 +144,14 @@ export default function HomeContent() {
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary"><ChevronLeft className="h-8 w-8 text-white" /></Button>
-          ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2"><Tv className="h-7 w-7 text-white" /></div>}
+          ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block">Léo Tv Stream</span>
             <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Blindado Online</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
-        <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full"><LogOut className="h-6 w-6" /></Button>
+        <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
       </header>
 
       <main className="p-8 max-w-[1800px] mx-auto">
@@ -149,6 +194,7 @@ export default function HomeContent() {
         )}
       </main>
 
+      {/* SELETOR DE EPISÓDIOS MASTER - LISTA VERTICAL PURA */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
@@ -161,37 +207,69 @@ export default function HomeContent() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
-                {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{ep.number}</div>
-                      <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title}</span>
+                {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
+                  selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
+                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
+                          {ep.number}
+                        </div>
+                        <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                      </div>
+                      <PlayCircle className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
+                    </Button>
+                  ))
+                ) : selectedSeries.seasons && selectedSeries.seasons.length > 0 ? (
+                  selectedSeries.seasons.sort((a,b) => a.number - b.number).map(season => (
+                    <div key={season.id} className="space-y-3">
+                      <h4 className="text-[10px] font-black uppercase text-primary tracking-widest pl-2 border-l-2 border-primary">Temporada {season.number}</h4>
+                      {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                        <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group">
+                          <div className="flex items-center gap-4">
+                            <div className="w-6 h-6 rounded-full bg-primary/5 flex items-center justify-center font-black text-[8px] text-primary">
+                              {ep.number}
+                            </div>
+                            <span className="font-bold uppercase text-[10px]">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                          </div>
+                          <PlayCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                        </Button>
+                      ))}
                     </div>
-                    <PlayCircle className="h-6 w-6 text-primary group-hover:scale-110" />
-                  </Button>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-20 opacity-20 uppercase font-black text-xs">Nenhum episódio cadastrado.</div>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* PLAYER DE VÍDEO MASTER */}
+      <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
+        <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
+          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* PIN PARENTAL ADULTO */}
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Léo Tv</div>
-          <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} autoFocus />
+          <input 
+            type="password" 
+            title="PIN" 
+            maxLength={4} 
+            className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
+            value={pinInput} 
+            onChange={e => setPinInput(e.target.value)} 
+            onKeyDown={e => e.key === 'Enter' && verifyPin()} 
+            autoFocus 
+          />
           <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl">DESBLOQUEAR</Button>
         </DialogContent>
       </Dialog>
-
-      {activeVideo && (
-        <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-          <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-            <VideoPlayer url={activeVideo.url} title={activeVideo.title} />
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   )
 }

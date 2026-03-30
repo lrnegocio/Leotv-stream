@@ -111,7 +111,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 30) return data;
+        if (Date.now() - timestamp < 1000 * 60 * 5) return data;
       }
     }
 
@@ -126,25 +126,13 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
     const { data: rawData, error } = await query;
     if (error || !rawData) return [];
 
-    const processed = rawData.map(item => {
-      // Re-mapeamento de snake_case para CamelCase do Supabase
-      const mapped = {
-        ...item,
-        isRestricted: item.isRestricted ?? item.is_restricted,
-        streamUrl: item.streamUrl ?? item.stream_url,
-        directStreamUrl: item.directStreamUrl ?? item.direct_stream_url,
-        imageUrl: item.imageUrl ?? item.image_url,
-      };
-
-      if (mapped.streamUrl && typeof mapped.streamUrl === 'string' && mapped.streamUrl.includes(URL_SEPARATOR)) {
-        const parts = mapped.streamUrl.split(URL_SEPARATOR);
-        mapped.streamUrl = parts[0] || "";
-        mapped.directStreamUrl = parts[1] || "";
-      } else if (!mapped.directStreamUrl) {
-        mapped.directStreamUrl = mapped.streamUrl; 
-      }
-      return mapped;
-    });
+    const processed = rawData.map(item => ({
+      ...item,
+      isRestricted: item.isRestricted ?? item.is_restricted,
+      streamUrl: item.streamUrl ?? item.stream_url,
+      directStreamUrl: item.directStreamUrl ?? item.direct_stream_url,
+      imageUrl: item.imageUrl ?? item.image_url,
+    }));
 
     if (!searchQuery) {
       localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
@@ -177,10 +165,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    const combinedUrl = item.directStreamUrl && item.directStreamUrl !== item.streamUrl 
-      ? `${item.streamUrl}${URL_SEPARATOR}${item.directStreamUrl}` 
-      : item.streamUrl;
-
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: item.title,
@@ -189,7 +173,8 @@ export async function saveContent(item: ContentItem) {
       genre: (item.genre || "LÉO TV CANAIS AO VIVO").toUpperCase(),
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
-      streamUrl: combinedUrl,
+      streamUrl: item.streamUrl || null,
+      directStreamUrl: item.directStreamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
     };
@@ -221,8 +206,6 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    // Para 1 milhão de itens, o ideal é o TRUNCATE via SQL Editor.
-    // Via API, tentamos apagar tudo que não seja um placeholder.
     const { error } = await supabase.from('content').delete().neq('id', '_root_');
     clearLocalCache();
     return !error;
@@ -312,7 +295,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
       else if (group.includes('RADIO')) genre = "LÉO TV RÁDIOS";
       else if (group.includes('NOVELA')) genre = "LÉO TV NOVELAS";
 
-      current = { title: name, genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTO') };
+      current = { title: name, genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
     } else if (line.startsWith('http') && current) {
       const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || current.title.match(/(.*?)\s+Episode\s+(\d+)/i);
       
@@ -320,7 +303,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         const base = seriesMatch[1].trim();
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         if (!itemsMap.has(base)) {
-          itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, episodes: [] });
+          itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
         }
         const series = itemsMap.get(base);
         if (!series.episodes.some((e:any) => e.number === epNum)) {
@@ -328,7 +311,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         }
       } else {
         const id = generateSafeId(current.title);
-        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILME') ? 'movie' : 'channel', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, streamUrl: line });
+        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, description: 'Sinal Master Léo Tv', streamUrl: line, directStreamUrl: line });
       }
       current = null;
     }
@@ -360,7 +343,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 
 export async function importPremiumBundle() {
   const bundle = [
-    { id: 'p1', title: 'GLOBO SP 4K', type: 'channel', genre: 'LÉO TV CANAIS AO VIVO', streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png' },
+    { id: 'p1', title: 'GLOBO SP 4K', type: 'channel', genre: 'LÉO TV CANAIS AO VIVO', streamUrl: 'https://stream.ads.ottera.tv/cl/260327d737co7n2q2grrf2v1c0/1280x720_3071200_0_f.m3u8', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png' },
     { id: 'p2', title: 'PREMIERE 4K', type: 'channel', genre: 'LÉO TV ESPORTES', streamUrl: 'http://contfree.shop:80/live/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png' }
   ];
   for (const item of bundle) await saveContent(item as any);
@@ -372,7 +355,7 @@ export async function syncLiveSports() {
     const res = await fetch("https://api.reidoscanais.ooo/sports");
     const d = await res.json();
     if (!d.success) return { success: 0 };
-    const items = d.data.map((e: any) => ({ id: "r_"+e.id, title: e.title.toUpperCase(), type: 'channel', genre: "LÉO TV ESPORTES", imageUrl: e.poster, streamUrl: e.embeds?.[0]?.embed_url }));
+    const items = d.data.map((e: any) => ({ id: "r_"+e.id, title: e.title.toUpperCase(), type: 'channel', genre: "LÉO TV ESPORTES", imageUrl: e.poster, streamUrl: e.embeds?.[0]?.embed_url, description: 'Sinal Master Léo Tv' }));
     await supabase.from('content').upsert(items);
     return { success: items.length };
   } catch (e) { return { success: 0 }; }
