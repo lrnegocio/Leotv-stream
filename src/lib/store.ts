@@ -71,7 +71,6 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
-// GERADOR DE ID BLINDADO (v183): Remove símbolos e acentos para evitar Erro 500
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -93,20 +92,14 @@ export async function getTotalContentCount(): Promise<number> {
   }
 }
 
-/**
- * BUSCA ON-DEMAND MASTER (v183)
- * Resolve o excesso de dados filtrando 300k canais no banco.
- */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').order('title', { ascending: true });
 
     if (searchQuery && searchQuery.length > 1) {
-      // Filtra 300k canais no servidor Supabase (Economiza Egress)
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
       query = query.limit(500); 
     } else {
-      // Home carrega apenas os primeiros 500 para ser instantâneo
       query = query.limit(500);
     }
 
@@ -118,7 +111,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
         const parts = item.streamUrl.split(URL_SEPARATOR);
         item.streamUrl = parts[0] || "";
         item.directStreamUrl = parts[1] || "";
-      } else {
+      } else if (!item.directStreamUrl) {
         item.directStreamUrl = item.streamUrl; 
       }
       return item;
@@ -277,8 +270,8 @@ export async function validateResellerLogin(username: string, pass: string) {
 
 export async function processM3UImport(content: string, onProgress?: (msg: string) => void): Promise<{ success: number; failed: number }> {
   const lines = content.split('\n');
-  const items: any[] = [];
-  let currentItem: any = null;
+  const itemsMap = new Map<string, any>();
+  let currentItemData: any = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -288,28 +281,86 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
-      currentItem = {
-        id: generateSafeId(name),
+      currentItemData = {
         title: name,
-        type: genre.includes('FILME') ? 'movie' : genre.includes('SERIE') ? 'series' : 'channel',
         genre: genre,
         imageUrl: logoMatch ? logoMatch[1] : null,
         isRestricted: genre.includes('ADULT') || genre.includes('XXX'),
-        description: "Sinal Master Léo Tv",
-        streamUrl: ""
       };
-    } else if (line.startsWith('http') && currentItem) {
-      currentItem.streamUrl = line + URL_SEPARATOR + line;
-      items.push(currentItem);
-      currentItem = null;
+    } else if (line.startsWith('http') && currentItemData) {
+      const { title, genre, imageUrl, isRestricted } = currentItemData;
+      const streamUrl = line + URL_SEPARATOR + line;
+
+      // DETECÇÃO DE SÉRIE: Nome S01E01 ou Nome Episódio 1
+      const seriesMatch = title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || title.match(/(.*?)\s+Episode\s+(\d+)/i) || title.match(/(.*?)\s+Episodio\s+(\d+)/i);
+      
+      if (seriesMatch && genre.includes('SERIE')) {
+        const baseName = seriesMatch[1].trim();
+        const seasonNum = seriesMatch.length === 4 ? parseInt(seriesMatch[2]) : 1;
+        const epNum = seriesMatch.length === 4 ? parseInt(seriesMatch[3]) : parseInt(seriesMatch[2]);
+
+        if (!itemsMap.has(baseName)) {
+          itemsMap.set(baseName, {
+            id: generateSafeId(baseName),
+            title: baseName,
+            type: seasonNum > 1 ? 'multi-season' : 'series',
+            genre: genre,
+            imageUrl: imageUrl,
+            isRestricted: isRestricted,
+            description: "Série Master Léo Tv",
+            episodes: [],
+            seasons: []
+          });
+        }
+
+        const series = itemsMap.get(baseName);
+        const newEp: Episode = {
+          id: generateSafeId(title),
+          title: `Episódio ${epNum}`,
+          number: epNum,
+          streamUrl: streamUrl,
+          directStreamUrl: line
+        };
+
+        if (seasonNum > 1 || series.type === 'multi-season') {
+          series.type = 'multi-season';
+          let season = series.seasons.find((s: any) => s.number === seasonNum);
+          if (!season) {
+            season = { id: generateSafeId(`${baseName}_S${seasonNum}`), number: seasonNum, episodes: [] };
+            series.seasons.push(season);
+          }
+          if (!season.episodes.find((e: any) => e.number === epNum)) {
+            season.episodes.push(newEp);
+          }
+        } else {
+          if (!series.episodes.find((e: any) => e.number === epNum)) {
+            series.episodes.push(newEp);
+          }
+        }
+      } else {
+        // ITEM NORMAL (CANAL OU FILME)
+        const id = generateSafeId(title);
+        itemsMap.set(id, {
+          id,
+          title,
+          type: genre.includes('FILME') ? 'movie' : 'channel',
+          genre,
+          imageUrl,
+          isRestricted,
+          description: "Sinal Master Léo Tv",
+          streamUrl
+        });
+      }
+      currentItemData = null;
     }
   }
 
+  const items = Array.from(itemsMap.values());
   let successCount = 0;
-  const batchSize = 100; 
+  const batchSize = 50; 
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Processando: ${i} de ${items.length}...`);
+    onProgress?.(`Salvando: ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
     if (!error) successCount += batch.length;
     await new Promise(r => setTimeout(r, 100)); 
