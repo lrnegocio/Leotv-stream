@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap, Layers, ListOrdered } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap, Layers, ListOrdered, ChevronLeft, Film, Monitor, Music, Baby, Heart, Ghost, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -18,24 +18,31 @@ interface ActiveVideo {
   url: string;
   title: string;
   itemId: string;
-  episodeIndex?: number;
-  seasonIndex?: number;
-  type: string;
+  index: number;
 }
+
+const MASTER_CATEGORIES = [
+  { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV CANAIS AO VIVO' },
+  { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
+  { id: 'SERIES', name: 'LÉO TV SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
+  { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
+  { id: 'MUSIC', name: 'LÉO TV CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
+  { id: 'ADULT', name: 'LÉO TV ADULTO', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS' },
+]
 
 export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<ActiveVideo | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null)
   const [showAdult, setShowAdult] = React.useState(false)
   const [parentalPin, setParentalPin] = React.useState("")
   const [pinInput, setPinInput] = React.useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = React.useState(false)
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
-  const [pendingItem, setPendingItem] = React.useState<ContentItem | null>(null)
-  const [pendingEpisodeData, setPendingEpisodeData] = React.useState<{ep: Episode, series: ContentItem, eIdx: number, sIdx?: number} | null>(null)
-  const [pendingAdultToggle, setPendingAdultToggle] = React.useState(false)
+  const [pendingCategory, setPendingCategory] = React.useState<string | null>(null)
   const [timeLeft, setTimeLeft] = React.useState("SINTONIZANDO...")
   
   const router = useRouter()
@@ -59,7 +66,6 @@ export default function HomeContent() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
-        // Força recarregamento se não houver canais (tentativa de contornar cota bloqueada)
         const data = await getRemoteContent(false, searchQuery)
         setContent(data)
       } catch (err) {
@@ -89,66 +95,75 @@ export default function HomeContent() {
     return () => clearInterval(interval)
   }, [handleLogout])
 
-  const isAdultCategory = (item: ContentItem) => {
-    const genre = (item.genre || "").toUpperCase();
-    return genre.includes("ADULTO") || genre.includes("XXX") || genre.includes("HOT");
-  }
-
   const filteredContent = React.useMemo(() => {
-    return content.filter(item => {
-      const isAdult = isAdultCategory(item);
-      // Se a chave Adulto no cadastro estiver desligada, some TUDO que for adulto.
+    let list = content;
+    if (selectedCategory) {
+      const cat = MASTER_CATEGORIES.find(c => c.id === selectedCategory);
+      if (cat) list = list.filter(i => (i.genre || "").toUpperCase() === cat.genre);
+    }
+    
+    return list.filter(item => {
+      const genre = (item.genre || "").toUpperCase();
+      const isAdult = genre.includes("ADULTO") || genre.includes("XXX") || genre.includes("HOT");
       if (isAdult && (!user || !user.isAdultEnabled)) return false;
-      // Se a chave Adulto no cadastro estiver ligada, mas o Switch da Home desligado, some também.
       if (isAdult && !showAdult) return false;
       return true;
     })
-  }, [content, showAdult, user])
+  }, [content, selectedCategory, showAdult, user])
 
-  const categoriesWithCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {};
-    filteredContent.forEach(item => {
-      const cat = (item.genre || "LÉO TV GERAL").toUpperCase();
-      counts[cat] = (counts[cat] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
-  }, [filteredContent])
-
-  const handleItemClick = (item: ContentItem) => {
-    if (isAdultCategory(item)) {
-      setPendingItem(item);
+  const handleCategoryClick = (catId: string) => {
+    if (catId === 'ADULT') {
+      setPendingCategory(catId);
       setIsPinDialogOpen(true);
       return;
     }
-    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-    else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
+    setSelectedCategory(catId);
   }
 
-  const handleEpisodeClick = (ep: Episode, series: ContentItem, epIndex: number, seasonIndex?: number) => {
-    if (isAdultCategory(series)) {
-      setPendingEpisodeData({ ep, series, eIdx: epIndex, sIdx: seasonIndex });
-      setIsPinDialogOpen(true);
-      return;
+  const handleItemClick = (item: ContentItem, index: number) => {
+    if (item.type === 'series' || item.type === 'multi-season') {
+      setSelectedSeries(item);
+    } else {
+      setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, index });
     }
-    setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: epIndex, seasonIndex: seasonIndex, type: series.type })
   }
 
   const verifyPin = () => {
     if (pinInput === parentalPin) {
-      if (pendingAdultToggle) { setShowAdult(true); setPendingAdultToggle(false); }
-      else if (pendingEpisodeData) {
-        const { ep, series, eIdx, sIdx } = pendingEpisodeData;
-        setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${series.title} - EP ${ep.number}`, itemId: series.id, episodeIndex: eIdx, seasonIndex: sIdx, type: series.type });
-        setPendingEpisodeData(null);
-      } else if (pendingItem) {
-        const item = pendingItem;
-        if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-        else setActiveVideo({ url: item.streamUrl || item.directStreamUrl || "", title: item.title, itemId: item.id, type: item.type });
-        setPendingItem(null);
+      if (pendingCategory) {
+        setShowAdult(true);
+        setSelectedCategory(pendingCategory);
+        setPendingCategory(null);
       }
-      setIsPinDialogOpen(false); setPinInput("");
+      setIsPinDialogOpen(false);
+      setPinInput("");
     } else {
-      toast({ variant: "destructive", title: "PIN INCORRETO" }); setPinInput("");
+      toast({ variant: "destructive", title: "PIN INCORRETO" });
+      setPinInput("");
+    }
+  }
+
+  const handleNext = () => {
+    if (!activeVideo) return;
+    const nextIdx = (activeVideo.index + 1) % filteredContent.length;
+    const nextItem = filteredContent[nextIdx];
+    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
+       setActiveVideo(null);
+       setSelectedSeries(nextItem);
+    } else {
+       setActiveVideo({ url: nextItem.streamUrl || nextItem.directStreamUrl || "", title: nextItem.title, itemId: nextItem.id, index: nextIdx });
+    }
+  }
+
+  const handlePrev = () => {
+    if (!activeVideo) return;
+    const prevIdx = (activeVideo.index - 1 + filteredContent.length) % filteredContent.length;
+    const prevItem = filteredContent[prevIdx];
+    if (prevItem.type === 'series' || prevItem.type === 'multi-season') {
+       setActiveVideo(null);
+       setSelectedSeries(prevItem);
+    } else {
+       setActiveVideo({ url: prevItem.streamUrl || prevItem.directStreamUrl || "", title: prevItem.title, itemId: prevItem.id, index: prevIdx });
     }
   }
 
@@ -156,7 +171,13 @@ export default function HomeContent() {
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/30 rotate-2"><Tv className="h-7 w-7 text-white" /></div>
+          {selectedCategory ? (
+            <Button variant="ghost" onClick={() => setSelectedCategory(null)} className="group h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all">
+              <ChevronLeft className="h-8 w-8 text-white group-hover:scale-110" />
+            </Button>
+          ) : (
+            <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/30 rotate-2"><Tv className="h-7 w-7 text-white" /></div>
+          )}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary font-headline uppercase italic tracking-tighter block leading-none">Léo Tv Stream</span>
             <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-black/40 border border-primary/20 text-primary">
@@ -166,56 +187,70 @@ export default function HomeContent() {
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
-        <div className="flex items-center gap-6">
-          {user?.isAdultEnabled && (
-            <div className="hidden sm:flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-               <Label htmlFor="adult-mode" className="text-[10px] font-black uppercase opacity-60 cursor-pointer flex items-center gap-2">
-                  {showAdult ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />} ADULTO
-               </Label>
-               <Switch id="adult-mode" checked={showAdult} onCheckedChange={(v) => { if(v) { setPendingAdultToggle(true); setIsPinDialogOpen(true); } else { setShowAdult(false); } }} />
-            </div>
-          )}
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive"><LogOut className="h-6 w-6" /></Button>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-destructive h-12 w-12 hover:bg-destructive/10 rounded-full"><LogOut className="h-6 w-6" /></Button>
         </div>
       </header>
 
-      <main className="p-4 sm:p-8 max-w-[1800px] mx-auto space-y-16">
+      <main className="p-4 sm:p-8 max-w-[1800px] mx-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-40 gap-4">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-[0.3em]">Sintonizando Sinais do Império...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-[0.3em]">Sintonizando Império Léo Tv...</p>
+          </div>
+        ) : !selectedCategory && !searchQuery ? (
+          /* MENU ESTILO SMARTERS PRO */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-500">
+            {MASTER_CATEGORIES.map((cat) => {
+              if (cat.id === 'ADULT' && (!user || !user.isAdultEnabled)) return null;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={`group relative h-48 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-[1.03] shadow-2xl ${cat.color} bg-opacity-20`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br from-white/10 to-transparent group-hover:scale-110 transition-transform duration-500`} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+                    <div className={`p-4 rounded-3xl ${cat.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}>
+                      <cat.icon className="h-10 w-10" />
+                    </div>
+                    <span className="text-xl font-black uppercase italic tracking-tighter text-white group-hover:text-primary transition-colors">{cat.name}</span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         ) : (
-          <>
-            {categoriesWithCounts.length === 0 && (
-              <div className="text-center py-20 opacity-40 uppercase font-black tracking-widest">Nenhum sinal localizado nesta faixa. Verifique se liberou o sinal adulto se estiver buscando por ele.</div>
-            )}
-            {categoriesWithCounts.map(([category, count]) => (
-              <section key={category} className="space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg"><Folder className="h-6 w-6 text-primary" /></div>
-                    <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">{category}</h2>
-                  </div>
-                  <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest">{count} SINAIS</span>
-                </div>
-                <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-                  {filteredContent.filter(i => (i.genre || "LÉO TV GERAL").toUpperCase() === category).map(item => (
-                    <div key={item.id} onClick={() => handleItemClick(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl">
-                      {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized /> : <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
-                        <div className="flex items-center justify-between mb-1">
-                           <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary flex-1">{item.title}</h3>
-                           {isAdultCategory(item) && <Lock className="h-4 w-4 text-primary ml-2" />}
-                        </div>
-                        <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
+          /* LISTAGEM DE CONTEÚDO FILTRADO */
+          <div className="space-y-10 animate-in slide-in-from-bottom-10 duration-500">
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+              <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
+                {searchQuery ? `BUSCANDO: ${searchQuery}` : MASTER_CATEGORIES.find(c => c.id === selectedCategory)?.name}
+              </h2>
+              <span className="text-xs bg-primary/10 text-primary border border-primary/20 px-6 py-2 rounded-full font-black uppercase tracking-widest">
+                {filteredContent.length} SINAIS ENCONTRADOS
+              </span>
+            </div>
+
+            {filteredContent.length === 0 ? (
+              <div className="text-center py-40 opacity-30 font-black uppercase tracking-widest text-xl">Nenhum canal localizado nesta faixa.</div>
+            ) : (
+              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+                {filteredContent.map((item, idx) => (
+                  <div key={item.id} onClick={() => handleItemClick(item, idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl">
+                    {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized /> : <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+                      <div className="flex items-center justify-between mb-1">
+                         <h3 className="font-black text-[12px] uppercase italic truncate tracking-tighter text-white group-hover:text-primary flex-1">{item.title}</h3>
+                         {(item.isRestricted || (item.genre || "").includes("ADULTO")) && <Lock className="h-4 w-4 text-primary ml-2" />}
                       </div>
+                      <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
                     </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </main>
 
@@ -233,7 +268,7 @@ export default function HomeContent() {
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.sort((a,b) => a.number - b.number).map((ep, idx) => (
-                  <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${selectedSeries.title} - EP ${ep.number}`, itemId: selectedSeries.id, index: 0 })} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{ep.number}</div>
                       <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
@@ -245,7 +280,7 @@ export default function HomeContent() {
                   <div key={season.id} className="space-y-3 mb-8 last:mb-0">
                     <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4 tracking-tighter">Temporada {season.number}</h3>
                     {season.episodes.sort((a,b) => a.number - b.number).map((ep, idx) => (
-                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx, season.number)} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-6 group">
+                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, itemId: selectedSeries.id, index: 0 })} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-6 group">
                         <span className="font-bold uppercase text-[10px]">T{season.number} - EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
                         <PlayCircle className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                       </Button>
@@ -272,7 +307,7 @@ export default function HomeContent() {
       {activeVideo && (
         <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
           <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-            <VideoPlayer url={activeVideo.url} title={activeVideo.title} />
+            <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />
           </DialogContent>
         </Dialog>
       )}

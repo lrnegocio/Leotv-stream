@@ -43,7 +43,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                     targetUrl.includes('contfree') ||
                     targetUrl.includes('fplay.');
     
-    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8');
+    // SUPORTE AMPLIADO PARA .TS E .M3U8
+    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8') || targetUrl.includes('.ts');
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
