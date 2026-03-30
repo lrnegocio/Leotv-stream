@@ -70,17 +70,18 @@ export interface Reseller {
 }
 
 const URL_SEPARATOR = '|IPTV|';
-const CACHE_KEY = 'leo_stream_content_cache_v4';
-const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v4';
+const CACHE_KEY = 'leo_stream_content_cache_v5';
+const CACHE_TIME_KEY = 'leo_stream_cache_timestamp_v5';
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 HORAS DE CACHE PARA ECONOMIZAR EGRESS
 
 async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<any[]> {
   let allData: any[] = [];
   let from = 0;
-  const step = 500; // REDUZIDO PARA EVITAR TIMEOUT NO SUPABASE BLOQUEADO
+  const step = 1000; 
   let hasMore = true;
 
   try {
+    // ECONOMIA MASTER: Tenta carregar apenas o necessário
     while (hasMore) {
       const { data, error } = await supabase
         .from(table)
@@ -100,7 +101,7 @@ async function fetchAllRecords(table: string, orderBy: string = 'id'): Promise<a
         hasMore = false;
       }
       
-      // TRAVA DE SEGURANÇA: Se a lista for muito grande, paramos para não estourar a RAM do cliente
+      // TRAVA DE SEGURANÇA: Limite de 50k para não travar o navegador do cliente
       if (allData.length > 50000) break;
     }
     return allData;
@@ -138,11 +139,16 @@ export async function getRemoteContent(forceRefresh = false): Promise<ContentIte
     }
   }
 
-  const rawData = await fetchAllRecords('content', 'title');
+  // Se forçar ou cache expirar, busca os primeiros 5000 para ser rápido
+  const { data: rawData, error } = await supabase
+    .from('content')
+    .select('*')
+    .order('title', { ascending: true })
+    .limit(5000); 
   
-  if (rawData.length === 0 && typeof window !== 'undefined') {
+  if (error || !rawData) {
     const backup = localStorage.getItem(CACHE_KEY);
-    if (backup) return JSON.parse(backup);
+    return backup ? JSON.parse(backup) : [];
   }
 
   const data = rawData.map(item => {
@@ -174,7 +180,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   return await fetchAllRecords('resellers', 'name');
 }
 
-// GERADOR DE ID BLINDADO CONTRA ERRO 500
+// GERADOR DE ID BLINDADO CONTRA ERRO 500 E SÍMBOLOS (✮)
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -232,7 +238,7 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 export async function clearAllM3UContent() {
-  const { error } = await supabase.from('content').delete().like('id', 'm3u_%');
+  const { error } = await supabase.from('content').delete().like('id', 'leo_m3u_%');
   if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
   return !error;
 }
@@ -361,13 +367,13 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
   }
 
   let successCount = 0;
-  const batchSize = 100;
+  const batchSize = 50; // REDUZIDO PARA ESTABILIDADE TOTAL
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    onProgress?.(`Processando ${i} de ${items.length}...`);
+    onProgress?.(`Salvando: ${i} de ${items.length}...`);
     const { error } = await supabase.from('content').upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
     if (!error) successCount += batch.length;
-    await new Promise(r => setTimeout(r, 100)); 
+    await new Promise(r => setTimeout(r, 50)); 
   }
   
   if (typeof window !== 'undefined') localStorage.removeItem(CACHE_TIME_KEY);
@@ -422,7 +428,7 @@ export const generateRandomPin = (length: number = 11) => {
 
 export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, screens: number) => {
   const planoText = tier === 'test' ? 'Teste VIP 6H' : tier === 'lifetime' ? 'Vitalício' : 'Mensal 30 Dias';
-  return `🚀 *LÉO TV STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n🖥️ *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${baseUrl}\n👤 *USUÁRIO:* ${pin}\n🔑 *SENHA:* ${pin}\n\nSinal blindado de alta performance.`;
+  return `🚀 *LÉO TV STREAM - SINAL LIBERADO!* 🚀\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${planoText}\n\n🔗 *ACESSO:* ${baseUrl}\n👤 *USUÁRIO:* ${pin}\n🔑 *SENHA:* ${pin}\n\nSinal blindado de alta performance.`;
 }
 
 export async function importPremiumBundle(): Promise<{ success: number }> {

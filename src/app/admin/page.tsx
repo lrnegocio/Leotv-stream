@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getRemoteUsers, getRemoteContent, getRemoteResellers, getTotalContentCount, User, ContentItem, Reseller } from "@/lib/store"
+import { getRemoteUsers, getRemoteResellers, getTotalContentCount, User, Reseller } from "@/lib/store"
 
 export default function AdminDashboard() {
   const [totalContent, setTotalContent] = React.useState(0)

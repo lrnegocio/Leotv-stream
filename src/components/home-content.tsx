@@ -234,8 +234,7 @@ export default function HomeContent() {
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white">{selectedSeries.title}</div>
                 </div>
               </div>
-              {/* SCROLL MASTER NEON FIXADO */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll block !visible scrollbar-visible">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll">
                 {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
                   <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
                     <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>
