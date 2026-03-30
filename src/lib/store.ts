@@ -71,7 +71,6 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
-// GERADOR DE ID BLINDADO: Remove 100% de símbolos como ✮, acentos e espaços
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -101,7 +100,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 1000 * 60 * 60) return data; // 1 hora de cache
+        if (Date.now() - timestamp < 1000 * 60 * 60) return data; 
       }
     }
 
@@ -138,7 +137,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
   }
 }
 
-// BUSCA INDIVIDUAL PARA EVITAR "CONTEÚDO INVÁLIDO" NA EDIÇÃO
 export async function getContentById(id: string): Promise<ContentItem | null> {
   try {
     const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
@@ -178,7 +176,7 @@ export async function saveContent(item: ContentItem) {
       title: item.title,
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
-      genre: (item.genre || "GERAL").toUpperCase(),
+      genre: (item.genre || "LÉO TV GERAL").toUpperCase(),
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
       streamUrl: combinedUrl,
@@ -206,9 +204,8 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    // Apaga apenas canais importados (que começam com leo_) para não apagar cadastros manuais
     const { error } = await supabase.from('content').delete().like('id', 'leo_%');
-    localStorage.clear(); // Limpa cache local também
+    localStorage.clear(); 
     return !error;
   } catch (e) {
     return false;
@@ -317,19 +314,26 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const logoMatch = line.match(/tvg-logo=["']?([^"']+)["']?/i);
       const groupMatch = line.match(/group-title=["']?([^"']+)["']?/i);
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
-      const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
+      const rawGenre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
+      let finalGenre = `LÉO TV ${rawGenre}`;
+      if (rawGenre.includes('FILME') || rawGenre.includes('MOVIES')) finalGenre = "LÉO TV FILMES";
+      else if (rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT')) finalGenre = "LÉO TV ADULTOS";
+      else if (rawGenre.includes('SERIE') || rawGenre.includes('DORAMA') || rawGenre.includes('ANIME')) finalGenre = "LÉO TV SERIES";
+      else if (rawGenre.includes('ESPORTE') || rawGenre.includes('SPORTS')) finalGenre = "LÉO TV ESPORTES";
+      else if (rawGenre.includes('DESENHO') || rawGenre.includes('KIDS') || rawGenre.includes('INFANTIL')) finalGenre = "LÉO TV DESENHOS";
+      else if (rawGenre.includes('AO VIVO') || rawGenre.includes('LIVE') || rawGenre.includes('TV')) finalGenre = "LÉO TV CANAIS AO VIVO";
+
       currentItemData = {
         title: name,
-        genre: genre,
+        genre: finalGenre,
         imageUrl: logoMatch ? logoMatch[1] : null,
-        isRestricted: genre.includes('ADULT') || genre.includes('XXX'),
+        isRestricted: rawGenre.includes('ADULT') || rawGenre.includes('XXX') || rawGenre.includes('HOT'),
       };
     } else if (line.startsWith('http') && currentItemData) {
       const { title, genre, imageUrl, isRestricted } = currentItemData;
       const streamUrl = line + URL_SEPARATOR + line;
 
-      // DETECÇÃO DE SÉRIE: Nome S01E01 ou Nome Episódio 1
       const seriesMatch = title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
                           title.match(/(.*?)\s+Episode\s+(\d+)/i) || 
                           title.match(/(.*?)\s+Episodio\s+(\d+)/i);
@@ -347,7 +351,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
             genre: genre,
             imageUrl: imageUrl,
             isRestricted: isRestricted,
-            description: "Série Master Léo Tv",
+            description: "Sinal Master Léo Tv",
             episodes: [],
             seasons: []
           });
@@ -405,7 +409,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
     await new Promise(r => setTimeout(r, 100)); 
   }
   
-  localStorage.clear(); // Força recarregar os dados novos
+  localStorage.clear(); 
   return { success: successCount, failed: items.length - successCount };
 }
 
@@ -437,9 +441,9 @@ export const getBeautifulMessage = (pin: string, tier: string, baseUrl: string, 
 
 export async function importPremiumBundle(): Promise<{ success: number }> {
   const premiumChannels: ContentItem[] = [
-    { id: 'leo_globo_sp_4k', title: 'GLOBO SP 4K', type: 'channel', genre: 'TV ABERTA', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
-    { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
-    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'HBO', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' }
+    { id: 'leo_globo_sp_4k', title: 'GLOBO SP 4K', type: 'channel', genre: 'LÉO TV CANAIS AO VIVO', isRestricted: false, streamUrl: 'https://tvonline0800.com/canal/globo-sp-novo/', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png', description: 'Rede Globo 4K.' },
+    { id: 'leo_premiere_4k', title: 'PREMIERE CLUB 4K', type: 'channel', genre: 'LÉO TV ESPORTES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png', description: 'Futebol 4K.' },
+    { id: 'leo_hbo_4k', title: 'HBO 4K', type: 'channel', genre: 'LÉO TV FILMES', isRestricted: false, streamUrl: 'http://contfree.shop:80/207946522/261879000/1698432.ts', imageUrl: 'http://contfree.shop:80/images/20b403598a91b2dd1e361a6746d3861f.png', description: 'HBO 4K.' }
   ];
   
   let added = 0;
@@ -458,7 +462,7 @@ export async function syncLiveSports(): Promise<{ success: number; error?: strin
       id: "radar_" + evento.id,
       title: evento.title.toUpperCase(),
       type: 'channel',
-      genre: "FUTEBOL AO VIVO",
+      genre: "LÉO TV ESPORTES",
       imageUrl: evento.poster,
       isRestricted: false,
       streamUrl: (evento.embeds?.[0]?.embed_url || "") + URL_SEPARATOR + (evento.embeds?.[0]?.embed_url || "")

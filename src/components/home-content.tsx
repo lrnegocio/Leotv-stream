@@ -89,7 +89,7 @@ export default function HomeContent() {
 
   const isAdultCategory = (item: ContentItem) => {
     const genre = (item.genre || "").toUpperCase();
-    return genre.includes("ADULTO") || genre.includes("XXX");
+    return genre.includes("ADULTO") || genre.includes("XXX") || genre.includes("HOT");
   }
 
   const filteredContent = React.useMemo(() => {
@@ -104,7 +104,7 @@ export default function HomeContent() {
   const categoriesWithCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     filteredContent.forEach(item => {
-      const cat = (item.genre || "GERAL").toUpperCase();
+      const cat = (item.genre || "LÉO TV GERAL").toUpperCase();
       counts[cat] = (counts[cat] || 0) + 1;
     });
     return Object.entries(counts).sort((a,b) => a[0].localeCompare(b[0]));
@@ -196,7 +196,7 @@ export default function HomeContent() {
                   <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full font-black uppercase tracking-widest">{count} SINAIS</span>
                 </div>
                 <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-                  {filteredContent.filter(i => (i.genre || "GERAL").toUpperCase() === category).map(item => (
+                  {filteredContent.filter(i => (i.genre || "LÉO TV GERAL").toUpperCase() === category).map(item => (
                     <div key={item.id} onClick={() => handleItemClick(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-[1.05] shadow-2xl">
                       {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-80 group-hover:opacity-100 transition-opacity" unoptimized /> : <div className="absolute inset-0 bg-primary/10 flex items-center justify-center"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
