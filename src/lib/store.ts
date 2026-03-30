@@ -71,7 +71,7 @@ export interface Reseller {
 
 const URL_SEPARATOR = '|IPTV|';
 
-// GERADOR DE ID BLINDADO (v182): Remove símbolos e acentos para evitar Erro 500
+// GERADOR DE ID BLINDADO (v183): Remove símbolos e acentos para evitar Erro 500
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -94,7 +94,7 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 /**
- * BUSCA ON-DEMAND MASTER (v182)
+ * BUSCA ON-DEMAND MASTER (v183)
  * Resolve o excesso de dados filtrando 300k canais no banco.
  */
 export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
@@ -177,7 +177,6 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    // Apaga todos os IDs que começam com 'leo_' (padrão de importação M3U)
     const { error } = await supabase.from('content').delete().like('id', 'leo_%');
     return !error;
   } catch (e) {
@@ -289,10 +288,8 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
       const name = line.split(',').pop()?.trim() || "Canal Sem Nome";
       const genre = (groupMatch ? groupMatch[1] : "GERAL").toUpperCase();
       
-      const safeId = generateSafeId(name);
-
       currentItem = {
-        id: safeId,
+        id: generateSafeId(name),
         title: name,
         type: genre.includes('FILME') ? 'movie' : genre.includes('SERIE') ? 'series' : 'channel',
         genre: genre,

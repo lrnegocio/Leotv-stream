@@ -20,7 +20,6 @@ export default function ContentManagementPage() {
   const [previewItem, setPreviewItem] = React.useState<ContentItem | null>(null)
   const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string} | null>(null)
   
-  // Estados de Seleção Master
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
 
@@ -92,7 +91,7 @@ export default function ContentManagementPage() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setPreviewItem(item)
     } else {
-      setActiveEpisode({ url: item.streamUrl || "", title: item.title })
+      setActiveEpisode({ url: item.streamUrl || item.directStreamUrl || "", title: item.title })
     }
   }
 
@@ -202,37 +201,40 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Seletor de Episódios para Preview no Admin */}
+      {/* Seletor de Episódios Master - Reordenado Verticalmente */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
-        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="uppercase font-black italic text-primary">{previewItem?.title}</DialogTitle>
-            <DialogDescription className="uppercase text-[10px] font-bold opacity-60">Escolha um episódio para testar o sinal</DialogDescription>
+        <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-8">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="uppercase font-black italic text-primary text-2xl">{previewItem?.title}</DialogTitle>
+            <DialogDescription className="uppercase text-[10px] font-black opacity-60 tracking-widest mt-1">Escolha um episódio para testar o sinal</DialogDescription>
           </DialogHeader>
-          <div className="grid sm:grid-cols-2 gap-3 mt-4 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
-            {previewItem?.type === 'series' && previewItem.episodes?.map((ep, idx) => (
+          <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-4 custom-scroll scrollbar-visible">
+            {previewItem?.type === 'series' && previewItem.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
               <Button 
                 key={ep.id} 
                 variant="outline" 
-                onClick={() => { setActiveEpisode({ url: ep.streamUrl, title: `${previewItem.title} - EP ${ep.number}` }); }}
-                className="h-14 justify-start bg-black/20 border-white/5 hover:border-primary rounded-xl"
+                onClick={() => { setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - EP ${ep.number}` }); }}
+                className="h-14 justify-start bg-white/5 border-white/5 hover:border-primary hover:bg-primary/10 rounded-2xl px-6 group transition-all"
               >
-                <ListOrdered className="h-4 w-4 mr-3 text-primary" />
-                <span className="font-bold uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
+                <PlayCircle className="h-5 w-5 mr-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
               </Button>
             ))}
-            {previewItem?.type === 'multi-season' && previewItem.seasons?.map(s => (
-               s.episodes.map(ep => (
-                <Button 
-                  key={ep.id} 
-                  variant="outline" 
-                  onClick={() => { setActiveEpisode({ url: ep.streamUrl, title: `${previewItem.title} - T${s.number} EP ${ep.number}` }); }}
-                  className="h-14 justify-start bg-black/20 border-white/5 hover:border-primary rounded-xl"
-                >
-                  <Layers className="h-4 w-4 mr-3 text-secondary" />
-                  <span className="font-bold uppercase text-[10px]">T{s.number} - EP {ep.number}</span>
-                </Button>
-               ))
+            {previewItem?.type === 'multi-season' && previewItem.seasons?.sort((a,b) => a.number - b.number).map(s => (
+               <div key={s.id} className="space-y-2 mt-4 first:mt-0">
+                 <h4 className="text-[10px] font-black uppercase text-primary/60 px-2 tracking-tighter">Temporada {s.number}</h4>
+                 {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                    <Button 
+                      key={ep.id} 
+                      variant="outline" 
+                      onClick={() => { setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - T${s.number} EP ${ep.number}` }); }}
+                      className="h-12 justify-start bg-white/5 border-white/5 hover:border-primary hover:bg-primary/10 rounded-xl px-6 group w-full"
+                    >
+                      <Layers className="h-4 w-4 mr-4 text-secondary group-hover:scale-110 transition-transform" />
+                      <span className="font-bold uppercase text-[10px]">T{s.number} - EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                    </Button>
+                 ))}
+               </div>
             ))}
           </div>
         </DialogContent>
@@ -240,7 +242,7 @@ export default function ContentManagementPage() {
 
       {/* Player de Preview Master */}
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
-        <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden rounded-3xl">
+        <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[3rem]">
           <DialogHeader className="sr-only">
             <DialogTitle>{activeEpisode?.title}</DialogTitle>
           </DialogHeader>

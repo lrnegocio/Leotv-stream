@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap } from "lucide-react"
+import { LogOut, Tv, Play, Lock, Loader2, Folder, EyeOff, Eye, Timer, PlayCircle, ShieldAlert, Zap, Layers, ListOrdered } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -215,6 +215,7 @@ export default function HomeContent() {
         )}
       </main>
 
+      {/* Seletor de Episódios Master - Reordenado Verticalmente */}
       <Dialog open={!!selectedSeries} onOpenChange={(open) => { if(!open) setSelectedSeries(null); }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
@@ -223,22 +224,26 @@ export default function HomeContent() {
                 {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div>
+                  <p className="text-xs font-black uppercase text-primary/60 tracking-widest mt-2">{selectedSeries.genre}</p>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scroll scrollbar-visible">
-                {selectedSeries.type === 'series' && selectedSeries.episodes?.map((ep, idx) => (
-                  <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-20 justify-between bg-white/5 border-white/5 hover:border-primary rounded-3xl px-8 group">
-                    <span className="font-black uppercase text-sm">{ep.title || `Episódio ${ep.number}`}</span>
-                    <PlayCircle className="h-6 w-6 text-primary" />
+              <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
+                {selectedSeries.type === 'series' && selectedSeries.episodes?.sort((a,b) => a.number - b.number).map((ep, idx) => (
+                  <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx)} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">{ep.number}</div>
+                      <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                    </div>
+                    <PlayCircle className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
                   </Button>
                 ))}
-                {selectedSeries.type === 'multi-season' && selectedSeries.seasons?.map((season) => (
-                  <div key={season.id} className="space-y-4">
-                    <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4">Temporada {season.number}</h3>
-                    {season.episodes.map((ep, idx) => (
-                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx, season.number)} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-6 group">
-                        <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
-                        <PlayCircle className="h-5 w-5 text-primary" />
+                {selectedSeries.type === 'multi-season' && selectedSeries.seasons?.sort((a,b) => a.number - b.number).map((season) => (
+                  <div key={season.id} className="space-y-3 mb-8 last:mb-0">
+                    <h3 className="text-xl font-black uppercase italic text-primary border-l-4 border-primary pl-4 tracking-tighter">Temporada {season.number}</h3>
+                    {season.episodes.sort((a,b) => a.number - b.number).map((ep, idx) => (
+                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries, idx, season.number)} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-6 group">
+                        <span className="font-bold uppercase text-[10px]">T{season.number} - EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                        <PlayCircle className="h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                       </Button>
                     ))}
                   </div>
