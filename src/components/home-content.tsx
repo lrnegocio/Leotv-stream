@@ -50,6 +50,7 @@ export default function HomeContent() {
       const settings = await getGlobalSettings()
       setParentalPin(settings.parentalPin)
       
+      // BUSCA OTIMIZADA POR CATEGORIA
       const data = await getRemoteContent(false, queryStr)
       setContent(data)
     } catch (err) {

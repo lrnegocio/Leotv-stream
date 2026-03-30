@@ -69,8 +69,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-const URL_SEPARATOR = '|IPTV|';
-
 export const clearLocalCache = () => {
   if (typeof window !== 'undefined') {
     Object.keys(localStorage).forEach(key => {
@@ -103,11 +101,11 @@ export async function getTotalContentCount(): Promise<number> {
   }
 }
 
-export async function getRemoteContent(forceRefresh = false, searchQuery = ""): Promise<ContentItem[]> {
+export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    const cacheKey = `p2p_content_cache_${searchQuery || 'initial'}`;
+    const cacheKey = `p2p_content_cache_${searchQuery || 'initial'}_${categoryGenre || 'all'}`;
     
-    if (!forceRefresh && !searchQuery) {
+    if (!forceRefresh && !searchQuery && !categoryGenre) {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
@@ -118,12 +116,14 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
     let query = supabase.from('content').select('*').order('title', { ascending: true });
 
     if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`).limit(1000);
-    } else {
-      query = query.limit(500);
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
+    
+    if (categoryGenre) {
+      query = query.eq('genre', categoryGenre);
     }
 
-    const { data: rawData, error } = await query;
+    const { data: rawData, error } = await query.limit(1000);
     if (error || !rawData) return [];
 
     const processed = rawData.map(item => ({
@@ -134,7 +134,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       imageUrl: item.imageUrl ?? item.image_url,
     }));
 
-    if (!searchQuery) {
+    if (!searchQuery && !categoryGenre) {
       localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
     }
     return processed;
@@ -147,7 +147,13 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   try {
     const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
     if (error || !data) return null;
-    return data;
+    return {
+      ...data,
+      isRestricted: data.isRestricted ?? data.is_restricted,
+      streamUrl: data.streamUrl ?? data.stream_url,
+      directStreamUrl: data.directStreamUrl ?? data.direct_stream_url,
+      imageUrl: data.imageUrl ?? data.image_url,
+    };
   } catch (e) {
     return null;
   }
@@ -237,7 +243,7 @@ export async function removeReseller(id: string) {
 
 export async function validateDeviceLogin(pin: string, deviceId: string): Promise<{ user?: User; error?: string }> {
   try {
-    if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [], isBlocked: false, isAdultEnabled: true } };
+    if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [], isBlocked: false, isAdultEnabled: true } as any };
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO." };
