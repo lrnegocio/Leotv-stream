@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Lock, Save, ShieldAlert, Loader2, ListPlus, Download, Info, Zap, Trophy, RefreshCcw, Database, FileUp, Code } from "lucide-react"
-import { getGlobalSettings, updateGlobalSettings, processM3UImport, processHTMLImport, syncLiveSports, importPremiumBundle } from "@/lib/store"
+import { getGlobalSettings, updateGlobalSettings, processM3UImport, processHTMLImport } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
@@ -16,7 +16,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = React.useState(true)
   const [importing, setImporting] = React.useState(false)
   const [importingHtml, setImportingHtml] = React.useState(false)
-  const [syncingSports, setSyncingSports] = React.useState(false)
   const [importMsg, setImportingMsg] = React.useState("")
 
   React.useEffect(() => {
@@ -83,7 +82,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-8">
-        {/* IMPORTADOR HTML SNIPER */}
+        {/* IMPORTADOR HTML SNIPER - MESTRE LÉO: COLE SEU CÓDIGO AQUI */}
         <Card className="bg-primary/5 border-primary/20 shadow-2xl rounded-3xl overflow-hidden border-2">
           <CardHeader className="bg-primary/10 border-b border-primary/20 p-6">
             <div className="flex items-center gap-4">
@@ -91,8 +90,8 @@ export default function SettingsPage() {
                 <Code className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="uppercase text-lg font-black italic">Importador HTML Sniper</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Cole o código do Web Player para extrair nomes e capas.</CardDescription>
+                <CardTitle className="uppercase text-lg font-black italic">Importador HTML Sniper Supremo</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Cole o código HTML completo aqui para extrair nomes e capas.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -100,7 +99,7 @@ export default function SettingsPage() {
             <Textarea 
               value={htmlContent}
               onChange={e => setHtmlContent(e.target.value)}
-              placeholder="Cole aqui o código HTML <div class='...'>..."
+              placeholder="Cole aqui o código HTML <div class='...'> ou o <html> completo..."
               className="h-48 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl"
             />
             {importingHtml && <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl text-center animate-pulse"><p className="text-xs font-black uppercase text-primary">{importMsg}</p></div>}
@@ -119,7 +118,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador Massivo M3U</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Importe listas gigantes com limpeza de nomes automática.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Importe listas gigantes com agrupamento de episódios.</CardDescription>
               </div>
             </div>
           </CardHeader>

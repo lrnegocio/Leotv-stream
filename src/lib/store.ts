@@ -67,9 +67,13 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// LIMPEZA DE NOMES MASTER
+// LIMPEZA DE NOMES MASTER (REMOÇÃO DE ASPAS, PONTOS, VÍRGULAS)
 const cleanName = (name: string) => {
-  return name.replace(/[.",]/g, '').trim().toUpperCase();
+  return name
+    .replace(/[.",']/g, '') // Remove aspas, pontos e vírgulas
+    .replace(/^\d+/, '')    // Remove números no início do nome
+    .trim()
+    .toUpperCase();
 };
 
 const generateSafeId = (name: string) => {
@@ -173,6 +177,7 @@ export async function removeContent(id: string) {
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
+  // EXCLUSÃO EM LOTES DE 20 PARA NÃO TRAVAR O SUPABASE
   for (let i = 0; i < ids.length; i += 20) {
     const batch = ids.slice(i, i + 20);
     await supabase.from('content').delete().in('id', batch);
@@ -255,41 +260,52 @@ export async function validateResellerLogin(username: string, password: string):
   return { reseller: data };
 }
 
-// IMPORTAÇÃO HTML SNIPER MASTER
+// IMPORTAÇÃO HTML SNIPER MASTER CALIBRADA PARA O SUPREMO
 export async function processHTMLImport(html: string, onProgress?: (m: string) => void) {
   const items: any[] = [];
   const div = document.createElement('div');
   div.innerHTML = html;
 
-  // Busca todos os cards de canais (baseado no snippet Supremo)
+  // Busca todos os links de canais (btn-stream)
   const links = div.querySelectorAll('a.btn-stream');
   
-  onProgress?.(`Analisando ${links.length} sinais...`);
+  onProgress?.(`Analisando ${links.length} sinais extraídos...`);
 
   links.forEach((link, idx) => {
-    const titleEl = link.querySelector('.col.d-flex.align-items-center');
+    // Busca o título dentro da estrutura do Supremo
+    const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
     const imgEl = link.querySelector('img');
     
     if (titleEl) {
+      // Remove o número inicial e limpa caracteres
       const rawTitle = titleEl.textContent?.replace(/^\d+/, '').trim() || `Canal ${idx}`;
       const title = cleanName(rawTitle);
       const imageUrl = imgEl?.getAttribute('src') || '';
       
+      // Categorização automática simples baseada no nome
+      let genre = "LÉO TV CANAIS AO VIVO";
+      if (title.includes('DORAMA') || title.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
+      else if (title.includes('18+') || title.includes('XXX') || title.includes('ADULTO')) genre = "LÉO TV ADULTOS";
+      else if (title.includes('FILME') || title.includes('MOVIE')) genre = "LÉO TV FILMES";
+      else if (title.includes('SERIE') || title.includes('SERIADO')) genre = "LÉO TV SERIES";
+
       items.push({
         id: generateSafeId(title),
         title,
-        type: 'channel',
-        genre: 'LÉO TV CANAIS AO VIVO',
+        type: genre.includes('SERIES') || genre.includes('DORAMAS') ? 'series' : 'channel',
+        genre,
         description: 'Sinal Master Léo Tv',
         imageUrl,
-        isRestricted: false,
-        streamUrl: 'OFFLINE_MANUAL', // O HTML não traz o link direto, precisa ser atualizado depois
-        directStreamUrl: ''
+        isRestricted: genre.includes('ADULTOS'),
+        streamUrl: 'OFFLINE_MANUAL',
+        directStreamUrl: '',
+        episodes: [],
+        seasons: []
       });
     }
   });
 
-  // Salva no banco em lotes de 20
+  // Salva no banco em lotes de 20 para segurança
   for (let i = 0; i < items.length; i += 20) {
     if (onProgress) onProgress(`Sintonizando HTML: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
@@ -362,14 +378,6 @@ export async function getGlobalSettings() {
 
 export async function updateGlobalSettings(val: any) {
   await supabase.from('settings').upsert({ key: 'global', value: val });
-}
-
-export async function syncLiveSports() {
-  return { success: 0, error: "Nenhum jogo novo no radar agora." };
-}
-
-export async function importPremiumBundle() {
-  return { success: 0 };
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
