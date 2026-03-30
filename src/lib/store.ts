@@ -51,6 +51,7 @@ export interface User {
   isAdultEnabled: boolean;
   resellerId?: string;
   activatedAt?: string;
+  is_adult_enabled?: boolean; // Compatibilidade DB
 }
 
 export interface Reseller {
@@ -67,12 +68,11 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// LIMPEZA DE NOMES MASTER (REMOÇÃO DE ASPAS, PONTOS, VÍRGULAS)
 const cleanName = (name: string) => {
   if (!name) return "";
   return name
-    .replace(/[.",']/g, '') // Remove aspas, pontos e vírgulas
-    .replace(/^\d+/, '')    // Remove números no início do nome
+    .replace(/[.",']/g, '') 
+    .replace(/^\d+/, '')    
     .trim()
     .toUpperCase();
 };
@@ -88,12 +88,8 @@ const generateSafeId = (name: string) => {
   return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
-// BUSCA BLINDADA PARA GRANDES VOLUMES (SUPORTE 1 MILHÃO)
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    // BLINDAGEM: Não usamos mais localStorage para a lista de canais, pois 50k+ canais estouram a memória do navegador.
-    // Buscamos direto do Supabase com limites inteligentes.
-    
     let query = supabase.from('content').select('*');
 
     if (searchQuery) {
@@ -102,19 +98,18 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
-    // Ordenação e Limite de segurança para não travar a tela
     const { data: rawData, error } = await query
       .order('title', { ascending: true })
-      .limit(searchQuery ? 1000 : 200); // Se for busca, traz mais. Se for lista geral, traz 200 para ser instantâneo.
+      .limit(searchQuery ? 1000 : 200);
 
     if (error || !rawData) return [];
 
     return rawData.map(item => ({
       ...item,
-      isRestricted: item.isRestricted ?? item.is_restricted,
-      streamUrl: item.streamUrl ?? item.stream_url,
-      directStreamUrl: item.directStreamUrl ?? item.direct_stream_url,
-      imageUrl: item.imageUrl ?? item.image_url,
+      isRestricted: item.is_restricted ?? item.isRestricted,
+      streamUrl: item.stream_url ?? item.streamUrl,
+      directStreamUrl: item.direct_stream_url ?? item.directStreamUrl,
+      imageUrl: item.image_url ?? item.imageUrl,
     }));
   } catch (e) { return []; }
 }
@@ -124,24 +119,23 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   if (error || !data) return null;
   return {
     ...data,
-    isRestricted: data.isRestricted ?? data.is_restricted,
-    streamUrl: data.streamUrl ?? data.stream_url,
-    directStreamUrl: data.directStreamUrl ?? data.direct_stream_url,
-    imageUrl: data.imageUrl ?? data.image_url,
+    isRestricted: data.is_restricted ?? data.isRestricted,
+    streamUrl: data.stream_url ?? data.streamUrl,
+    directStreamUrl: data.direct_stream_url ?? data.directStreamUrl,
+    imageUrl: data.image_url ?? data.imageUrl,
   };
 }
 
-// CONTAGEM REAL DO IMPÉRIO (0 CONSUMO DE MEMÓRIA)
 export async function getTotalContentCount(): Promise<number> {
   try {
-    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getCategoryCount(genre: string): Promise<number> {
   try {
-    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -154,15 +148,16 @@ export async function saveContent(item: ContentItem) {
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV CANAIS AO VIVO").toUpperCase(),
-      isRestricted: item.isRestricted || false,
-      imageUrl: item.imageUrl || null,
-      streamUrl: item.streamUrl || null,
-      directStreamUrl: item.directStreamUrl || null,
+      is_restricted: item.isRestricted || false,
+      image_url: item.imageUrl || null,
+      stream_url: item.streamUrl || null,
+      direct_stream_url: item.directStreamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
     };
 
     const { error } = await supabase.from('content').upsert(payload);
+    if (error) console.error("Erro Supabase:", error);
     return !error;
   } catch (e) { return false; }
 }
@@ -174,7 +169,6 @@ export async function removeContent(id: string) {
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
-  // EXCLUSÃO EM LOTES DE 20 PARA NÃO TRAVAR O BANCO
   for (let i = 0; i < ids.length; i += 20) {
     const batch = ids.slice(i, i + 20);
     await supabase.from('content').delete().in('id', batch);
@@ -190,13 +184,20 @@ export async function clearAllM3UContent() {
 }
 
 export async function saveUser(user: User) {
-  const { error } = await supabase.from('users').upsert(user);
+  const payload = {
+    ...user,
+    is_adult_enabled: user.isAdultEnabled // Mapeamento para o DB
+  };
+  const { error } = await supabase.from('users').upsert(payload);
   return !error;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
   const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
-  return data || [];
+  return (data || []).map(u => ({
+    ...u,
+    isAdultEnabled: u.is_adult_enabled ?? u.isAdultEnabled
+  }));
 }
 
 export async function removeUser(id: string) {
@@ -218,15 +219,20 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
-    const update: any = { ...user, activeDevices: devices };
+    const updatedUser: User = { 
+      ...user, 
+      activeDevices: devices,
+      isAdultEnabled: user.is_adult_enabled ?? user.isAdultEnabled 
+    };
+
     if (!user.activatedAt) {
-      update.activatedAt = new Date().toISOString();
-      if (user.subscriptionTier === 'test') update.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
-      else if (user.subscriptionTier === 'monthly') update.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
+      updatedUser.activatedAt = new Date().toISOString();
+      if (user.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
+      else if (user.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
     }
 
-    await saveUser(update);
-    return { user: update };
+    await saveUser(updatedUser);
+    return { user: updatedUser };
   } catch (e) { return { error: "ERRO CRÍTICO." }; }
 }
 
@@ -252,21 +258,20 @@ export async function validateResellerLogin(username: string, password: string):
   return { reseller: data };
 }
 
-// IMPORTAÇÃO HTML SNIPER MASTER CALIBRADA PARA O SUPREMO
 export async function processHTMLImport(html: string, onProgress?: (m: string) => void) {
   const items: any[] = [];
   const div = document.createElement('div');
   div.innerHTML = html;
 
   const links = div.querySelectorAll('a.btn-stream');
-  onProgress?.(`Analisando ${links.length} sinais extraídos...`);
+  onProgress?.(`Extraindo sinais...`);
 
   links.forEach((link, idx) => {
     const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
     const imgEl = link.querySelector('img');
     
     if (titleEl) {
-      const rawTitle = titleEl.textContent?.replace(/^\d+/, '').trim() || `Canal ${idx}`;
+      const rawTitle = titleEl.textContent?.trim() || `Canal ${idx}`;
       const title = cleanName(rawTitle);
       const imageUrl = imgEl?.getAttribute('src') || '';
       
@@ -274,7 +279,7 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
       if (title.includes('DORAMA') || title.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
       else if (title.includes('18+') || title.includes('XXX') || title.includes('ADULTO')) genre = "LÉO TV ADULTOS";
       else if (title.includes('FILME') || title.includes('MOVIE')) genre = "LÉO TV FILMES";
-      else if (title.includes('SERIE') || title.includes('SERIADO')) genre = "LÉO TV SERIES";
+      else if (title.includes('SERIE') || title.includes('SERIADO') || title.includes('SEASON')) genre = "LÉO TV SERIES";
 
       items.push({
         id: generateSafeId(title),
@@ -282,10 +287,10 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
         type: genre.includes('SERIES') || genre.includes('DORAMAS') ? 'series' : 'channel',
         genre,
         description: 'Sinal Master Léo Tv',
-        imageUrl,
-        isRestricted: genre.includes('ADULTOS'),
-        streamUrl: 'OFFLINE_MANUAL',
-        directStreamUrl: '',
+        image_url: imageUrl,
+        is_restricted: genre.includes('ADULTOS'),
+        stream_url: '',
+        direct_stream_url: '',
         episodes: [],
         seasons: []
       });
@@ -293,7 +298,7 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
   });
 
   for (let i = 0; i < items.length; i += 20) {
-    if (onProgress) onProgress(`Sintonizando HTML: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sincronizando HTML: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
 
@@ -333,7 +338,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         const base = cleanName(seriesMatch[1].trim());
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         if (!itemsMap.has(base)) {
-          itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
+          itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
         }
         const series = itemsMap.get(base);
         if (!series.episodes.some((e:any) => e.number === epNum)) {
@@ -341,7 +346,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         }
       } else {
         const id = generateSafeId(current.title);
-        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, imageUrl: current.imageUrl, isRestricted: current.isRestricted, description: 'Sinal Master Léo Tv', streamUrl: line, directStreamUrl: line });
+        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', stream_url: line, direct_stream_url: line });
       }
       current = null;
     }
@@ -349,7 +354,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
 
   const items = Array.from(itemsMap.values());
   for (let i = 0; i < items.length; i += 20) {
-    if (onProgress) onProgress(`Sintonizando M3U: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sincronizando M3U: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
   return { success: items.length };
@@ -380,8 +385,10 @@ export async function generateM3UPlaylist(pin: string) {
   const { data: content } = await supabase.from('content').select('*').limit(5000);
   let m3u = "#EXTM3U\n";
   content?.forEach(i => {
-    if (i.isRestricted && !user.isAdultEnabled) return;
-    m3u += `#EXTINF:-1 tvg-logo="${i.imageUrl || ''}" group-title="${i.genre}",${i.title}\n${i.directStreamUrl || i.streamUrl}\n`;
+    const isRestricted = i.is_restricted ?? i.isRestricted;
+    if (isRestricted && !user.is_adult_enabled) return;
+    const stream = i.direct_stream_url || i.directStreamUrl || i.stream_url || i.streamUrl;
+    m3u += `#EXTINF:-1 tvg-logo="${i.image_url || i.imageUrl || ''}" group-title="${i.genre}",${i.title}\n${stream}\n`;
   });
   return m3u;
 }

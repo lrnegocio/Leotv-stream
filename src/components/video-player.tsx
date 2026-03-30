@@ -26,34 +26,46 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isSigmaLink, isMercadoLivre } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false }
+  const { processedUrl, isDirectVideo, isSigmaLink, isExternalIframe } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isExternalIframe: false }
     let targetUrl = url.trim()
 
+    // 1. SUPORTE YOUTUBE
+    if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
+      const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
+      return { 
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
+        isDirectVideo: false, isSigmaLink: false, isExternalIframe: true
+      }
+    }
+
+    // 2. SUPORTE DAILYMOTION
+    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
+      const id = targetUrl.split('/').pop()?.split('?')[0];
+      return {
+        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0`,
+        isDirectVideo: false, isSigmaLink: false, isExternalIframe: true
+      }
+    }
+
+    // 3. LINKS SIGMA / WEBPLAYER (SINAL EXTERNO)
     const isSigma = targetUrl.includes('webplayer.one') || 
                     targetUrl.includes('sigma') || 
                     targetUrl.includes('blinder.') || 
                     targetUrl.includes('blder.') ||
                     targetUrl.includes('cloudplayer') ||
-                    targetUrl.includes('contfree') ||
                     targetUrl.includes('fplay.');
     
-    // SUPORTE AMPLIADO PARA .TS E .M3U8
-    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('playlist.m3u8') || targetUrl.includes('.ts');
-
-    if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
-      const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false, isSigmaLink: false, isMercadoLivre: false
-      }
-    }
+    // 4. SUPORTE DIRETO (MP4, M3U8, TS)
+    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || 
+                     targetUrl.includes('playlist.m3u8') || 
+                     targetUrl.includes('.ts');
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
       isSigmaLink: isSigma,
-      isMercadoLivre: false
+      isExternalIframe: !isDirect && !isSigma
     };
   }, [url])
 
@@ -77,7 +89,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <div className="p-6 bg-primary/10 rounded-full animate-pulse"><Zap className="h-16 w-16 text-primary" /></div>
           <div className="space-y-2">
             <h3 className="text-2xl font-black uppercase italic text-primary">SINAL EXTERNO</h3>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">Este sinal exige sintonização externa.</p>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">Este sinal exige sintonização externa profissional.</p>
           </div>
           <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl">LIBERAR AGORA</Button>
         </div>
@@ -91,7 +103,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
            <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
            <h3 className="text-2xl font-black uppercase italic text-destructive">SINAL FORA DO AR</h3>
-           <Button onClick={() => window.location.reload()} variant="ghost" className="text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
+           <div className="flex gap-4">
+             <Button onClick={() => window.location.reload()} variant="outline" className="text-white border-white/10 font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
+             <Button onClick={openExternal} className="bg-primary text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR EXTERNO</Button>
+           </div>
         </div>
       )}
       
