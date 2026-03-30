@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -52,7 +51,6 @@ export interface User {
   isAdultEnabled: boolean;
   resellerId?: string;
   activatedAt?: string;
-  blockedAt?: string;
 }
 
 export interface Reseller {
@@ -69,16 +67,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-export const clearLocalCache = () => {
-  if (typeof window !== 'undefined') {
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('p2p_content_cache')) {
-        localStorage.removeItem(key);
-      }
-    });
-  }
-};
-
 const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -92,19 +80,26 @@ const generateSafeId = (name: string) => {
 
 export async function getTotalContentCount(): Promise<number> {
   try {
-    const { count, error } = await supabase
-      .from('content')
-      .select('*', { count: 'exact', head: true });
-    return error ? 0 : (count || 0);
-  } catch (e) {
-    return 0;
-  }
+    const { data, error } = await supabase.from('content').select('episodes, seasons');
+    if (error || !data) return 0;
+    
+    let total = 0;
+    data.forEach((item: any) => {
+      const epCount = (item.episodes?.length || 0);
+      let seasonEpCount = 0;
+      if (item.seasons) item.seasons.forEach((s: any) => seasonEpCount += (s.episodes?.length || 0));
+      
+      // Se não tem episódios nem temporadas, conta como 1 sinal (canal/filme)
+      if (epCount === 0 && seasonEpCount === 0) total += 1;
+      else total += (epCount + seasonEpCount);
+    });
+    return total;
+  } catch (e) { return 0; }
 }
 
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    const cacheKey = `p2p_content_cache_${searchQuery || 'initial'}_${categoryGenre || 'all'}`;
-    
+    const cacheKey = `p2p_cache_${searchQuery || 'init'}_${categoryGenre || 'all'}`;
     if (!forceRefresh && !searchQuery && !categoryGenre) {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -123,7 +118,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       query = query.eq('genre', categoryGenre);
     }
 
-    const { data: rawData, error } = await query.limit(1000);
+    const { data: rawData, error } = await query.limit(searchQuery ? 1000 : 500);
     if (error || !rawData) return [];
 
     const processed = rawData.map(item => ({
@@ -138,9 +133,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       localStorage.setItem(cacheKey, JSON.stringify({ data: processed, timestamp: Date.now() }));
     }
     return processed;
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
@@ -154,9 +147,7 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
       directStreamUrl: data.directStreamUrl ?? data.direct_stream_url,
       imageUrl: data.imageUrl ?? data.image_url,
     };
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
@@ -186,38 +177,33 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (!error) clearLocalCache();
+    if (!error) localStorage.clear();
     return !error;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 export async function removeContent(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
-  if (!error) clearLocalCache();
+  if (!error) localStorage.clear();
   return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
-  const batchSize = 20; 
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize);
+  for (let i = 0; i < ids.length; i += 20) {
+    const batch = ids.slice(i, i + 20);
     await supabase.from('content').delete().in('id', batch);
   }
-  clearLocalCache();
+  localStorage.clear();
   return true;
 }
 
 export async function clearAllM3UContent() {
   try {
-    const { error } = await supabase.from('content').delete().neq('id', '_root_');
-    clearLocalCache();
+    const { error } = await supabase.from('content').delete().neq('id', '_init_');
+    localStorage.clear();
     return !error;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 export async function saveUser(user: User) {
@@ -303,9 +289,12 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
 
       current = { title: name, genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
     } else if (line.startsWith('http') && current) {
-      const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || current.title.match(/(.*?)\s+Episode\s+(\d+)/i);
+      // AGRUPAMENTO AUTOMÁTICO DE SÉRIES/DORAMAS/NOVELAS
+      const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
+                          current.title.match(/(.*?)\s+Episode\s+(\d+)/i) ||
+                          current.title.match(/(.*?)\s+Ep\s+(\d+)/i);
       
-      if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA'))) {
+      if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA') || current.genre.includes('ADULTOS'))) {
         const base = seriesMatch[1].trim();
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         if (!itemsMap.has(base)) {
@@ -325,10 +314,10 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
 
   const items = Array.from(itemsMap.values());
   for (let i = 0; i < items.length; i += 50) {
-    if (onProgress) onProgress(`Importando: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sintonizando: ${i} de ${items.length}...`);
     await supabase.from('content').upsert(items.slice(i, i + 50));
   }
-  clearLocalCache();
+  localStorage.clear();
   return { success: items.length };
 }
 
@@ -346,23 +335,3 @@ export const generateRandomPin = () => Math.random().toString().substring(2, 13)
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => 
   `🚀 *LÉO TV STREAM - ATIVADO!*\n\n🔑 *PIN:* \`${pin}\`\n📅 *PLANO:* ${tier}\n📺 *TELAS:* ${screens}\n\n🔗 *ACESSO:* ${url}\nSinal blindado de alta performance.`;
-
-export async function importPremiumBundle() {
-  const bundle = [
-    { id: 'p1', title: 'GLOBO SP 4K', type: 'channel', genre: 'LÉO TV CANAIS AO VIVO', streamUrl: 'https://stream.ads.ottera.tv/cl/260327d737co7n2q2grrf2v1c0/1280x720_3071200_0_f.m3u8', imageUrl: 'https://i.postimg.cc/J0swJ7tH/Design-sem-nome-63.png' },
-    { id: 'p2', title: 'PREMIERE 4K', type: 'channel', genre: 'LÉO TV ESPORTES', streamUrl: 'http://contfree.shop:80/live/207946522/261879000/1698439.ts', imageUrl: 'http://contfree.shop:80/images/2961e2a695b10db70eb306b3e0a41eb0.png' }
-  ];
-  for (const item of bundle) await saveContent(item as any);
-  return { success: bundle.length };
-}
-
-export async function syncLiveSports() {
-  try {
-    const res = await fetch("https://api.reidoscanais.ooo/sports");
-    const d = await res.json();
-    if (!d.success) return { success: 0 };
-    const items = d.data.map((e: any) => ({ id: "r_"+e.id, title: e.title.toUpperCase(), type: 'channel', genre: "LÉO TV ESPORTES", imageUrl: e.poster, streamUrl: e.embeds?.[0]?.embed_url, description: 'Sinal Master Léo Tv' }));
-    await supabase.from('content').upsert(items);
-    return { success: items.length };
-  } catch (e) { return { success: 0 }; }
-}

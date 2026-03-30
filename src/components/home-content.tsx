@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Timer, PlayCircle, Radio, Sparkles, AlertTriangle, Zap } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -50,7 +49,6 @@ export default function HomeContent() {
       const settings = await getGlobalSettings()
       setParentalPin(settings.parentalPin)
       
-      // BUSCA OTIMIZADA POR CATEGORIA
       const data = await getRemoteContent(false, queryStr)
       setContent(data)
     } catch (err) {
@@ -64,17 +62,19 @@ export default function HomeContent() {
     loadData(q)
   }, [q, loadData])
 
+  // CONTADOR AGRESSIVO: Conta episódios como sinais individuais
   const catCounts = React.useMemo(() => {
     const counts: any = {}
     CATEGORIES.forEach(c => {
       const items = content.filter(i => i.genre === c.genre)
       let total = 0
       items.forEach(i => {
-        if (i.type === 'series' || i.type === 'multi-season') {
-          total += (i.episodes?.length || 0)
-          if (i.seasons) i.seasons.forEach(s => total += s.episodes.length)
-          if (!i.episodes?.length && !i.seasons?.length) total += 1
-        } else total += 1
+        const epCount = (i.episodes?.length || 0);
+        let seasonEpCount = 0;
+        if (i.seasons) i.seasons.forEach(s => seasonEpCount += (s.episodes?.length || 0));
+        
+        if (epCount === 0 && seasonEpCount === 0) total += 1;
+        else total += (epCount + seasonEpCount);
       })
       counts[c.id] = total
     })
@@ -177,9 +177,14 @@ export default function HomeContent() {
           </div>
         ) : (
           <div className="space-y-10 animate-in slide-in-from-bottom-10 duration-500">
-            <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white border-b border-white/5 pb-6">
-              {q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
-            </h2>
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+              <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
+                {q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
+              </h2>
+              <div className="text-[10px] font-black uppercase bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
+                {filtered.length} ITENS LOCALIZADOS
+              </div>
+            </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {filtered.map((item, idx) => (
                 <div key={item.id} onClick={() => handleItemClick(item, idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
@@ -209,32 +214,28 @@ export default function HomeContent() {
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
-                  selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-between bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary">
-                          {ep.number}
-                        </div>
-                        <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
-                      </div>
-                      <PlayCircle className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
-                    </Button>
-                  ))
+                  <div className="flex flex-col gap-2">
+                    {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
+                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
+                        <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                        <PlayCircle className="ml-auto h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
+                      </Button>
+                    ))}
+                  </div>
                 ) : selectedSeries.seasons && selectedSeries.seasons.length > 0 ? (
                   selectedSeries.seasons.sort((a,b) => a.number - b.number).map(season => (
-                    <div key={season.id} className="space-y-3">
-                      <h4 className="text-[10px] font-black uppercase text-primary tracking-widest pl-2 border-l-2 border-primary">Temporada {season.number}</h4>
-                      {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-between bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group">
-                          <div className="flex items-center gap-4">
-                            <div className="w-6 h-6 rounded-full bg-primary/5 flex items-center justify-center font-black text-[8px] text-primary">
-                              {ep.number}
-                            </div>
-                            <span className="font-bold uppercase text-[10px]">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
-                          </div>
-                          <PlayCircle className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                        </Button>
-                      ))}
+                    <div key={season.id} className="space-y-3 mb-8 last:mb-0">
+                      <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
+                      <div className="flex flex-col gap-2">
+                        {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
+                            <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
+                            <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                            <PlayCircle className="ml-auto h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -246,14 +247,12 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      {/* PLAYER DE VÍDEO MASTER */}
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
           {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>
 
-      {/* PIN PARENTAL ADULTO */}
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
