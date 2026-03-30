@@ -68,7 +68,6 @@ export default function HomeContent() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
 
-        // BUSCA BLINDADA COM FORCE REFRESH SE ESTIVER ZERADO
         const data = await getRemoteContent(false, searchQuery)
         if (data.length === 0 && !searchQuery) {
            const retryData = await getRemoteContent(true, ""); 

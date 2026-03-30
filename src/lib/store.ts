@@ -112,7 +112,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = ""): 
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp } = JSON.parse(cached);
-        // Cache reduzido para 1 hora para garantir sincronia entre Admin e Cliente
         if (Date.now() - timestamp < 1000 * 60 * 60) return data;
       }
     }
@@ -186,7 +185,7 @@ export async function saveContent(item: ContentItem) {
       title: item.title,
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
-      genre: (item.genre || "LÉO TV GERAL").toUpperCase(),
+      genre: (item.genre || "LÉO TV CANAIS AO VIVO").toUpperCase(),
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
       streamUrl: combinedUrl,
@@ -229,6 +228,8 @@ export async function bulkRemoveContent(ids: string[]) {
 export async function clearAllM3UContent() {
   try {
     // LIMPEZA MASTER: Apaga absolutamente tudo da tabela de conteúdo
+    // Se o banco tiver 300k, o comando abaixo pode dar timeout via API.
+    // O ideal é o comando TRUNCATE no SQL Editor do Supabase.
     const { error } = await supabase.from('content').delete().neq('id', '0_placeholder_0');
     clearLocalCache();
     return !error;
