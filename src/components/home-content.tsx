@@ -72,6 +72,7 @@ export default function HomeContent() {
         let seasonEpCount = 0;
         if (i.seasons) i.seasons.forEach(s => seasonEpCount += (s.episodes?.length || 0));
         
+        // Se for canal ou filme (sem episódios), conta 1. Se for série, conta cada episódio.
         if (epCount === 0 && seasonEpCount === 0) total += 1;
         else total += (epCount + seasonEpCount);
       })
