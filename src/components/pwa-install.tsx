@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -19,7 +18,6 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Verifica se já está instalado
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
       const timer = setTimeout(() => setIsVisible(true), 1500)
@@ -39,19 +37,10 @@ export function PwaInstall() {
         toast({ title: "INSTALANDO...", description: "Léo TV está sendo fixado no seu aparelho." })
       }
     } else {
-      // SMART TV SNIPER: Dispara a função real de instalação se disponível
-      try {
-        if ((window as any).navigator.standalone) {
-          toast({ title: "JÁ INSTALADO", description: "O App já está na sua tela inicial." });
-          return;
-        }
-        toast({ 
-          title: "INSTALAR AGORA", 
-          description: "Use o menu do navegador (3 pontinhos) e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
-        });
-      } catch (e) {
-        // Fallback
-      }
+      toast({ 
+        title: "INSTALAR AGORA", 
+        description: "Use o menu do seu navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
+      });
     }
   }
 

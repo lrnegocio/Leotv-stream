@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -26,7 +25,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (url) {
       setLoading(true)
       setHasError(false)
-      // BLINDAGEM MESTRE: Detecta links HTTP em site HTTPS
       if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
         setIsMixedContent(true)
       } else {
@@ -39,7 +37,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // YOUTUBE MASTER
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -48,17 +45,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // IPTV / HLS / TS / MPEG
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
-    // VOD / ARQUIVOS
     if (targetUrl.toLowerCase().match(/\.(mp4|mkv|mov|avi)$/) || targetUrl.includes('/movie/') || targetUrl.includes('/movie.mp4')) {
       return { processedUrl: targetUrl, type: 'video' }
     }
 
-    // SITE / IFRAME
     return { processedUrl: targetUrl, type: 'iframe' }
   }, [url])
 
@@ -67,7 +61,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const video = videoRef.current;
     
-    // SINTONIZADOR XUI MASTER 8.0
     if (type === 'hls') {
       let hls: any = null;
       const initHls = () => {
@@ -121,13 +114,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra XUI v8.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Léo Hidra</span>
       </div>
 
       {(loading && !hasError) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL XUI...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL Master...</span>
         </div>
       )}
 

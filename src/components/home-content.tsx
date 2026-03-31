@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -73,9 +72,6 @@ export default function HomeContent() {
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
   const handleItemClick = (item: ContentItem, idx: number) => {
-    const watchId = Buffer.from(item.id).toString('base64').substring(0, 12);
-    window.history.pushState(null, '', `/watch/${watchId}`);
-
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
     } else {
@@ -85,7 +81,6 @@ export default function HomeContent() {
 
   const closePlayer = () => {
     setActiveVideo(null);
-    window.history.pushState(null, '', '/user/home');
   }
 
   const verifyPin = () => {
@@ -99,7 +94,7 @@ export default function HomeContent() {
     }
   };
 
-  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Blindado...</p></div>
+  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master...</p></div>
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
@@ -109,8 +104,8 @@ export default function HomeContent() {
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
-            <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block">Léo Tv Stream</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Blindado Online</span>
+            <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block">Léo TV Stream</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Master Online</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
@@ -121,7 +116,7 @@ export default function HomeContent() {
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 animate-in fade-in duration-500">
             {CATEGORIES.map(c => {
-              if (c.id === 'ADULT' && !user?.isAdultEnabled) return null;
+              if (c.id === 'ADULT' && !user?.isAdultEnabled && !user?.is_adult_enabled) return null;
               const count = catCounts[c.id] || 0;
               return (
                 <button key={c.id} onClick={() => c.id === 'ADULT' ? setIsPinOpen(true) : setSelectedCat(c.id)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color} bg-opacity-20`}>
@@ -129,10 +124,9 @@ export default function HomeContent() {
                     <div className={`p-4 rounded-3xl ${c.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center">
                       <span className="text-lg font-black uppercase italic text-white block">{c.name}</span>
-                      {/* FIM DO SINAL 0: Só mostra se houver contagem real */}
                       {count > 0 && (
                         <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
-                          {count.toLocaleString()} SINAIS ATIVOS
+                          {count.toLocaleString()} SINAIS
                         </span>
                       )}
                     </div>
@@ -147,11 +141,6 @@ export default function HomeContent() {
               <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
                 {q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
               </h2>
-              {content.length > 0 && (
-                <div className="text-[10px] font-black uppercase bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
-                  {content.length} ITENS LOCALIZADOS
-                </div>
-              )}
             </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (
@@ -159,7 +148,6 @@ export default function HomeContent() {
                   {item.imageUrl ? <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-primary/10"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                     <h3 className="font-black text-[12px] uppercase italic truncate text-white group-hover:text-primary">{item.title}</h3>
-                    <p className="text-[8px] font-black uppercase opacity-40 text-primary">{item.genre}</p>
                   </div>
                 </div>
               ))}
@@ -176,7 +164,6 @@ export default function HomeContent() {
                 {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
                   <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div>
-                  <p className="text-xs font-black uppercase text-primary/60 mt-2">{selectedSeries.genre}</p>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
@@ -185,7 +172,7 @@ export default function HomeContent() {
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
                       <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
-                        <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                        <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span>
                         <PlayCircle className="ml-auto h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
                       </Button>
                     ))}
@@ -198,7 +185,7 @@ export default function HomeContent() {
                         {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
                           <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
                             <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
-                            <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title || `Episódio ${ep.number}`}</span>
+                            <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
                             <PlayCircle className="ml-auto h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
                           </Button>
                         ))}
@@ -221,7 +208,7 @@ export default function HomeContent() {
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Léo Tv</div>
+          <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Léo TV</div>
           <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} autoFocus />
           <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl">DESBLOQUEAR</Button>
         </DialogContent>
