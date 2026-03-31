@@ -46,7 +46,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         const id = parts[1].split('/')[0];
         return {
           processedUrl: `https://www.xvideos.com/embedframe/${id}`,
-          type: 'xvideos'
+          type: 'iframe'
         }
       }
     }
@@ -55,13 +55,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        type: 'youtube'
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`,
+        type: 'iframe'
       }
     }
 
     // 4. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio de Mixed Content)
-    // Se o sinal for HTTP, canalizamos pelo nosso servidor para torná-lo seguro para o navegador
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -71,12 +70,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'mpegts' }
     
-    // Default para vídeo (.mp4, .mkv, etc)
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || type === 'image' || type === 'youtube' || type === 'xvideos') return;
+    if (!videoRef.current || !processedUrl || type === 'image' || type === 'iframe') return;
 
     const video = videoRef.current;
     let hls: any = null;
@@ -86,23 +84,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        hls = new window.Hls({ 
-          enableWorker: true, 
-          lowLatencyMode: true,
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-        });
+        hls = new window.Hls({ enableWorker: true });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
-        });
-        hls.on('hlsError', (event: any, data: any) => {
-          if (data.fatal) {
-            console.error("Erro fatal HLS:", data);
-            setError(true);
-            setLoading(false);
-          }
         });
       } 
       // @ts-ignore
@@ -118,13 +105,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         // Motor Nativo para MP4/Vídeos Diretos
         video.src = processedUrl;
         video.load();
-        video.play().catch((e) => {
-          console.error("Erro no play nativo:", e);
+        video.play().catch(() => {
           video.muted = true;
-          video.play().catch(() => {
-            setLoading(false);
-            // Se falhou até o mudo, pode ser erro de codec ou link offline
-          });
+          video.play().catch(() => { setLoading(false); });
         });
       }
     };
@@ -142,37 +125,24 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-[2.5rem] border border-white/5 select-none">
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <span className="mt-6 text-[10px] font-black text-primary uppercase animate-pulse tracking-[0.3em]">SINTONIZANDO FLUXO MASTER...</span>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-[70] p-10 text-center backdrop-blur-md">
-          <AlertTriangle className="h-16 w-16 text-destructive mb-6 animate-pulse" />
-          <h3 className="text-2xl font-black uppercase text-white mb-3">Sinal com Interferência</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-8 max-w-sm">O link original pode estar offline ou bloqueado pelo servidor de origem.</p>
-          <div className="flex gap-4">
-            <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-xs h-14 px-10 rounded-2xl shadow-xl">RECALIBRAR SISTEMA</Button>
-            <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-xs h-14 px-10 rounded-2xl">ABRIR LINK BRUTO</Button>
-          </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
+          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+          <h3 className="text-lg font-black uppercase text-white">Sinal com Interferência</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado.</p>
+          <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR FONTE EXTERNA</Button>
         </div>
       )}
 
       {type === 'image' ? (
-        <div className="relative w-full h-full flex items-center justify-center bg-black">
-          <img src={processedUrl!} alt={title} className="max-w-full max-h-full object-contain" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
-        </div>
-      ) : (type === 'youtube' || type === 'xvideos') ? (
-        <iframe 
-          key={processedUrl} 
-          src={processedUrl!} 
-          className="h-full w-full border-0" 
-          allowFullScreen 
-          allow="autoplay; encrypted-media" 
-          onLoad={() => setLoading(false)} 
-        />
+        <img src={processedUrl!} alt={title} className="w-full h-full object-contain" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
+      ) : type === 'iframe' ? (
+        <iframe src={processedUrl!} className="h-full w-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
       ) : (
         <video 
           ref={videoRef} 
@@ -180,7 +150,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           autoPlay 
           muted={isMuted} 
           playsInline 
-          webkit-playsinline="true"
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
@@ -190,30 +159,24 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-8 bg-gradient-to-b from-black/90 to-transparent flex items-center justify-between pointer-events-auto">
-          <div className="space-y-1">
-            <h3 className="text-2xl font-black text-white uppercase italic truncate max-w-2xl tracking-tighter">{title}</h3>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Sinal Decodificado via Túnel Master</span>
-            </div>
-          </div>
-          <button className="h-14 w-14 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all shadow-2xl backdrop-blur-md border border-white/5" onClick={() => setIsMuted(!isMuted)}>
-            {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
+          <h3 className="text-xl font-black text-white uppercase italic truncate max-w-xl tracking-tighter">{title}</h3>
+          <button className="h-12 w-12 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all" onClick={() => setIsMuted(!isMuted)}>
+            {isMuted ? <VolumeX className="h-5 w-5 text-destructive" /> : <Volume2 className="h-5 w-5 text-primary" />}
           </button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-10 bg-gradient-to-t from-black/90 to-transparent flex justify-between items-center pointer-events-auto">
+        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button className="h-14 px-8 rounded-2xl bg-white/5 hover:bg-primary text-white font-black uppercase text-[10px] border border-white/10 transition-all" onClick={() => window.open(url || "", '_blank')}>
-               <ExternalLink className="mr-2 h-4 w-4" /> FONTE ORIGINAL
+             <Button className="h-12 px-6 rounded-xl bg-white/5 hover:bg-primary text-white font-black uppercase text-[10px] border border-white/10" onClick={() => window.open(url, '_blank')}>
+               FONTE ORIGINAL
              </Button>
           </div>
-          <div className="flex gap-6 items-center">
-            <div className="flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-2xl border border-primary/20 shadow-2xl">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">SINAL BLINDADO</span>
+          <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO</span>
             </div>
-            <Button variant="ghost" size="icon" className="text-white h-14 w-14 hover:bg-primary/20 rounded-full" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-7 w-7" /></Button>
+            <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20 rounded-full" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
           </div>
         </div>
       </div>
