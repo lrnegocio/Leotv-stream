@@ -29,6 +29,7 @@ export interface ContentItem {
   imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
+  created_at?: string;
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -82,6 +83,10 @@ export const cleanName = (name: string) => {
     .toUpperCase();
 };
 
+/**
+ * ID DETERMINÍSTICO: Garante que o mesmo canal sempre tenha o mesmo ID.
+ * Isso impede que canais "sumam" ou dupliquem durante importações em massa.
+ */
 export const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
@@ -90,7 +95,7 @@ export const generateSafeId = (name: string) => {
     .replace(/_+/g, '_')
     .trim()
     .substring(0, 100);
-  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
+  return "leo_" + clean;
 };
 
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -103,9 +108,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
+    // ORDENAÇÃO POR MAIS RECENTES: Garante que o que o Mestre acabou de adicionar apareça no topo.
     const { data: rawData, error } = await query
-      .order('title', { ascending: true })
-      .limit(searchQuery ? 1000 : 200);
+      .order('created_at', { ascending: false })
+      .limit(searchQuery ? 1000 : 500);
 
     if (error || !rawData) return [];
 
@@ -176,14 +182,9 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase Detalhado:", JSON.stringify(error, null, 2));
-    }
+    if (error) console.error("Erro Supabase:", error);
     return !error;
-  } catch (e) { 
-    console.error("Erro Fatal no Catch:", e);
-    return false; 
-  }
+  } catch (e) { return false; }
 }
 
 export async function removeContent(id: string) {
@@ -202,8 +203,8 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    const { error } = await supabase.from('content').delete().neq('id', '_init_');
-    localStorage.clear();
+    // RESET NUCLEAR: Limpa a tabela content inteira de uma vez.
+    const { error } = await supabase.from('content').delete().neq('id', '_dummy_');
     return !error;
   } catch (e) { return false; }
 }
@@ -227,7 +228,7 @@ export async function saveUser(user: User) {
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
+  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
   return (data || []).map(u => ({
     id: u.id,
     pin: u.pin,
@@ -239,7 +240,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     isBlocked: u.is_blocked,
     isAdultEnabled: u.is_adult_enabled,
     resellerId: u.reseller_id,
-    activatedAt: u.activated_at
+    activated_at: u.activated_at
   }));
 }
 
@@ -391,10 +392,11 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
       if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA'))) {
         const base = cleanName(seriesMatch[1].trim());
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
-        if (!itemsMap.has(base)) {
-          itemsMap.set(base, { id: generateSafeId(base), title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
+        const baseId = generateSafeId(base);
+        if (!itemsMap.has(baseId)) {
+          itemsMap.set(baseId, { id: baseId, title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
         }
-        const series = itemsMap.get(base);
+        const series = itemsMap.get(baseId);
         if (!series.episodes.some((e:any) => e.number === epNum)) {
           series.episodes.push({ id: generateSafeId(current.title), title: `EPISODIO ${epNum}`, number: epNum, streamUrl: line, directStreamUrl: line });
         }
