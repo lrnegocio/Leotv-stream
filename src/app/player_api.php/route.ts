@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getRemoteContent } from '@/lib/store';
@@ -17,12 +18,12 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // LOGIN MASTER LÉO - BUSCA BLINDADA POR PIN NO NOVO BANCO
     let activeUser: any = null;
 
     if (username === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
+      // BUSCA CASE-SENSITIVE NAS NOVAS COLUNAS
       const { data, error } = await supabase.from('users').select('*').eq('pin', username.trim()).maybeSingle();
       if (error || !data) return NextResponse.json({ user_info: { auth: 0, message: "PIN NAO LOCALIZADO" } }, { headers });
       if (data["isBlocked"]) return NextResponse.json({ user_info: { auth: 0, message: "ACESSO SUSPENSO" } }, { headers });
@@ -76,18 +77,42 @@ export async function GET(req: NextRequest) {
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
       if (!activeUser["isAdultEnabled"]) items = items.filter(i => !i["isRestricted"]);
-      return NextResponse.json(items.map(i => ({ num: i.id, name: i.title, stream_id: i.id, stream_icon: i["imageUrl"] || "", added: "1700000000", category_id: "1", stream_type: "live" })), { headers });
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, 
+        name: i.title, 
+        stream_id: i.id, 
+        stream_icon: i.imageUrl || "", 
+        added: "1700000000", 
+        category_id: "1", 
+        stream_type: "live" 
+      })), { headers });
     }
 
     if (action === 'get_vod_streams') {
       let items = content.filter(i => i.type === 'movie');
       if (!activeUser["isAdultEnabled"]) items = items.filter(i => !i["isRestricted"]);
-      return NextResponse.json(items.map(i => ({ num: i.id, name: i.title, stream_id: i.id, stream_icon: i["imageUrl"] || "", added: "1700000000", category_id: "1000", stream_type: "movie" })), { headers });
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, 
+        name: i.title, 
+        stream_id: i.id, 
+        stream_icon: i.imageUrl || "", 
+        added: "1700000000", 
+        category_id: "1000", 
+        stream_type: "movie" 
+      })), { headers });
     }
 
     if (action === 'get_series') {
       let items = content.filter(i => i.type === 'series' || i.type === 'multi-season');
-      return NextResponse.json(items.map(i => ({ num: i.id, name: i.title, series_id: i.id, cover: i["imageUrl"] || "", plot: i.description || "Série Léo Tv Master", genre: i.genre || "Série", category_id: "2000" })), { headers });
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, 
+        name: i.title, 
+        series_id: i.id, 
+        cover: i.imageUrl || "", 
+        plot: i.description || "Série Léo Tv Master", 
+        genre: i.genre || "Série", 
+        category_id: "2000" 
+      })), { headers });
     }
 
     return NextResponse.json([], { headers });

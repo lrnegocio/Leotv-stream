@@ -39,7 +39,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     // SINTONIZADOR XVIDEOS MASTER (Extração de ID para Embed)
     if (targetUrl.includes('xvideos.com')) {
-      // Formato: https://www.xvideos.com/video.ID/Titulo
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
         const id = parts[1].split('/')[0];
@@ -161,7 +160,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         />
       )}
       
-      {/* OVERLAY SOBERANO */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-auto">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
