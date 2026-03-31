@@ -152,9 +152,7 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
       seasons: data.seasons || [],
       created_at: data.created_at
     };
-  } catch (e) { 
-    return null; 
-  }
+  } catch (e) { return null; }
 }
 
 export async function removeContent(id: string) {

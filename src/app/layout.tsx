@@ -37,7 +37,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#1E161D" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
-        {/* BLINDAGEM MESTRE: Bloqueio de Inspeção e Extração */}
         <script dangerouslySetInnerHTML={{ __html: `
           document.addEventListener('contextmenu', event => event.preventDefault());
           document.onkeydown = function(e) {
@@ -53,7 +52,9 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
+        {/* SINTONIZADORES MESTRE LÉO TV */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
+        <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>
     </html>
   );
