@@ -109,7 +109,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
-    // SINTONIZAÇÃO SQL CASE-SENSITIVE: Usando exatamente as aspas do seu SQL
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),

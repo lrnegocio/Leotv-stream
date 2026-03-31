@@ -18,29 +18,55 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
+    // LOGIN MESTRE LÉO & PINs BLINDADOS
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
     if (isMaster) {
-      activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
+      activeUser = { 
+        pin: 'adm77x2p', 
+        isBlocked: false, 
+        isAdultEnabled: true, 
+        expiryDate: null, 
+        subscriptionTier: 'lifetime', 
+        maxScreens: 999 
+      };
     } else {
-      // SINTONIZAÇÃO SQL: Usando a coluna correta "isBlocked"
-      const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
-      if (error || !data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+      // BUSCA REAL NO BANCO MASTER USANDO PIN COMO USERNAME
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('pin', username)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.error("Login IPTV Falhou - PIN não encontrado:", username);
+        return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+      }
+
+      // Verificação de bloqueio usando o nome exato da coluna SQL
+      if (data["isBlocked"]) {
+        return NextResponse.json({ user_info: { auth: 0, message: "Acesso Suspenso" } }, { headers });
+      }
+
       activeUser = data;
     }
 
     const baseUrl = req.nextUrl.origin;
+    const expiryTimestamp = activeUser["expiryDate"] 
+      ? Math.floor(new Date(activeUser["expiryDate"]).getTime() / 1000).toString() 
+      : "1999999999";
 
+    // LOGIN BÁSICO (INFO DO SERVIDOR)
     if (!action) {
       return NextResponse.json({
         user_info: {
           auth: 1,
           status: "Active",
-          exp_date: activeUser.expiryDate ? Math.floor(new Date(activeUser.expiryDate).getTime() / 1000).toString() : "1999999999",
-          is_trial: activeUser.subscriptionTier === 'test' ? "1" : "0",
+          exp_date: expiryTimestamp,
+          is_trial: activeUser["subscriptionTier"] === 'test' ? "1" : "0",
           active_cons: "1",
-          max_connections: activeUser.maxScreens?.toString() || "1",
+          max_connections: activeUser["maxScreens"]?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4", "mkv", "mpeg"]
         },
         server_info: {
@@ -56,6 +82,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
+    // CARREGAMENTO DE CONTEÚDO PARA IPTV
     const content = await getRemoteContent(true);
 
     if (action === 'get_live_categories') {
@@ -75,12 +102,14 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
-      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      // Filtragem Adulta
+      if (!activeUser["isAdultEnabled"]) items = items.filter(i => !i["isRestricted"]);
+      
       return NextResponse.json(items.map(i => ({
         num: i.id,
         name: i.title,
         stream_id: i.id,
-        stream_icon: i.imageUrl || "",
+        stream_icon: i["imageUrl"] || "",
         added: "1700000000",
         category_id: "1",
         stream_type: "live"
@@ -89,12 +118,13 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_vod_streams') {
       let items = content.filter(i => i.type === 'movie');
-      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      if (!activeUser["isAdultEnabled"]) items = items.filter(i => !i["isRestricted"]);
+      
       return NextResponse.json(items.map(i => ({
         num: i.id,
         name: i.title,
         stream_id: i.id,
-        stream_icon: i.imageUrl || "",
+        stream_icon: i["imageUrl"] || "",
         added: "1700000000",
         category_id: "1000",
         stream_type: "movie"
@@ -107,7 +137,7 @@ export async function GET(req: NextRequest) {
         num: i.id,
         name: i.title,
         series_id: i.id,
-        cover: i.imageUrl || "",
+        cover: i["imageUrl"] || "",
         plot: i.description || "Série Léo Tv Master",
         genre: i.genre || "Série",
         category_id: "2000"

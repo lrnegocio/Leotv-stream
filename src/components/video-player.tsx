@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle, ExternalLink } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle, ExternalLink, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -47,7 +47,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     const lowUrl = targetUrl.toLowerCase();
-    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg') || lowUrl.includes('.mp4') || lowUrl.includes('stream')) {
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg') || lowUrl.includes('.mp4')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
@@ -67,8 +67,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls = new window.Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingMaxRetry: 4,
-          levelLoadingMaxRetry: 4,
+          manifestLoadingMaxRetry: 6,
+          levelLoadingMaxRetry: 6,
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
         });
         hls.loadSource(processedUrl);
@@ -80,15 +80,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         });
         hls.on('hlsError', (event: any, data: any) => {
           if (data.fatal) {
+            console.error("HLS Fatal Error:", data);
             setHasError(true);
             setLoading(false);
             hls.destroy();
           }
         });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = processedUrl;
-        video.play().catch(() => {});
-        setLoading(false);
       } else {
         video.src = processedUrl;
         video.play().catch(() => {});
@@ -107,7 +104,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL MASTER HIDRA v18 ATIVO</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL MASTER HIDRA v19 ATIVO</span>
       </div>
 
       {loading && !hasError && (
@@ -142,13 +139,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
       {(hasError || isHttpOnHttps) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
-           <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
+           <ShieldAlert className="h-12 w-12 text-primary animate-bounce" />
+           <h3 className="text-xl font-black uppercase italic text-primary tracking-tighter">SINAL BLINDADO: AÇÃO NECESSÁRIA</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             O sinal está online, mas as travas de segurança do navegador bloquearam o player interno.
+             Mestre, este sinal é externo e o navegador requer uma sintonização forçada para abrir o player.
            </p>
            <Button asChild className="h-16 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR DIRETAMENTE <ExternalLink className="ml-2 h-6 w-6" /></a>
+              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAÇÃO SEGURA <ExternalLink className="ml-2 h-6 w-6" /></a>
            </Button>
            <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black hover:text-primary">
              <RefreshCcw className="mr-2 h-4 w-4" /> RECONECTAR SINAL
