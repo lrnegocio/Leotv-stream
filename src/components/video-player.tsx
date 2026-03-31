@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // 1. DETECÇÃO DE IMAGEM
+    // 1. DETECÇÃO DE IMAGEM (Evita carregar fotos como vídeo)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -39,7 +39,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. SINTONIZADOR XVIDEOS
+    // 2. SINTONIZADOR XVIDEOS (Embed Oficial)
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
@@ -48,13 +48,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // 3. SUPORTE YOUTUBE
+    // 3. SUPORTE YOUTUBE (Embed Oficial)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 4. SUPORTE DAILYMOTION
+    // 4. SUPORTE DAILYMOTION (Embed Oficial)
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       let id = "";
       if (targetUrl.includes('video/')) id = targetUrl.split('video/')[1]?.split('?')[0];
@@ -62,7 +62,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 5. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio de Mixed Content)
+    // 5. TÚNEL MASTER PARA LINKS HTTP (MP4 do blinder.space, M3U8, etc)
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://') && !targetUrl.includes(window.location.host)) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -72,6 +72,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'mpegts' }
     
+    // Padrão para MP4 e outros vídeos diretos
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
@@ -83,6 +84,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
+      // Motor HLS para .m3u8
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -94,6 +96,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           setLoading(false); 
         });
       } 
+      // Motor MPEG-TS para .ts
       // @ts-ignore
       else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
@@ -103,8 +106,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         mpegtsPlayer.play().catch(() => { video.muted = true; mpegtsPlayer.play().catch(() => {}); });
         setLoading(false);
       }
+      // Motor Nativo para MP4 (blinder.space) e vídeos diretos
       else {
-        // Motor Nativo para MP4/Vídeos Diretos
         video.src = processedUrl;
         video.load();
         video.play().catch(() => {
@@ -135,8 +138,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-black uppercase text-white">Sinal com Interferência</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado.</p>
+          <h3 className="text-lg font-black uppercase text-white">Sinal Master com Oscilação</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado pelo servidor.</p>
           <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR FONTE EXTERNA</Button>
         </div>
       )}
@@ -152,6 +155,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           autoPlay 
           muted={isMuted} 
           playsInline 
+          controls={!loading && !error}
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
@@ -159,6 +163,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         />
       )}
       
+      {/* Controles Customizados Visíveis no Hover */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-8 bg-gradient-to-b from-black/90 to-transparent flex items-center justify-between pointer-events-auto">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-xl tracking-tighter">{title}</h3>
@@ -169,15 +174,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/90 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button className="h-12 px-6 rounded-xl bg-white/5 hover:bg-primary text-white font-black uppercase text-[10px] border border-white/10" onClick={() => window.open(url, '_blank')}>
-               FONTE ORIGINAL
-             </Button>
+             <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
+               <ShieldCheck className="h-4 w-4 text-primary" />
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO</span>
+             </div>
           </div>
           <div className="flex gap-4 items-center">
-            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO</span>
-            </div>
             <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20 rounded-full" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
           </div>
         </div>

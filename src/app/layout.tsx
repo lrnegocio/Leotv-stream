@@ -37,12 +37,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#1E161D" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
+        {/* POLÍTICA DE SEGURANÇA MESTRE: Permite que o túnel sintonize sinais HTTP de forma transparente */}
+        <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
       </head>
       <body className="font-body antialiased bg-background text-foreground select-none">
         {children}
         <Toaster />
         <OfflineIndicator />
-        {/* MOTORES DE SINAL MESTRE LÉO TV - IGUAL AO PLAYER PROFISSIONAL SUPREMO */}
+        {/* MOTORES DE SINAL MESTRE LÉO TV */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>
