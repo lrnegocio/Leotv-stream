@@ -28,8 +28,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <head>
-        {/* DESBLOQUEIO MASTER: Tenta converter requisições HTTP para HTTPS para evitar bloqueio de Mixed Content */}
-        <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+        {/* DESBLOQUEIO MASTER: Força o navegador a aceitar requisições mistas para os canais rodarem */}
+        <meta httpEquiv="Content-Security-Policy" content="upgrade-insecure-requests" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -44,7 +44,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
-        {/* MOTORES DE SINAL MESTRE LÉO TV */}
+        {/* MOTORES DE SINAL MESTRE LÉO TV - IGUAL AO PLAYER PROFISSIONAL SUPREMO */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>

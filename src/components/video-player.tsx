@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM MASTER (Motor Hidra v29)
+    // DETECÇÃO DE IMAGEM MASTER (Motor Hidra v30)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -69,7 +69,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
-        hls.on('hlsManifestParsed', () => { video.play().catch(() => {}); setLoading(false); });
+        hls.on('hlsManifestParsed', () => { 
+          video.play().catch(() => {
+            video.muted = true;
+            video.play().catch(() => {});
+          }); 
+          setLoading(false); 
+        });
         hls.on('hlsError', () => setLoading(false));
       } 
       // MOTOR MPEG-TS (Igual ao player Profissional Supremo)
@@ -79,7 +85,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl });
         mpegtsPlayer.attachMediaElement(video);
         mpegtsPlayer.load();
-        mpegtsPlayer.play().catch(() => {});
+        mpegtsPlayer.play().catch(() => {
+          video.muted = true;
+          video.play().catch(() => {});
+        });
         setLoading(false);
       }
       else {
@@ -131,7 +140,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(url, '_blank')}>
+             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(processedUrl || "", '_blank')}>
                <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL DIRETO
              </Button>
           </div>
