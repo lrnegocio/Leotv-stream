@@ -2,9 +2,8 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, Image as ImageIcon } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
 
 interface VideoPlayerProps {
   url: string
@@ -17,13 +16,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
-  const [error, setError] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      setError(false)
     }
   }, [url])
 
@@ -32,7 +29,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const targetUrl = url.trim()
     
     // DETECÇÃO DE IMAGEM (Blindagem Mestre)
-    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg|gstatic)/i.test(targetUrl) || targetUrl.includes('gstatic.com') || targetUrl.includes('images?q=tbn');
+    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
+                   targetUrl.includes('gstatic.com') || 
+                   targetUrl.includes('images?q=tbn') ||
+                   targetUrl.includes('picsum.photos');
+    
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -112,7 +113,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             alt={title} 
             className="max-w-full max-h-full object-contain relative z-10" 
             onLoad={() => setLoading(false)}
-            onError={() => { setLoading(false); setError(true); }}
+            onError={() => setLoading(false)}
           />
         </div>
       ) : (type === 'hls' || type === 'video') ? (

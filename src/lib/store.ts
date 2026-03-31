@@ -76,9 +76,10 @@ export const cleanName = (name: string) => {
 
 export const generateSafeId = (name: string) => {
   const clean = name.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_');
-  return "leo_" + clean.substring(0, 20) + "_" + Math.random().toString(36).substring(2, 7);
+  return "leo_" + clean.substring(0, 15) + "_" + Math.random().toString(36).substring(2, 6);
 };
 
+// BLINDAGEM SQL: Mapeamento exato para colunas Case-Sensitive
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');

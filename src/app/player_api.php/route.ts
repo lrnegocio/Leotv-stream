@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
         maxScreens: 999 
       };
     } else {
+      // BLINDAGEM IPTV: Busca exata usando colunas Case-Sensitive
       const { data, error } = await supabase
         .from('users')
         .select('*')
