@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, PlayCircle } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, PlayCircle, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -16,11 +16,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
+  const [error, setError] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
+      setError(false)
     }
   }, [url])
 
@@ -28,15 +30,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM (Suporte total para links do Google/Gstatic)
+    // DETECÇÃO DE IMAGEM (Suporte total para links do Google/Gstatic e extensões comuns)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
-                   targetUrl.includes('picsum.photos');
+                   targetUrl.includes('picsum.photos') ||
+                   targetUrl.includes('encrypted-tbn');
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // SUPORTE YOUTUBE
+    // SUPORTE YOUTUBE (Iframe)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -45,8 +48,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
+    // FORMATOS IPTV (HLS / TS / MP4)
     const lowUrl = targetUrl.toLowerCase();
-    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg')) {
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg') || lowUrl.includes('.mp4')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
@@ -57,7 +61,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!videoRef.current || !processedUrl || (type !== 'hls' && type !== 'video')) return;
 
     const video = videoRef.current;
-    // @ts-ignore
     let hls: any = null;
     
     const initPlayer = () => {
@@ -76,18 +79,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           video.play().catch(() => {});
           setLoading(false);
         });
-        hls.on('hlsError', () => {
-          setLoading(false);
+        hls.on('hlsError', (event: any, data: any) => {
+          if (data.fatal) setLoading(false);
         });
       } else {
         video.src = processedUrl;
         video.play().catch(() => {
           setLoading(false);
+          // Se falhar o autoplay, tentamos sem som
+          video.muted = true;
+          video.play().catch(() => setLoading(false));
         });
       }
     };
 
-    // Pequeno delay para garantir que o Script de HLS.js carregou
     const timeout = setTimeout(initPlayer, 500);
     return () => { 
       clearTimeout(timeout);
@@ -118,7 +123,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             alt={title} 
             className="max-w-full max-h-full object-contain relative z-10" 
             onLoad={() => setLoading(false)}
-            onError={() => setLoading(false)}
+            onError={() => { setLoading(false); setError(true); }}
           />
         </div>
       ) : (type === 'hls' || type === 'video') ? (
@@ -131,7 +136,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           crossOrigin="anonymous"
           className="h-full w-full object-contain relative z-10" 
           onLoadedData={() => setLoading(false)}
-          onError={() => setLoading(false)}
+          onError={() => { setLoading(false); setError(true); }}
         />
       ) : (
         <iframe 
@@ -156,8 +161,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button variant="outline" className="h-12 px-6 rounded-xl bg-white/5 border-white/10 hover:border-primary text-xs font-black uppercase text-white" onClick={() => window.open(url, '_blank')}>
-               <PlayCircle className="mr-2 h-5 w-5" /> SINTONIZAR FORÇADO
+             <Button variant="outline" className="h-12 px-6 rounded-xl bg-primary text-white border-none font-black uppercase text-[10px] shadow-lg shadow-primary/20" onClick={() => window.open(url, '_blank')}>
+               <ExternalLink className="mr-2 h-4 w-4" /> SINTONIZAR DIRETAMENTE
              </Button>
           </div>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
