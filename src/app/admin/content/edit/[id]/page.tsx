@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Link as LinkIcon, Layers, Plus, Zap, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Layers, Plus, Zap, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,7 +32,6 @@ export default function EditContentPage() {
   React.useEffect(() => {
     const load = async () => {
       if (!id) return;
-      
       try {
         const item = await getContentById(id)
         if (item) {
@@ -40,11 +39,11 @@ export default function EditContentPage() {
           setEpisodes(item.episodes || [])
           setSeasons(item.seasons || [])
         } else {
-          toast({ variant: "destructive", title: "ERRO DE BANCO", description: "Sinal não localizado. Ele pode ter sido removido." })
+          toast({ variant: "destructive", title: "Sinal não localizado." })
           router.push("/admin/content")
         }
       } catch (err) {
-        toast({ variant: "destructive", title: "ERRO CRÍTICO", description: "Falha na sintonização com o Supabase." })
+        toast({ variant: "destructive", title: "Erro de conexão." })
       } finally {
         setFetching(false)
       }
@@ -105,7 +104,7 @@ export default function EditContentPage() {
       })
       setFormData(prev => prev ? ({ ...prev, description: res.description }) : null)
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua chave." })
+      toast({ variant: "destructive", title: "Erro de IA" })
     } finally {
       setGenerating(false)
     }
@@ -122,11 +121,11 @@ export default function EditContentPage() {
     })
     
     if (success) {
-      toast({ title: "SINAL RECALIBRADO", description: "As alterações foram salvas no banco master." })
+      toast({ title: "SINAL RECALIBRADO" })
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique a conexão com o banco master." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
     }
   }
 
@@ -189,6 +188,10 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal</h3>
                 <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto)</h3>
+                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link .m3u8, .ts ou .mp4" />
               </div>
             </div>
           )}
@@ -279,7 +282,6 @@ export default function EditContentPage() {
               <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Adulto</Label>
               <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
             </div>
-            <p className="text-[8px] font-black opacity-40 uppercase leading-relaxed tracking-widest italic">Se ativado, este sinal só aparece para PINs com "Liberar Adultos" ligado.</p>
           </div>
           
           <Button type="submit" className="w-full h-16 bg-primary font-black text-lg uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>

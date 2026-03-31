@@ -17,12 +17,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
+  const [errorMsg, setErrorMsg] = React.useState("")
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
       setHasError(false)
+      setErrorMsg("")
     }
   }, [url])
 
@@ -46,7 +48,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg') || targetUrl.toLowerCase().includes('.mp4')) {
+    const lowUrl = targetUrl.toLowerCase();
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg') || lowUrl.includes('.mp4') || lowUrl.includes('stream')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
@@ -54,54 +57,63 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl) return;
+    if (!videoRef.current || !processedUrl || (type !== 'hls' && type !== 'video')) return;
 
     const video = videoRef.current;
+    let hls: any = null;
     
-    if (type === 'hls' || type === 'video') {
-      let hls: any = null;
-      
-      const initHls = () => {
+    const initHls = () => {
+      // @ts-ignore
+      if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
-          // @ts-ignore
-          hls = new window.Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 90,
-            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-          });
-          hls.loadSource(processedUrl);
-          hls.attachMedia(video);
-          hls.on('hlsManifestParsed', () => {
-            video.play().catch(() => {});
-            setLoading(false);
-          });
-          hls.on('hlsError', (event: any, data: any) => {
-            if (data.fatal) {
-              setHasError(true);
-              setLoading(false);
-              hls.destroy();
-            }
-          });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl') || type === 'video') {
-          video.src = processedUrl;
+        hls = new window.Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          manifestLoadingMaxRetry: 4,
+          levelLoadingMaxRetry: 4,
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+        });
+        hls.loadSource(processedUrl);
+        hls.attachMedia(video);
+        hls.on('hlsManifestParsed', () => {
           video.play().catch(() => {});
           setLoading(false);
-        }
-      };
-      initHls();
-      return () => { if (hls) hls.destroy(); };
-    } 
+          setHasError(false);
+        });
+        hls.on('hlsError', (event: any, data: any) => {
+          if (data.fatal) {
+            console.error("HLS FATAL ERROR:", data);
+            setHasError(true);
+            setLoading(false);
+            setErrorMsg("ERRO DE SINTONIZAÇÃO: O sinal pode estar offline ou bloqueado pelo navegador.");
+            hls.destroy();
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = processedUrl;
+        video.play().catch(() => {});
+        setLoading(false);
+      } else {
+        // Fallback para video direto
+        video.src = processedUrl;
+        video.play().catch(() => {});
+        setLoading(false);
+      }
+    };
+    initHls();
+    return () => { if (hls) hls.destroy(); };
   }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
+
+  const isHttpOnHttps = typeof window !== 'undefined' && window.location.protocol === 'https:' && processedUrl?.startsWith('http:');
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra Ativo</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v16 Ativo</span>
       </div>
 
       {loading && !hasError && (
@@ -118,6 +130,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           autoPlay 
           muted={isMuted} 
           playsInline
+          crossOrigin="anonymous"
           className="h-full w-full object-contain relative z-10" 
           onLoadedData={() => { setLoading(false); setHasError(false); }}
           onError={() => { setLoading(false); setHasError(true); }}
@@ -136,12 +149,18 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO PELO NAVEGADOR</h3>
-           <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Mestre Léo, o navegador bloqueou este sinal HTTP por segurança. Clique no botão abaixo para abrir o sintonizador forçado.
-           </p>
+           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
+           {isHttpOnHttps ? (
+             <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
+               Mestre Léo, o navegador bloqueou este sinal HTTP por segurança (Mixed Content). Use o nosso App de IPTV ou tente o sintonizador forçado abaixo.
+             </p>
+           ) : (
+             <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
+               Não foi possível sintonizar este sinal. O link pode estar fora do ar ou o formato não é suportado pelo seu navegador atual.
+             </p>
+           )}
            <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR AGORA <PlayCircle className="ml-2 h-6 w-6" /></a>
+              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR FORÇADO <PlayCircle className="ml-2 h-6 w-6" /></a>
            </Button>
            <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black hover:text-primary">
              <RefreshCcw className="mr-2 h-4 w-4" /> RECONECTAR
@@ -152,9 +171,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-auto">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
-          <button className="h-14 w-14 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all shadow-2xl" onClick={() => setIsMuted(!isMuted)}>
-            {isMuted ? <VolumeX className="h-8 w-8 text-destructive" /> : <Volume2 className="h-8 w-8 text-primary" />}
-          </button>
+          <div className="flex gap-2">
+            <button className="h-12 w-12 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all shadow-2xl" onClick={() => setIsMuted(!isMuted)}>
+              {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
+            </button>
+          </div>
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-end pointer-events-auto">

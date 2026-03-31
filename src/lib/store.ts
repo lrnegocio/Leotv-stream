@@ -25,6 +25,7 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl?: string; 
+  directStreamUrl?: string; // LINK SECUNDÁRIO RESTAURADO
   imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
@@ -95,6 +96,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       genre: item.genre,
       isRestricted: item.isRestricted,
       streamUrl: item.streamUrl,
+      directStreamUrl: item.directStreamUrl, // MAPEADO
       imageUrl: item.imageUrl,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
@@ -115,6 +117,7 @@ export async function saveContent(item: ContentItem) {
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
       "isRestricted": item.isRestricted || false,
       "streamUrl": item.streamUrl || null,
+      "directStreamUrl": item.directStreamUrl || null, // SALVAMENTO DO LINK SECUNDÁRIO
       "imageUrl": item.imageUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
@@ -122,10 +125,7 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase Save:", error);
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e) { 
     return false; 
@@ -145,6 +145,7 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
       genre: data.genre,
       isRestricted: data.isRestricted,
       streamUrl: data.streamUrl,
+      directStreamUrl: data.directStreamUrl, // RETORNO DO LINK SECUNDÁRIO
       imageUrl: data.imageUrl,
       episodes: data.episodes || [],
       seasons: data.seasons || [],
@@ -201,6 +202,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
           type: 'channel',
           genre: 'LÉO TV AO VIVO',
           "streamUrl": nextLine,
+          "directStreamUrl": nextLine,
           created_at: new Date().toISOString()
         });
         count++;
