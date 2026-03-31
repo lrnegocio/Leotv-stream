@@ -17,13 +17,13 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // LOGIN MASTER LÉO - BUSCA BLINDADA POR PIN
+    // LOGIN MASTER LÉO - BUSCA BLINDADA POR PIN NO NOVO BANCO
     let activeUser: any = null;
 
     if (username === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
-      const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
+      const { data, error } = await supabase.from('users').select('*').eq('pin', username.trim()).maybeSingle();
       if (error || !data) return NextResponse.json({ user_info: { auth: 0, message: "PIN NAO LOCALIZADO" } }, { headers });
       if (data["isBlocked"]) return NextResponse.json({ user_info: { auth: 0, message: "ACESSO SUSPENSO" } }, { headers });
       activeUser = data;

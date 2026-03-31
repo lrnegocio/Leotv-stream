@@ -1,14 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * CONEXÃO EXCLUSIVA LÉO TV - NOVO PROJETO MASTER
- * URL: veilblctswnnyzidirrf.supabase.co
+ * ISOLAMENTO TOTAL MESTRE LÉO - VERSÃO 253.0
+ * Forçamos os dados do NOVO PROJETO diretamente aqui para garantir que
+ * nenhum resquício do projeto antigo (que sumiu) interfira na rede.
  */
 const supabaseUrl = 'https://veilblctswnnyzidirrf.supabase.co'; 
-
-/**
- * CHAVE PÚBLICA ATUALIZADA
- */
 const supabaseAnonKey = 'sb_publishable_OCkZfnj39jlsA7vwFukuEA_QV3xHRU-'; 
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

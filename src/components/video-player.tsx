@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, ExternalLink, AlertTriangle } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,13 +15,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
-  const [error, setError] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
-      setError(false)
     }
   }, [url])
 
@@ -29,7 +27,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM (Motor Hidra v27)
+    // DETECÇÃO DE IMAGEM (Motor Hidra v28)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -47,24 +45,23 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // FORMATOS IPTV MASTER
+    // FORMATOS IPTV MASTER (MPEG-TS / HLS)
     const lowUrl = targetUrl.toLowerCase();
     if (lowUrl.includes('.m3u8')) return { processedUrl: targetUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: targetUrl, type: 'mpegts' }
-    if (lowUrl.includes('.mp4') || lowUrl.includes('.mpeg') || lowUrl.includes('.mkv')) return { processedUrl: targetUrl, type: 'video' }
-
+    
     return { processedUrl: targetUrl, type: 'video' }
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || (type === 'image' || type === 'youtube')) return;
+    if (!videoRef.current || !processedUrl || type === 'image' || type === 'youtube') return;
 
     const video = videoRef.current;
     let hls: any = null;
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
-      // MOTOR HLS (Hidra v27)
+      // MOTOR HLS (Hidra v28)
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -74,7 +71,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls.on('hlsManifestParsed', () => { video.play().catch(() => {}); setLoading(false); });
         hls.on('hlsError', () => setLoading(false));
       } 
-      // MOTOR MPEG-TS (Igual ao Supremo Player)
+      // MOTOR MPEG-TS (Igual ao player Profissional)
       // @ts-ignore
       else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
@@ -119,15 +116,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       ) : type === 'youtube' ? (
         <iframe key={processedUrl} src={processedUrl!} className="h-full w-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
       ) : (
-        <video ref={videoRef} key={processedUrl} autoPlay muted={isMuted} playsInline crossOrigin="anonymous" className="h-full w-full object-contain" onLoadedData={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
+        <video ref={videoRef} key={processedUrl} autoPlay muted={isMuted} playsInline crossOrigin="anonymous" className="h-full w-full object-contain" onLoadedData={() => setLoading(false)} onError={() => setLoading(false)} />
       )}
       
-      {/* OVERLAY DE COMANDO MASTER */}
+      {/* OVERLAY MASTER */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-auto">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
-          </div>
+          <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
           <button className="h-12 w-12 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all shadow-2xl" onClick={() => setIsMuted(!isMuted)}>
             {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}
           </button>
@@ -135,7 +130,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px] shadow-lg shadow-primary/20" onClick={() => window.open(url, '_blank')}>
+             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(url, '_blank')}>
                <ExternalLink className="mr-2 h-4 w-4" /> SINTONIZAR DIRETAMENTE
              </Button>
           </div>

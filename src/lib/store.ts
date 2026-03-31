@@ -108,7 +108,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
-    // BLINDAGEM SQL SNIPER: Usa nomes de colunas exatos com aspas duplas
+    // BLINDAGEM SQL CASE-SENSITIVE: Usamos nomes exatos com aspas duplas
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
@@ -166,20 +166,6 @@ export async function bulkRemoveContent(ids: string[]) {
   try {
     const { error } = await supabase.from('content').delete().in('id', ids);
     return !error;
-  } catch (e) { return false; }
-}
-
-export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
-    return data?.value || { parentalPin: "1234" };
-  } catch (e) { return { parentalPin: "1234" }; }
-}
-
-export async function updateGlobalSettings(val: any) {
-  try {
-    await supabase.from('settings').upsert({ key: 'global', value: val });
-    return true;
   } catch (e) { return false; }
 }
 
