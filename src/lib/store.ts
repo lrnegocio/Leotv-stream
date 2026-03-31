@@ -109,7 +109,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
-    // SINTONIZAÇÃO SQL CASE-SENSITIVE: Usando aspas para colunas do PostgreSQL
+    // SINTONIZAÇÃO SQL CASE-SENSITIVE: Usando exatamente as aspas do seu SQL
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
@@ -337,6 +337,7 @@ export async function saveReseller(res: Reseller) {
       "birthDate": res.birthDate || null,
       email: res.email,
       phone: res.phone,
+      phone_whatsapp: res.phone,
       cpf: res.cpf
     };
     const { error } = await supabase.from('resellers').upsert(payload);
