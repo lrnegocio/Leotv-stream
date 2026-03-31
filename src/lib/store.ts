@@ -69,7 +69,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// LIMPEZA SNIPER: Remove aspas, pontos e números iniciais
 export const cleanName = (name: string) => {
   if (!name) return "";
   return name
@@ -91,7 +90,7 @@ export const generateSafeId = (name: string) => {
     .replace(/_+/g, '_')
     .trim()
     .substring(0, 100);
-  return "leo_" + clean;
+  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 5);
 };
 
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -146,22 +145,9 @@ export async function getTotalContentCount(): Promise<number> {
 
 export async function getCategoryCount(genre: string): Promise<number> {
   try {
-    const { data, error } = await supabase.from('content').select('episodes, seasons').eq('genre', genre.toUpperCase());
-    if (error || !data) return 0;
-    
-    let total = 0;
-    data.forEach(item => {
-      if (item.episodes && Array.isArray(item.episodes) && item.episodes.length > 0) {
-        total += item.episodes.length;
-      } else if (item.seasons && Array.isArray(item.seasons)) {
-        item.seasons.forEach((s: any) => {
-          if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
-        });
-      } else {
-        total += 1;
-      }
-    });
-    return total;
+    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
+    if (error) throw error;
+    return count || 0;
   } catch (e) { return 0; }
 }
 
@@ -213,15 +199,21 @@ export async function clearAllM3UContent() {
 
 export async function getGlobalSettings() {
   try {
-    const { data } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
+    const { data, error } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
+    if (error) throw error;
     return data?.value || { parentalPin: "1234" };
-  } catch (e) { return { parentalPin: "1234" }; }
+  } catch (e) { 
+    return { parentalPin: "1234" }; 
+  }
 }
 
 export async function updateGlobalSettings(val: any) {
   try {
     await supabase.from('settings').upsert({ key: 'global', value: val });
-  } catch (e) { }
+    return true;
+  } catch (e) { 
+    return false;
+  }
 }
 
 export async function processM3UImport(m3u: string, onProgress: (msg: string) => void) {
@@ -231,6 +223,8 @@ export async function processM3UImport(m3u: string, onProgress: (msg: string) =>
     if (lines[i].startsWith('#EXTINF')) {
       const info = lines[i];
       const url = lines[i+1]?.trim();
+      if (!url) continue;
+
       const titleMatch = info.match(/,(.*)$/);
       const title = titleMatch ? cleanName(titleMatch[1]) : "CANAL M3U";
       const groupMatch = info.match(/group-title="(.*?)"/);
@@ -252,36 +246,6 @@ export async function processM3UImport(m3u: string, onProgress: (msg: string) =>
       });
       count++;
       if (count % 50 === 0) onProgress(`Sincronizando ${count} sinais...`);
-    }
-  }
-  return { success: count };
-}
-
-export async function processHTMLImport(html: string, onProgress: (msg: string) => void) {
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
-  const links = temp.querySelectorAll('a.btn-stream');
-  let count = 0;
-  
-  for (const link of links) {
-    const titleElem = link.querySelector('.col');
-    const imgElem = link.querySelector('img');
-    const title = titleElem ? cleanName(titleElem.textContent?.replace(/^\d+/, '') || "") : "";
-    const img = imgElem ? imgElem.getAttribute('src') : "";
-
-    if (title) {
-      await saveContent({
-        id: generateSafeId(title),
-        title,
-        type: 'channel',
-        description: 'Extraído via Sniper HTML',
-        genre: 'LÉO TV AO VIVO',
-        isRestricted: false,
-        imageUrl: img || "",
-        created_at: new Date().toISOString()
-      });
-      count++;
-      if (count % 10 === 0) onProgress(`Sniper extraindo: ${count} canais...`);
     }
   }
   return { success: count };

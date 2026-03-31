@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles, Zap } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, PlayCircle, Radio, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -42,9 +42,7 @@ export default function HomeContent() {
   const q = searchParams.get('q') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
-    // FIX DE SUMIÇO: Só mostra o loading se a lista estiver vazia
-    if (content.length === 0) setLoading(true);
-    
+    setLoading(true);
     try {
       const session = localStorage.getItem("user_session");
       if (!session) { router.push("/login"); return; }
@@ -52,7 +50,7 @@ export default function HomeContent() {
       setUser(currentUser);
 
       const settings = await getGlobalSettings();
-      setParentalPin(settings.parentalPin);
+      setParentalPin(settings.parentalPin || "1234");
 
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       const data = await getRemoteContent(false, queryStr, targetGenre);
@@ -65,8 +63,12 @@ export default function HomeContent() {
         }
         setCatCounts(counts);
       }
-    } catch (err) { } finally { setLoading(false); }
-  }, [router, content.length]);
+    } catch (err) { 
+      console.error("Erro no HomeContent:", err);
+    } finally { 
+      setLoading(false); 
+    }
+  }, [router]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
@@ -105,7 +107,7 @@ export default function HomeContent() {
     }
   };
 
-  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Canais...</p></div>
+  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Sinais...</p></div>
 
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">

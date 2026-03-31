@@ -35,24 +35,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // DETECÇÃO HLS (IPTV DIRETO)
     const isDirectHls = targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4');
     
-    // DETECÇÃO SINAIS PROTEGIDOS (LIBERADOS SEM SANDBOX PARA FUNCIONAR DIRETO)
+    // DETECÇÃO SINAIS PROTEGIDOS
     const isProtected = targetUrl.includes('rdcanais.com') || 
                         targetUrl.includes('reidoscanais.ooo') || 
                         targetUrl.includes('isaocorp') || 
-                        targetUrl.includes('cloudecast');
+                        targetUrl.includes('cloudecast') ||
+                        targetUrl.includes('bhtelecom');
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isHls: false, isIframe: true, isNoSandbox: false 
-      }
-    }
-
-    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
-      const id = targetUrl.includes('/video/') ? targetUrl.split('/video/')[1]?.split('?')[0] : targetUrl.split('dai.ly/')[1]?.split('?')[0];
-      return { 
-        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`,
         isHls: false, isIframe: true, isNoSandbox: false 
       }
     }
@@ -91,6 +84,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
         hls.on('hlsError', (event: any, data: any) => {
           if (data.fatal) {
+            console.error("HLS Error:", data);
             setHasError(true);
             setLoading(false);
           }
@@ -102,6 +96,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setLoading(false);
         });
       } else {
+        // Fallback para players que não carregaram o script Hls.js a tempo
         setTimeout(initHls, 1000);
       }
     };
@@ -151,7 +146,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; picture-in-picture"
-          // MESTRE LÉO: Sandbox removido para links protegidos para rodar direto sem erro
           sandbox={isNoSandbox ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"}
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
