@@ -109,7 +109,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
-    // SINTONIZAÇÃO SQL MASTER: Usa as aspas exatas para colunas case-sensitive
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),

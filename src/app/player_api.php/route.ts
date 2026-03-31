@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // LOGIN MESTRE LÉO & PINs BLINDADOS
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
@@ -32,7 +31,6 @@ export async function GET(req: NextRequest) {
         maxScreens: 999 
       };
     } else {
-      // BUSCA REAL NO BANCO MASTER USANDO PIN COMO USERNAME
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -43,7 +41,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       }
 
-      // Verificação de bloqueio usando o nome exato da coluna SQL
       if (data["isBlocked"]) {
         return NextResponse.json({ user_info: { auth: 0, message: "Acesso Suspenso" } }, { headers });
       }
@@ -56,7 +53,6 @@ export async function GET(req: NextRequest) {
       ? Math.floor(new Date(activeUser["expiryDate"]).getTime() / 1000).toString() 
       : "1999999999";
 
-    // LOGIN BÁSICO (INFO DO SERVIDOR)
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -81,7 +77,6 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // CARREGAMENTO DE CONTEÚDO PARA IPTV
     const content = await getRemoteContent(true);
 
     if (action === 'get_live_categories') {
@@ -101,7 +96,6 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
-      // Filtragem Adulta
       if (!activeUser["isAdultEnabled"]) items = items.filter(i => !i["isRestricted"]);
       
       return NextResponse.json(items.map(i => ({
