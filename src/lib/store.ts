@@ -94,10 +94,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       type: item.type,
       description: item.description,
       genre: item.genre,
-      isRestricted: item.isRestricted,
-      streamUrl: item.streamUrl,
-      directStreamUrl: item.directStreamUrl,
-      imageUrl: item.imageUrl,
+      isRestricted: item["isRestricted"],
+      streamUrl: item["streamUrl"],
+      directStreamUrl: item["directStreamUrl"],
+      imageUrl: item["imageUrl"],
       episodes: item.episodes || [],
       seasons: item.seasons || [],
       created_at: item.created_at
@@ -109,6 +109,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
+    // SINTONIZAÇÃO SQL CASE-SENSITIVE: Usando aspas para colunas do PostgreSQL
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
@@ -127,8 +128,8 @@ export async function saveContent(item: ContentItem) {
     const { error } = await supabase.from('content').upsert(payload);
     if (error) throw error;
     return true;
-  } catch (e) { 
-    console.error("Erro ao salvar no Supabase:", e);
+  } catch (e: any) { 
+    console.error("Erro ao salvar no Supabase:", e.message || e);
     return false; 
   }
 }
@@ -144,10 +145,10 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
       type: data.type,
       description: data.description,
       genre: data.genre,
-      isRestricted: data.isRestricted,
-      streamUrl: data.streamUrl,
-      directStreamUrl: data.directStreamUrl,
-      imageUrl: data.imageUrl,
+      isRestricted: data["isRestricted"],
+      streamUrl: data["streamUrl"],
+      directStreamUrl: data["directStreamUrl"],
+      imageUrl: data["imageUrl"],
       episodes: data.episodes || [],
       seasons: data.seasons || [],
       created_at: data.created_at
@@ -261,14 +262,14 @@ export async function getRemoteUsers(): Promise<User[]> {
       id: u.id,
       pin: u.pin,
       role: u.role,
-      subscriptionTier: u.subscriptionTier,
-      expiryDate: u.expiryDate,
-      maxScreens: u.maxScreens,
-      activeDevices: u.activeDevices || [],
-      isBlocked: u.isBlocked,
-      isAdultEnabled: u.isAdultEnabled,
-      resellerId: u.resellerId,
-      activatedAt: u.activatedAt
+      subscriptionTier: u["subscriptionTier"],
+      expiryDate: u["expiryDate"],
+      maxScreens: u["maxScreens"],
+      activeDevices: u["activeDevices"] || [],
+      isBlocked: u["isBlocked"],
+      isAdultEnabled: u["isAdultEnabled"],
+      resellerId: u["resellerId"],
+      activatedAt: u["activatedAt"]
     }));
   } catch (e) { return []; }
 }
@@ -279,11 +280,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO OU NÃO CADASTRADO." };
-    if (user.isBlocked) return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
+    if (user["isBlocked"]) return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
 
-    let devices = user.activeDevices || [];
+    let devices = user["activeDevices"] || [];
     if (!devices.some((d: any) => d.id === deviceId)) {
-      if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO NO PLANO." };
+      if (devices.length >= user["maxScreens"]) return { error: "LIMITE DE TELAS EXCEDIDO NO PLANO." };
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
@@ -291,17 +292,17 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       id: user.id,
       pin: user.pin,
       role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate,
-      maxScreens: user.maxScreens,
+      subscriptionTier: user["subscriptionTier"],
+      expiryDate: user["expiryDate"],
+      maxScreens: user["maxScreens"],
       activeDevices: devices,
-      isBlocked: user.isBlocked,
-      isAdultEnabled: user.isAdultEnabled,
-      resellerId: user.resellerId,
-      activatedAt: user.activatedAt || new Date().toISOString()
+      isBlocked: user["isBlocked"],
+      isAdultEnabled: user["isAdultEnabled"],
+      resellerId: user["resellerId"],
+      activatedAt: user["activatedAt"] || new Date().toISOString()
     };
 
-    if (!user.activatedAt) {
+    if (!user["activatedAt"]) {
       if (updatedUser.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
       else if (updatedUser.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
     }
@@ -314,17 +315,29 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 export async function getRemoteResellers(): Promise<Reseller[]> {
   try {
     const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
+    return (data || []).map(r => ({
+      ...r,
+      isBlocked: r["isBlocked"],
+      totalSold: r["totalSold"],
+      birthDate: r["birthDate"]
+    }));
   } catch (e) { return []; }
 }
 
 export async function saveReseller(res: Reseller) {
   try {
     const payload = {
-      ...res,
+      id: res.id,
+      name: res.name,
+      username: res.username,
+      password: res.password,
+      credits: res.credits,
       "totalSold": res.totalSold || 0,
       "isBlocked": res.isBlocked || false,
-      "birthDate": res.birthDate || null
+      "birthDate": res.birthDate || null,
+      email: res.email,
+      phone: res.phone,
+      cpf: res.cpf
     };
     const { error } = await supabase.from('resellers').upsert(payload);
     return !error;
@@ -342,8 +355,13 @@ export async function validateResellerLogin(username: string, password: string):
   try {
     const { data, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', password).maybeSingle();
     if (error || !data) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
-    if (data.isBlocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
-    return { reseller: data };
+    if (data["isBlocked"]) return { error: "ACESSO DE REVENDA SUSPENSO." };
+    return { reseller: {
+      ...data,
+      isBlocked: data["isBlocked"],
+      totalSold: data["totalSold"],
+      birthDate: data["birthDate"]
+    } };
   } catch (e) { return { error: "ERRO DE CONEXÃO MASTER." }; }
 }
 
