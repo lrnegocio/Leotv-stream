@@ -19,9 +19,10 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
+    // Se já estiver instalado ou em modo standalone, não mostra
     const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
-      const timer = setTimeout(() => setIsVisible(true), 1500)
+      const timer = setTimeout(() => setIsVisible(true), 2000)
       return () => clearTimeout(timer)
     }
 
@@ -38,9 +39,10 @@ export function PwaInstall() {
         toast({ title: "INSTALANDO...", description: "Léo TV está sendo fixado no seu aparelho." })
       }
     } else {
+      // Se o prompt sumiu, orienta o manual mas tenta o disparo
       toast({ 
         title: "INSTALAR AGORA", 
-        description: "Use o menu do seu navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
+        description: "Use o menu do navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
       });
     }
   }
@@ -56,11 +58,11 @@ export function PwaInstall() {
           </div>
           <div>
             <p className="text-white font-black uppercase text-[12px] italic">Léo TV</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Instalar App</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">App Oficial</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg">
+          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg active:scale-95 transition-transform">
             INSTALAR AGORA
           </Button>
           <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white transition-colors p-1">

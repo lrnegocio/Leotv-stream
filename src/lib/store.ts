@@ -193,48 +193,6 @@ export async function updateGlobalSettings(val: any) {
   }
 }
 
-export async function processM3UImport(m3u: string, onProgress: (msg: string) => void) {
-  const lines = m3u.split('\n');
-  let count = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith('#EXTINF')) {
-      const info = lines[i];
-      const url = lines[i+1]?.trim();
-      if (!url) continue;
-
-      const titleMatch = info.match(/,(.*)$/);
-      const title = titleMatch ? cleanName(titleMatch[1]) : "CANAL M3U";
-      const groupMatch = info.match(/group-title="(.*?)"/);
-      const genre = groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO";
-      const logoMatch = info.match(/tvg-logo="(.*?)"/);
-      const logo = logoMatch ? logoMatch[1] : "";
-
-      await saveContent({
-        id: generateSafeId(title),
-        title,
-        type: 'channel',
-        description: 'Sinal Master M3U',
-        genre,
-        isRestricted: genre.includes('ADULT') || genre.includes('XXX') || genre.includes('18+'),
-        streamUrl: url,
-        directStreamUrl: url,
-        imageUrl: logo,
-        created_at: new Date().toISOString()
-      });
-      count++;
-      if (count % 50 === 0) onProgress(`Sincronizando ${count} sinais...`);
-    }
-  }
-  return { success: count };
-}
-
-export async function clearAllM3UContent() {
-  try {
-    const { error } = await supabase.from('content').delete().neq('id', 'admin_placeholder');
-    return !error;
-  } catch (e) { return false; }
-}
-
 export async function saveUser(user: User) {
   try {
     const payload = {
@@ -372,18 +330,6 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
   if (tier === 'lifetime') expiry = 'VITALÍCIO';
   
   return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📅 *VALIDADE:* ${expiry}\n📺 *TELAS:* ${screens}\n\n🌐 *ACESSO:* ${url}\n\n_Suporte Master Léo Tech_`;
-}
-
-export async function generateM3UPlaylist(pin: string) {
-  const content = await getRemoteContent(true);
-  let m3u = "#EXTM3U\n";
-  content.forEach(item => {
-    const streamUrl = item.directStreamUrl || item.streamUrl;
-    if (streamUrl) {
-      m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre}",${item.title}\n${streamUrl}\n`;
-    }
-  });
-  return m3u;
 }
 
 export const generateRandomPin = (len = 11) => Math.random().toString().substring(2, 2+len);

@@ -1,24 +1,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getRemoteContent, ContentItem } from '@/lib/store';
+import { getRemoteContent } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
-
-async function getFastContent() {
-  try {
-    const data = await getRemoteContent(true);
-    return data;
-  } catch (e) {
-    return [];
-  }
-}
 
 export async function GET(req: NextRequest) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60', 
   };
 
   try {
@@ -28,12 +18,14 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
+    // BUSCA DE USUÁRIO MASTER
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
     if (isMaster) {
       activeUser = { pin: 'adm77x2p', is_blocked: false, is_adult_enabled: true, expiry_date: null, subscription_tier: 'lifetime', max_screens: 999 };
     } else {
+      // FIX MESTRE LÉO: Supabase retorna colunas snake_case. Mapeando corretamente para o Xtream.
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
       if (error || !data || data.is_blocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       activeUser = data;
@@ -64,12 +56,12 @@ export async function GET(req: NextRequest) {
           rtmp_port: "80",
           timezone: "America/Sao_Paulo",
           timestamp: Math.floor(Date.now() / 1000),
-          name: "Léo Tv Master XUI Server"
+          name: "Léo Tv Master Server"
         }
       }, { headers });
     }
 
-    const content = await getFastContent();
+    const content = await getRemoteContent(true);
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => (i.genre || "GERAL").toUpperCase()))).sort();

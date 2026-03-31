@@ -24,9 +24,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (url) {
       setLoading(true)
       setHasError(false)
-      // Detecta Mixed Content (HTTP em HTTPS)
+      // BLINDAGEM MESTRE: Detecta Mixed Content (HTTP em site HTTPS)
+      // Navegadores como Chrome e TVs bloqueiam HTTP dentro de HTTPS.
       if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
         setIsMixedContent(true)
+        setLoading(false)
       } else {
         setIsMixedContent(false)
       }
@@ -114,10 +116,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Léo Hidra</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v9</span>
       </div>
 
-      {(loading && !hasError && !isMixedContent) && (
+      {loading && !hasError && !isMixedContent && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL Master...</span>
@@ -149,16 +151,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {(hasError || isMixedContent) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL PROTEGIDO</h3>
-           <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed">
+           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO PELO NAVEGADOR</h3>
+           <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
              {isMixedContent 
-               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS do seu dispositivo.\nAbra o sintonizador externo para assistir."
-               : "O sinal original bloqueou o player interno ou está temporariamente offline.\nTente abrir o link master."
+               ? "Este sinal usa protocolo HTTP (Não Seguro) e seu navegador bloqueou a transmissão. Clique no botão abaixo para sintonizar via player externo."
+               : "O sinal original bloqueou o player interno ou está temporariamente offline. Tente abrir o link master."
              }
            </p>
            <div className="flex gap-2">
-             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6 shadow-xl shadow-primary/20"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL MASTER</Button>
-             <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
+             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6 shadow-xl shadow-primary/20">
+               <ExternalLink className="mr-2 h-4 w-4" /> SINTONIZAR VIA PLAYER EXTERNO
+             </Button>
+             <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6">
+               <RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR
+             </Button>
            </div>
         </div>
       )}
