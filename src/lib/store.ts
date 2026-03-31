@@ -69,9 +69,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * LIMPEZA SNIPER DE NOMES: Remove aspas, pontos, vírgulas e números iniciais.
- */
 export const cleanName = (name: string) => {
   if (!name) return "";
   return name
@@ -83,9 +80,6 @@ export const cleanName = (name: string) => {
     .toUpperCase();
 };
 
-/**
- * ID DETERMINÍSTICO: Evita duplicidade e garante estabilidade no banco.
- */
 export const generateSafeId = (name: string) => {
   if (!name) return "leo_" + Date.now();
   const clean = name.toString().toLowerCase()
@@ -105,7 +99,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (searchQuery) {
       query = query.ilike('title', `%${searchQuery}%`);
     } else if (categoryGenre) {
-      // Filtro por gênero padronizado
       query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
@@ -113,9 +106,9 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       .order('created_at', { ascending: false })
       .limit(searchQuery ? 2000 : 1000);
 
-    if (error || !rawData) return [];
+    if (error) throw error;
 
-    return rawData.map(item => ({
+    return (rawData || []).map(item => ({
       ...item,
       isRestricted: item.is_restricted,
       streamUrl: item.stream_url,
@@ -123,6 +116,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       imageUrl: item.image_url,
     }));
   } catch (e) { 
+    console.error("Erro ao carregar canais:", e);
     return []; 
   }
 }
@@ -143,7 +137,8 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
 
 export async function getTotalContentCount(): Promise<number> {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    if (error) throw error;
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -176,7 +171,7 @@ export async function saveContent(item: ContentItem) {
       title: cleanName(item.title),
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
-      genre: (item.genre || "LÉO TV CANAIS AO VIVO").toUpperCase(),
+      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
       is_restricted: item.isRestricted || false,
       image_url: item.imageUrl || null,
       stream_url: item.streamUrl || null,
@@ -187,8 +182,13 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    return !error;
+    if (error) {
+      console.error("Erro Supabase:", error);
+      return false;
+    }
+    return true;
   } catch (e) { 
+    console.error("Erro Fatal ao Salvar:", e);
     return false; 
   }
 }
@@ -203,11 +203,8 @@ export async function removeContent(id: string) {
 export async function bulkRemoveContent(ids: string[]) {
   if (!ids || ids.length === 0) return true;
   try {
-    for (let i = 0; i < ids.length; i += 50) {
-      const batch = ids.slice(i, i + 50);
-      await supabase.from('content').delete().in('id', batch);
-    }
-    return true;
+    const { error } = await supabase.from('content').delete().in('id', ids);
+    return !error;
   } catch (e) { return false; }
 }
 
@@ -335,11 +332,11 @@ export async function validateResellerLogin(username: string, password: string):
 
 export async function processHTMLImport(html: string, onProgress?: (m: string) => void) {
   const items: any[] = [];
-  const div = document.createElement('div');
-  div.innerHTML = html;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
 
-  const links = div.querySelectorAll('a.btn-stream');
-  onProgress?.(`Iniciando Sniper Brave...`);
+  const links = doc.querySelectorAll('a.btn-stream');
+  onProgress?.(`Iniciando Sniper Supremo...`);
 
   links.forEach((link, idx) => {
     const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
@@ -353,10 +350,10 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
       let genre = "LÉO TV AO VIVO";
       const upperTitle = title.toUpperCase();
       
-      if (upperTitle.includes('DORAMA') || upperTitle.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
+      if (upperTitle.includes('DORAMA')) genre = "LÉO TV DORAMAS";
       else if (upperTitle.includes('18+') || upperTitle.includes('XXX') || upperTitle.includes('ADULTO')) genre = "LÉO TV ADULTOS";
       else if (upperTitle.includes('FILME') || upperTitle.includes('MOVIE')) genre = "LÉO TV FILMES";
-      else if (upperTitle.includes('SERIE') || upperTitle.includes('SERIADO') || upperTitle.includes('SEASON') || upperTitle.includes('EP')) genre = "LÉO TV SERIES";
+      else if (upperTitle.includes('SERIE') || upperTitle.includes('SEASON') || upperTitle.includes('EP')) genre = "LÉO TV SERIES";
       else if (upperTitle.includes('RADIO')) genre = "LÉO TV RÁDIOS";
       else if (upperTitle.includes('MUSICA') || upperTitle.includes('CLIP')) genre = "LÉO TV MUSICAS";
       else if (upperTitle.includes('NOVELA')) genre = "LÉO TV NOVELAS";

@@ -3,15 +3,13 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Link as LinkIcon, Zap } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
-import { generateChannelImage } from "@/ai/flows/generate-channel-image-flow"
 import { toast } from "@/hooks/use-toast"
 import { saveContent, Season, Episode, ContentType, cleanName } from "@/lib/store"
 import Link from "next/link"
@@ -20,13 +18,11 @@ import Image from "next/image"
 function NewContentForm() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
-  const [generating, setGenerating] = React.useState(false)
-  const [generatingImage, setGeneratingImage] = React.useState(false)
   
   const [formData, setFormData] = React.useState({
     title: "",
     type: "channel" as ContentType,
-    genre: "LÉO TV AO VIVO", // Padronizado com Home
+    genre: "LÉO TV AO VIVO", 
     description: "",
     streamUrl: "",
     directStreamUrl: "",
@@ -41,7 +37,7 @@ function NewContentForm() {
     e.preventDefault()
     setLoading(true)
     
-    // GARANTIA DE DATA DE CRIAÇÃO E NOME LIMPO
+    // DATA DE CRIAÇÃO OBRIGATÓRIA PARA FIXAR O CANAL NO TOPO
     const success = await saveContent({
       id: "", 
       title: cleanName(formData.title),
@@ -58,11 +54,11 @@ function NewContentForm() {
     })
 
     if (success) {
-      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso e fixado na lista." })
+      toast({ title: "Conteúdo Adicionado", description: "O sinal foi fixado na sua biblioteca." })
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique seu banco Supabase." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique o banco de dados." })
     }
   }
 
@@ -137,6 +133,9 @@ function NewContentForm() {
                     <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
+                    <SelectItem value="LÉO TV MUSICAS">LÉO TV MUSICAS</SelectItem>
+                    <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -151,7 +150,7 @@ function NewContentForm() {
           {showMainStreamUrl && (
             <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
               <div className="space-y-2">
-                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Player)</h3>
+                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Iframe / Sigma)</h3>
                 <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
               </div>
               <div className="space-y-2">
@@ -167,7 +166,7 @@ function NewContentForm() {
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><ListOrdered className="h-4 w-4" /> Episódios</h3>
                 <Button type="button" size="sm" onClick={() => addEpisode()} className="bg-primary/10 text-primary"><Plus className="h-4 w-4 mr-1" /> Add Ep</Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                 {episodes.map((ep, idx) => (
                   <div key={ep.id} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-2">
                     <div className="flex justify-between items-center">
@@ -196,38 +195,40 @@ function NewContentForm() {
                 <h3 className="font-bold uppercase text-xs flex items-center gap-2"><Layers className="h-4 w-4" /> Temporadas</h3>
                 <Button type="button" size="sm" onClick={addSeason} className="bg-primary/10 text-primary"><Plus className="h-4 w-4 mr-1" /> Nova Temp</Button>
               </div>
-              {seasons.map((season, sIdx) => (
-                <div key={season.id} className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-black uppercase text-[10px] text-primary">Temporada {season.number}</h4>
-                    <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)} className="h-7 text-[8px] uppercase font-bold"><Plus className="h-3 w-3 mr-1" /> Add Ep</Button>
-                  </div>
-                  <div className="space-y-4">
-                    {season.episodes.map((ep, eIdx) => (
-                      <div key={ep.id} className="grid gap-2 border-l-2 border-white/5 pl-3">
-                        <div className="flex justify-between items-center">
-                           <span className="text-[9px] font-bold opacity-40 uppercase">Ep {ep.number}</span>
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
-                              const newSeasons = [...seasons];
-                              newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
-                              setSeasons(newSeasons);
-                           }}><Trash2 className="h-3 w-3" /></Button>
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
+                {seasons.map((season, sIdx) => (
+                  <div key={season.id} className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-black uppercase text-[10px] text-primary">Temporada {season.number}</h4>
+                      <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)} className="h-7 text-[8px] uppercase font-bold"><Plus className="h-3 w-3 mr-1" /> Add Ep</Button>
+                    </div>
+                    <div className="space-y-4">
+                      {season.episodes.map((ep, eIdx) => (
+                        <div key={ep.id} className="grid gap-2 border-l-2 border-white/5 pl-3">
+                          <div className="flex justify-between items-center">
+                             <span className="text-[9px] font-bold opacity-40 uppercase">Ep {ep.number}</span>
+                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
+                                const newSeasons = [...seasons];
+                                newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
+                                setSeasons(newSeasons);
+                             }}><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                          <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
+                            const newSeasons = [...seasons];
+                            newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
+                            setSeasons(newSeasons);
+                          }} className="h-8 bg-black/40 text-[9px]" />
+                          <Input placeholder="Link Direto" value={ep.directStreamUrl} onChange={e => {
+                            const newSeasons = [...seasons];
+                            newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
+                            setSeasons(newSeasons);
+                          }} className="h-8 bg-emerald-500/5 text-[9px]" />
                         </div>
-                        <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
-                          const newSeasons = [...seasons];
-                          newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
-                          setSeasons(newSeasons);
-                        }} className="h-8 bg-black/40 text-[9px]" />
-                        <Input placeholder="Link Direto" value={ep.directStreamUrl} onChange={e => {
-                          const newSeasons = [...seasons];
-                          newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
-                          setSeasons(newSeasons);
-                        }} className="h-8 bg-emerald-500/5 text-[9px]" />
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
