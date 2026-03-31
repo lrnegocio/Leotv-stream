@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
 import { generateChannelImage } from "@/ai/flows/generate-channel-image-flow"
 import { toast } from "@/hooks/use-toast"
-import { saveContent, Season, Episode, ContentType } from "@/lib/store"
+import { saveContent, Season, Episode, ContentType, cleanName } from "@/lib/store"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -26,7 +26,7 @@ function NewContentForm() {
   const [formData, setFormData] = React.useState({
     title: "",
     type: "channel" as ContentType,
-    genre: "",
+    genre: "LÉO TV AO VIVO", // Padronizado com Home
     description: "",
     streamUrl: "",
     directStreamUrl: "",
@@ -37,104 +37,55 @@ function NewContentForm() {
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
 
-  const addEpisode = (seasonId?: string) => {
-    if (seasonId) {
-      setSeasons(prev => prev.map(s => {
-        if (s.id === seasonId) {
-          const nextNum = s.episodes.length + 1;
-          const newEp: Episode = {
-            id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
-            title: `Episódio ${nextNum}`,
-            number: nextNum,
-            streamUrl: "",
-            directStreamUrl: ""
-          };
-          return { ...s, episodes: [...s.episodes, newEp] };
-        }
-        return s;
-      }));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    // GARANTIA DE DATA DE CRIAÇÃO E NOME LIMPO
+    const success = await saveContent({
+      id: "", 
+      title: cleanName(formData.title),
+      type: formData.type,
+      genre: formData.genre.toUpperCase(),
+      description: formData.description,
+      isRestricted: formData.isRestricted,
+      streamUrl: formData.streamUrl,
+      directStreamUrl: formData.directStreamUrl,
+      imageUrl: formData.imageUrl,
+      episodes: formData.type === 'series' ? episodes : undefined,
+      seasons: formData.type === 'multi-season' ? seasons : undefined,
+      created_at: new Date().toISOString()
+    })
+
+    if (success) {
+      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso e fixado na lista." })
+      router.push("/admin/content")
     } else {
-      const nextNum = episodes.length + 1;
-      const newEp: Episode = {
-        id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
-        title: `Episódio ${nextNum}`,
-        number: nextNum,
-        streamUrl: "",
-        directStreamUrl: ""
-      };
+      setLoading(false)
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique seu banco Supabase." })
+    }
+  }
+
+  const addEpisode = (seasonId?: string) => {
+    const nextNum = seasonId ? (seasons.find(s => s.id === seasonId)?.episodes.length || 0) + 1 : episodes.length + 1;
+    const newEp: Episode = {
+      id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+      title: `Episódio ${nextNum}`,
+      number: nextNum,
+      streamUrl: "",
+      directStreamUrl: ""
+    };
+
+    if (seasonId) {
+      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s));
+    } else {
       setEpisodes(prev => [...prev, newEp]);
     }
   }
 
   const addSeason = () => {
     const nextNum = seasons.length + 1;
-    const newSeason: Season = {
-      id: "sea_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      number: nextNum,
-      episodes: []
-    }
-    setSeasons(prev => [...prev, newSeason])
-  }
-
-  const generateAI = async () => {
-    if (!formData.title) {
-      toast({ variant: "destructive", title: "Atenção", description: "Insira o título para a IA poder escrever." })
-      return
-    }
-    setGenerating(true)
-    try {
-      const res = await autoGenerateContentDescription({
-        title: formData.title,
-        contentType: formData.type === 'channel' ? 'movie' : formData.type as any,
-      })
-      setFormData(prev => ({ ...prev, description: res.description }))
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro de IA", description: "Verifique sua chave de IA." })
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleGenerateImage = async () => {
-    if (!formData.title || !formData.genre) {
-      toast({ variant: "destructive", title: "Atenção", description: "Preencha título e categoria para gerar a imagem." })
-      return
-    }
-    setGeneratingImage(true)
-    try {
-      const res = await generateChannelImage({
-        title: formData.title,
-        genre: formData.genre,
-      })
-      setFormData(prev => ({ ...prev, imageUrl: res.imageUrl }))
-      toast({ title: "Imagem Gerada!", description: "A capa foi criada com sucesso pela IA." })
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro na IA", description: "Não foi possível gerar a imagem." })
-    } finally {
-      setGeneratingImage(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    
-    const newId = "canal_" + Date.now() + "_" + Math.random().toString(36).substring(2, 12);
-
-    const success = await saveContent({
-      id: newId,
-      ...formData,
-      episodes: formData.type === 'series' ? episodes : undefined,
-      seasons: formData.type === 'multi-season' ? seasons : undefined,
-    })
-
-    if (success) {
-      toast({ title: "Conteúdo Adicionado", description: "Salvo com sucesso na biblioteca." })
-      router.push("/admin/content")
-    } else {
-      setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique seu banco Supabase." })
-    }
+    setSeasons(prev => [...prev, { id: "sea_" + Date.now(), number: nextNum, episodes: [] }]);
   }
 
   const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
@@ -154,7 +105,7 @@ function NewContentForm() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Nome do Conteúdo</Label>
               <Input 
-                value={formData.title || ""} 
+                value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
                 placeholder="Ex: HBO Family ou Stranger Things" required
                 className="h-12 bg-black/40 border-white/5 font-bold uppercase"
@@ -175,31 +126,37 @@ function NewContentForm() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Categoria</Label>
-                <Input value={formData.genre || ""} onChange={e => setFormData({...formData, genre: e.target.value})} placeholder="Ex: ESPORTES" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+                <Label className="uppercase text-[10px] font-black opacity-60">Pasta / Categoria</Label>
+                <Select value={formData.genre} onValueChange={v => setFormData({...formData, genre: v})}>
+                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
+                    <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
+                    <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
+                    <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                    <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
+                    <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label className="uppercase text-[10px] font-black opacity-60">Descrição</Label>
-                <Button type="button" variant="outline" size="sm" onClick={generateAI} disabled={generating} className="h-8 border-primary/20 text-primary">
-                  {generating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />} IA
-                </Button>
-              </div>
-              <Textarea value={formData.description || ""} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
+              <Label className="uppercase text-[10px] font-black opacity-60">Descrição</Label>
+              <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="h-24 bg-black/40 border-white/5" />
             </div>
           </div>
 
           {showMainStreamUrl && (
             <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl">
               <div className="space-y-2">
-                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Iframe / Sigma / Supremo)</h3>
-                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web (Player)</h3>
+                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (IPTV Apps / m3u8)</h3>
-                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="http://...m3u8" className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
+                <h3 className="font-bold uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (m3u8 / ts)</h3>
+                <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="http://...m3u8" className="h-12 bg-black/40 border-white/5 font-mono text-xs" />
               </div>
             </div>
           )}
@@ -214,15 +171,15 @@ function NewContentForm() {
                 {episodes.map((ep, idx) => (
                   <div key={ep.id} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-primary">EPISÓDIO {ep.number}</span>
+                      <span className="text-[10px] font-black text-primary uppercase">EPISÓDIO {ep.number}</span>
                       <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Input placeholder="Link Web (Player)" value={ep.streamUrl || ""} onChange={e => {
+                    <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-9 bg-black/40 border-white/5 font-mono text-[10px]" />
-                    <Input placeholder="Link Direto (m3u8)" value={ep.directStreamUrl || ""} onChange={e => {
+                    <Input placeholder="Link Direto" value={ep.directStreamUrl} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].directStreamUrl = e.target.value;
                       setEpisodes(newEps);
@@ -256,12 +213,12 @@ function NewContentForm() {
                               setSeasons(newSeasons);
                            }}><Trash2 className="h-3 w-3" /></Button>
                         </div>
-                        <Input placeholder="Link Web" value={ep.streamUrl || ""} onChange={e => {
+                        <Input placeholder="Link Web" value={ep.streamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                           setSeasons(newSeasons);
                         }} className="h-8 bg-black/40 text-[9px]" />
-                        <Input placeholder="Link IPTV" value={ep.directStreamUrl || ""} onChange={e => {
+                        <Input placeholder="Link Direto" value={ep.directStreamUrl} onChange={e => {
                           const newSeasons = [...seasons];
                           newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
                           setSeasons(newSeasons);
@@ -278,32 +235,15 @@ function NewContentForm() {
         <div className="space-y-6">
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
             <h3 className="font-bold uppercase text-xs flex items-center gap-2 tracking-widest text-primary"><ImageIcon className="h-4 w-4" /> Capa</h3>
-            <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-dashed border-white/10 flex flex-col items-center justify-center group">
-              {formData.imageUrl ? (
-                <>
-                  <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateImage} disabled={generatingImage}>
-                      {generatingImage ? <Loader2 className="animate-spin h-4 w-4" /> : "Regerar"}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <Button type="button" onClick={handleGenerateImage} disabled={generatingImage} className="bg-primary/20 text-primary hover:bg-primary/30 h-10 uppercase text-[9px] font-black">
-                  {generatingImage ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />} IA: Gerar Capa
-                </Button>
-              )}
+            <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-dashed border-white/10 flex items-center justify-center">
+              {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="text-[8px] font-black uppercase opacity-20">Sem Capa</div>}
             </div>
-            
-            <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">URL da Capa (Manual)</Label>
-              <Input 
-                value={formData.imageUrl || ""} 
-                onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
-                placeholder="https://imagem.com/poster.jpg"
-                className="h-10 bg-black/40 border-white/5 text-[10px]"
-              />
-            </div>
+            <Input 
+              value={formData.imageUrl} 
+              onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
+              placeholder="URL da Imagem..."
+              className="h-10 bg-black/40 border-white/5 text-[10px]"
+            />
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4">
@@ -324,9 +264,5 @@ function NewContentForm() {
 }
 
 export default function NewContentPage() {
-  return (
-    <React.Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
-      <NewContentForm />
-    </React.Suspense>
-  )
+  return <NewContentForm />
 }

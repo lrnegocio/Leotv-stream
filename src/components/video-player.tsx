@@ -27,56 +27,34 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isSigmaLink, isIframe, isHls } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false, isHls: false }
+  const { processedUrl, isDirectVideo, isIframe, isShielded } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isIframe: false, isShielded: false }
     let targetUrl = url.trim()
 
-    // 1. SUPORTE HLS (.m3u8)
-    const isM3U8 = targetUrl.toLowerCase().includes('.m3u8') || targetUrl.includes('index.m3u8');
+    // DETECÇÃO DE SINAIS QUE PEDIRAM DESBLOQUEIO DE SANDBOX
+    const isSpecialLink = targetUrl.includes('rdcanais.com') || targetUrl.includes('reidoscanais.ooo');
 
-    // 2. SUPORTE YOUTUBE
+    // SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1&iv_load_policy=3`,
-        isDirectVideo: false, isSigmaLink: false, isIframe: true, isHls: false
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
+        isDirectVideo: false, isIframe: true, isShielded: true
       }
     }
 
-    // 3. SUPORTE DAILYMOTION
-    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
-      const id = targetUrl.split('/').pop()?.split('?')[0];
-      return {
-        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0&ui-logo=false&sharing-enable=false`,
-        isDirectVideo: false, isSigmaLink: false, isIframe: true, isHls: false
-      }
-    }
-
-    // 4. LINKS PROTEGIDOS QUE BLOQUEIAM SANDBOX (BRAVE DETECTADO)
-    const isSigma = targetUrl.includes('webplayer.one') || 
-                    targetUrl.includes('sigma') || 
-                    targetUrl.includes('blinder.') || 
-                    targetUrl.includes('blder.') ||
-                    targetUrl.includes('cloudplayer') ||
-                    targetUrl.includes('fplay.') ||
-                    targetUrl.includes('reidoscanais') ||
-                    targetUrl.includes('rdcanais');
-    
-    // 5. SUPORTE DIRETO (MP4, TS)
-    const isDirect = /\.(mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || 
-                     targetUrl.includes('.ts');
+    // SUPORTE DIRETO (MP4, TS, M3U8)
+    const isDirect = /\.(mp4|webm|ogg|ts|mkv|mpegts|m3u8)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('.ts') || targetUrl.includes('.m3u8');
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
-      isSigmaLink: isSigma,
-      isIframe: !isDirect && !isSigma && !isM3U8,
-      isHls: isM3U8
+      isIframe: !isDirect,
+      isShielded: !isSpecialLink // Se for especial, NÃO usa sandbox/shield restritivo
     };
   }, [url])
 
   const openExternal = () => {
-    // ABERTURA EM JANELA LIMPA PARA PULAR TRAVAS DE ANÚNCIO (ESTILO BRAVE)
     window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no');
   }
 
@@ -84,10 +62,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
-      {/* BRAVE SHIELD INDICATOR */}
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Brave Shield Ativo</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Blindado</span>
       </div>
 
       {loading && (
@@ -97,20 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {isSigmaLink ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
-          <div className="p-6 bg-primary/10 rounded-full animate-pulse"><Zap className="h-16 w-16 text-primary" /></div>
-          <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL PROTEGIDO (BRAVE MODE)</h3>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
-              Este sinal possui travas de propaganda. Clique abaixo para abrir em uma janela blindada sem anúncios.
-            </p>
-          </div>
-          <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl hover:scale-105 transition-transform">
-            <ExternalLink className="mr-2 h-6 w-6" /> LIBERAR SINAL MASTER
-          </Button>
-        </div>
-      ) : isDirectVideo ? (
+      {isDirectVideo ? (
         <video 
           key={processedUrl} 
           src={processedUrl!} 
@@ -127,8 +91,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={processedUrl!} 
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
-          // sandbox restrito para bloquear redirecionamentos e anúncios
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"
+          // Se for sinal protegido (rdcanais), remove o sandbox para funcionar direto
+          sandbox={isShielded ? "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals" : undefined}
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />

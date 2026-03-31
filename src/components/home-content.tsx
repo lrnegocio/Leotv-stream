@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -12,7 +13,7 @@ import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
 
 const CATEGORIES = [
-  { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV CANAIS AO VIVO' },
+  { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
   { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },
@@ -51,12 +52,10 @@ export default function HomeContent() {
       const settings = await getGlobalSettings();
       setParentalPin(settings.parentalPin);
 
-      // BUSCA INTELIGENTE: Só traz canais da categoria selecionada ou da pesquisa
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      // Carrega contagens oficiais (apenas uma vez na home)
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
         for (const cat of CATEGORIES) {

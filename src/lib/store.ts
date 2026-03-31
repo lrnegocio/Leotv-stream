@@ -105,10 +105,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (searchQuery) {
       query = query.ilike('title', `%${searchQuery}%`);
     } else if (categoryGenre) {
+      // Filtro por gênero padronizado
       query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
-    // ORDENAÇÃO POR DATA DE CRIAÇÃO (FIXO): Impede que os canais sumam da visão
     const { data: rawData, error } = await query
       .order('created_at', { ascending: false })
       .limit(searchQuery ? 2000 : 1000);
@@ -123,7 +123,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       imageUrl: item.image_url,
     }));
   } catch (e) { 
-    console.error("Erro ao buscar conteúdo:", e);
     return []; 
   }
 }
@@ -188,10 +187,8 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) console.error("Erro Supabase:", error);
     return !error;
   } catch (e) { 
-    console.error("Erro fatal ao salvar:", e);
     return false; 
   }
 }
@@ -353,7 +350,7 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
       const title = cleanName(rawTitle);
       const imageUrl = imgEl?.getAttribute('src') || '';
       
-      let genre = "LÉO TV CANAIS AO VIVO";
+      let genre = "LÉO TV AO VIVO";
       const upperTitle = title.toUpperCase();
       
       if (upperTitle.includes('DORAMA') || upperTitle.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
@@ -382,7 +379,6 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
     }
   });
 
-  // Filtra duplicatas antes de enviar
   const uniqueItems = Array.from(new Map(items.map(item => [item.id, item])).values());
 
   for (let i = 0; i < uniqueItems.length; i += 20) {
@@ -404,7 +400,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
       const name = line.split(',').pop()?.trim() || "Canal";
       const group = (line.match(/group-title=["']?([^"']+)["']?/i)?.[1] || "GERAL").toUpperCase();
       
-      let genre = "LÉO TV CANAIS AO VIVO";
+      let genre = "LÉO TV AO VIVO";
       if (group.includes('FILME') || group.includes('MOVIE')) genre = "LÉO TV FILMES";
       else if (group.includes('ADULT') || group.includes('XXX') || group.includes('HOT')) genre = "LÉO TV ADULTOS";
       else if (group.includes('DORAMA')) genre = "LÉO TV DORAMAS";
