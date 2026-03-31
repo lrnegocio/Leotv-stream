@@ -18,29 +18,17 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
+    // LOGIN MASTER OU VIA PIN (SINC COM SQL DO MESTRE)
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
     if (isMaster) {
-      activeUser = { 
-        pin: 'adm77x2p', 
-        is_blocked: false, 
-        is_adult_enabled: true, 
-        expiry_date: null, 
-        subscription_tier: 'lifetime', 
-        max_screens: 999 
-      };
+      activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
+      // BUSCA EXATA NAS COLUNAS DO SQL DO MESTRE
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
-      if (error || !data || data.is_blocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
-      activeUser = {
-        pin: data.pin,
-        is_blocked: data.is_blocked,
-        is_adult_enabled: data.is_adult_enabled,
-        expiry_date: data.expiry_date,
-        subscription_tier: data.subscription_tier,
-        max_screens: data.max_screens
-      };
+      if (error || !data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+      activeUser = data;
     }
 
     const baseUrl = req.nextUrl.origin;
@@ -50,10 +38,10 @@ export async function GET(req: NextRequest) {
         user_info: {
           auth: 1,
           status: "Active",
-          exp_date: activeUser.expiry_date ? Math.floor(new Date(activeUser.expiry_date).getTime() / 1000).toString() : "1999999999",
-          is_trial: activeUser.subscription_tier === 'test' ? "1" : "0",
+          exp_date: activeUser.expiryDate ? Math.floor(new Date(activeUser.expiryDate).getTime() / 1000).toString() : "1999999999",
+          is_trial: activeUser.subscriptionTier === 'test' ? "1" : "0",
           active_cons: "1",
-          max_connections: activeUser.max_screens?.toString() || "1",
+          max_connections: activeUser.maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4", "mkv", "mpeg"]
         },
         server_info: {
@@ -88,32 +76,28 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
-      if (!activeUser.is_adult_enabled) items = items.filter(i => !i.isRestricted);
-      
+      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({
         num: i.id,
-        name: i.title.toUpperCase(),
+        name: i.title,
         stream_id: i.id,
         stream_icon: i.imageUrl || "",
         added: "1700000000",
         category_id: "1",
-        direct_source: i.directStreamUrl || i.streamUrl || "",
         stream_type: "live"
       })), { headers });
     }
 
     if (action === 'get_vod_streams') {
       let items = content.filter(i => i.type === 'movie');
-      if (!activeUser.is_adult_enabled) items = items.filter(i => !i.isRestricted);
-
+      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({
         num: i.id,
-        name: i.title.toUpperCase(),
+        name: i.title,
         stream_id: i.id,
         stream_icon: i.imageUrl || "",
         added: "1700000000",
         category_id: "1000",
-        direct_source: i.directStreamUrl || i.streamUrl || "",
         stream_type: "movie"
       })), { headers });
     }
@@ -122,7 +106,7 @@ export async function GET(req: NextRequest) {
       let items = content.filter(i => i.type === 'series' || i.type === 'multi-season');
       return NextResponse.json(items.map(i => ({
         num: i.id,
-        name: i.title.toUpperCase(),
+        name: i.title,
         series_id: i.id,
         cover: i.imageUrl || "",
         plot: i.description || "Série Léo Tv Master",

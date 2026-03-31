@@ -71,54 +71,31 @@ export interface Reseller {
 
 export const cleanName = (name: string) => {
   if (!name) return "";
-  return name
-    .toString()
-    .replace(/[.",']/g, '') 
-    .replace(/^\d+\s+/, '') 
-    .replace(/^\d+-/, '')   
-    .replace(/-+/g, ' ')
-    .trim()
-    .toUpperCase();
+  return name.toString().toUpperCase().trim();
 };
 
 export const generateSafeId = (name: string) => {
-  if (!name) return "leo_" + Date.now();
-  const clean = name.toString().toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") 
-    .replace(/[^a-z0-9]/g, '_') 
-    .replace(/_+/g, '_')
-    .trim()
-    .substring(0, 50);
-  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
+  const clean = name.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_');
+  return "leo_" + clean.substring(0, 20) + "_" + Math.random().toString(36).substring(2, 7);
 };
 
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
+    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
 
-    if (searchQuery) {
-      query = query.ilike('title', `%${searchQuery}%`);
-    } else if (categoryGenre) {
-      query = query.eq('genre', categoryGenre.toUpperCase());
-    }
-
-    const { data: rawData, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(1000);
-
+    const { data: rawData, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
 
     return (rawData || []).map(item => ({
       ...item,
-      isRestricted: item.is_restricted,
-      streamUrl: item.stream_url,
-      directStreamUrl: item.direct_stream_url,
-      imageUrl: item.image_url,
+      // MAPEAMENTO PARA O SQL DO MESTRE LÉO (CASE SENSITIVE)
+      isRestricted: item.isRestricted,
+      streamUrl: item.streamUrl,
+      imageUrl: item.imageUrl,
     }));
-  } catch (e) { 
-    return []; 
-  }
+  } catch (e) { return []; }
 }
 
 export async function saveContent(item: ContentItem) {
@@ -129,10 +106,10 @@ export async function saveContent(item: ContentItem) {
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      is_restricted: item.isRestricted || false,
-      image_url: item.imageUrl || null,
-      stream_url: item.streamUrl || null,
-      direct_stream_url: item.directStreamUrl || null,
+      // USANDO OS NOMES EXATOS DO SQL COM ASPAS DO MESTRE
+      isRestricted: item.isRestricted || false,
+      imageUrl: item.imageUrl || null,
+      streamUrl: item.streamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
       created_at: item.created_at || new Date().toISOString()
@@ -140,9 +117,7 @@ export async function saveContent(item: ContentItem) {
 
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
-  } catch (e) { 
-    return false; 
-  }
+  } catch (e) { return false; }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
@@ -151,10 +126,9 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
     if (error || !data) return null;
     return {
       ...data,
-      isRestricted: data.is_restricted,
-      streamUrl: data.stream_url,
-      directStreamUrl: data.direct_stream_url,
-      imageUrl: data.image_url,
+      isRestricted: data.isRestricted,
+      streamUrl: data.streamUrl,
+      imageUrl: data.imageUrl,
     };
   } catch (e) { return null; }
 }
@@ -166,31 +140,18 @@ export async function removeContent(id: string) {
   } catch (e) { return false; }
 }
 
-export async function bulkRemoveContent(ids: string[]) {
-  if (!ids || ids.length === 0) return true;
-  try {
-    const { error } = await supabase.from('content').delete().in('id', ids);
-    return !error;
-  } catch (e) { return false; }
-}
-
 export async function getGlobalSettings() {
   try {
-    const { data, error } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
-    if (error) throw error;
+    const { data } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
     return data?.value || { parentalPin: "1234" };
-  } catch (e) { 
-    return { parentalPin: "1234" }; 
-  }
+  } catch (e) { return { parentalPin: "1234" }; }
 }
 
 export async function updateGlobalSettings(val: any) {
   try {
     await supabase.from('settings').upsert({ key: 'global', value: val });
     return true;
-  } catch (e) { 
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 export async function saveUser(user: User) {
@@ -199,14 +160,14 @@ export async function saveUser(user: User) {
       id: user.id,
       pin: user.pin,
       role: user.role,
-      subscription_tier: user.subscriptionTier,
-      expiry_date: user.expiryDate,
-      max_screens: user.maxScreens,
-      active_devices: user.activeDevices,
-      is_blocked: user.isBlocked,
-      is_adult_enabled: user.isAdultEnabled,
-      reseller_id: user.resellerId,
-      activated_at: user.activatedAt
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices,
+      isBlocked: user.isBlocked,
+      isAdultEnabled: user.isAdultEnabled,
+      resellerId: user.resellerId,
+      activatedAt: user.activatedAt
     };
     const { error } = await supabase.from('users').upsert(payload);
     return !error;
@@ -227,14 +188,14 @@ export async function getRemoteUsers(): Promise<User[]> {
       id: u.id,
       pin: u.pin,
       role: u.role,
-      subscriptionTier: u.subscription_tier,
-      expiryDate: u.expiry_date,
-      maxScreens: u.max_screens,
-      activeDevices: u.active_devices || [],
-      isBlocked: u.is_blocked,
-      isAdultEnabled: u.is_adult_enabled,
-      resellerId: u.reseller_id,
-      activatedAt: u.activated_at
+      subscriptionTier: u.subscriptionTier,
+      expiryDate: u.expiryDate,
+      maxScreens: u.maxScreens,
+      activeDevices: u.activeDevices || [],
+      isBlocked: u.isBlocked,
+      isAdultEnabled: u.isAdultEnabled,
+      resellerId: u.resellerId,
+      activatedAt: u.activatedAt
     }));
   } catch (e) { return []; }
 }
@@ -245,11 +206,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO." };
-    if (user.is_blocked) return { error: "ACESSO SUSPENSO." };
+    if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
 
-    let devices = user.active_devices || [];
+    let devices = user.activeDevices || [];
     if (!devices.some((d: any) => d.id === deviceId)) {
-      if (devices.length >= user.max_screens) return { error: "LIMITE DE TELAS EXCEDIDO." };
+      if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO." };
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
@@ -257,18 +218,17 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       id: user.id,
       pin: user.pin,
       role: user.role,
-      subscriptionTier: user.subscription_tier,
-      expiryDate: user.expiry_date,
-      maxScreens: user.max_screens,
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens,
       activeDevices: devices,
-      isBlocked: user.is_blocked,
-      isAdultEnabled: user.is_adult_enabled,
-      resellerId: user.reseller_id,
-      activatedAt: user.activated_at
+      isBlocked: user.isBlocked,
+      isAdultEnabled: user.isAdultEnabled,
+      resellerId: user.resellerId,
+      activatedAt: user.activatedAt || new Date().toISOString()
     };
 
-    if (!user.activated_at) {
-      updatedUser.activatedAt = new Date().toISOString();
+    if (!user.activatedAt) {
       if (updatedUser.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
       else if (updatedUser.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
     }
@@ -303,23 +263,21 @@ export async function validateResellerLogin(username: string, password: string):
   try {
     const { data, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', password).maybeSingle();
     if (error || !data) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
-    if (data.is_blocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
+    if (data.isBlocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
     return { reseller: data };
   } catch (e) { return { error: "ERRO DE CONEXÃO." }; }
 }
 
 export async function getCategoryCount(genre: string): Promise<number> {
   try {
-    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
-    if (error) throw error;
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getTotalContentCount(): Promise<number> {
   try {
-    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
-    if (error) throw error;
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -328,7 +286,6 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
   let expiry = '30 Dias';
   if (tier === 'test') expiry = '6 Horas';
   if (tier === 'lifetime') expiry = 'VITALÍCIO';
-  
   return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📅 *VALIDADE:* ${expiry}\n📺 *TELAS:* ${screens}\n\n🌐 *ACESSO:* ${url}\n\n_Suporte Master Léo Tech_`;
 }
 

@@ -16,16 +16,7 @@ export function PwaInstall() {
       setDeferredPrompt(e)
       setIsVisible(true)
     }
-
     window.addEventListener('beforeinstallprompt', handler)
-
-    // Detecção se já está instalado
-    const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
-    if (!isStandalone) {
-      const timer = setTimeout(() => setIsVisible(true), 1500)
-      return () => clearTimeout(timer)
-    }
-
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -39,8 +30,8 @@ export function PwaInstall() {
       }
     } else {
       toast({ 
-        title: "INSTALAÇÃO DIRETA", 
-        description: "Abra as opções do seu navegador (três pontinhos) e clique em 'Instalar Aplicativo'." 
+        title: "INSTALAÇÃO MASTER", 
+        description: "Abra o menu do seu navegador e clique em 'Instalar App' ou 'Adicionar à tela inicial'." 
       });
     }
   }
@@ -51,21 +42,17 @@ export function PwaInstall() {
     <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-full duration-500 px-4 w-full max-w-sm">
       <div className="bg-primary border-4 border-white/20 p-5 rounded-[2.5rem] shadow-[0_0_50px_rgba(var(--primary),0.5)] flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-white/10 p-3 rounded-2xl">
-            <Tv className="h-6 w-6 text-white" />
-          </div>
+          <div className="bg-white/10 p-3 rounded-2xl"><Tv className="h-6 w-6 text-white" /></div>
           <div>
             <p className="text-white font-black uppercase text-[12px] italic">Léo TV</p>
             <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Sinal Oficial</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg transition-transform active:scale-95">
+          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl shadow-lg">
             INSTALAR AGORA
           </Button>
-          <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white transition-colors p-1">
-            <X className="h-5 w-5" />
-          </button>
+          <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white p-1"><X className="h-5 w-5" /></button>
         </div>
       </div>
     </div>

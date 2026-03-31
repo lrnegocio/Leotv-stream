@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, RefreshCcw, Trash, CheckSquare, Square, Tv } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, ContentItem } from "@/lib/store"
@@ -22,29 +22,26 @@ export default function ContentManagementPage() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  const loadItems = React.useCallback(async (query = "", force = false) => {
+  const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
-      const data = await getRemoteContent(force, query)
+      const data = await getRemoteContent(false, query)
       setItems(data)
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao carregar conteúdos." })
+      toast({ variant: "destructive", title: "Erro de Conexão" })
     } finally {
       setLoading(false)
     }
   }, [])
 
   React.useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      loadItems(searchTerm)
-    }, 500)
+    const delayDebounceFn = setTimeout(() => { loadItems(searchTerm) }, 500)
     return () => clearTimeout(delayDebounceFn)
   }, [searchTerm, loadItems])
 
   const handleDelete = async (id: string) => {
     if (confirm("Excluir este sinal?")) {
-      const success = await removeContent(id)
-      if (success) {
+      if (await removeContent(id)) {
         setItems(prev => prev.filter(i => i.id !== id))
         toast({ title: "Removido" })
       }
@@ -55,10 +52,9 @@ export default function ContentManagementPage() {
     if (selectedIds.length === 0) return
     if (confirm(`Excluir ${selectedIds.length} sinais?`)) {
       setIsDeleting(true)
-      const success = await bulkRemoveContent(selectedIds)
-      if (success) {
+      if (await bulkRemoveContent(selectedIds)) {
         setSelectedIds([])
-        await loadItems(searchTerm, true)
+        await loadItems(searchTerm)
         toast({ title: "Limpeza Concluída" })
       }
       setIsDeleting(false)
@@ -70,27 +66,16 @@ export default function ContentManagementPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === items.length && items.length > 0) {
-      setSelectedIds([])
-    } else {
-      setSelectedIds(items.map(i => i.id))
-    }
-  }
-
-  const handlePreview = (item: ContentItem) => {
-    if (item.type === 'series' || item.type === 'multi-season') {
-      setPreviewItem(item)
-    } else {
-      setActiveEpisode({ url: item.directStreamUrl || item.streamUrl || "", title: item.title })
-    }
+    if (selectedIds.length === items.length && items.length > 0) setSelectedIds([])
+    else setSelectedIds(items.map(i => i.id))
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Sua Biblioteca</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Master de Rede.</p>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Biblioteca Master</h1>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Canais e VOD.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && (
@@ -98,7 +83,7 @@ export default function ContentManagementPage() {
               <Trash2 className="mr-2 h-3 w-3" /> Excluir ({selectedIds.length})
             </Button>
           )}
-          <Button asChild className="bg-primary h-10 px-6 rounded-xl text-[9px] font-black uppercase shadow-xl shadow-primary/20">
+          <Button asChild className="bg-primary h-10 px-6 rounded-xl text-[9px] font-black uppercase">
             <Link href="/admin/content/new"><Plus className="mr-2 h-4 w-4" /> Novo Conteúdo</Link>
           </Button>
         </div>
@@ -107,12 +92,7 @@ export default function ContentManagementPage() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="BUSCAR NO SEU IMPÉRIO..." 
-            className="pl-12 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="BUSCAR SINAL..." className="pl-12 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <Button variant="outline" onClick={toggleSelectAll} className="h-12 border-white/5 rounded-xl uppercase text-[9px] font-black">
           {selectedIds.length === items.length && items.length > 0 ? <CheckSquare className="mr-2 h-4 w-4 text-primary" /> : <Square className="mr-2 h-4 w-4" />}
@@ -121,10 +101,7 @@ export default function ContentManagementPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase opacity-40">Acessando Banco Master...</p>
-        </div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase opacity-40">Acessando Banco Master...</p></div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
           {items.map((item) => {
@@ -146,13 +123,17 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
+                  {/* FIX MESTRE LÉO: SÓ MOSTRA CONTAGEM SE FOR SÉRIE E TIVER EPISÓDIOS */}
                   {isSeries && epCount > 0 && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
                 </div>
                 <div className="flex justify-between p-2 border-t border-white/5 bg-black/20">
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePreview(item)}><PlayCircle className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                      if (isSeries) setPreviewItem(item);
+                      else setActiveEpisode({ url: item.streamUrl || "", title: item.title });
+                    }}><PlayCircle className="h-3 w-3" /></Button>
                     <Button variant="ghost" size="icon" asChild className="h-7 w-7"><Link href={`/admin/content/edit/${item.id}`}><Edit2 className="h-3 w-3" /></Link></Button>
                   </div>
                   <Button variant="ghost" size="icon" className="text-destructive h-7 w-7" onClick={() => handleDelete(item.id)}><Trash2 className="h-3 w-3" /></Button>
@@ -165,12 +146,10 @@ export default function ContentManagementPage() {
 
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8">
-          <DialogHeader>
-            <DialogTitle className="uppercase font-black text-primary">{previewItem?.title}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="uppercase font-black text-primary">{previewItem?.title}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
             {previewItem?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary">
+              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
                 <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                 <PlayCircle className="ml-auto h-4 w-4 text-primary" />
               </Button>
@@ -180,7 +159,7 @@ export default function ContentManagementPage() {
       </Dialog>
 
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
-        <DialogContent className="max-w-4xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
+        <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
           {activeEpisode && <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />}
         </DialogContent>
       </Dialog>
