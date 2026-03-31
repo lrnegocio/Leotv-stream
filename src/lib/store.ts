@@ -69,12 +69,14 @@ export interface Reseller {
   birthDate?: string;
 }
 
+// LIMPEZA SNIPER: Remove aspas, pontos, vírgulas e números iniciais
 export const cleanName = (name: string) => {
   if (!name) return "";
   return name
     .toString()
     .replace(/[.",']/g, '') 
-    .replace(/^\d+/, '')    
+    .replace(/^\d+\s+/, '') 
+    .replace(/^\d+-/, '')   
     .replace(/-+/g, ' ')
     .trim()
     .toUpperCase();
@@ -328,131 +330,6 @@ export async function validateResellerLogin(username: string, password: string):
     if (data.is_blocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
     return { reseller: data };
   } catch (e) { return { error: "ERRO DE CONEXÃO." }; }
-}
-
-export async function processHTMLImport(html: string, onProgress?: (m: string) => void) {
-  const items: any[] = [];
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
-  const links = doc.querySelectorAll('a.btn-stream');
-  onProgress?.(`Iniciando Sniper Supremo...`);
-
-  links.forEach((link, idx) => {
-    const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
-    const imgEl = link.querySelector('img');
-    
-    if (titleEl) {
-      const rawTitle = titleEl.textContent?.trim() || `Sinal ${idx}`;
-      const title = cleanName(rawTitle);
-      const imageUrl = imgEl?.getAttribute('src') || '';
-      
-      let genre = "LÉO TV AO VIVO";
-      const upperTitle = title.toUpperCase();
-      
-      if (upperTitle.includes('DORAMA')) genre = "LÉO TV DORAMAS";
-      else if (upperTitle.includes('18+') || upperTitle.includes('XXX') || upperTitle.includes('ADULTO')) genre = "LÉO TV ADULTOS";
-      else if (upperTitle.includes('FILME') || upperTitle.includes('MOVIE')) genre = "LÉO TV FILMES";
-      else if (upperTitle.includes('SERIE') || upperTitle.includes('SEASON') || upperTitle.includes('EP')) genre = "LÉO TV SERIES";
-      else if (upperTitle.includes('RADIO')) genre = "LÉO TV RÁDIOS";
-      else if (upperTitle.includes('MUSICA') || upperTitle.includes('CLIP')) genre = "LÉO TV MUSICAS";
-      else if (upperTitle.includes('NOVELA')) genre = "LÉO TV NOVELAS";
-      else if (upperTitle.includes('DESENHO') || upperTitle.includes('KID')) genre = "LÉO TV DESENHOS";
-
-      items.push({
-        id: generateSafeId(title),
-        title,
-        type: genre.includes('SERIES') || genre.includes('DORAMAS') || genre.includes('NOVELAS') ? 'series' : 'channel',
-        genre,
-        description: 'Sinal Master Sniper Blindado',
-        image_url: imageUrl,
-        is_restricted: genre.includes('ADULTOS'),
-        stream_url: '',
-        direct_stream_url: '',
-        episodes: [],
-        seasons: [],
-        created_at: new Date().toISOString()
-      });
-    }
-  });
-
-  const uniqueItems = Array.from(new Map(items.map(item => [item.id, item])).values());
-
-  for (let i = 0; i < uniqueItems.length; i += 20) {
-    if (onProgress) onProgress(`Sincronizando ${i} de ${uniqueItems.length} sinais...`);
-    await supabase.from('content').upsert(uniqueItems.slice(i, i + 20));
-  }
-
-  return { success: uniqueItems.length };
-}
-
-export async function processM3UImport(content: string, onProgress?: (m: string) => void) {
-  const lines = content.split('\n');
-  const itemsMap = new Map<string, any>();
-  let current: any = null;
-
-  for (let line of lines) {
-    line = line.trim();
-    if (line.startsWith('#EXTINF:')) {
-      const name = line.split(',').pop()?.trim() || "Canal";
-      const group = (line.match(/group-title=["']?([^"']+)["']?/i)?.[1] || "GERAL").toUpperCase();
-      
-      let genre = "LÉO TV AO VIVO";
-      if (group.includes('FILME') || group.includes('MOVIE')) genre = "LÉO TV FILMES";
-      else if (group.includes('ADULT') || group.includes('XXX') || group.includes('HOT')) genre = "LÉO TV ADULTOS";
-      else if (group.includes('DORAMA')) genre = "LÉO TV DORAMAS";
-      else if (group.includes('SERIE') || group.includes('ANIME')) genre = "LÉO TV SERIES";
-      else if (group.includes('ESPORTE') || group.includes('SPORT')) genre = "LÉO TV ESPORTES";
-      else if (group.includes('DESENHO') || group.includes('KID') || group.includes('CHILD')) genre = "LÉO TV DESENHOS";
-      else if (group.includes('CLIP')) genre = "LÉO TV VÍDEO CLIPES";
-      else if (group.includes('MUSICA')) genre = "LÉO TV MUSICAS";
-      else if (group.includes('RADIO')) genre = "LÉO TV RÁDIOS";
-      else if (group.includes('NOVELA')) genre = "LÉO TV NOVELAS";
-
-      current = { title: cleanName(name), genre, imageUrl: line.match(/tvg-logo=["']?([^"']+)["']?/i)?.[1], isRestricted: genre.includes('ADULTOS') };
-    } else if (line.startsWith('http') && current) {
-      const seriesMatch = current.title.match(/(.*?)\s+[sS](\d+)[eE](\d+)/i) || 
-                          current.title.match(/(.*?)\s+Episode\s+(\d+)/i) ||
-                          current.title.match(/(.*?)\s+Ep\s+(\d+)/i);
-      
-      if (seriesMatch && (current.genre.includes('SERIE') || current.genre.includes('DORAMA') || current.genre.includes('NOVELA'))) {
-        const base = cleanName(seriesMatch[1].trim());
-        const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
-        const baseId = generateSafeId(base);
-        if (!itemsMap.has(baseId)) {
-          itemsMap.set(baseId, { id: baseId, title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [], created_at: new Date().toISOString() });
-        }
-        const series = itemsMap.get(baseId);
-        if (!series.episodes.some((e:any) => e.number === epNum)) {
-          series.episodes.push({ id: generateSafeId(current.title), title: `EPISODIO ${epNum}`, number: epNum, streamUrl: line, directStreamUrl: line });
-        }
-      } else {
-        const id = generateSafeId(current.title);
-        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', stream_url: line, direct_stream_url: line, created_at: new Date().toISOString() });
-      }
-      current = null;
-    }
-  }
-
-  const items = Array.from(itemsMap.values());
-  for (let i = 0; i < items.length; i += 20) {
-    if (onProgress) onProgress(`Sincronizando M3U: ${i} de ${items.length}...`);
-    await supabase.from('content').upsert(items.slice(i, i + 20));
-  }
-  return { success: items.length };
-}
-
-export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return data?.value || { parentalPin: '1234' };
-  } catch (e) { return { parentalPin: '1234' }; }
-}
-
-export async function updateGlobalSettings(val: any) {
-  try {
-    await supabase.from('settings').upsert({ key: 'global', value: val });
-  } catch (e) { }
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {

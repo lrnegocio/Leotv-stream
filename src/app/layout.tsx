@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { OfflineIndicator } from '@/components/offline-indicator';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Léo Tv & Stream',
@@ -41,6 +42,8 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
+        {/* Sintonizador HLS Hidra - Carregado Globalmente para evitar loop de carregamento */}
+        <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
       </body>
     </html>
   );

@@ -28,31 +28,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isHls, isYoutube, isIframe, isNoSandboxDomain } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isHls: false, isYoutube: false, isIframe: false, isNoSandboxDomain: false }
+  const { processedUrl, isHls, isIframe, isNoSandbox } = React.useMemo(() => {
+    if (!url || typeof url !== 'string') return { processedUrl: null, isHls: false, isIframe: false, isNoSandbox: false }
     const targetUrl = url.trim()
 
-    // SINAIS QUE BLOQUEIAM SANDBOX (Rei dos Canais / RdCanais)
-    const isProtectedSource = targetUrl.includes('rdcanais.com') || targetUrl.includes('reidoscanais.ooo');
+    // DETECÇÃO HLS (IPTV DIRETO)
+    const isDirectHls = targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4');
+    
+    // DETECÇÃO SINAIS PROTEGIDOS (REI DOS CANAIS / RDCANAIS)
+    const isProtected = targetUrl.includes('rdcanais.com') || targetUrl.includes('reidoscanais.ooo') || targetUrl.includes('isaocorp');
 
-    // YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isHls: false, isYoutube: true, isIframe: true, isNoSandboxDomain: false
+        isHls: false, isIframe: true, isNoSandbox: false 
       }
     }
 
-    // HLS / M3U8 / TS (IPTV Direto)
-    const isDirectStream = /\.(m3u8|ts|mp4|mkv)$/i.test(targetUrl.split('?')[0]) || targetUrl.includes('.m3u8') || targetUrl.includes('.ts');
-
     return { 
       processedUrl: targetUrl, 
-      isHls: isDirectStream, 
-      isYoutube: false, 
-      isIframe: !isDirectStream,
-      isNoSandboxDomain: isProtectedSource
+      isHls: isDirectHls, 
+      isIframe: !isDirectHls,
+      isNoSandbox: isProtected
     };
   }, [url])
 
@@ -62,45 +60,44 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let hls: any = null;
     const video = videoRef.current;
 
-    const loadHls = async () => {
+    const initHls = () => {
       // @ts-ignore
-      if (typeof Hls !== 'undefined') {
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         // @ts-ignore
-        if (Hls.isSupported()) {
-          // @ts-ignore
-          hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 90
-          });
-          hls.loadSource(processedUrl);
-          hls.attachMedia(video);
-          hls.on('hlsManifestParsed', () => {
-            video.play().catch(() => {});
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          xhrSetup: (xhr: any) => {
+            xhr.withCredentials = false;
+          }
+        });
+        hls.loadSource(processedUrl);
+        hls.attachMedia(video);
+        hls.on('hlsManifestParsed', () => {
+          video.play().catch(() => {});
+          setLoading(false);
+        });
+        hls.on('hlsError', (event: any, data: any) => {
+          if (data.fatal) {
+            console.error("Erro Fatal HLS:", data);
+            setHasError(true);
             setLoading(false);
-          });
-          hls.on('hlsError', (event: any, data: any) => {
-            if (data.fatal) {
-              setHasError(true);
-              setLoading(false);
-            }
-          });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = processedUrl;
-          video.addEventListener('loadedmetadata', () => {
-            video.play().catch(() => {});
-            setLoading(false);
-          });
-        }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = processedUrl;
+        video.addEventListener('loadedmetadata', () => {
+          video.play().catch(() => {});
+          setLoading(false);
+        });
       } else {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
-        script.onload = () => loadHls();
-        document.head.appendChild(script);
+        // Se o Hls ainda não carregou, espera 1 segundo e tenta de novo
+        setTimeout(initHls, 1000);
       }
     };
 
-    loadHls();
+    initHls();
 
     return () => {
       if (hls) hls.destroy();
@@ -135,6 +132,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           muted={isMuted} 
           playsInline
           className="h-full w-full object-contain relative z-10" 
+          onLoadedData={() => setLoading(false)}
           onError={() => { setLoading(false); setHasError(true); }} 
         />
       ) : isIframe ? (
@@ -144,8 +142,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; picture-in-picture"
-          // MODO BRAVE: Bloqueia tudo EXCETO o necessário. Se for rdcanais, remove o sandbox para evitar o erro.
-          sandbox={isNoSandboxDomain ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"}
+          // LIBERAÇÃO TOTAL PARA RDCANAIS E REI DOS CANAIS
+          sandbox={isNoSandbox ? undefined : "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"}
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />

@@ -42,7 +42,9 @@ export default function HomeContent() {
   const q = searchParams.get('q') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
-    setLoading(true);
+    // FIX DE SUMIÇO: Só mostra o loading se a lista estiver vazia
+    if (content.length === 0) setLoading(true);
+    
     try {
       const session = localStorage.getItem("user_session");
       if (!session) { router.push("/login"); return; }
@@ -64,7 +66,7 @@ export default function HomeContent() {
         setCatCounts(counts);
       }
     } catch (err) { } finally { setLoading(false); }
-  }, [router]);
+  }, [router, content.length]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
