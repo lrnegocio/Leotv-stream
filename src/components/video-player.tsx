@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, ExternalLink, AlertTriangle, RefreshCcw, ShieldCheck, Lock } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // DETECÇÃO HLS (IPTV DIRETO)
     const isDirectHls = targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4');
     
-    // SINAIS PROTEGIDOS QUE BLOQUEIAM SANDBOX
+    // SINAIS PROTEGIDOS QUE BLOQUEIAM SANDBOX (Rei dos Canais)
     const isProt = targetUrl.includes('rdcanais.com') || 
                    targetUrl.includes('reidoscanais.ooo') || 
                    targetUrl.includes('cloudecast') ||
@@ -113,7 +113,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Blindado v217</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Blindado v218</span>
       </div>
 
       {loading && (
@@ -141,8 +141,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; picture-in-picture"
-          // LIBERAÇÃO MESTRE: Remove sandbox apenas para domínios de confiança para evitar travamento infinito
-          sandbox={isProtected ? "allow-scripts allow-same-origin allow-forms allow-presentation" : "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"}
+          // LIBERAÇÃO MESTRE: Remove sandbox completamente para domínios que o exigem para funcionar
+          {...(isProtected ? {} : { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals" })}
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />

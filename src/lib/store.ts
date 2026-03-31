@@ -214,6 +214,13 @@ export async function processM3UImport(m3u: string, onProgress: (msg: string) =>
   return { success: count };
 }
 
+export async function clearAllM3UContent() {
+  try {
+    const { error } = await supabase.from('content').delete().neq('id', 'admin_placeholder');
+    return !error;
+  } catch (e) { return false; }
+}
+
 export async function saveUser(user: User) {
   try {
     const payload = {
@@ -230,6 +237,13 @@ export async function saveUser(user: User) {
       activated_at: user.activatedAt
     };
     const { error } = await supabase.from('users').upsert(payload);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function removeUser(id: string) {
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', id);
     return !error;
   } catch (e) { return false; }
 }
@@ -306,6 +320,13 @@ export async function saveReseller(res: Reseller) {
   } catch (e) { return false; }
 }
 
+export async function removeReseller(id: string) {
+  try {
+    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
+}
+
 export async function validateResellerLogin(username: string, password: string): Promise<{ reseller?: Reseller; error?: string }> {
   try {
     const { data, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', password).maybeSingle();
@@ -321,6 +342,25 @@ export async function getCategoryCount(genre: string): Promise<number> {
     if (error) throw error;
     return count || 0;
   } catch (e) { return 0; }
+}
+
+export async function getTotalContentCount(): Promise<number> {
+  try {
+    const { count, error } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    if (error) throw error;
+    return count || 0;
+  } catch (e) { return 0; }
+}
+
+export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
+  const expiry = tier === 'test' ? '6 Horas' : '30 Dias';
+  return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n` +
+         `Seu sinal Master foi calibrado com sucesso!\n\n` +
+         `🔑 *SEU PIN:* ${pin}\n` +
+         `📅 *VALIDADE:* ${expiry}\n` +
+         `📺 *TELAS:* ${screens}\n\n` +
+         `🌐 *ACESSO:* ${url}\n\n` +
+         `_Suporte Master Léo Tech_`;
 }
 
 export const generateRandomPin = (len = 11) => Math.random().toString().substring(2, 2+len);
