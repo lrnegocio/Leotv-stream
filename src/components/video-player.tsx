@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -27,7 +28,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM (Motor Hidra v28)
+    // DETECÇÃO DE IMAGEM MASTER (Motor Hidra v29)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -61,7 +62,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
-      // MOTOR HLS (Hidra v28)
+      // MOTOR HLS
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -71,9 +72,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls.on('hlsManifestParsed', () => { video.play().catch(() => {}); setLoading(false); });
         hls.on('hlsError', () => setLoading(false));
       } 
-      // MOTOR MPEG-TS (Igual ao player Profissional)
+      // MOTOR MPEG-TS (Igual ao player Profissional Supremo)
       // @ts-ignore
-      else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
+      else if ((type === 'mpegts' || processedUrl.includes('.ts')) && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
         mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl });
         mpegtsPlayer.attachMediaElement(video);
@@ -90,7 +91,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     };
 
-    const timeout = setTimeout(initPlayer, 500);
+    const timeout = setTimeout(initPlayer, 300);
     return () => { 
       clearTimeout(timeout);
       if (hls) hls.destroy(); 
@@ -119,7 +120,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <video ref={videoRef} key={processedUrl} autoPlay muted={isMuted} playsInline crossOrigin="anonymous" className="h-full w-full object-contain" onLoadedData={() => setLoading(false)} onError={() => setLoading(false)} />
       )}
       
-      {/* OVERLAY MASTER */}
+      {/* OVERLAY SOBERANO */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-auto">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
@@ -131,7 +132,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
              <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(url, '_blank')}>
-               <ExternalLink className="mr-2 h-4 w-4" /> SINTONIZAR DIRETAMENTE
+               <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL DIRETO
              </Button>
           </div>
           <div className="flex gap-4 items-center">

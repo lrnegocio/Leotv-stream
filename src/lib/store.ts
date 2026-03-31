@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -108,7 +109,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
-    // BLINDAGEM SQL CASE-SENSITIVE: Usamos nomes exatos com aspas duplas
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
