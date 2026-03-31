@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM MASTER (Motor Hidra v30)
+    // DETECÇÃO DE IMAGEM MASTER
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -36,6 +36,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
                    targetUrl.includes('encrypted-tbn');
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
+
+    // SINTONIZADOR XVIDEOS MASTER (Extração de ID para Embed)
+    if (targetUrl.includes('xvideos.com')) {
+      // Formato: https://www.xvideos.com/video.ID/Titulo
+      const parts = targetUrl.split('video.');
+      if (parts.length > 1) {
+        const id = parts[1].split('/')[0];
+        return {
+          processedUrl: `https://www.xvideos.com/embedframe/${id}`,
+          type: 'xvideos'
+        }
+      }
+    }
 
     // SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -46,16 +59,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // FORMATOS IPTV MASTER (MPEG-TS / HLS)
+    // FORMATOS IPTV MASTER (MPEG-TS / HLS / MP4)
     const lowUrl = targetUrl.toLowerCase();
     if (lowUrl.includes('.m3u8')) return { processedUrl: targetUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: targetUrl, type: 'mpegts' }
+    if (lowUrl.includes('.mp4') || lowUrl.includes('.mkv') || lowUrl.includes('.mov')) return { processedUrl: targetUrl, type: 'video' }
     
     return { processedUrl: targetUrl, type: 'video' }
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || type === 'image' || type === 'youtube') return;
+    if (!videoRef.current || !processedUrl || type === 'image' || type === 'youtube' || type === 'xvideos') return;
 
     const video = videoRef.current;
     let hls: any = null;
@@ -78,7 +92,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         });
         hls.on('hlsError', () => setLoading(false));
       } 
-      // MOTOR MPEG-TS (Igual ao player Profissional Supremo)
+      // MOTOR MPEG-TS
       // @ts-ignore
       else if ((type === 'mpegts' || processedUrl.includes('.ts')) && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
@@ -93,6 +107,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
       else {
         video.src = processedUrl;
+        video.load();
         video.play().catch(() => {
           video.muted = true;
           video.play().catch(() => setLoading(false));
@@ -123,10 +138,27 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="relative w-full h-full flex items-center justify-center bg-black">
           <img src={processedUrl!} alt={title} className="max-w-full max-h-full object-contain" onLoad={() => setLoading(false)} onError={() => setLoading(false)} />
         </div>
-      ) : type === 'youtube' ? (
-        <iframe key={processedUrl} src={processedUrl!} className="h-full w-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
+      ) : (type === 'youtube' || type === 'xvideos') ? (
+        <iframe 
+          key={processedUrl} 
+          src={processedUrl!} 
+          className="h-full w-full border-0" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
-        <video ref={videoRef} key={processedUrl} autoPlay muted={isMuted} playsInline crossOrigin="anonymous" className="h-full w-full object-contain" onLoadedData={() => setLoading(false)} onError={() => setLoading(false)} />
+        <video 
+          ref={videoRef} 
+          key={processedUrl} 
+          autoPlay 
+          muted={isMuted} 
+          playsInline 
+          crossOrigin="anonymous" 
+          className="h-full w-full object-contain" 
+          onLoadedData={() => setLoading(false)} 
+          onError={() => setLoading(false)} 
+        />
       )}
       
       {/* OVERLAY SOBERANO */}
@@ -140,7 +172,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
-             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(processedUrl || "", '_blank')}>
+             <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(url || "", '_blank')}>
                <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL DIRETO
              </Button>
           </div>
