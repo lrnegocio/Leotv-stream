@@ -135,6 +135,7 @@ export async function saveContent(item: ContentItem) {
       direct_stream_url: item.directStreamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
+      // FIX SUMIÇO: Sempre grava a data de criação
       created_at: item.created_at || new Date().toISOString()
     };
 

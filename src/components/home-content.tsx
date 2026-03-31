@@ -72,24 +72,7 @@ export default function HomeContent() {
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
-  const handleNext = () => {
-    if (!activeVideo || content.length === 0) return;
-    const currentIndex = activeVideo.index;
-    const nextIndex = (currentIndex + 1) % content.length;
-    const item = content[nextIndex];
-    setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: nextIndex });
-  };
-
-  const handlePrev = () => {
-    if (!activeVideo || content.length === 0) return;
-    const currentIndex = activeVideo.index;
-    const prevIndex = (currentIndex - 1 + content.length) % content.length;
-    const item = content[prevIndex];
-    setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: prevIndex });
-  };
-
   const handleItemClick = (item: ContentItem, idx: number) => {
-    // MASCARAMENTO MESTRE: Altera a URL para um Watch ID oculto
     const watchId = Buffer.from(item.id).toString('base64').substring(0, 12);
     window.history.pushState(null, '', `/watch/${watchId}`);
 
@@ -119,7 +102,7 @@ export default function HomeContent() {
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Blindado...</p></div>
 
   return (
-    <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none" onContextMenu={(e) => e.preventDefault()}>
+    <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
@@ -139,15 +122,19 @@ export default function HomeContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 animate-in fade-in duration-500">
             {CATEGORIES.map(c => {
               if (c.id === 'ADULT' && !user?.isAdultEnabled) return null;
+              const count = catCounts[c.id] || 0;
               return (
                 <button key={c.id} onClick={() => c.id === 'ADULT' ? setIsPinOpen(true) : setSelectedCat(c.id)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color} bg-opacity-20`}>
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
                     <div className={`p-4 rounded-3xl ${c.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center">
                       <span className="text-lg font-black uppercase italic text-white block">{c.name}</span>
-                      <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
-                        {catCounts[c.id]?.toLocaleString() || 0} SINAIS ATIVOS
-                      </span>
+                      {/* SINAL 0 FIX: Esconde se o contador for zero para não dar erro visual */}
+                      {count > 0 && (
+                        <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
+                          {count.toLocaleString()} SINAIS ATIVOS
+                        </span>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -225,7 +212,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={closePlayer}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
-          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} />}
         </DialogContent>
       </Dialog>
 

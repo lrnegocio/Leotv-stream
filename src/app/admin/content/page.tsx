@@ -81,7 +81,7 @@ export default function ContentManagementPage() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setPreviewItem(item)
     } else {
-      setActiveEpisode({ url: item.streamUrl || item.directStreamUrl || "", title: item.title })
+      setActiveEpisode({ url: item.directStreamUrl || item.streamUrl || "", title: item.title })
     }
   }
 
@@ -90,12 +90,9 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Sua Biblioteca</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de 1 Milhão de Sinais.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de 1 Milhão de Sinais Master.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => loadItems(searchTerm, true)} className="border-primary/20 text-primary h-10 px-4 rounded-xl text-[9px] font-black uppercase">
-            <RefreshCcw className="mr-2 h-3 w-3" /> Sincronizar
-          </Button>
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete} disabled={isDeleting} className="h-10 px-4 rounded-xl text-[9px] font-black uppercase">
               <Trash2 className="mr-2 h-3 w-3" /> Excluir ({selectedIds.length})
@@ -111,7 +108,7 @@ export default function ContentManagementPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="BUSCAR..." 
+            placeholder="BUSCAR NO SEU IMPÉRIO..." 
             className="pl-10 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -126,14 +123,15 @@ export default function ContentManagementPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase opacity-40">Sincronizando Banco Master...</p>
+          <p className="text-[10px] font-black uppercase opacity-40">Acessando Banco de Dados Master...</p>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             const isSeries = item.type === 'series' || item.type === 'multi-season';
-            const epCount = isSeries ? (item.episodes?.length || 0) : null;
+            // SINAL 0 FIX: Só mostramos se for maior que zero para não poluir
+            const epCount = isSeries ? (item.episodes?.length || 0) : 0;
             
             return (
               <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl overflow-hidden relative group transition-all flex flex-col shadow-lg`}>
@@ -149,7 +147,7 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {isSeries && epCount !== null && (
+                  {isSeries && epCount > 0 && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
                 </div>

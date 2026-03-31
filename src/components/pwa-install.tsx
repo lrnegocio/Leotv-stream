@@ -11,6 +11,7 @@ export function PwaInstall() {
 
   React.useEffect(() => {
     const handler = (e: any) => {
+      // PREVINE O NATIVO E GUARDA O EVENTO PARA DISPARAR NO NOSSO BOTÃO
       e.preventDefault()
       setDeferredPrompt(e)
       setIsVisible(true)
@@ -18,7 +19,7 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Detecção para Smart TV que não dispara o evento nativo
+    // FALLBACK PARA TVS: Se não for standalone (não estiver instalado), mostra o botão após 3s
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
       const timer = setTimeout(() => setIsVisible(true), 3000)
@@ -30,6 +31,7 @@ export function PwaInstall() {
 
   const handleInstall = async () => {
     if (deferredPrompt) {
+      // DISPARA A FUNÇÃO REAL DE INSTALAÇÃO DO NAVEGADOR/ANDROID/TV
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') {
@@ -37,8 +39,8 @@ export function PwaInstall() {
         setDeferredPrompt(null)
       }
     } else {
-      // Fallback para TVs: Instrução visual
-      alert("INSTALAÇÃO LÉO TV:\n\n1. Use o controle remoto e vá no Menu do Navegador.\n2. Clique em 'Adicionar à Tela Inicial' ou 'Instalar Aplicativo'.\n3. O app aparecerá nos seus aplicativos da Smart TV.")
+      // SE NÃO HOUVER PROMPT (TVs ANTIGAS), ABRE O MANUAL DE INSTALAÇÃO COMO ÚLTIMO RECURSO
+      alert("INSTALAÇÃO LÉO TV:\n\n1. Use o controle remoto e abra o Menu do Navegador.\n2. Clique em 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O app aparecerá nos seus aplicativos da Smart TV.")
     }
   }
 
@@ -58,7 +60,7 @@ export function PwaInstall() {
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg">
-            INSTALAR
+            INSTALAR AGORA
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsVisible(false)} className="text-white hover:bg-white/10 h-10 w-10">
             <X className="h-5 w-5" />
