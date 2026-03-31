@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle, ExternalLink, ShieldAlert } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, RefreshCcw, ExternalLink, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -38,16 +38,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
-      const id = targetUrl.includes('video/') ? targetUrl.split('video/')[1]?.split('?')[0] : targetUrl.split('dai.ly/')[1]?.split('?')[0];
-      return {
-        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`,
-        type: 'iframe'
-      }
-    }
-
     const lowUrl = targetUrl.toLowerCase();
-    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg') || lowUrl.includes('.mp4')) {
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mpeg')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
@@ -60,15 +52,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const video = videoRef.current;
     let hls: any = null;
     
-    const initHls = () => {
+    const initPlayer = () => {
       // @ts-ignore
-      if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
+      if (type === 'hls' && typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
         hls = new window.Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          manifestLoadingMaxRetry: 6,
-          levelLoadingMaxRetry: 6,
+          manifestLoadingMaxRetry: 10,
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
         });
         hls.loadSource(processedUrl);
@@ -80,7 +71,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         });
         hls.on('hlsError', (event: any, data: any) => {
           if (data.fatal) {
-            console.error("HLS Fatal Error:", data);
             setHasError(true);
             setLoading(false);
             hls.destroy();
@@ -88,11 +78,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         });
       } else {
         video.src = processedUrl;
-        video.play().catch(() => {});
-        setLoading(false);
+        video.play().catch(() => {
+          // Se falhar o auto-play, apenas tira o loading
+          setLoading(false);
+        });
       }
     };
-    initHls();
+
+    initPlayer();
     return () => { if (hls) hls.destroy(); };
   }, [type, processedUrl]);
 
@@ -104,7 +97,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL MASTER HIDRA v19 ATIVO</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL HIDRA v20 ATIVO</span>
       </div>
 
       {loading && !hasError && (
@@ -140,9 +133,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {(hasError || isHttpOnHttps) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <ShieldAlert className="h-12 w-12 text-primary animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-primary tracking-tighter">SINAL BLINDADO: AÇÃO NECESSÁRIA</h3>
+           <h3 className="text-xl font-black uppercase italic text-primary tracking-tighter">SINAL BLINDADO: BLOQUEIO DE NAVEGADOR</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Mestre, este sinal é externo e o navegador requer uma sintonização forçada para abrir o player.
+             Mestre, este sinal é externo (HTTP) e o navegador bloqueia o player interno por segurança. Clique abaixo para sintonização segura.
            </p>
            <Button asChild className="h-16 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
               <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAÇÃO SEGURA <ExternalLink className="ml-2 h-6 w-6" /></a>

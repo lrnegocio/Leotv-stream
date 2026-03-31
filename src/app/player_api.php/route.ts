@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
 
       if (error || !data) {
-        console.error("Login IPTV Falhou - PIN não encontrado:", username);
         return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       }
 
