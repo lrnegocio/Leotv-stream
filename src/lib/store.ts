@@ -145,6 +145,20 @@ export async function saveContent(item: ContentItem) {
   }
 }
 
+export async function getContentById(id: string): Promise<ContentItem | null> {
+  try {
+    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    if (error || !data) return null;
+    return {
+      ...data,
+      isRestricted: data.is_restricted,
+      streamUrl: data.stream_url,
+      directStreamUrl: data.direct_stream_url,
+      imageUrl: data.image_url,
+    };
+  } catch (e) { return null; }
+}
+
 export async function removeContent(id: string) {
   try {
     const { error } = await supabase.from('content').delete().eq('id', id);

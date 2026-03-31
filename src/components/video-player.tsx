@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -28,37 +28,30 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isHls, isIframe, isProtected } = React.useMemo(() => {
-    if (!url || typeof url !== 'string') return { processedUrl: null, isHls: false, isIframe: false, isProtected: false }
+  const { processedUrl, type } = React.useMemo(() => {
+    if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
 
-    // DETECÇÃO HLS (IPTV DIRETO)
-    const isDirectHls = targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4');
-    
-    // SINAIS PROTEGIDOS QUE BLOQUEIAM SANDBOX (Rei dos Canais)
-    const isProt = targetUrl.includes('rdcanais.com') || 
-                   targetUrl.includes('reidoscanais.ooo') || 
-                   targetUrl.includes('cloudecast') ||
-                   targetUrl.includes('bhtelecom');
-
+    // DETECÇÃO YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isHls: false, isIframe: true, isProtected: false 
+        type: 'youtube'
       }
     }
 
-    return { 
-      processedUrl: targetUrl, 
-      isHls: isDirectHls, 
-      isIframe: !isDirectHls,
-      isProtected: isProt
-    };
+    // DETECÇÃO HLS / IPTV
+    if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
+      return { processedUrl: targetUrl, type: 'hls' }
+    }
+
+    // PADRÃO: IFRAME WEB (SEM SANDBOX)
+    return { processedUrl: targetUrl, type: 'iframe' }
   }, [url])
 
   React.useEffect(() => {
-    if (!isHls || !videoRef.current || !processedUrl) return;
+    if (type !== 'hls' || !videoRef.current || !processedUrl) return;
 
     let hls: any = null;
     const video = videoRef.current;
@@ -70,7 +63,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 90,
           xhrSetup: (xhr: any) => {
             xhr.withCredentials = false;
           }
@@ -83,6 +75,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
         hls.on('hlsError', (event: any, data: any) => {
           if (data.fatal) {
+            console.error("HLS Fatal Error:", data);
             setHasError(true);
             setLoading(false);
           }
@@ -93,15 +86,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           video.play().catch(() => {});
           setLoading(false);
         });
+        video.addEventListener('error', () => {
+          setHasError(true);
+          setLoading(false);
+        });
       }
     };
 
-    initHls();
-
+    // Pequeno delay para garantir que o elemento DOM está pronto
+    const timer = setTimeout(initHls, 100);
     return () => {
+      clearTimeout(timer);
       if (hls) hls.destroy();
     };
-  }, [isHls, processedUrl]);
+  }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -113,17 +111,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Blindado v218</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master v219.0</span>
       </div>
 
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando Canal...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando...</span>
         </div>
       )}
 
-      {isHls ? (
+      {type === 'hls' ? (
         <video 
           ref={videoRef}
           key={processedUrl} 
@@ -132,39 +130,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline
           className="h-full w-full object-contain relative z-10" 
           onLoadedData={() => setLoading(false)}
-          onError={() => { setLoading(false); setHasError(true); }} 
         />
-      ) : isIframe ? (
+      ) : type === 'youtube' || type === 'iframe' ? (
         <iframe 
           key={processedUrl} 
           src={processedUrl!} 
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; picture-in-picture"
-          // LIBERAÇÃO MESTRE: Remove sandbox completamente para domínios que o exigem para funcionar
-          {...(isProtected ? {} : { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation allow-modals" })}
           onLoad={() => setLoading(false)} 
-          onError={() => { setLoading(false); setHasError(true); }} 
         />
       ) : (
-        <video 
-          key={processedUrl} 
-          src={processedUrl!} 
-          autoPlay 
-          muted={isMuted} 
-          controls 
-          className="h-full w-full object-contain relative z-10" 
-          onLoadedData={() => setLoading(false)} 
-          onError={() => { setLoading(false); setHasError(true); }} 
-        />
+        <div className="flex items-center justify-center h-full text-destructive uppercase font-black">Sinal Desconhecido</div>
       )}
 
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
            <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
            <h3 className="text-2xl font-black uppercase italic text-destructive tracking-tighter">ERRO DE SINTONIA</h3>
-           <p className="text-[10px] uppercase font-bold text-white/40">O sinal original pode estar instável ou bloqueado.</p>
-           <Button onClick={() => window.location.reload()} variant="outline" className="text-white border-white/10 font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECALIBRAR SINAL</Button>
+           <p className="text-[10px] uppercase font-bold text-white/40">O sinal original pode estar offline no momento.</p>
+           <Button onClick={() => window.location.reload()} variant="outline" className="text-white border-white/10 font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
         </div>
       )}
       
