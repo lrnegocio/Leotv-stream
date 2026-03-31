@@ -69,7 +69,7 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// LIMPEZA SNIPER: Remove aspas, pontos, vírgulas e números iniciais
+// LIMPEZA SNIPER: Remove aspas, pontos e números iniciais
 export const cleanName = (name: string) => {
   if (!name) return "";
   return name
@@ -118,7 +118,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       imageUrl: item.image_url,
     }));
   } catch (e) { 
-    console.error("Erro ao carregar canais:", e);
     return []; 
   }
 }
@@ -184,13 +183,8 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase:", error);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) { 
-    console.error("Erro Fatal ao Salvar:", e);
     return false; 
   }
 }
@@ -215,6 +209,82 @@ export async function clearAllM3UContent() {
     const { error } = await supabase.from('content').delete().neq('id', '_dummy_');
     return !error;
   } catch (e) { return false; }
+}
+
+export async function getGlobalSettings() {
+  try {
+    const { data } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
+    return data?.value || { parentalPin: "1234" };
+  } catch (e) { return { parentalPin: "1234" }; }
+}
+
+export async function updateGlobalSettings(val: any) {
+  try {
+    await supabase.from('settings').upsert({ key: 'global', value: val });
+  } catch (e) { }
+}
+
+export async function processM3UImport(m3u: string, onProgress: (msg: string) => void) {
+  const lines = m3u.split('\n');
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith('#EXTINF')) {
+      const info = lines[i];
+      const url = lines[i+1]?.trim();
+      const titleMatch = info.match(/,(.*)$/);
+      const title = titleMatch ? cleanName(titleMatch[1]) : "CANAL M3U";
+      const groupMatch = info.match(/group-title="(.*?)"/);
+      const genre = groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO";
+      const logoMatch = info.match(/tvg-logo="(.*?)"/);
+      const logo = logoMatch ? logoMatch[1] : "";
+
+      await saveContent({
+        id: generateSafeId(title),
+        title,
+        type: 'channel',
+        description: 'Importado via M3U',
+        genre,
+        isRestricted: genre.includes('ADULT') || genre.includes('XXX') || genre.includes('18+'),
+        streamUrl: url,
+        directStreamUrl: url,
+        imageUrl: logo,
+        created_at: new Date().toISOString()
+      });
+      count++;
+      if (count % 50 === 0) onProgress(`Sincronizando ${count} sinais...`);
+    }
+  }
+  return { success: count };
+}
+
+export async function processHTMLImport(html: string, onProgress: (msg: string) => void) {
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  const links = temp.querySelectorAll('a.btn-stream');
+  let count = 0;
+  
+  for (const link of links) {
+    const titleElem = link.querySelector('.col');
+    const imgElem = link.querySelector('img');
+    const title = titleElem ? cleanName(titleElem.textContent?.replace(/^\d+/, '') || "") : "";
+    const img = imgElem ? imgElem.getAttribute('src') : "";
+
+    if (title) {
+      await saveContent({
+        id: generateSafeId(title),
+        title,
+        type: 'channel',
+        description: 'Extraído via Sniper HTML',
+        genre: 'LÉO TV AO VIVO',
+        isRestricted: false,
+        imageUrl: img || "",
+        created_at: new Date().toISOString()
+      });
+      count++;
+      if (count % 10 === 0) onProgress(`Sniper extraindo: ${count} canais...`);
+    }
+  }
+  return { success: count };
 }
 
 export async function saveUser(user: User) {
