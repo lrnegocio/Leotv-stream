@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Download, X, Tv } from "lucide-react"
+import { X, Tv, ArrowDownToLine } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 
@@ -30,8 +30,8 @@ export function PwaInstall() {
       }
     } else {
       toast({ 
-        title: "INSTALAÇÃO REAL", 
-        description: "Abra o menu do seu navegador e clique em 'Instalar App' ou 'Adicionar à tela inicial'." 
+        title: "INSTALAÇÃO DIRETA", 
+        description: "Mestre, no seu navegador, clique nos 3 pontinhos e selecione 'Instalar Aplicativo'." 
       });
     }
   }
@@ -44,13 +44,13 @@ export function PwaInstall() {
         <div className="flex items-center gap-4">
           <div className="bg-white/10 p-3 rounded-2xl"><Tv className="h-6 w-6 text-white" /></div>
           <div>
-            <p className="text-white font-black uppercase text-[12px] italic">LÉO TV MASTER</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Sinal Oficial</p>
+            <p className="text-white font-black uppercase text-[12px] italic tracking-tighter">LÉO TV MASTER</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">SINAL OFICIAL</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl shadow-lg">
-            INSTALAR AGORA
+          <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl shadow-lg hover:scale-105 transition-transform">
+            <ArrowDownToLine className="h-4 w-4 mr-2" /> INSTALAR AGORA
           </Button>
           <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white p-1"><X className="h-5 w-5" /></button>
         </div>

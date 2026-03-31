@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     if (isMaster) {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
+      // SINTONIZAÇÃO SQL: Usando a coluna correta "isBlocked"
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
       if (error || !data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       activeUser = data;

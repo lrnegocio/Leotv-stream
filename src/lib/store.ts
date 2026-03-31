@@ -78,6 +78,7 @@ export const generateSafeId = (name: string) => {
   return "leo_" + clean.substring(0, 20) + "_" + Math.random().toString(36).substring(2, 7);
 };
 
+// SINTONIZAÇÃO MASTER: Todas as colunas agora usam aspas duplas para bater com o SQL do Mestre Léo
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -105,15 +106,16 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
+    // BLINDAGEM SQL: Forçando as colunas case-sensitive do banco
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      isRestricted: item.isRestricted || false,
-      streamUrl: item.streamUrl || null,
-      imageUrl: item.imageUrl || null,
+      "isRestricted": item.isRestricted || false,
+      "streamUrl": item.streamUrl || null,
+      "imageUrl": item.imageUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
       created_at: item.created_at || new Date().toISOString()
@@ -189,7 +191,7 @@ export async function processM3UImport(content: string, onProgress?: (msg: strin
           title: cleanName(title),
           type: 'channel',
           genre: 'LÉO TV AO VIVO',
-          streamUrl: nextLine,
+          "streamUrl": nextLine,
           created_at: new Date().toISOString()
         });
         count++;
@@ -218,14 +220,14 @@ export async function saveUser(user: User) {
       id: user.id,
       pin: user.pin,
       role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices,
-      isBlocked: user.isBlocked,
-      isAdultEnabled: user.isAdultEnabled,
-      resellerId: user.resellerId,
-      activatedAt: user.activatedAt
+      "subscriptionTier": user.subscriptionTier,
+      "expiryDate": user.expiryDate,
+      "maxScreens": user.maxScreens,
+      "activeDevices": user.activeDevices,
+      "isBlocked": user.isBlocked,
+      "isAdultEnabled": user.isAdultEnabled,
+      "resellerId": user.resellerId,
+      "activatedAt": user.activatedAt
     };
     const { error } = await supabase.from('users').upsert(payload);
     return !error;
@@ -263,12 +265,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [], isBlocked: false, isAdultEnabled: true } as any };
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-    if (error || !user) return { error: "PIN INVÁLIDO." };
-    if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
+    if (error || !user) return { error: "PIN INVÁLIDO OU NÃO CADASTRADO." };
+    if (user.isBlocked) return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
 
     let devices = user.activeDevices || [];
     if (!devices.some((d: any) => d.id === deviceId)) {
-      if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO." };
+      if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO NO PLANO." };
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
@@ -293,7 +295,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
 
     await saveUser(updatedUser);
     return { user: updatedUser };
-  } catch (e) { return { error: "ERRO DE CONEXÃO." }; }
+  } catch (e) { return { error: "ERRO DE CONEXÃO COM O BANCO MASTER." }; }
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
@@ -305,7 +307,13 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveReseller(res: Reseller) {
   try {
-    const { error } = await supabase.from('resellers').upsert(res);
+    const payload = {
+      ...res,
+      "totalSold": res.totalSold || 0,
+      "isBlocked": res.isBlocked || false,
+      "birthDate": res.birthDate || null
+    };
+    const { error } = await supabase.from('resellers').upsert(payload);
     return !error;
   } catch (e) { return false; }
 }
@@ -323,7 +331,7 @@ export async function validateResellerLogin(username: string, password: string):
     if (error || !data) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
     if (data.isBlocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
     return { reseller: data };
-  } catch (e) { return { error: "ERRO DE CONEXÃO." }; }
+  } catch (e) { return { error: "ERRO DE CONEXÃO MASTER." }; }
 }
 
 export async function getCategoryCount(genre: string): Promise<number> {
@@ -341,8 +349,8 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
-  let expiry = '30 Dias';
-  if (tier === 'test') expiry = '6 Horas';
+  let expiry = '30 DIAS';
+  if (tier === 'test') expiry = '6 HORAS';
   if (tier === 'lifetime') expiry = 'VITALÍCIO';
   return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📅 *VALIDADE:* ${expiry}\n📺 *TELAS:* ${screens}\n\n🌐 *ACESSO:* ${url}\n\n_Suporte Master Léo Tech_`;
 }

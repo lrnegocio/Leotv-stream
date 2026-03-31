@@ -46,7 +46,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg')) {
+    // SUPORTE TS / MPEG / MP4 / M3U8
+    if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg') || targetUrl.toLowerCase().includes('.mp4')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
@@ -58,8 +59,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const video = videoRef.current;
     
-    if (type === 'hls') {
+    if (type === 'hls' || type === 'video') {
       let hls: any = null;
+      
       const initHls = () => {
         // @ts-ignore
         if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
@@ -67,6 +69,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new window.Hls({
             enableWorker: true,
             lowLatencyMode: true,
+            backBufferLength: 90,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           });
           hls.loadSource(processedUrl);
@@ -77,12 +80,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
           hls.on('hlsError', (event: any, data: any) => {
             if (data.fatal) {
+              console.error("Erro fatal HLS:", data);
               setHasError(true);
               setLoading(false);
               hls.destroy();
             }
           });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        } else if (video.canPlayType('application/vnd.apple.mpegurl') || type === 'video') {
           video.src = processedUrl;
           video.play().catch(() => {});
           setLoading(false);
@@ -91,14 +95,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       initHls();
       return () => { if (hls) hls.destroy(); };
     } 
-    
-    if (type === 'video') {
-      video.src = processedUrl;
-      video.load();
-      video.play().catch(() => {});
-      setLoading(false);
-    }
-
   }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -107,7 +103,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v14</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v14 Ativo</span>
       </div>
 
       {loading && !hasError && (
@@ -126,7 +122,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           playsInline
           className="h-full w-full object-contain relative z-10" 
           onLoadedData={() => { setLoading(false); setHasError(false); }}
-          onError={() => { setHasError(true); setLoading(false); }}
+          onError={() => { setLoading(false); setHasError(true); }}
         />
       ) : (
         <iframe 
@@ -144,12 +140,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
            <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Este sinal (HTTP) foi bloqueado pelo navegador por segurança. Para ver no navegador, use o botão abaixo ou prefira o App de IPTV.
+             Mestre, este sinal (HTTP) foi bloqueado pelo navegador por segurança (Mixed Content). Use o botão abaixo para sintonizar em janela limpa.
            </p>
-           <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase">
-              <a href={url} target="_blank" rel="noopener noreferrer">ABRIR SINAL MASTER <PlayCircle className="ml-2 h-6 w-6" /></a>
+           <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR AGORA <PlayCircle className="ml-2 h-6 w-6" /></a>
            </Button>
-           <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black">
+           <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black hover:text-primary">
              <RefreshCcw className="mr-2 h-4 w-4" /> TENTAR RECONECTAR
            </Button>
         </div>
@@ -164,7 +160,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-end pointer-events-auto">
-          <Button variant="ghost" size="icon" className="text-white h-12 w-12" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
+          <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
         </div>
       </div>
     </div>
