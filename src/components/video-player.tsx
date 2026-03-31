@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -28,23 +28,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, type } = React.useMemo(() => {
-    if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
+  const { processedUrl, type, isProtected } = React.useMemo(() => {
+    if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown', isProtected: false }
     const targetUrl = url.trim()
+    
+    const protectedDomains = ['rdcanais.com', 'reidoscanais.ooo', 'cloudecast.com', 'agropesca.live'];
+    const isProtected = protectedDomains.some(domain => targetUrl.includes(domain));
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        type: 'youtube'
+        type: 'youtube',
+        isProtected: false
       }
     }
 
     if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
-      return { processedUrl: targetUrl, type: 'hls' }
+      return { processedUrl: targetUrl, type: 'hls', isProtected: false }
     }
 
-    return { processedUrl: targetUrl, type: 'iframe' }
+    return { processedUrl: targetUrl, type: 'iframe', isProtected }
   }, [url])
 
   React.useEffect(() => {
@@ -123,7 +127,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v221.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v222.0</span>
       </div>
 
       {loading && (
@@ -150,6 +154,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; picture-in-picture"
+          // MESTRE LÉO: Removido sandbox para sinais protegidos funcionarem direto
+          {...(!isProtected ? { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation" } : {})}
           onLoad={() => setLoading(false)} 
         />
       ) : (
@@ -157,7 +163,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {hasError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-6">
            <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
            <h3 className="text-2xl font-black uppercase italic text-destructive tracking-tighter">ERRO DE SINTONIA</h3>
            <p className="text-[10px] uppercase font-bold text-white/40">O sinal pode estar temporariamente offline ou bloqueado pela TV.</p>

@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, Globe, PlayCircle, Loader2, RefreshCcw, Trash, CheckSquare, Square } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, RefreshCcw, Trash, CheckSquare, Square, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, clearAllM3UContent, ContentItem } from "@/lib/store"
@@ -25,7 +26,6 @@ export default function ContentManagementPage() {
   const loadItems = React.useCallback(async (query = "", force = false) => {
     setLoading(true)
     try {
-      // BUSCA DIRETA NO BANCO (Sem cache de navegador para não estourar a memória)
       const data = await getRemoteContent(force, query)
       setItems(data)
     } catch (error) {
@@ -159,6 +159,9 @@ export default function ContentManagementPage() {
           ) : (
             items.map((item) => {
               const isSelected = selectedIds.includes(item.id);
+              // MESTRE LÉO: Contagem de episódios apenas para Séries/Multi-Season
+              const epCount = item.type === 'series' ? (item.episodes?.length || 0) : item.type === 'multi-season' ? (item.seasons?.reduce((acc, s) => acc + (s.episodes?.length || 0), 0) || 0) : null;
+              
               return (
                 <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl p-0 group hover:border-primary/50 transition-all flex flex-col overflow-hidden relative shadow-lg`}>
                   <div className="absolute top-2 left-2 z-10">
@@ -173,7 +176,7 @@ export default function ContentManagementPage() {
                     {item.imageUrl ? (
                       <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform" unoptimized />
                     ) : (
-                      <div className="flex items-center justify-center h-full opacity-20"><Film className="h-10 w-10" /></div>
+                      <div className="flex items-center justify-center h-full opacity-20"><Tv className="h-10 w-10" /></div>
                     )}
                     <div className="absolute top-3 right-3">
                       {item.isRestricted && <Lock className="h-4 w-4 text-primary bg-black/60 p-1 rounded-full" />}
@@ -184,10 +187,14 @@ export default function ContentManagementPage() {
                     <div className="flex items-center justify-between mb-1 gap-2">
                       <h3 className="font-bold text-[10px] uppercase truncate text-primary flex-1">{item.title}</h3>
                       <div className="bg-primary/10 px-1.5 py-0.5 rounded text-[7px] font-black uppercase text-primary shrink-0">
-                        {item.type === 'channel' ? 'TV' : item.type === 'movie' ? 'FILM' : 'SER'}
+                        {item.type === 'channel' ? 'TV' : item.type === 'movie' ? 'FILM' : item.type === 'series' ? 'SER' : 'SEA'}
                       </div>
                     </div>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest truncate">{item.genre}</p>
+                    {/* MESTRE LÉO: Removida a linha "0 sinal" que aparecia para Canais e Filmes */}
+                    {epCount !== null && (
+                      <p className="text-[7px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
+                    )}
                   </div>
 
                   <div className="flex justify-between items-center p-2 border-t border-white/5 bg-black/20">
@@ -211,7 +218,6 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Preview e Player continuam iguais */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
         <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-8">
           <DialogHeader className="mb-6">
