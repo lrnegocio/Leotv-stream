@@ -76,13 +76,9 @@ export default function HomeContent() {
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
     } else {
-      setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: idx });
+      setActiveVideo({ url: item.streamUrl, title: item.title, index: idx });
     }
   };
-
-  const closePlayer = () => {
-    setActiveVideo(null);
-  }
 
   const verifyPin = () => {
     if (pinInput === parentalPin) { 
@@ -105,8 +101,8 @@ export default function HomeContent() {
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
-            <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block">Léo TV Stream</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Master Online</span>
+            <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block">LÉO TV MASTER</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Soberania Master Online</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
@@ -171,7 +167,7 @@ export default function HomeContent() {
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}`, index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
                         <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span>
                         <PlayCircle className="ml-auto h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
@@ -184,7 +180,7 @@ export default function HomeContent() {
                       <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                       <div className="flex flex-col gap-2">
                         {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.directStreamUrl || ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
+                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
                             <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
                             <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
                             <PlayCircle className="ml-auto h-5 w-5 text-primary group-hover:scale-110 transition-transform" />
@@ -200,7 +196,7 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!activeVideo} onOpenChange={closePlayer}>
+      <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
           {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} />}
         </DialogContent>

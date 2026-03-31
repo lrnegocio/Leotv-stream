@@ -107,7 +107,7 @@ export default function ContentManagementPage() {
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             const isSeries = item.type === 'series' || item.type === 'multi-season';
-            const epCount = isSeries ? (item.episodes?.length || item.seasons?.reduce((acc, s) => acc + s.episodes.length, 0) || 0) : 0;
+            const epCount = isSeries ? (item.episodes?.length || item.seasons?.reduce((acc, s) => acc + (s.episodes?.length || 0), 0) || 0) : 0;
             
             return (
               <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl overflow-hidden relative group transition-all flex flex-col shadow-lg`}>
@@ -123,7 +123,6 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {/* FIX MESTRE LÉO: SÓ MOSTRA CONTAGEM SE FOR SÉRIE E TIVER EPISÓDIOS */}
                   {isSeries && epCount > 0 && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
@@ -132,7 +131,7 @@ export default function ContentManagementPage() {
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
                       if (isSeries) setPreviewItem(item);
-                      else setActiveEpisode({ url: item.streamUrl || "", title: item.title });
+                      else setActiveVideo({ url: item.streamUrl || "", title: item.title });
                     }}><PlayCircle className="h-3 w-3" /></Button>
                     <Button variant="ghost" size="icon" asChild className="h-7 w-7"><Link href={`/admin/content/edit/${item.id}`}><Edit2 className="h-3 w-3" /></Link></Button>
                   </div>
@@ -149,10 +148,21 @@ export default function ContentManagementPage() {
           <DialogHeader><DialogTitle className="uppercase font-black text-primary">{previewItem?.title}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
             {previewItem?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || ep.directStreamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
+              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
                 <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                 <PlayCircle className="ml-auto h-4 w-4 text-primary" />
               </Button>
+            ))}
+            {previewItem?.seasons?.sort((a,b) => a.number - b.number).map(season => (
+              <div key={season.id} className="space-y-2 mb-4">
+                <p className="text-[10px] font-black text-primary uppercase pl-2">Temporada {season.number}</p>
+                {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ url: ep.streamUrl || "", title: `${previewItem.title} - T${season.number} EP ${ep.number}` })} className="w-full h-10 justify-start bg-white/5 border-white/5 hover:border-primary px-6 rounded-lg">
+                    <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
+                    <PlayCircle className="ml-auto h-3 w-3 text-primary" />
+                  </Button>
+                ))}
+              </div>
             ))}
           </div>
         </DialogContent>

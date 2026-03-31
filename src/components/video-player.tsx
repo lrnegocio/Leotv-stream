@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -50,11 +50,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
-    if (targetUrl.toLowerCase().match(/\.(mp4|mkv|mov|avi)$/) || targetUrl.includes('/movie/') || targetUrl.includes('/movie.mp4')) {
-      return { processedUrl: targetUrl, type: 'video' }
-    }
-
-    return { processedUrl: targetUrl, type: 'iframe' }
+    return { processedUrl: targetUrl, type: 'video' }
   }, [url])
 
   React.useEffect(() => {
@@ -111,7 +107,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v13</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v14</span>
       </div>
 
       {loading && !hasError && (
@@ -148,10 +144,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
            <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Este sinal não pode ser sintonizado internamente pelo navegador por segurança. Verifique se o link é HTTPS ou tente outro sinal.
+             Este sinal (HTTP) foi bloqueado pelo navegador por segurança. Para ver no navegador, use o botão abaixo ou prefira o App de IPTV.
            </p>
-           <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6">
-             <RefreshCcw className="mr-2 h-4 w-4" /> TENTAR NOVAMENTE
+           <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase">
+              <a href={url} target="_blank" rel="noopener noreferrer">ABRIR SINAL MASTER <PlayCircle className="ml-2 h-6 w-6" /></a>
+           </Button>
+           <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black">
+             <RefreshCcw className="mr-2 h-4 w-4" /> TENTAR RECONECTAR
            </Button>
         </div>
       )}

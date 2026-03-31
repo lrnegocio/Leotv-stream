@@ -25,7 +25,6 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl?: string; 
-  directStreamUrl?: string;
   imageUrl?: string;
   seasons?: Season[];
   episodes?: Episode[];
@@ -89,10 +88,17 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (error) throw error;
 
     return (rawData || []).map(item => ({
-      ...item,
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      description: item.description,
+      genre: item.genre,
       isRestricted: item.isRestricted,
       streamUrl: item.streamUrl,
       imageUrl: item.imageUrl,
+      episodes: item.episodes || [],
+      seasons: item.seasons || [],
+      created_at: item.created_at
     }));
   } catch (e) { return []; }
 }
@@ -106,8 +112,8 @@ export async function saveContent(item: ContentItem) {
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
       isRestricted: item.isRestricted || false,
-      imageUrl: item.imageUrl || null,
       streamUrl: item.streamUrl || null,
+      imageUrl: item.imageUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
       created_at: item.created_at || new Date().toISOString()
@@ -123,10 +129,17 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
     const { data, error } = await supabase.from('content').eq('id', id).maybeSingle();
     if (error || !data) return null;
     return {
-      ...data,
+      id: data.id,
+      title: data.title,
+      type: data.type,
+      description: data.description,
+      genre: data.genre,
       isRestricted: data.isRestricted,
       streamUrl: data.streamUrl,
       imageUrl: data.imageUrl,
+      episodes: data.episodes || [],
+      seasons: data.seasons || [],
+      created_at: data.created_at
     };
   } catch (e) { return null; }
 }
@@ -335,17 +348,3 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
 }
 
 export const generateRandomPin = (len = 11) => Math.random().toString().substring(2, 2+len);
-
-export async function renewUserSubscription(userId: string, tier: SubscriptionTier) {
-  try {
-    const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
-    if (!user) return false;
-    
-    let newExpiry = new Date().toISOString();
-    if (tier === 'monthly') newExpiry = new Date(Date.now() + 30 * 86400000).toISOString();
-    if (tier === 'lifetime') newExpiry = "2099-12-31T23:59:59Z";
-
-    const { error } = await supabase.from('users').update({ expiryDate: newExpiry, subscriptionTier: tier }).eq('id', userId);
-    return !error;
-  } catch (e) { return false; }
-}

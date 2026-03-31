@@ -18,14 +18,12 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // LOGIN MASTER OU VIA PIN (SINC COM SQL DO MESTRE)
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
     if (isMaster) {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
-      // BUSCA EXATA NAS COLUNAS DO SQL DO MESTRE
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
       if (error || !data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       activeUser = data;
