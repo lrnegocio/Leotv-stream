@@ -60,7 +60,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // 4. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio do blinder.space)
+    // 4. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio do blinder.space e outros)
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -69,8 +69,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const lowUrl = targetUrl.toLowerCase();
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'mpegts' }
-    if (lowUrl.includes('.mp4') || lowUrl.includes('.mkv') || lowUrl.includes('.mov')) return { processedUrl: finalUrl, type: 'video' }
+    if (lowUrl.includes('.mp4') || lowUrl.includes('.mkv') || lowUrl.includes('.mov') || lowUrl.includes('.avi')) return { processedUrl: finalUrl, type: 'video' }
     
+    // Fallback para vídeo se tiver extensão de mídia
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
@@ -85,14 +86,24 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+        hls = new window.Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true,
+          // Não tenta atualizar links HTTP internos para HTTPS se já estivermos no túnel
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+        });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
-        hls.on('hlsError', () => setLoading(false));
+        hls.on('hlsError', (event: any, data: any) => {
+          if (data.fatal) {
+            console.error("Erro fatal HLS:", data);
+            setLoading(false);
+          }
+        });
       } 
       // @ts-ignore
       else if ((type === 'mpegts' || processedUrl.includes('.ts')) && window.mpegts && window.mpegts.isSupported()) {
@@ -136,7 +147,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[70] p-10 text-center">
           <RefreshCcw className="h-12 w-12 text-destructive mb-4 animate-spin-slow" />
           <h3 className="text-xl font-black uppercase text-white mb-2">Sinal Instável</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O servidor externo está oscilando.</p>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O servidor externo está oscilando ou bloqueado.</p>
           <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-xs h-12 px-8 rounded-xl">Recarregar Sistema</Button>
         </div>
       )}
@@ -161,6 +172,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           autoPlay 
           muted={isMuted} 
           playsInline 
+          webkit-playsinline="true"
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
