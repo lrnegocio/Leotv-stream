@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, ExternalLink, RefreshCcw, AlertTriangle } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // 1. DETECÇÃO DE IMAGEM MASTER
+    // 1. DETECÇÃO DE IMAGEM
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -39,30 +39,32 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. SINTONIZADOR XVIDEOS MASTER
+    // 2. SINTONIZADOR XVIDEOS
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
         const id = parts[1].split('/')[0];
-        return {
-          processedUrl: `https://www.xvideos.com/embedframe/${id}`,
-          type: 'iframe'
-        }
+        return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
       }
     }
 
     // 3. SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
-      return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`,
-        type: 'iframe'
-      }
+      return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 4. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio de Mixed Content)
+    // 4. SUPORTE DAILYMOTION
+    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
+      let id = "";
+      if (targetUrl.includes('video/')) id = targetUrl.split('video/')[1]?.split('?')[0];
+      else if (targetUrl.includes('dai.ly/')) id = targetUrl.split('dai.ly/')[1]?.split('?')[0];
+      if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
+    }
+
+    // 5. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio de Mixed Content)
     let finalUrl = targetUrl;
-    if (targetUrl.startsWith('http://')) {
+    if (targetUrl.startsWith('http://') && !targetUrl.includes(window.location.host)) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 

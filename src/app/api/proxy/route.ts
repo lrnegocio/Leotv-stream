@@ -4,10 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 3.0 (STREAMING TOTAL)
- * Esta rota resolve o bloqueio de "Mixed Content" do Google/Brave.
- * Suporta Range Requests para permitir navegação (seek) em arquivos MP4.
- * Repassa cabeçalhos críticos para que o player reconheça o fluxo de vídeo.
+ * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 4.0 (FLUXO CINEMA)
+ * Suporte total a Range Requests para permitir Seek (pular partes) em MP4.
+ * Resolve o bloqueio de Mixed Content (HTTP em HTTPS).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -37,7 +36,7 @@ export async function GET(req: NextRequest) {
     // Prepara os cabeçalhos de resposta para o navegador aceitar o sinal
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos essenciais do servidor de origem
+    // Copia cabeçalhos essenciais do servidor de origem para permitir streaming correto
     const contentHeaders = [
       'content-type',
       'content-length',
@@ -51,13 +50,9 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Se não houver content-type, força vídeo
-    if (!responseHeaders.has('content-type')) {
-      responseHeaders.set('content-type', 'video/mp4');
-    }
-
+    // Força o navegador a aceitar o fluxo
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('X-Sinal-Status', 'Blindado');
+    responseHeaders.set('X-Sinal-Status', 'Blindado-Master');
 
     return new NextResponse(response.body, {
       status: response.status,
