@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -30,7 +29,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM (Suporte total para links do Google e Fotos)
+    // DETECÇÃO DE IMAGEM (Motor Hidra v27)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -48,7 +47,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // FORMATOS IPTV
+    // FORMATOS IPTV MASTER
     const lowUrl = targetUrl.toLowerCase();
     if (lowUrl.includes('.m3u8')) return { processedUrl: targetUrl, type: 'hls' }
     if (lowUrl.includes('.ts')) return { processedUrl: targetUrl, type: 'mpegts' }
@@ -65,6 +64,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
+      // MOTOR HLS (Hidra v27)
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -74,6 +74,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls.on('hlsManifestParsed', () => { video.play().catch(() => {}); setLoading(false); });
         hls.on('hlsError', () => setLoading(false));
       } 
+      // MOTOR MPEG-TS (Igual ao Supremo Player)
       // @ts-ignore
       else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
@@ -102,8 +103,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
-  const isHttp = url.startsWith('http://');
-
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       {loading && (
@@ -128,7 +127,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-black text-white uppercase italic truncate max-w-md">{title}</h3>
-            {isHttp && <div className="bg-orange-500/20 text-orange-500 px-3 py-1 rounded-full border border-orange-500/30 text-[8px] font-black uppercase flex items-center gap-1"><AlertTriangle className="h-3 w-3"/> SINAL HTTP (BLOQUEÁVEL PELA TV)</div>}
           </div>
           <button className="h-12 w-12 bg-black/40 hover:bg-primary rounded-full flex items-center justify-center transition-all shadow-2xl" onClick={() => setIsMuted(!isMuted)}>
             {isMuted ? <VolumeX className="h-6 w-6 text-destructive" /> : <Volume2 className="h-6 w-6 text-primary" />}

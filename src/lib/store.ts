@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -91,10 +90,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     return (rawData || []).map(item => ({
       id: item.id,
       title: item.title,
-      type: item.type,
+      type: item.type as any,
       description: item.description,
       genre: item.genre,
-      isRestricted: item["isRestricted"],
+      isRestricted: item["isRestricted"] || false,
       streamUrl: item["streamUrl"],
       directStreamUrl: item["directStreamUrl"],
       imageUrl: item["imageUrl"],
@@ -109,6 +108,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
 export async function saveContent(item: ContentItem) {
   try {
+    // BLINDAGEM SQL SNIPER: Usa nomes de colunas exatos com aspas duplas
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
@@ -141,10 +141,10 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
     return {
       id: data.id,
       title: data.title,
-      type: data.type,
+      type: data.type as any,
       description: data.description,
       genre: data.genre,
-      isRestricted: data["isRestricted"],
+      isRestricted: data["isRestricted"] || false,
       streamUrl: data["streamUrl"],
       directStreamUrl: data["directStreamUrl"],
       imageUrl: data["imageUrl"],
@@ -180,48 +180,6 @@ export async function updateGlobalSettings(val: any) {
   try {
     await supabase.from('settings').upsert({ key: 'global', value: val });
     return true;
-  } catch (e) { return false; }
-}
-
-export async function processM3UImport(content: string, onProgress?: (msg: string) => void) {
-  const lines = content.split('\n');
-  let count = 0;
-  const items: any[] = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('#EXTINF:')) {
-      const titleMatch = line.match(/,(.*)$/);
-      const title = titleMatch ? titleMatch[1].trim() : "Canal Sem Nome";
-      const nextLine = lines[i+1]?.trim();
-      if (nextLine && !nextLine.startsWith('#')) {
-        items.push({
-          id: generateSafeId(title),
-          title: cleanName(title),
-          type: 'channel',
-          genre: 'LÉO TV AO VIVO',
-          "streamUrl": nextLine,
-          "directStreamUrl": nextLine,
-          "isRestricted": false,
-          created_at: new Date().toISOString()
-        });
-        count++;
-      }
-    }
-  }
-
-  if (items.length > 0) {
-    const { error } = await supabase.from('content').upsert(items);
-    if (error) throw error;
-  }
-  
-  return { success: count };
-}
-
-export async function clearAllM3UContent() {
-  try {
-    const { error } = await supabase.from('content').delete().neq('id', 'placeholder');
-    return !error;
   } catch (e) { return false; }
 }
 
@@ -263,8 +221,8 @@ export async function getRemoteUsers(): Promise<User[]> {
       expiryDate: u["expiryDate"],
       maxScreens: u["maxScreens"],
       activeDevices: u["activeDevices"] || [],
-      isBlocked: u["isBlocked"],
-      isAdultEnabled: u["isAdultEnabled"],
+      isBlocked: u["isBlocked"] || false,
+      isAdultEnabled: u["isAdultEnabled"] || false,
       resellerId: u["resellerId"],
       activatedAt: u["activatedAt"]
     }));
@@ -314,8 +272,8 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
     const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
     return (data || []).map(r => ({
       ...r,
-      isBlocked: r["isBlocked"],
-      totalSold: r["totalSold"],
+      isBlocked: r["isBlocked"] || false,
+      totalSold: r["totalSold"] || 0,
       birthDate: r["birthDate"]
     }));
   } catch (e) { return []; }
@@ -334,7 +292,6 @@ export async function saveReseller(res: Reseller) {
       "birthDate": res.birthDate || null,
       email: res.email,
       phone: res.phone,
-      phone_whatsapp: res.phone,
       cpf: res.cpf
     };
     const { error } = await supabase.from('resellers').upsert(payload);
@@ -356,8 +313,8 @@ export async function validateResellerLogin(username: string, password: string):
     if (data["isBlocked"]) return { error: "ACESSO DE REVENDA SUSPENSO." };
     return { reseller: {
       ...data,
-      isBlocked: data["isBlocked"],
-      totalSold: data["totalSold"],
+      isBlocked: data["isBlocked"] || false,
+      totalSold: data["totalSold"] || 0,
       birthDate: data["birthDate"]
     } };
   } catch (e) { return { error: "ERRO DE CONEXÃO MASTER." }; }

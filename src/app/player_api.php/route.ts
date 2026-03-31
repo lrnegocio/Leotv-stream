@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getRemoteContent } from '@/lib/store';
@@ -18,11 +17,10 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // LOGIN MASTER LÉO
-    const isMaster = username === 'adm77x2p';
+    // LOGIN MASTER LÉO - BUSCA BLINDADA POR PIN
     let activeUser: any = null;
 
-    if (isMaster) {
+    if (username === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
