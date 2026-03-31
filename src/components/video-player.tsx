@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, ExternalLink } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, ExternalLink, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -16,11 +16,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
+  const [error, setError] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
+      setError(false)
     }
   }, [url])
 
@@ -28,7 +30,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM MASTER
+    // 1. DETECÇÃO DE IMAGEM MASTER
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -37,7 +39,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // SINTONIZADOR XVIDEOS MASTER (Extração de ID para Embed)
+    // 2. SINTONIZADOR XVIDEOS MASTER
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
@@ -49,7 +51,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // SUPORTE YOUTUBE
+    // 3. SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -58,13 +60,18 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // FORMATOS IPTV MASTER (MPEG-TS / HLS / MP4)
+    // 4. TÚNEL MASTER PARA LINKS HTTP (Resolve o bloqueio do blinder.space)
+    let finalUrl = targetUrl;
+    if (targetUrl.startsWith('http://')) {
+      finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
+    }
+
     const lowUrl = targetUrl.toLowerCase();
-    if (lowUrl.includes('.m3u8')) return { processedUrl: targetUrl, type: 'hls' }
-    if (lowUrl.includes('.ts')) return { processedUrl: targetUrl, type: 'mpegts' }
-    if (lowUrl.includes('.mp4') || lowUrl.includes('.mkv') || lowUrl.includes('.mov')) return { processedUrl: targetUrl, type: 'video' }
+    if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
+    if (lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'mpegts' }
+    if (lowUrl.includes('.mp4') || lowUrl.includes('.mkv') || lowUrl.includes('.mov')) return { processedUrl: finalUrl, type: 'video' }
     
-    return { processedUrl: targetUrl, type: 'video' }
+    return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
   React.useEffect(() => {
@@ -75,7 +82,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
-      // MOTOR HLS
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -83,25 +89,18 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
-          video.play().catch(() => {
-            video.muted = true;
-            video.play().catch(() => {});
-          }); 
+          video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
         hls.on('hlsError', () => setLoading(false));
       } 
-      // MOTOR MPEG-TS
       // @ts-ignore
       else if ((type === 'mpegts' || processedUrl.includes('.ts')) && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
         mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl });
         mpegtsPlayer.attachMediaElement(video);
         mpegtsPlayer.load();
-        mpegtsPlayer.play().catch(() => {
-          video.muted = true;
-          video.play().catch(() => {});
-        });
+        mpegtsPlayer.play().catch(() => { video.muted = true; mpegtsPlayer.play().catch(() => {}); });
         setLoading(false);
       }
       else {
@@ -129,13 +128,22 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL MASTER...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-[70] p-10 text-center">
+          <RefreshCcw className="h-12 w-12 text-destructive mb-4 animate-spin-slow" />
+          <h3 className="text-xl font-black uppercase text-white mb-2">Sinal Instável</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O servidor externo está oscilando.</p>
+          <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-xs h-12 px-8 rounded-xl">Recarregar Sistema</Button>
         </div>
       )}
 
       {type === 'image' ? (
         <div className="relative w-full h-full flex items-center justify-center bg-black">
-          <img src={processedUrl!} alt={title} className="max-w-full max-h-full object-contain" onLoad={() => setLoading(false)} onError={() => setLoading(false)} />
+          <img src={processedUrl!} alt={title} className="max-w-full max-h-full object-contain" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
         </div>
       ) : (type === 'youtube' || type === 'xvideos') ? (
         <iframe 
@@ -156,7 +164,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
-          onError={() => setLoading(false)} 
+          onError={() => { setLoading(false); setError(true); }} 
         />
       )}
       
@@ -171,13 +179,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
           <div className="flex gap-4">
              <Button className="h-12 px-6 rounded-xl bg-primary text-white font-black uppercase text-[10px]" onClick={() => window.open(url || "", '_blank')}>
-               <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL DIRETO
+               <ExternalLink className="mr-2 h-4 w-4" /> LINK EXTERNO DIRETO
              </Button>
           </div>
           <div className="flex gap-4 items-center">
             <div className="flex items-center gap-2 px-4 py-2 bg-black/40 rounded-full border border-white/5">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL MASTER</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO</span>
             </div>
             <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
           </div>
