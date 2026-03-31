@@ -31,7 +31,7 @@ export function PwaInstall() {
     } else {
       toast({ 
         title: "INSTALAÇÃO MASTER", 
-        description: "Abra o menu do seu navegador e clique em 'Instalar App' ou 'Adicionar à tela inicial'." 
+        description: "Abra o menu do seu navegador (Chrome/Android) e clique em 'Instalar App' ou 'Adicionar à tela inicial'." 
       });
     }
   }

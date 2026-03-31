@@ -90,7 +90,6 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
     return (rawData || []).map(item => ({
       ...item,
-      // MAPEAMENTO PARA O SQL DO MESTRE LÉO (CASE SENSITIVE)
       isRestricted: item.isRestricted,
       streamUrl: item.streamUrl,
       imageUrl: item.imageUrl,
@@ -106,7 +105,6 @@ export async function saveContent(item: ContentItem) {
       type: item.type,
       description: item.description || "Sinal Master Léo Tv",
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      // USANDO OS NOMES EXATOS DO SQL COM ASPAS DO MESTRE
       isRestricted: item.isRestricted || false,
       imageUrl: item.imageUrl || null,
       streamUrl: item.streamUrl || null,
@@ -140,6 +138,13 @@ export async function removeContent(id: string) {
   } catch (e) { return false; }
 }
 
+export async function bulkRemoveContent(ids: string[]) {
+  try {
+    const { error } = await supabase.from('content').delete().in('id', ids);
+    return !error;
+  } catch (e) { return false; }
+}
+
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('value').eq('key', 'global').maybeSingle();
@@ -151,6 +156,46 @@ export async function updateGlobalSettings(val: any) {
   try {
     await supabase.from('settings').upsert({ key: 'global', value: val });
     return true;
+  } catch (e) { return false; }
+}
+
+export async function processM3UImport(content: string, onProgress?: (msg: string) => void) {
+  const lines = content.split('\n');
+  let count = 0;
+  const items: any[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('#EXTINF:')) {
+      const titleMatch = line.match(/,(.*)$/);
+      const title = titleMatch ? titleMatch[1].trim() : "Canal Sem Nome";
+      const nextLine = lines[i+1]?.trim();
+      if (nextLine && !nextLine.startsWith('#')) {
+        items.push({
+          id: generateSafeId(title),
+          title: cleanName(title),
+          type: 'channel',
+          genre: 'LÉO TV AO VIVO',
+          streamUrl: nextLine,
+          created_at: new Date().toISOString()
+        });
+        count++;
+      }
+    }
+  }
+
+  if (items.length > 0) {
+    const { error } = await supabase.from('content').upsert(items);
+    if (error) throw error;
+  }
+  
+  return { success: count };
+}
+
+export async function clearAllM3UContent() {
+  try {
+    const { error } = await supabase.from('content').delete().neq('id', 'placeholder');
+    return !error;
   } catch (e) { return false; }
 }
 
@@ -290,3 +335,17 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
 }
 
 export const generateRandomPin = (len = 11) => Math.random().toString().substring(2, 2+len);
+
+export async function renewUserSubscription(userId: string, tier: SubscriptionTier) {
+  try {
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    if (!user) return false;
+    
+    let newExpiry = new Date().toISOString();
+    if (tier === 'monthly') newExpiry = new Date(Date.now() + 30 * 86400000).toISOString();
+    if (tier === 'lifetime') newExpiry = "2099-12-31T23:59:59Z";
+
+    const { error } = await supabase.from('users').update({ expiryDate: newExpiry, subscriptionTier: tier }).eq('id', userId);
+    return !error;
+  } catch (e) { return false; }
+}
