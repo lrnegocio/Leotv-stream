@@ -377,4 +377,16 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
          `_Suporte Master Léo Tech_`;
 }
 
+export async function generateM3UPlaylist(pin: string) {
+  const content = await getRemoteContent(true);
+  let m3u = "#EXTM3U\n";
+  content.forEach(item => {
+    const streamUrl = item.directStreamUrl || item.streamUrl;
+    if (streamUrl) {
+      m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre}",${item.title}\n${streamUrl}\n`;
+    }
+  });
+  return m3u;
+}
+
 export const generateRandomPin = (len = 11) => Math.random().toString().substring(2, 2+len);

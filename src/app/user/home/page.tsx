@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import HomeContent from '@/components/home-content';
 import { Loader2 } from 'lucide-react';
 import { AiAssistant } from '@/components/ai-assistant';
+import { PwaInstall } from '@/components/pwa-install';
 
 export default function HomePage() {
   const [isMounted, setIsMounted] = React.useState(false);
@@ -26,8 +27,8 @@ export default function HomePage() {
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     }>
+      <PwaInstall />
       <HomeContent />
-      {/* MICROFONE E ASSISTENTE LIBERADO PARA TODOS OS CLIENTES */}
       <AiAssistant />
     </Suspense>
   );

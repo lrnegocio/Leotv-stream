@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, ShieldAlert, Loader2, Zap, RefreshCcw, Trash } from "lucide-react"
+import { Lock, Save, Loader2, Zap, Trash } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, processM3UImport, clearAllM3UContent } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -71,17 +71,16 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-4 font-black uppercase text-[10px]">Carregando Painel de Segurança...</p></div>
+  if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="ml-4 font-black uppercase text-[10px]">Carregando Painel de Segurança Master...</p></div>
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="space-y-1">
         <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Importação</h1>
-        <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Master de Rede.</p>
+        <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Master de Rede Léo Tv.</p>
       </div>
 
       <div className="grid gap-8">
-        {/* IMPORTADOR M3U */}
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-6">
             <div className="flex items-center gap-4">
@@ -90,7 +89,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador Massivo M3U</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Importe listas gigantes para o banco de dados.</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Importe listas gigantes para o banco de dados Master.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -113,7 +112,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* SENHA PARENTAL */}
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
             <div className="flex items-center gap-4">

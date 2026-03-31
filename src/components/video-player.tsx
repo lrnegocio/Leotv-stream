@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, Play } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -32,7 +32,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
 
-    // DETECÇÃO YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -41,12 +40,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // DETECÇÃO HLS / IPTV
     if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
-    // PADRÃO: IFRAME WEB (SEM SANDBOX)
     return { processedUrl: targetUrl, type: 'iframe' }
   }, [url])
 
@@ -58,11 +55,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const initHls = () => {
       // @ts-ignore
-      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        hls = new Hls({
+        hls = new window.Hls({
           enableWorker: true,
           lowLatencyMode: true,
+          backBufferLength: 90,
           xhrSetup: (xhr: any) => {
             xhr.withCredentials = false;
           }
@@ -75,9 +73,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
         hls.on('hlsError', (event: any, data: any) => {
           if (data.fatal) {
-            console.error("HLS Fatal Error:", data);
-            setHasError(true);
-            setLoading(false);
+            switch (data.type) {
+              case 'networkError':
+                hls.startLoad();
+                break;
+              case 'mediaError':
+                hls.recoverMediaError();
+                break;
+              default:
+                setHasError(true);
+                setLoading(false);
+                hls.destroy();
+                break;
+            }
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -90,16 +98,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setHasError(true);
           setLoading(false);
         });
+      } else {
+        setLoading(false);
       }
     };
 
-    // Pequeno delay para garantir que o elemento DOM está pronto
-    const timer = setTimeout(initHls, 100);
+    const timer = setTimeout(initHls, 300);
+    const failSafe = setTimeout(() => { if (loading) setLoading(false); }, 5000);
+
     return () => {
       clearTimeout(timer);
+      clearTimeout(failSafe);
       if (hls) hls.destroy();
     };
-  }, [type, processedUrl]);
+  }, [type, processedUrl, loading]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -111,7 +123,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master v219.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v221.0</span>
       </div>
 
       {loading && (
@@ -148,7 +160,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
            <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
            <h3 className="text-2xl font-black uppercase italic text-destructive tracking-tighter">ERRO DE SINTONIA</h3>
-           <p className="text-[10px] uppercase font-bold text-white/40">O sinal original pode estar offline no momento.</p>
+           <p className="text-[10px] uppercase font-bold text-white/40">O sinal pode estar temporariamente offline ou bloqueado pela TV.</p>
            <Button onClick={() => window.location.reload()} variant="outline" className="text-white border-white/10 font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
         </div>
       )}
