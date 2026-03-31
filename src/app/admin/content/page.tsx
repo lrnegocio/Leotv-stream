@@ -130,7 +130,7 @@ export default function ContentManagementPage() {
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             const isSeries = item.type === 'series' || item.type === 'multi-season';
-            const epCount = isSeries ? (item.episodes?.length || 0) : 0;
+            const epCount = isSeries ? (item.episodes?.length || item.seasons?.reduce((acc, s) => acc + s.episodes.length, 0) || 0) : 0;
             
             return (
               <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl overflow-hidden relative group transition-all flex flex-col shadow-lg`}>

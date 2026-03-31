@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink, Play } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -105,6 +105,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // SINTONIZADOR VOD (MP4/TS)
     if (type === 'video') {
       video.src = processedUrl;
+      video.load(); // Força recarregamento para arquivos diretos
       video.play().catch(() => {});
       setLoading(false);
     }
@@ -120,7 +121,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v225.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v226.0</span>
       </div>
 
       {(loading && !hasError) && (
