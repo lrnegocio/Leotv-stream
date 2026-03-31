@@ -89,8 +89,8 @@ export const generateSafeId = (name: string) => {
     .replace(/[^a-z0-9]/g, '_') 
     .replace(/_+/g, '_')
     .trim()
-    .substring(0, 100);
-  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 5);
+    .substring(0, 50);
+  return "leo_" + clean + "_" + Math.random().toString(36).substring(2, 7);
 };
 
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -105,7 +105,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
     const { data: rawData, error } = await query
       .order('created_at', { ascending: false })
-      .limit(searchQuery ? 2000 : 1000);
+      .limit(1000);
 
     if (error) throw error;
 
@@ -213,7 +213,7 @@ export async function processM3UImport(m3u: string, onProgress: (msg: string) =>
         id: generateSafeId(title),
         title,
         type: 'channel',
-        description: 'Importado via M3U',
+        description: 'Sinal Master M3U',
         genre,
         isRestricted: genre.includes('ADULT') || genre.includes('XXX') || genre.includes('18+'),
         streamUrl: url,
@@ -368,13 +368,7 @@ export async function getTotalContentCount(): Promise<number> {
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
   const expiry = tier === 'test' ? '6 Horas' : '30 Dias';
-  return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n` +
-         `Seu sinal Master foi calibrado com sucesso!\n\n` +
-         `🔑 *SEU PIN:* ${pin}\n` +
-         `📅 *VALIDADE:* ${expiry}\n` +
-         `📺 *TELAS:* ${screens}\n\n` +
-         `🌐 *ACESSO:* ${url}\n\n` +
-         `_Suporte Master Léo Tech_`;
+  return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📅 *VALIDADE:* ${expiry}\n📺 *TELAS:* ${screens}\n\n🌐 *ACESSO:* ${url}\n\n_Suporte Master Léo Tech_`;
 }
 
 export async function generateM3UPlaylist(pin: string) {
