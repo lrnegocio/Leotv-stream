@@ -2,8 +2,9 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
 
 interface VideoPlayerProps {
   url: string
@@ -16,11 +17,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
+  const [error, setError] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
+      setError(false)
     }
   }, [url])
 
@@ -28,6 +31,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
+    // DETECÇÃO DE IMAGEM (Blindagem Mestre)
+    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg|gstatic)/i.test(targetUrl) || targetUrl.includes('gstatic.com') || targetUrl.includes('images?q=tbn');
+    if (isImage) return { processedUrl: targetUrl, type: 'image' }
+
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -48,6 +55,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!videoRef.current || !processedUrl || (type !== 'hls' && type !== 'video')) return;
 
     const video = videoRef.current;
+    // @ts-ignore
     let hls: any = null;
     
     const initPlayer = () => {
@@ -87,17 +95,27 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL HIDRA v21 ATIVO</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">SINAL MASTER ATIVO</span>
       </div>
 
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO...</span>
         </div>
       )}
 
-      {(type === 'hls' || type === 'video') ? (
+      {type === 'image' ? (
+        <div className="relative w-full h-full flex items-center justify-center bg-black">
+          <img 
+            src={processedUrl!} 
+            alt={title} 
+            className="max-w-full max-h-full object-contain relative z-10" 
+            onLoad={() => setLoading(false)}
+            onError={() => { setLoading(false); setError(true); }}
+          />
+        </div>
+      ) : (type === 'hls' || type === 'video') ? (
         <video 
           ref={videoRef}
           key={processedUrl} 
