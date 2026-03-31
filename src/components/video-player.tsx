@@ -31,10 +31,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false, isHls: false }
     let targetUrl = url.trim()
 
-    // 1. SUPORTE HLS (.m3u8) - Detecção para links tipo Agropesca
+    // 1. SUPORTE HLS (.m3u8)
     const isM3U8 = targetUrl.toLowerCase().includes('.m3u8') || targetUrl.includes('index.m3u8');
 
-    // 2. SUPORTE YOUTUBE (MODO SEM COOKIES/ADS)
+    // 2. SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -52,13 +52,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // 4. LINKS SIGMA / WEBPLAYER (SINAL EXTERNO)
+    // 4. LINKS PROTEGIDOS QUE BLOQUEIAM SANDBOX (BRAVE DETECTADO)
     const isSigma = targetUrl.includes('webplayer.one') || 
                     targetUrl.includes('sigma') || 
                     targetUrl.includes('blinder.') || 
                     targetUrl.includes('blder.') ||
                     targetUrl.includes('cloudplayer') ||
-                    targetUrl.includes('fplay.');
+                    targetUrl.includes('fplay.') ||
+                    targetUrl.includes('reidoscanais') ||
+                    targetUrl.includes('rdcanais');
     
     // 5. SUPORTE DIRETO (MP4, TS)
     const isDirect = /\.(mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || 
@@ -74,7 +76,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url])
 
   const openExternal = () => {
-    window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
+    // ABERTURA EM JANELA LIMPA PARA PULAR TRAVAS DE ANÚNCIO (ESTILO BRAVE)
+    window.open(url, '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no,status=no');
   }
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -94,17 +97,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {isSigmaLink || isHls ? (
+      {isSigmaLink ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
           <div className="p-6 bg-primary/10 rounded-full animate-pulse"><Zap className="h-16 w-16 text-primary" /></div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">{isHls ? 'SINAL HLS PROTEGIDO' : 'SINAL SIGMA'}</h3>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">
-              {isHls ? 'Este sinal requer motor de hardware externo para rodar 100% sem travar.' : 'Este sinal exige liberação externa por segurança.'}
+            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL PROTEGIDO (BRAVE MODE)</h3>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto leading-relaxed">
+              Este sinal possui travas de propaganda. Clique abaixo para abrir em uma janela blindada sem anúncios.
             </p>
           </div>
           <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl hover:scale-105 transition-transform">
-            <ExternalLink className="mr-2 h-6 w-6" /> LIBERAR SINAL AGORA
+            <ExternalLink className="mr-2 h-6 w-6" /> LIBERAR SINAL MASTER
           </Button>
         </div>
       ) : isDirectVideo ? (
@@ -124,15 +127,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={processedUrl!} 
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
-          /* 
-             BRAVE SHIELD (SANDBOX): 
-             - allow-scripts: permite o player rodar
-             - allow-same-origin: permite carregar o video
-             - allow-forms: permite interações básicas
-             - allow-presentation: permite fullscreen
-             - allow-modals e allow-popups-to-escape-sandbox: MELHORA COMPATIBILIDADE SEM TRAVAR
-          */
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-modals allow-popups-to-escape-sandbox"
+          // sandbox restrito para bloquear redirecionamentos e anúncios
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-modals"
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />

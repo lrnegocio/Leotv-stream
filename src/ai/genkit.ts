@@ -6,12 +6,13 @@ const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY;
 
 /**
  * Inicialização ultra-segura do Genkit.
- * Se a chave não estiver configurada no Vercel/Ambiente, 
- * o plugin não é carregado para evitar erro 500 (Internal Server Error).
+ * Se a chave não estiver configurada, o sistema não tenta carregar o modelo 
+ * para evitar erro 500 (Internal Server Error) no servidor NextJS.
  */
 export const ai = genkit({
   plugins: apiKey ? [googleAI({ apiKey })] : [],
-  model: 'googleai/gemini-2.5-flash',
+  // Só define o modelo se a chave existir, caso contrário o Genkit crasha no boot
+  ...(apiKey ? { model: 'googleai/gemini-2.5-flash' } : {})
 });
 
 // Helper para verificar se a IA está pronta para uso
