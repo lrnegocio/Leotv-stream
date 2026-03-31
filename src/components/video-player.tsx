@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, ShieldCheck, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // DETECÇÃO DE IMAGEM (Blindagem Mestre)
+    // DETECÇÃO DE IMAGEM (Suporte total para links do Google/Gstatic)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -36,6 +36,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
+    // SUPORTE YOUTUBE
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -86,8 +87,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     };
 
-    initPlayer();
-    return () => { if (hls) hls.destroy(); };
+    // Pequeno delay para garantir que o Script de HLS.js carregou
+    const timeout = setTimeout(initPlayer, 500);
+    return () => { 
+      clearTimeout(timeout);
+      if (hls) hls.destroy(); 
+    };
   }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
@@ -149,7 +154,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           </div>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-end pointer-events-auto">
+        <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
+          <div className="flex gap-4">
+             <Button variant="outline" className="h-12 px-6 rounded-xl bg-white/5 border-white/10 hover:border-primary text-xs font-black uppercase text-white" onClick={() => window.open(url, '_blank')}>
+               <PlayCircle className="mr-2 h-5 w-5" /> SINTONIZAR FORÇADO
+             </Button>
+          </div>
           <Button variant="ghost" size="icon" className="text-white h-12 w-12 hover:bg-primary/20" onClick={() => containerRef.current?.requestFullscreen()}><Maximize className="h-6 w-6" /></Button>
         </div>
       </div>

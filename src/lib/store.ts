@@ -79,7 +79,7 @@ export const generateSafeId = (name: string) => {
   return "leo_" + clean.substring(0, 15) + "_" + Math.random().toString(36).substring(2, 6);
 };
 
-// BLINDAGEM SQL: Mapeamento exato para colunas Case-Sensitive
+// BLINDAGEM SQL: Mapeamento exato para colunas Case-Sensitive com Aspas
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -278,6 +278,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   try {
     if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [], isBlocked: false, isAdultEnabled: true } as any };
     
+    // BUSCA CASE-SENSITIVE: Mantém o PIN como o identificador único
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO OU NÃO CADASTRADO." };
     if (user["isBlocked"]) return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };

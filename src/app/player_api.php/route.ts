@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
+    // LOGIN MASTER LÉO
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
         maxScreens: 999 
       };
     } else {
-      // BLINDAGEM IPTV: Busca exata usando colunas Case-Sensitive
+      // BUSCA CASE-SENSITIVE: Exatamente como o PIN foi criado
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -39,11 +40,11 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
 
       if (error || !data) {
-        return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+        return NextResponse.json({ user_info: { auth: 0, message: "PIN NAO LOCALIZADO" } }, { headers });
       }
 
       if (data["isBlocked"]) {
-        return NextResponse.json({ user_info: { auth: 0, message: "Acesso Suspenso" } }, { headers });
+        return NextResponse.json({ user_info: { auth: 0, message: "ACESSO SUSPENSO" } }, { headers });
       }
 
       activeUser = data;
