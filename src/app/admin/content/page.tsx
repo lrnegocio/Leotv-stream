@@ -5,10 +5,10 @@ import * as React from "react"
 import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, RefreshCcw, Trash, CheckSquare, Square, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, removeContent, bulkRemoveContent, clearAllM3UContent, ContentItem } from "@/lib/store"
+import { getRemoteContent, removeContent, bulkRemoveContent, ContentItem } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import Image from "next/image"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -146,8 +146,7 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {/* FIM DO SINAL 0: Só mostra se for série e tiver episódios */}
-                  {(isSeries && epCount > 0) && (
+                  {isSeries && epCount > 0 && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
                 </div>

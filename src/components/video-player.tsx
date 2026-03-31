@@ -1,17 +1,16 @@
+
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
   url: string
   title: string
-  onNext?: () => void
-  onPrev?: () => void
 }
 
-export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
+export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
@@ -25,6 +24,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (url) {
       setLoading(true)
       setHasError(false)
+      // Detecta Mixed Content (HTTP em HTTPS)
       if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
         setIsMixedContent(true)
       } else {
@@ -57,7 +57,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl) return;
+    if (!videoRef.current || !processedUrl || isMixedContent) return;
 
     const video = videoRef.current;
     
@@ -103,7 +103,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       setLoading(false);
     }
 
-  }, [type, processedUrl]);
+  }, [type, processedUrl, isMixedContent]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -117,14 +117,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Léo Hidra</span>
       </div>
 
-      {(loading && !hasError) && (
+      {(loading && !hasError && !isMixedContent) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL Master...</span>
         </div>
       )}
 
-      {(type === 'hls' || type === 'video') ? (
+      {(type === 'hls' || type === 'video') && !isMixedContent ? (
         <video 
           ref={videoRef}
           key={processedUrl} 
@@ -135,7 +135,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           onLoadedData={() => { setLoading(false); setHasError(false); }}
           onError={() => { setHasError(true); setLoading(false); }}
         />
-      ) : (
+      ) : !isMixedContent ? (
         <iframe 
           key={processedUrl} 
           src={processedUrl!} 
@@ -144,7 +144,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allow="autoplay; encrypted-media; picture-in-picture"
           onLoad={() => { setLoading(false); setHasError(false); }} 
         />
-      )}
+      ) : null}
 
       {(hasError || isMixedContent) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
@@ -152,8 +152,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
            <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL PROTEGIDO</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed">
              {isMixedContent 
-               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS.\nAbra externamente para sintonizar."
-               : "O sinal original bloqueou o player interno ou está offline.\nTente abrir em uma nova janela."
+               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS do seu dispositivo.\nAbra o sintonizador externo para assistir."
+               : "O sinal original bloqueou o player interno ou está temporariamente offline.\nTente abrir o link master."
              }
            </p>
            <div className="flex gap-2">

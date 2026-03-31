@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -146,7 +147,7 @@ export async function saveContent(item: ContentItem) {
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
   try {
-    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('content').eq('id', id).maybeSingle();
     if (error || !data) return null;
     return {
       ...data,

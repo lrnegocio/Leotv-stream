@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getRemoteContent, ContentItem } from '@/lib/store';
@@ -41,14 +42,18 @@ export async function GET(req: NextRequest) {
     const baseUrl = req.nextUrl.origin;
 
     if (!action) {
+      const expDate = activeUser.expiry_date || activeUser.expiryDate;
+      const subTier = activeUser.subscription_tier || activeUser.subscriptionTier;
+      const maxScreens = activeUser.max_screens || activeUser.maxScreens;
+
       return NextResponse.json({
         user_info: {
           auth: 1,
           status: "Active",
-          exp_date: activeUser.expiry_date ? Math.floor(new Date(activeUser.expiry_date).getTime() / 1000).toString() : "1999999999",
-          is_trial: (activeUser.subscription_tier || activeUser.subscriptionTier) === 'test' ? "1" : "0",
+          exp_date: expDate ? Math.floor(new Date(expDate).getTime() / 1000).toString() : "1999999999",
+          is_trial: subTier === 'test' ? "1" : "0",
           active_cons: "1",
-          max_connections: (activeUser.max_screens || activeUser.maxScreens)?.toString() || "1",
+          max_connections: maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4", "mkv", "mpeg"]
         },
         server_info: {
@@ -83,7 +88,8 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
-      if (!activeUser.is_adult_enabled && !activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      const isAdultEnabled = activeUser.is_adult_enabled || activeUser.isAdultEnabled;
+      if (!isAdultEnabled) items = items.filter(i => !i.isRestricted);
       
       return NextResponse.json(items.map(i => ({
         num: i.id,
@@ -99,7 +105,8 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_vod_streams') {
       let items = content.filter(i => i.type === 'movie');
-      if (!activeUser.is_adult_enabled && !activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      const isAdultEnabled = activeUser.is_adult_enabled || activeUser.isAdultEnabled;
+      if (!isAdultEnabled) items = items.filter(i => !i.isRestricted);
 
       return NextResponse.json(items.map(i => ({
         num: i.id,

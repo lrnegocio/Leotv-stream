@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -18,7 +19,7 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
       const timer = setTimeout(() => setIsVisible(true), 1500)
       return () => clearTimeout(timer)
@@ -55,7 +56,7 @@ export function PwaInstall() {
           </div>
           <div>
             <p className="text-white font-black uppercase text-[12px] italic">Léo TV</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Sinal Master</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Instalar App</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
