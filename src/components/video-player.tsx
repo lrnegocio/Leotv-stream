@@ -53,8 +53,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
-    // VOD / ARQUIVOS (.mp4, .mkv, .ts)
-    if (targetUrl.toLowerCase().includes('.mp4') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mkv')) {
+    // VOD / ARQUIVOS (.mp4, .ts, .mkv)
+    if (targetUrl.toLowerCase().match(/\.(mp4|ts|mkv|mov|avi)$/) || targetUrl.includes('/movie/')) {
       return { processedUrl: targetUrl, type: 'video' }
     }
 
@@ -67,7 +67,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const video = videoRef.current;
     
-    // SINTONIZADOR HLS HIDRA
+    // SINTONIZADOR HLS HIDRA 8.0
     if (type === 'hls') {
       let hls: any = null;
       const initHls = () => {
@@ -96,16 +96,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
           video.play().catch(() => {});
+          setLoading(false);
         }
       };
       initHls();
       return () => { if (hls) hls.destroy(); };
     } 
     
-    // SINTONIZADOR VOD (MP4/TS)
+    // SINTONIZADOR VOD HIDRA (MP4/TS)
     if (type === 'video') {
       video.src = processedUrl;
-      video.load(); // Força recarregamento para arquivos diretos
+      video.load();
       video.play().catch(() => {});
       setLoading(false);
     }
@@ -121,13 +122,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v226.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v227.0</span>
       </div>
 
       {(loading && !hasError) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL MASTER...</span>
         </div>
       )}
 
@@ -159,12 +160,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
            <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL PROTEGIDO</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed">
              {isMixedContent 
-               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS.\nAbra externamente para sintonizar."
-               : "O sinal original bloqueou o player interno ou está offline.\nTente abrir em uma nova janela."
+               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS.\nAbra externamente para sintonizar no seu dispositivo."
+               : "O sinal original bloqueou o player interno ou está temporariamente offline.\nTente abrir em uma nova janela master."
              }
            </p>
            <div className="flex gap-2">
-             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL MASTER</Button>
+             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6 shadow-xl shadow-primary/20"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL MASTER</Button>
              <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
            </div>
         </div>

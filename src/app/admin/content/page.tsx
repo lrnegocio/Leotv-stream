@@ -109,7 +109,7 @@ export default function ContentManagementPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="BUSCAR NO SEU IMPÉRIO..." 
-            className="pl-10 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
+            className="pl-12 bg-card/50 border-white/5 h-12 rounded-xl text-xs uppercase font-bold" 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
@@ -146,7 +146,7 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {/* FIX SINAL 0: Esconde completamente se não for série ou tiver 0 episódios */}
+                  {/* FIX SINAL 0: Nunca mais mostra contadores vazios em canais ou filmes */}
                   {(isSeries && epCount > 0) && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}

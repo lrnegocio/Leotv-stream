@@ -135,7 +135,6 @@ export async function saveContent(item: ContentItem) {
       direct_stream_url: item.directStreamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
-      // FIX SUMIÇO: Sempre grava a data de criação
       created_at: item.created_at || new Date().toISOString()
     };
 
@@ -368,7 +367,10 @@ export async function getTotalContentCount(): Promise<number> {
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
-  const expiry = tier === 'test' ? '6 Horas' : '30 Dias';
+  let expiry = '30 Dias';
+  if (tier === 'test') expiry = '6 Horas';
+  if (tier === 'lifetime') expiry = 'VITALÍCIO';
+  
   return `🚀 *LÉO TV & STREAM - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📅 *VALIDADE:* ${expiry}\n📺 *TELAS:* ${screens}\n\n🌐 *ACESSO:* ${url}\n\n_Suporte Master Léo Tech_`;
 }
 
