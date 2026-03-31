@@ -108,10 +108,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       query = query.eq('genre', categoryGenre.toUpperCase());
     }
 
-    // ORDENAÇÃO POR MAIS RECENTES: Garante que o que o Mestre acabou de adicionar apareça no topo.
+    // ORDENAÇÃO POR MAIS RECENTES (FIXO): Garante visibilidade dos últimos itens.
     const { data: rawData, error } = await query
       .order('created_at', { ascending: false })
-      .limit(searchQuery ? 1000 : 500);
+      .limit(searchQuery ? 2000 : 1000);
 
     if (error || !rawData) return [];
 
@@ -179,6 +179,7 @@ export async function saveContent(item: ContentItem) {
       direct_stream_url: item.directStreamUrl || null,
       episodes: item.episodes || [],
       seasons: item.seasons || [],
+      created_at: new Date().toISOString() // FIXO: Garante que o canal não suma da ordem
     };
 
     const { error } = await supabase.from('content').upsert(payload);
@@ -203,7 +204,6 @@ export async function bulkRemoveContent(ids: string[]) {
 
 export async function clearAllM3UContent() {
   try {
-    // RESET NUCLEAR: Limpa a tabela content inteira de uma vez.
     const { error } = await supabase.from('content').delete().neq('id', '_dummy_');
     return !error;
   } catch (e) { return false; }
@@ -240,7 +240,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     isBlocked: u.is_blocked,
     isAdultEnabled: u.is_adult_enabled,
     resellerId: u.reseller_id,
-    activated_at: u.activated_at
+    activatedAt: u.activated_at
   }));
 }
 
@@ -347,7 +347,8 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
         stream_url: '',
         direct_stream_url: '',
         episodes: [],
-        seasons: []
+        seasons: [],
+        created_at: new Date().toISOString()
       });
     }
   });
@@ -394,7 +395,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         const epNum = parseInt(seriesMatch[3] || seriesMatch[2]);
         const baseId = generateSafeId(base);
         if (!itemsMap.has(baseId)) {
-          itemsMap.set(baseId, { id: baseId, title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [] });
+          itemsMap.set(baseId, { id: baseId, title: base, type: 'series', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', episodes: [], created_at: new Date().toISOString() });
         }
         const series = itemsMap.get(baseId);
         if (!series.episodes.some((e:any) => e.number === epNum)) {
@@ -402,7 +403,7 @@ export async function processM3UImport(content: string, onProgress?: (m: string)
         }
       } else {
         const id = generateSafeId(current.title);
-        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', stream_url: line, direct_stream_url: line });
+        itemsMap.set(id, { id, title: current.title, type: current.genre.includes('FILMES') ? 'movie' : 'channel', genre: current.genre, image_url: current.imageUrl, is_restricted: current.isRestricted, description: 'Sinal Master Léo Tv', stream_url: line, direct_stream_url: line, created_at: new Date().toISOString() });
       }
       current = null;
     }

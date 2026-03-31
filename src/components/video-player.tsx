@@ -27,29 +27,32 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isSigmaLink, isIframe } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false }
+  const { processedUrl, isDirectVideo, isSigmaLink, isIframe, isHls } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false, isHls: false }
     let targetUrl = url.trim()
 
-    // 1. SUPORTE YOUTUBE (MODO SEM COOKIES/ADS)
+    // 1. SUPORTE HLS (.m3u8) - Detecção para links tipo Agropesca
+    const isM3U8 = targetUrl.toLowerCase().includes('.m3u8') || targetUrl.includes('index.m3u8');
+
+    // 2. SUPORTE YOUTUBE (MODO SEM COOKIES/ADS)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1&iv_load_policy=3`,
-        isDirectVideo: false, isSigmaLink: false, isIframe: true
+        isDirectVideo: false, isSigmaLink: false, isIframe: true, isHls: false
       }
     }
 
-    // 2. SUPORTE DAILYMOTION
+    // 3. SUPORTE DAILYMOTION
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       const id = targetUrl.split('/').pop()?.split('?')[0];
       return {
         processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0&ui-logo=false&sharing-enable=false`,
-        isDirectVideo: false, isSigmaLink: false, isIframe: true
+        isDirectVideo: false, isSigmaLink: false, isIframe: true, isHls: false
       }
     }
 
-    // 3. LINKS SIGMA / WEBPLAYER (SINAL EXTERNO)
+    // 4. LINKS SIGMA / WEBPLAYER (SINAL EXTERNO)
     const isSigma = targetUrl.includes('webplayer.one') || 
                     targetUrl.includes('sigma') || 
                     targetUrl.includes('blinder.') || 
@@ -57,16 +60,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                     targetUrl.includes('cloudplayer') ||
                     targetUrl.includes('fplay.');
     
-    // 4. SUPORTE DIRETO (MP4, M3U8, TS)
-    const isDirect = /\.(m3u8|mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || 
-                     targetUrl.includes('playlist.m3u8') || 
+    // 5. SUPORTE DIRETO (MP4, TS)
+    const isDirect = /\.(mp4|webm|ogg|ts|mkv|mpegts)$/i.test(targetUrl.split('?')[0]) || 
                      targetUrl.includes('.ts');
 
     return { 
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
       isSigmaLink: isSigma,
-      isIframe: !isDirect && !isSigma
+      isIframe: !isDirect && !isSigma && !isM3U8,
+      isHls: isM3U8
     };
   }, [url])
 
@@ -87,23 +90,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL BLINDADO...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL MASTER...</span>
         </div>
       )}
 
-      {isSigmaLink ? (
+      {isSigmaLink || isHls ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
           <div className="p-6 bg-primary/10 rounded-full animate-pulse"><Zap className="h-16 w-16 text-primary" /></div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL PROTEGIDO</h3>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">Este sinal exige liberação externa por segurança.</p>
+            <h3 className="text-2xl font-black uppercase italic text-primary">{isHls ? 'SINAL HLS PROTEGIDO' : 'SINAL SIGMA'}</h3>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">
+              {isHls ? 'Este sinal requer motor de hardware externo para rodar 100% sem travar.' : 'Este sinal exige liberação externa por segurança.'}
+            </p>
           </div>
-          <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl">LIBERAR AGORA</Button>
+          <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl hover:scale-105 transition-transform">
+            <ExternalLink className="mr-2 h-6 w-6" /> LIBERAR SINAL AGORA
+          </Button>
         </div>
       ) : isDirectVideo ? (
         <video 
           key={processedUrl} 
-          src={processedUrl} 
+          src={processedUrl!} 
           autoPlay 
           muted={isMuted} 
           controls 
@@ -114,7 +121,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       ) : (
         <iframe 
           key={processedUrl} 
-          src={processedUrl} 
+          src={processedUrl!} 
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
           /* 
@@ -123,9 +130,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
              - allow-same-origin: permite carregar o video
              - allow-forms: permite interações básicas
              - allow-presentation: permite fullscreen
-             - SEM allow-popups: BLOQUEIA REDIRECIONAMENTOS E ABAS DE ANÚNCIO
+             - allow-modals e allow-popups-to-escape-sandbox: MELHORA COMPATIBILIDADE SEM TRAVAR
           */
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-modals allow-popups-to-escape-sandbox"
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />
@@ -154,10 +161,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
 
         <div className="absolute inset-y-0 left-0 flex items-center pl-6 z-50">
-          <Button variant="ghost" size="icon" onClick={onPrev} className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary shadow-2xl ${!onPrev ? 'hidden' : 'flex'}`}><SkipBack className="h-10 w-10" /></Button>
+          {onPrev && (
+            <Button variant="ghost" size="icon" onClick={onPrev} className="h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary shadow-2xl flex"><SkipBack className="h-10 w-10" /></Button>
+          )}
         </div>
         <div className="absolute inset-y-0 right-0 flex items-center pr-6 z-50">
-          <Button variant="ghost" size="icon" onClick={onNext} className={`h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary shadow-2xl ${!onNext ? 'hidden' : 'flex'}`}><SkipForward className="h-10 w-10" /></Button>
+          {onNext && (
+            <Button variant="ghost" size="icon" onClick={onNext} className="h-16 w-16 rounded-full bg-black/60 text-white pointer-events-auto hover:bg-primary shadow-2xl flex"><SkipForward className="h-10 w-10" /></Button>
+          )}
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex justify-end">
