@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -69,6 +70,7 @@ export interface Reseller {
 
 /**
  * LIMPEZA SNIPER DE NOMES: Remove aspas, pontos, vírgulas e números iniciais.
+ * Modo Brave: Garante nomes limpos para o catálogo de elite.
  */
 export const cleanName = (name: string) => {
   if (!name) return "";
@@ -303,7 +305,7 @@ export async function removeReseller(id: string) {
 export async function validateResellerLogin(username: string, password: string): Promise<{ reseller?: Reseller; error?: string }> {
   const { data, error } = await supabase.from('resellers').select('*').eq('username', username).eq('password', password).maybeSingle();
   if (error || !data) return { error: "USUÁRIO OU SENHA INVÁLIDOS." };
-  if (data.isBlocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
+  if (data.is_blocked) return { error: "ACESSO DE REVENDA SUSPENSO." };
   return { reseller: data };
 }
 
@@ -313,7 +315,7 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
   div.innerHTML = html;
 
   const links = div.querySelectorAll('a.btn-stream');
-  onProgress?.(`Iniciando Sniper em Massa...`);
+  onProgress?.(`Iniciando Sniper Brave...`);
 
   links.forEach((link, idx) => {
     const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
@@ -331,13 +333,14 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
       else if (title.includes('SERIE') || title.includes('SERIADO') || title.includes('SEASON') || title.includes('EP')) genre = "LÉO TV SERIES";
       else if (title.includes('RADIO')) genre = "LÉO TV RÁDIOS";
       else if (title.includes('MUSICA') || title.includes('CLIP')) genre = "LÉO TV MUSICAS";
+      else if (title.includes('NOVELA')) genre = "LÉO TV NOVELAS";
 
       items.push({
         id: generateSafeId(title),
         title,
-        type: genre.includes('SERIES') || genre.includes('DORAMAS') ? 'series' : 'channel',
+        type: genre.includes('SERIES') || genre.includes('DORAMAS') || genre.includes('NOVELAS') ? 'series' : 'channel',
         genre,
-        description: 'Sinal Master Sniper',
+        description: 'Sinal Master Sniper Blindado',
         image_url: imageUrl,
         is_restricted: genre.includes('ADULTOS'),
         stream_url: '',
@@ -348,7 +351,6 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
     }
   });
 
-  // UPSERT EM BATCH (20 em 20) PARA NÃO TRAVAR
   for (let i = 0; i < items.length; i += 20) {
     if (onProgress) onProgress(`Sincronizando ${i} de ${items.length} sinais...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));

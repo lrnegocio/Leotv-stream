@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, Zap, Lock, AlertTriangle, RefreshCcw } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, Tv, VolumeX, ExternalLink, Zap, Lock, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -30,11 +31,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false }
     let targetUrl = url.trim()
 
-    // 1. SUPORTE YOUTUBE
+    // 1. SUPORTE YOUTUBE (MODO SEM COOKIES/ADS)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
-        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
+        processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1&iv_load_policy=3`,
         isDirectVideo: false, isSigmaLink: false, isIframe: true
       }
     }
@@ -43,7 +44,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       const id = targetUrl.split('/').pop()?.split('?')[0];
       return {
-        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0`,
+        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0&ui-logo=false&sharing-enable=false`,
         isDirectVideo: false, isSigmaLink: false, isIframe: true
       }
     }
@@ -77,10 +78,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
+      {/* BRAVE SHIELD INDICATOR */}
+      <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
+        <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Brave Shield Ativo</span>
+      </div>
+
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">SINTONIZANDO SINAL BLINDADO...</span>
         </div>
       )}
 
@@ -88,8 +95,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D] z-50 p-8 text-center space-y-6">
           <div className="p-6 bg-primary/10 rounded-full animate-pulse"><Zap className="h-16 w-16 text-primary" /></div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL EXTERNO</h3>
-            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">Este sinal exige sintonização externa profissional.</p>
+            <h3 className="text-2xl font-black uppercase italic text-primary">SINAL PROTEGIDO</h3>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase max-w-sm mx-auto">Este sinal exige liberação externa por segurança.</p>
           </div>
           <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl">LIBERAR AGORA</Button>
         </div>
@@ -110,6 +117,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={processedUrl} 
           className="h-full w-full border-0 relative z-10" 
           allowFullScreen 
+          /* 
+             BRAVE SHIELD (SANDBOX): 
+             - allow-scripts: permite o player rodar
+             - allow-same-origin: permite carregar o video
+             - allow-forms: permite interações básicas
+             - allow-presentation: permite fullscreen
+             - SEM allow-popups: BLOQUEIA REDIRECIONAMENTOS E ABAS DE ANÚNCIO
+          */
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           onLoad={() => setLoading(false)} 
           onError={() => { setLoading(false); setHasError(true); }} 
         />
@@ -118,7 +134,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1E161D]/95 z-[70] p-10 text-center space-y-6">
            <AlertTriangle className="h-16 w-16 text-destructive animate-pulse" />
-           <h3 className="text-2xl font-black uppercase italic text-destructive">SINAL FORA DO AR</h3>
+           <h3 className="text-2xl font-black uppercase italic text-destructive">SINAL INSTÁVEL</h3>
            <div className="flex gap-4">
              <Button onClick={() => window.location.reload()} variant="outline" className="text-white border-white/10 font-black uppercase text-[10px] rounded-2xl h-14 px-8"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
              <Button onClick={openExternal} className="bg-primary text-white font-black uppercase text-[10px] rounded-2xl h-14 px-8"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR EXTERNO</Button>
