@@ -37,12 +37,22 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="theme-color" content="#1E161D" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
+        {/* BLINDAGEM MESTRE: Bloqueio de Inspeção e Extração */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('contextmenu', event => event.preventDefault());
+          document.onkeydown = function(e) {
+            if(e.keyCode == 123) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+          };
+        `}} />
       </head>
-      <body className="font-body antialiased bg-background text-foreground">
+      <body className="font-body antialiased bg-background text-foreground select-none">
         {children}
         <Toaster />
         <OfflineIndicator />
-        {/* Sintonizador HLS Hidra - Carregado Globalmente para evitar loop de carregamento */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
       </body>
     </html>

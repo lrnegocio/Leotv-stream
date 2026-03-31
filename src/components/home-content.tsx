@@ -89,12 +89,21 @@ export default function HomeContent() {
   };
 
   const handleItemClick = (item: ContentItem, idx: number) => {
+    // MASCARAMENTO MESTRE: Altera a URL para um Watch ID oculto
+    const watchId = Buffer.from(item.id).toString('base64').substring(0, 12);
+    window.history.pushState(null, '', `/watch/${watchId}`);
+
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
     } else {
       setActiveVideo({ url: item.directStreamUrl || item.streamUrl, title: item.title, index: idx });
     }
   };
+
+  const closePlayer = () => {
+    setActiveVideo(null);
+    window.history.pushState(null, '', '/user/home');
+  }
 
   const verifyPin = () => {
     if (pinInput === parentalPin) { 
@@ -107,10 +116,10 @@ export default function HomeContent() {
     }
   };
 
-  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sintonizando Sinais...</p></div>
+  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Blindado...</p></div>
 
   return (
-    <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
+    <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none" onContextMenu={(e) => e.preventDefault()}>
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
@@ -214,7 +223,7 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
+      <Dialog open={!!activeVideo} onOpenChange={closePlayer}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem]">
           {activeVideo && <VideoPlayer url={activeVideo.url} title={activeVideo.title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
