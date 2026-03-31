@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, PlayCircle, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -86,7 +86,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             console.error("HLS FATAL ERROR:", data);
             setHasError(true);
             setLoading(false);
-            setErrorMsg("ERRO DE SINTONIZAÇÃO: O sinal pode estar offline ou bloqueado pelo navegador.");
             hls.destroy();
           }
         });
@@ -95,7 +94,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         video.play().catch(() => {});
         setLoading(false);
       } else {
-        // Fallback para video direto
         video.src = processedUrl;
         video.play().catch(() => {});
         setLoading(false);
@@ -107,13 +105,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
-  const isHttpOnHttps = typeof window !== 'undefined' && window.location.protocol === 'https:' && processedUrl?.startsWith('http:');
+  const isHttpOnHttps = typeof window !== 'undefined' && window.location.protocol === 'https:' && url?.startsWith('http:');
 
   return (
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v16 Ativo</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v17 Ativo</span>
       </div>
 
       {loading && !hasError && (
@@ -146,21 +144,21 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         />
       )}
 
-      {hasError && (
+      {(hasError || isHttpOnHttps) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
            <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
            {isHttpOnHttps ? (
              <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-               Mestre Léo, o navegador bloqueou este sinal HTTP por segurança (Mixed Content). Use o nosso App de IPTV ou tente o sintonizador forçado abaixo.
+               Mestre Léo, o navegador bloqueou este sinal HTTP por segurança. Use o botão abaixo para sintonizar diretamente.
              </p>
            ) : (
              <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
                Não foi possível sintonizar este sinal. O link pode estar fora do ar ou o formato não é suportado pelo seu navegador atual.
              </p>
            )}
-           <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR FORÇADO <PlayCircle className="ml-2 h-6 w-6" /></a>
+           <Button asChild className="h-16 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+              <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR DIRETAMENTE <ExternalLink className="ml-2 h-6 w-6" /></a>
            </Button>
            <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black hover:text-primary">
              <RefreshCcw className="mr-2 h-4 w-4" /> RECONECTAR
