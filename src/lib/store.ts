@@ -51,7 +51,6 @@ export interface User {
   isAdultEnabled: boolean;
   resellerId?: string;
   activatedAt?: string;
-  is_adult_enabled?: boolean; // Compatibilidade DB
 }
 
 export interface Reseller {
@@ -68,16 +67,20 @@ export interface Reseller {
   birthDate?: string;
 }
 
-const cleanName = (name: string) => {
+/**
+ * LIMPEZA SNIPER DE NOMES: Remove aspas, pontos, vírgulas e números iniciais.
+ */
+export const cleanName = (name: string) => {
   if (!name) return "";
   return name
     .replace(/[.",']/g, '') 
     .replace(/^\d+/, '')    
+    .replace(/-+/g, ' ')
     .trim()
     .toUpperCase();
 };
 
-const generateSafeId = (name: string) => {
+export const generateSafeId = (name: string) => {
   const clean = name.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") 
@@ -106,10 +109,10 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
 
     return rawData.map(item => ({
       ...item,
-      isRestricted: item.is_restricted ?? item.isRestricted,
-      streamUrl: item.stream_url ?? item.streamUrl,
-      directStreamUrl: item.direct_stream_url ?? item.directStreamUrl,
-      imageUrl: item.image_url ?? item.imageUrl,
+      isRestricted: item.is_restricted,
+      streamUrl: item.stream_url,
+      directStreamUrl: item.direct_stream_url,
+      imageUrl: item.image_url,
     }));
   } catch (e) { return []; }
 }
@@ -119,10 +122,10 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   if (error || !data) return null;
   return {
     ...data,
-    isRestricted: data.is_restricted ?? data.isRestricted,
-    streamUrl: data.stream_url ?? data.streamUrl,
-    directStreamUrl: data.direct_stream_url ?? data.directStreamUrl,
-    imageUrl: data.image_url ?? data.imageUrl,
+    isRestricted: data.is_restricted,
+    streamUrl: data.stream_url,
+    directStreamUrl: data.direct_stream_url,
+    imageUrl: data.image_url,
   };
 }
 
@@ -135,8 +138,22 @@ export async function getTotalContentCount(): Promise<number> {
 
 export async function getCategoryCount(genre: string): Promise<number> {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
-    return count || 0;
+    const { data, error } = await supabase.from('content').select('episodes, seasons').eq('genre', genre.toUpperCase());
+    if (error || !data) return 0;
+    
+    let total = 0;
+    data.forEach(item => {
+      if (item.episodes && Array.isArray(item.episodes) && item.episodes.length > 0) {
+        total += item.episodes.length;
+      } else if (item.seasons && Array.isArray(item.seasons)) {
+        item.seasons.forEach((s: any) => {
+          if (s.episodes) total += s.episodes.length;
+        });
+      } else {
+        total += 1;
+      }
+    });
+    return total;
   } catch (e) { return 0; }
 }
 
@@ -157,9 +174,14 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) console.error("Erro Supabase:", error);
+    if (error) {
+      console.error("Erro Supabase Detalhado:", JSON.stringify(error, null, 2));
+    }
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("Erro Fatal no Catch:", e);
+    return false; 
+  }
 }
 
 export async function removeContent(id: string) {
@@ -179,14 +201,24 @@ export async function bulkRemoveContent(ids: string[]) {
 export async function clearAllM3UContent() {
   try {
     const { error } = await supabase.from('content').delete().neq('id', '_init_');
+    localStorage.clear();
     return !error;
   } catch (e) { return false; }
 }
 
 export async function saveUser(user: User) {
   const payload = {
-    ...user,
-    is_adult_enabled: user.isAdultEnabled // Mapeamento para o DB
+    id: user.id,
+    pin: user.pin,
+    role: user.role,
+    subscription_tier: user.subscriptionTier,
+    expiry_date: user.expiryDate,
+    max_screens: user.maxScreens,
+    active_devices: user.activeDevices,
+    is_blocked: user.isBlocked,
+    is_adult_enabled: user.isAdultEnabled,
+    reseller_id: user.resellerId,
+    activated_at: user.activatedAt
   };
   const { error } = await supabase.from('users').upsert(payload);
   return !error;
@@ -195,8 +227,17 @@ export async function saveUser(user: User) {
 export async function getRemoteUsers(): Promise<User[]> {
   const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
   return (data || []).map(u => ({
-    ...u,
-    isAdultEnabled: u.is_adult_enabled ?? u.isAdultEnabled
+    id: u.id,
+    pin: u.pin,
+    role: u.role,
+    subscriptionTier: u.subscription_tier,
+    expiryDate: u.expiry_date,
+    maxScreens: u.max_screens,
+    activeDevices: u.active_devices,
+    isBlocked: u.is_blocked,
+    isAdultEnabled: u.is_adult_enabled,
+    resellerId: u.reseller_id,
+    activatedAt: u.activated_at
   }));
 }
 
@@ -211,24 +252,32 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
     
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO." };
-    if (user.isBlocked) return { error: "ACESSO SUSPENSO." };
+    if (user.is_blocked) return { error: "ACESSO SUSPENSO." };
 
-    let devices = user.activeDevices || [];
+    let devices = user.active_devices || [];
     if (!devices.some((d: any) => d.id === deviceId)) {
-      if (devices.length >= user.maxScreens) return { error: "LIMITE DE TELAS EXCEDIDO." };
+      if (devices.length >= user.max_screens) return { error: "LIMITE DE TELAS EXCEDIDO." };
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
     }
 
     const updatedUser: User = { 
-      ...user, 
+      id: user.id,
+      pin: user.pin,
+      role: user.role,
+      subscriptionTier: user.subscription_tier,
+      expiryDate: user.expiry_date,
+      maxScreens: user.max_screens,
       activeDevices: devices,
-      isAdultEnabled: user.is_adult_enabled ?? user.isAdultEnabled 
+      isBlocked: user.is_blocked,
+      isAdultEnabled: user.is_adult_enabled,
+      resellerId: user.reseller_id,
+      activatedAt: user.activated_at
     };
 
-    if (!user.activatedAt) {
+    if (!user.activated_at) {
       updatedUser.activatedAt = new Date().toISOString();
-      if (user.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
-      else if (user.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
+      if (updatedUser.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
+      else if (updatedUser.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
     }
 
     await saveUser(updatedUser);
@@ -264,14 +313,14 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
   div.innerHTML = html;
 
   const links = div.querySelectorAll('a.btn-stream');
-  onProgress?.(`Extraindo sinais...`);
+  onProgress?.(`Iniciando Sniper em Massa...`);
 
   links.forEach((link, idx) => {
     const titleEl = link.querySelector('.col.d-flex') || link.querySelector('.col');
     const imgEl = link.querySelector('img');
     
     if (titleEl) {
-      const rawTitle = titleEl.textContent?.trim() || `Canal ${idx}`;
+      const rawTitle = titleEl.textContent?.trim() || `Sinal ${idx}`;
       const title = cleanName(rawTitle);
       const imageUrl = imgEl?.getAttribute('src') || '';
       
@@ -279,14 +328,16 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
       if (title.includes('DORAMA') || title.includes('24H DORAMA')) genre = "LÉO TV DORAMAS";
       else if (title.includes('18+') || title.includes('XXX') || title.includes('ADULTO')) genre = "LÉO TV ADULTOS";
       else if (title.includes('FILME') || title.includes('MOVIE')) genre = "LÉO TV FILMES";
-      else if (title.includes('SERIE') || title.includes('SERIADO') || title.includes('SEASON')) genre = "LÉO TV SERIES";
+      else if (title.includes('SERIE') || title.includes('SERIADO') || title.includes('SEASON') || title.includes('EP')) genre = "LÉO TV SERIES";
+      else if (title.includes('RADIO')) genre = "LÉO TV RÁDIOS";
+      else if (title.includes('MUSICA') || title.includes('CLIP')) genre = "LÉO TV MUSICAS";
 
       items.push({
         id: generateSafeId(title),
         title,
         type: genre.includes('SERIES') || genre.includes('DORAMAS') ? 'series' : 'channel',
         genre,
-        description: 'Sinal Master Léo Tv',
+        description: 'Sinal Master Sniper',
         image_url: imageUrl,
         is_restricted: genre.includes('ADULTOS'),
         stream_url: '',
@@ -297,8 +348,9 @@ export async function processHTMLImport(html: string, onProgress?: (m: string) =
     }
   });
 
+  // UPSERT EM BATCH (20 em 20) PARA NÃO TRAVAR
   for (let i = 0; i < items.length; i += 20) {
-    if (onProgress) onProgress(`Sincronizando HTML: ${i} de ${items.length}...`);
+    if (onProgress) onProgress(`Sincronizando ${i} de ${items.length} sinais...`);
     await supabase.from('content').upsert(items.slice(i, i + 20));
   }
 
@@ -376,19 +428,18 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
 export async function renewUserSubscription(userId: string, tier: SubscriptionTier) {
   const days = tier === 'test' ? 0.25 : tier === 'monthly' ? 30 : 9999;
   const expiry = new Date(Date.now() + days * 86400000).toISOString();
-  await supabase.from('users').update({ "subscriptionTier": tier, "expiryDate": expiry }).eq('id', userId);
+  await supabase.from('users').update({ "subscription_tier": tier, "expiry_date": expiry }).eq('id', userId);
 }
 
 export async function generateM3UPlaylist(pin: string) {
   const { data: user } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
-  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,PIN INVALIDO\n";
+  if (!user || user.is_blocked) return "#EXTM3U\n#EXTINF:-1,PIN INVALIDO\n";
   const { data: content } = await supabase.from('content').select('*').limit(5000);
   let m3u = "#EXTM3U\n";
   content?.forEach(i => {
-    const isRestricted = i.is_restricted ?? i.isRestricted;
-    if (isRestricted && !user.is_adult_enabled) return;
-    const stream = i.direct_stream_url || i.directStreamUrl || i.stream_url || i.streamUrl;
-    m3u += `#EXTINF:-1 tvg-logo="${i.image_url || i.imageUrl || ''}" group-title="${i.genre}",${i.title}\n${stream}\n`;
+    if (i.is_restricted && !user.is_adult_enabled) return;
+    const stream = i.direct_stream_url || i.stream_url;
+    m3u += `#EXTINF:-1 tvg-logo="${i.image_url || ''}" group-title="${i.genre}",${i.title}\n${stream}\n`;
   });
   return m3u;
 }

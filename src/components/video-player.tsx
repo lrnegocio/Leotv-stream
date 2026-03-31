@@ -26,8 +26,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [url])
 
-  const { processedUrl, isDirectVideo, isSigmaLink, isExternalIframe } = React.useMemo(() => {
-    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isExternalIframe: false }
+  const { processedUrl, isDirectVideo, isSigmaLink, isIframe } = React.useMemo(() => {
+    if (!url || typeof url !== 'string' || url.trim() === "") return { processedUrl: null, isDirectVideo: false, isSigmaLink: false, isIframe: false }
     let targetUrl = url.trim()
 
     // 1. SUPORTE YOUTUBE
@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
         processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1`,
-        isDirectVideo: false, isSigmaLink: false, isExternalIframe: true
+        isDirectVideo: false, isSigmaLink: false, isIframe: true
       }
     }
 
@@ -44,7 +44,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const id = targetUrl.split('/').pop()?.split('?')[0];
       return {
         processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1&mute=0`,
-        isDirectVideo: false, isSigmaLink: false, isExternalIframe: true
+        isDirectVideo: false, isSigmaLink: false, isIframe: true
       }
     }
 
@@ -65,7 +65,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       processedUrl: targetUrl, 
       isDirectVideo: isDirect, 
       isSigmaLink: isSigma,
-      isExternalIframe: !isDirect && !isSigma
+      isIframe: !isDirect && !isSigma
     };
   }, [url])
 
@@ -94,9 +94,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <Button onClick={openExternal} className="bg-primary h-16 px-12 rounded-2xl font-black uppercase shadow-2xl">LIBERAR AGORA</Button>
         </div>
       ) : isDirectVideo ? (
-        <video key={processedUrl} src={processedUrl} autoPlay muted={isMuted} controls className="h-full w-full object-contain relative z-10" onLoadedData={() => setLoading(false)} onError={() => { setLoading(false); setHasError(true); }} />
+        <video 
+          key={processedUrl} 
+          src={processedUrl} 
+          autoPlay 
+          muted={isMuted} 
+          controls 
+          className="h-full w-full object-contain relative z-10" 
+          onLoadedData={() => setLoading(false)} 
+          onError={() => { setLoading(false); setHasError(true); }} 
+        />
       ) : (
-        <iframe key={processedUrl} src={processedUrl} className="h-full w-full border-0 relative z-10" allowFullScreen onLoad={() => setLoading(false)} onError={() => { setLoading(false); setHasError(true); }} />
+        <iframe 
+          key={processedUrl} 
+          src={processedUrl} 
+          className="h-full w-full border-0 relative z-10" 
+          allowFullScreen 
+          onLoad={() => setLoading(false)} 
+          onError={() => { setLoading(false); setHasError(true); }} 
+        />
       )}
 
       {hasError && (
