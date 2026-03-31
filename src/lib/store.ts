@@ -78,7 +78,6 @@ export const generateSafeId = (name: string) => {
   return "leo_" + clean.substring(0, 20) + "_" + Math.random().toString(36).substring(2, 7);
 };
 
-// SINTONIZAÇÃO MASTER: Todas as colunas agora usam aspas duplas para bater com o SQL do Mestre Léo
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -101,12 +100,13 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       seasons: item.seasons || [],
       created_at: item.created_at
     }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    return []; 
+  }
 }
 
 export async function saveContent(item: ContentItem) {
   try {
-    // BLINDAGEM SQL: Forçando as colunas case-sensitive do banco
     const payload = {
       id: item.id || generateSafeId(item.title),
       title: cleanName(item.title),
@@ -122,13 +122,20 @@ export async function saveContent(item: ContentItem) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
+    if (error) {
+      console.error("Erro Supabase Save:", error);
+      return false;
+    }
+    return true;
+  } catch (e) { 
+    return false; 
+  }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
+  if (!id) return null;
   try {
-    const { data, error } = await supabase.from('content').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
     if (error || !data) return null;
     return {
       id: data.id,
@@ -143,7 +150,9 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
       seasons: data.seasons || [],
       created_at: data.created_at
     };
-  } catch (e) { return null; }
+  } catch (e) { 
+    return null; 
+  }
 }
 
 export async function removeContent(id: string) {

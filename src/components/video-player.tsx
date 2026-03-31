@@ -46,7 +46,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // SUPORTE TS / MPEG / MP4 / M3U8
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg') || targetUrl.toLowerCase().includes('.mp4')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
@@ -80,7 +79,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
           hls.on('hlsError', (event: any, data: any) => {
             if (data.fatal) {
-              console.error("Erro fatal HLS:", data);
               setHasError(true);
               setLoading(false);
               hls.destroy();
@@ -103,13 +101,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v14 Ativo</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra Ativo</span>
       </div>
 
       {loading && !hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL Master...</span>
+          <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL...</span>
         </div>
       )}
 
@@ -138,15 +136,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
+           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO PELO NAVEGADOR</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Mestre, este sinal (HTTP) foi bloqueado pelo navegador por segurança (Mixed Content). Use o botão abaixo para sintonizar em janela limpa.
+             Mestre Léo, o navegador bloqueou este sinal HTTP por segurança. Clique no botão abaixo para abrir o sintonizador forçado.
            </p>
            <Button asChild className="h-14 bg-primary px-8 rounded-2xl font-black uppercase shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
               <a href={url} target="_blank" rel="noopener noreferrer">SINTONIZAR AGORA <PlayCircle className="ml-2 h-6 w-6" /></a>
            </Button>
            <Button onClick={() => window.location.reload()} variant="ghost" className="text-white text-[10px] font-black hover:text-primary">
-             <RefreshCcw className="mr-2 h-4 w-4" /> TENTAR RECONECTAR
+             <RefreshCcw className="mr-2 h-4 w-4" /> RECONECTAR
            </Button>
         </div>
       )}
