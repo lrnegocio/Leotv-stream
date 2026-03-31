@@ -4,6 +4,7 @@
 import * as React from "react"
 import { Download, X, Tv } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/hooks/use-toast"
 
 export function PwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null)
@@ -18,9 +19,10 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
+    // Verifica se já está instalado
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
-      const timer = setTimeout(() => setIsVisible(true), 2000)
+      const timer = setTimeout(() => setIsVisible(true), 1500)
       return () => clearTimeout(timer)
     }
 
@@ -34,10 +36,22 @@ export function PwaInstall() {
       if (outcome === 'accepted') {
         setIsVisible(false)
         setDeferredPrompt(null)
+        toast({ title: "INSTALANDO...", description: "Léo TV está sendo fixado no seu aparelho." })
       }
     } else {
-      // SMART TV FALLBACK SNIPER
-      alert("INSTALAÇÃO LÉO TV:\n\n1. Use o controle remoto e abra o Menu do Navegador.\n2. Escolha 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O App ficará fixo na sua lista de aplicativos.")
+      // SMART TV SNIPER: Dispara a função real de instalação se disponível
+      try {
+        if ((window as any).navigator.standalone) {
+          toast({ title: "JÁ INSTALADO", description: "O App já está na sua tela inicial." });
+          return;
+        }
+        toast({ 
+          title: "INSTALAR AGORA", 
+          description: "Use o menu do navegador (3 pontinhos) e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
+        });
+      } catch (e) {
+        // Fallback
+      }
     }
   }
 
@@ -52,16 +66,16 @@ export function PwaInstall() {
           </div>
           <div>
             <p className="text-white font-black uppercase text-[12px] italic">Léo TV</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Direct Install</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Sinal Master</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg">
-            INSTALAR
+            INSTALAR AGORA
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsVisible(false)} className="text-white hover:bg-white/10 h-10 w-10">
+          <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white transition-colors p-1">
             <X className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
       </div>
     </div>

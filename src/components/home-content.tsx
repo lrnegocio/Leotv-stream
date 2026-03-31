@@ -129,6 +129,7 @@ export default function HomeContent() {
                     <div className={`p-4 rounded-3xl ${c.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center">
                       <span className="text-lg font-black uppercase italic text-white block">{c.name}</span>
+                      {/* FIM DO SINAL 0: Só mostra se houver contagem real */}
                       {count > 0 && (
                         <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
                           {count.toLocaleString()} SINAIS ATIVOS
