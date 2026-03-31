@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     if (isMaster) {
       activeUser = { pin: 'adm77x2p', is_blocked: false, is_adult_enabled: true, expiry_date: null, subscription_tier: 'lifetime', max_screens: 999 };
     } else {
-      // FIX MESTRE LÉO: Supabase retorna colunas snake_case. Mapeando corretamente para o Xtream.
+      // FIX MESTRE LÉO: Supabase retorna colunas snake_case.
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
       if (error || !data || data.is_blocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       activeUser = data;

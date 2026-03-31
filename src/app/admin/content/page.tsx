@@ -146,7 +146,6 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {/* FIX MESTRE LÉO: Só mostra contador se for série e tiver episódios > 0 */}
                   {isSeries && epCount > 0 && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}

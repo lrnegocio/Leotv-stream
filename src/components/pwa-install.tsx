@@ -19,10 +19,9 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Se já estiver instalado ou em modo standalone, não mostra
     const isStandalone = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
-      const timer = setTimeout(() => setIsVisible(true), 2000)
+      const timer = setTimeout(() => setIsVisible(true), 1500)
       return () => clearTimeout(timer)
     }
 
@@ -36,13 +35,11 @@ export function PwaInstall() {
       if (outcome === 'accepted') {
         setIsVisible(false)
         setDeferredPrompt(null)
-        toast({ title: "INSTALANDO...", description: "Léo TV está sendo fixado no seu aparelho." })
       }
     } else {
-      // Se o prompt sumiu, orienta o manual mas tenta o disparo
       toast({ 
         title: "INSTALAR AGORA", 
-        description: "Use o menu do navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
+        description: "Abra o menu do navegador e clique em 'Instalar Aplicativo' ou 'Adicionar à Tela de Início'." 
       });
     }
   }
