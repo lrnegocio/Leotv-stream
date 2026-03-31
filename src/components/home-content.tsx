@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -116,7 +117,7 @@ export default function HomeContent() {
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 animate-in fade-in duration-500">
             {CATEGORIES.map(c => {
-              if (c.id === 'ADULT' && !user?.isAdultEnabled && !user?.is_adult_enabled) return null;
+              if (c.id === 'ADULT' && !user?.isAdultEnabled) return null;
               const count = catCounts[c.id] || 0;
               return (
                 <button key={c.id} onClick={() => c.id === 'ADULT' ? setIsPinOpen(true) : setSelectedCat(c.id)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color} bg-opacity-20`}>

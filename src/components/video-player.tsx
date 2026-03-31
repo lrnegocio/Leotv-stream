@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink } from "lucide-react"
+import { Maximize, Loader2, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -17,20 +17,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
-  const [isMixedContent, setIsMixedContent] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
       setHasError(false)
-      // BLINDAGEM MESTRE: Detecta Mixed Content (HTTP em site HTTPS)
-      if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.trim().startsWith('http:')) {
-        setIsMixedContent(true)
-        setLoading(false)
-      } else {
-        setIsMixedContent(false)
-      }
     }
   }, [url])
 
@@ -46,6 +38,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
+    if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
+      const id = targetUrl.includes('video/') ? targetUrl.split('video/')[1]?.split('?')[0] : targetUrl.split('dai.ly/')[1]?.split('?')[0];
+      return {
+        processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`,
+        type: 'iframe'
+      }
+    }
+
     if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mpeg')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
@@ -58,7 +58,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   }, [url])
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || isMixedContent) return;
+    if (!videoRef.current || !processedUrl) return;
 
     const video = videoRef.current;
     
@@ -103,7 +103,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(false);
     }
 
-  }, [type, processedUrl, isMixedContent]);
+  }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -111,17 +111,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-3xl border border-white/5 select-none">
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v10</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Master Hidra v11</span>
       </div>
 
-      {loading && !hasError && !isMixedContent && (
+      {loading && !hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL Master...</span>
         </div>
       )}
 
-      {(type === 'hls' || type === 'video') && !isMixedContent ? (
+      {(type === 'hls' || type === 'video') ? (
         <video 
           ref={videoRef}
           key={processedUrl} 
@@ -132,7 +132,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           onLoadedData={() => { setLoading(false); setHasError(false); }}
           onError={() => { setHasError(true); setLoading(false); }}
         />
-      ) : !isMixedContent ? (
+      ) : (
         <iframe 
           key={processedUrl} 
           src={processedUrl!} 
@@ -141,23 +141,18 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           allow="autoplay; encrypted-media; picture-in-picture"
           onLoad={() => { setLoading(false); setHasError(false); }} 
         />
-      ) : null}
+      )}
 
-      {(hasError || isMixedContent) && (
+      {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO PELO NAVEGADOR</h3>
+           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL BLOQUEADO OU OFFLINE</h3>
            <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed max-w-sm">
-             Este sinal usa um protocolo de rede (HTTP) que navegadores modernos bloqueiam por segurança. Para assistir, clique no botão abaixo.
+             Este sinal não pode ser sintonizado internamente pelo navegador. Certifique-se que o link está online.
            </p>
-           <div className="flex gap-2">
-             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6 shadow-xl shadow-primary/20">
-               <ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL MASTER
-             </Button>
-             <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6">
-               <RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR
-             </Button>
-           </div>
+           <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6">
+             <RefreshCcw className="mr-2 h-4 w-4" /> TENTAR NOVAMENTE
+           </Button>
         </div>
       )}
       
