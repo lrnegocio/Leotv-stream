@@ -130,7 +130,6 @@ export default function ContentManagementPage() {
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             const isSeries = item.type === 'series' || item.type === 'multi-season';
-            // SINAL 0 FIX: Só mostramos se for maior que zero para não poluir
             const epCount = isSeries ? (item.episodes?.length || 0) : 0;
             
             return (
@@ -147,7 +146,8 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {isSeries && epCount > 0 && (
+                  {/* FIX SINAL 0: Esconde completamente se não for série ou tiver 0 episódios */}
+                  {(isSeries && epCount > 0) && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
                 </div>

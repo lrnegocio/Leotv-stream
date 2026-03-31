@@ -19,7 +19,7 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // FALLBACK PARA TVS: Se não for standalone (não estiver instalado), mostra o botão após 3s
+    // FALLBACK: Mostra o botão após 3 segundos se não estiver instalado
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
       const timer = setTimeout(() => setIsVisible(true), 3000)
@@ -31,7 +31,7 @@ export function PwaInstall() {
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-      // DISPARA A FUNÇÃO REAL DE INSTALAÇÃO DO NAVEGADOR/ANDROID/TV
+      // DISPARA O INSTALADOR REAL DO NAVEGADOR
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') {
@@ -39,8 +39,8 @@ export function PwaInstall() {
         setDeferredPrompt(null)
       }
     } else {
-      // SE NÃO HOUVER PROMPT (TVs ANTIGAS), ABRE O MANUAL DE INSTALAÇÃO COMO ÚLTIMO RECURSO
-      alert("INSTALAÇÃO LÉO TV:\n\n1. Use o controle remoto e abra o Menu do Navegador.\n2. Clique em 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O app aparecerá nos seus aplicativos da Smart TV.")
+      // SE NÃO HOUVER PROMPT (Smart TVs Antigas), MOSTRA O MANUAL SNIPER
+      alert("INSTALAÇÃO MASTER LÉO TV:\n\n1. Use o controle remoto e vá no Menu do Navegador.\n2. Clique em 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O App aparecerá nos seus aplicativos da Smart TV.")
     }
   }
 
@@ -54,8 +54,8 @@ export function PwaInstall() {
             <Tv className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-white font-black uppercase text-[12px] italic">Instalar Léo TV</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Acesso Direto P2P</p>
+            <p className="text-white font-black uppercase text-[12px] italic">Léo TV Império</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Instalação Direta</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

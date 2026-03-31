@@ -129,7 +129,6 @@ export default function HomeContent() {
                     <div className={`p-4 rounded-3xl ${c.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center">
                       <span className="text-lg font-black uppercase italic text-white block">{c.name}</span>
-                      {/* SINAL 0 FIX: Esconde se o contador for zero para não dar erro visual */}
                       {count > 0 && (
                         <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
                           {count.toLocaleString()} SINAIS ATIVOS
@@ -147,9 +146,11 @@ export default function HomeContent() {
               <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
                 {q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
               </h2>
-              <div className="text-[10px] font-black uppercase bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
-                {content.length} ITENS LOCALIZADOS
-              </div>
+              {content.length > 0 && (
+                <div className="text-[10px] font-black uppercase bg-primary/10 text-primary px-4 py-2 rounded-full border border-primary/20">
+                  {content.length} ITENS LOCALIZADOS
+                </div>
+              )}
             </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (

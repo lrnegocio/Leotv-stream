@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink } from "lucide-react"
+import { Maximize, Loader2, SkipBack, SkipForward, Volume2, VolumeX, AlertTriangle, RefreshCcw, ShieldCheck, ExternalLink, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -19,12 +19,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
+  const [isMixedContent, setIsMixedContent] = React.useState(false)
 
   React.useEffect(() => {
     setIsMounted(true)
     if (url) {
       setLoading(true)
       setHasError(false)
+      // BLINDAGEM MESTRE: Detecta links HTTP em site HTTPS (Mixed Content)
+      if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http:')) {
+        setIsMixedContent(true)
+      } else {
+        setIsMixedContent(false)
+      }
     }
   }, [url])
 
@@ -32,6 +39,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
+    // YOUTUBE MASTER
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { 
@@ -40,80 +48,68 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    if (targetUrl.toLowerCase().includes('.m3u8') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mp4')) {
+    // IPTV / HLS (.m3u8)
+    if (targetUrl.toLowerCase().includes('.m3u8')) {
       return { processedUrl: targetUrl, type: 'hls' }
     }
 
+    // VOD / ARQUIVOS (.mp4, .mkv, .ts)
+    if (targetUrl.toLowerCase().includes('.mp4') || targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('.mkv')) {
+      return { processedUrl: targetUrl, type: 'video' }
+    }
+
+    // SITE / IFRAME (rdcanais, reidoscanais)
     return { processedUrl: targetUrl, type: 'iframe' }
   }, [url])
 
   React.useEffect(() => {
-    if (type !== 'hls' || !videoRef.current || !processedUrl) return;
+    if (!videoRef.current || !processedUrl) return;
 
-    let hls: any = null;
     const video = videoRef.current;
-
-    const initHls = () => {
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
+    
+    // SINTONIZADOR HLS HIDRA
+    if (type === 'hls') {
+      let hls: any = null;
+      const initHls = () => {
         // @ts-ignore
-        hls = new window.Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-          xhrSetup: (xhr: any) => {
-            xhr.withCredentials = false;
-          }
-        });
-        hls.loadSource(processedUrl);
-        hls.attachMedia(video);
-        hls.on('hlsManifestParsed', () => {
-          video.play().catch(() => {});
-          setLoading(false);
-          setHasError(false);
-        });
-        hls.on('hlsError', (event: any, data: any) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case 'networkError':
-                hls.startLoad();
-                break;
-              case 'mediaError':
-                hls.recoverMediaError();
-                break;
-              default:
-                setHasError(true);
-                setLoading(false);
-                hls.destroy();
-                break;
+        if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
+          // @ts-ignore
+          hls = new window.Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90,
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+          });
+          hls.loadSource(processedUrl);
+          hls.attachMedia(video);
+          hls.on('hlsManifestParsed', () => {
+            video.play().catch(() => {});
+            setLoading(false);
+          });
+          hls.on('hlsError', (event: any, data: any) => {
+            if (data.fatal) {
+              setHasError(true);
+              setLoading(false);
+              hls.destroy();
             }
-          }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = processedUrl;
-        video.addEventListener('loadedmetadata', () => {
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = processedUrl;
           video.play().catch(() => {});
-          setLoading(false);
-          setHasError(false);
-        });
-        video.addEventListener('error', () => {
-          setHasError(true);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    };
+        }
+      };
+      initHls();
+      return () => { if (hls) hls.destroy(); };
+    } 
+    
+    // SINTONIZADOR VOD (MP4/TS)
+    if (type === 'video') {
+      video.src = processedUrl;
+      video.play().catch(() => {});
+      setLoading(false);
+    }
 
-    const timer = setTimeout(initHls, 300);
-    const failSafe = setTimeout(() => { if (loading) setLoading(false); }, 10000);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(failSafe);
-      if (hls) hls.destroy();
-    };
-  }, [type, processedUrl, loading]);
+  }, [type, processedUrl]);
 
   if (!isMounted) return <div className="aspect-video bg-black rounded-3xl animate-pulse" />
 
@@ -124,17 +120,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     >
       <div className="absolute top-4 left-4 z-[80] flex items-center gap-2 bg-primary/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity">
         <ShieldCheck className="h-3 w-3 text-primary animate-pulse" />
-        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v223.0</span>
+        <span className="text-[8px] font-black text-primary uppercase tracking-widest">Sinal Hidra v225.0</span>
       </div>
 
-      {loading && (
+      {(loading && !hasError) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-[60]">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <span className="mt-4 text-[10px] font-black text-primary uppercase animate-pulse tracking-widest">Sintonizando SINAL...</span>
         </div>
       )}
 
-      {type === 'hls' ? (
+      {(type === 'hls' || type === 'video') ? (
         <video 
           ref={videoRef}
           key={processedUrl} 
@@ -143,6 +139,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline
           className="h-full w-full object-contain relative z-10" 
           onLoadedData={() => { setLoading(false); setHasError(false); }}
+          onError={() => { setHasError(true); setLoading(false); }}
         />
       ) : (
         <iframe 
@@ -155,13 +152,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {hasError && (
+      {(hasError || isMixedContent) && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-[70] p-10 text-center space-y-4">
            <AlertTriangle className="h-12 w-12 text-destructive animate-bounce" />
-           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">ERRO DE SINAL</h3>
-           <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed">O sinal original bloqueou o player interno.<br/>Deseja tentar abrir em uma nova janela?</p>
+           <h3 className="text-xl font-black uppercase italic text-destructive tracking-tighter">SINAL PROTEGIDO</h3>
+           <p className="text-[9px] uppercase font-bold text-white/40 leading-relaxed">
+             {isMixedContent 
+               ? "Este sinal usa protocolo HTTP e foi bloqueado pelo navegador HTTPS.\nAbra externamente para sintonizar."
+               : "O sinal original bloqueou o player interno ou está offline.\nTente abrir em uma nova janela."
+             }
+           </p>
            <div className="flex gap-2">
-             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR EXTERNO</Button>
+             <Button onClick={() => window.open(url, '_blank')} className="bg-primary hover:bg-primary/90 text-[10px] font-black uppercase h-12 rounded-xl px-6"><ExternalLink className="mr-2 h-4 w-4" /> ABRIR SINAL MASTER</Button>
              <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white text-[10px] font-black h-12 rounded-xl px-6"><RefreshCcw className="mr-2 h-4 w-4" /> RECARREGAR</Button>
            </div>
         </div>
