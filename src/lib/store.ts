@@ -320,6 +320,23 @@ export async function getTotalContentCount(): Promise<number> {
   } catch (e) { return 0; }
 }
 
+export async function generateM3UPlaylist(pin: string): Promise<string> {
+  const content = await getRemoteContent();
+  let m3u = "#EXTM3U\n";
+  content.forEach(item => {
+    // Prioriza o link direto para IPTV
+    const streamUrl = item.directStreamUrl || item.streamUrl;
+    if (!streamUrl) return;
+
+    m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${item.imageUrl || ""}" group-title="${item.genre}",${item.title}\n`;
+    
+    // Gera a rota de acesso baseada no tipo
+    const typePath = item.type === 'channel' ? 'live' : item.type === 'series' ? 'series' : 'movie';
+    m3u += `${window.location.origin}/${typePath}/${pin}/pass/${item.id}.ts\n`;
+  });
+  return m3u;
+}
+
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
   let expiry = '30 DIAS';
   if (tier === 'test') expiry = '6 HORAS';
