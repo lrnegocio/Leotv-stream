@@ -11,7 +11,6 @@ export function PwaInstall() {
 
   React.useEffect(() => {
     const handler = (e: any) => {
-      // PREVINE O NATIVO E GUARDA O EVENTO PARA DISPARAR NO NOSSO BOTÃO
       e.preventDefault()
       setDeferredPrompt(e)
       setIsVisible(true)
@@ -19,10 +18,9 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // FALLBACK: Mostra o botão após 3 segundos se não estiver instalado
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (!isStandalone) {
-      const timer = setTimeout(() => setIsVisible(true), 3000)
+      const timer = setTimeout(() => setIsVisible(true), 2000)
       return () => clearTimeout(timer)
     }
 
@@ -31,7 +29,6 @@ export function PwaInstall() {
 
   const handleInstall = async () => {
     if (deferredPrompt) {
-      // DISPARA O INSTALADOR REAL DO NAVEGADOR
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
       if (outcome === 'accepted') {
@@ -39,8 +36,8 @@ export function PwaInstall() {
         setDeferredPrompt(null)
       }
     } else {
-      // SE NÃO HOUVER PROMPT (Smart TVs Antigas), MOSTRA O MANUAL SNIPER
-      alert("INSTALAÇÃO MASTER LÉO TV:\n\n1. Use o controle remoto e vá no Menu do Navegador.\n2. Clique em 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O App aparecerá nos seus aplicativos da Smart TV.")
+      // SMART TV FALLBACK SNIPER
+      alert("INSTALAÇÃO LÉO TV:\n\n1. Use o controle remoto e abra o Menu do Navegador.\n2. Escolha 'Adicionar à Tela Inicial' ou 'Instalar App'.\n3. O App ficará fixo na sua lista de aplicativos.")
     }
   }
 
@@ -54,13 +51,13 @@ export function PwaInstall() {
             <Tv className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-white font-black uppercase text-[12px] italic">Léo TV Império</p>
-            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Instalação Direta</p>
+            <p className="text-white font-black uppercase text-[12px] italic">Léo TV</p>
+            <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">Direct Install</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl hover:bg-white/90 shadow-lg">
-            INSTALAR AGORA
+            INSTALAR
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsVisible(false)} className="text-white hover:bg-white/10 h-10 w-10">
             <X className="h-5 w-5" />

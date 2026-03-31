@@ -28,12 +28,12 @@ export async function GET(req: NextRequest) {
 
     if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
-    // SUPORTE MASTER: PIN 28685672815 VALIDADO COM SUCESSO
+    // SUPORTE MASTER: PIN VALIDADO COM SUCESSO
     const isMaster = username === 'adm77x2p';
     let activeUser: any = null;
 
     if (isMaster) {
-      activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiry_date: null, subscription_tier: 'lifetime' };
+      activeUser = { pin: 'adm77x2p', is_blocked: false, is_adult_enabled: true, expiry_date: null, subscription_tier: 'lifetime', max_screens: 999 };
     } else {
       const { data, error } = await supabase.from('users').select('*').eq('pin', username).maybeSingle();
       if (error || !data || data.is_blocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           is_trial: activeUser.subscription_tier === 'test' ? "1" : "0",
           active_cons: "1",
           max_connections: activeUser.max_screens?.toString() || "1",
-          allowed_output_formats: ["m3u8", "ts", "mp4", "mkv"]
+          allowed_output_formats: ["m3u8", "ts", "mp4", "mkv", "mpeg"]
         },
         server_info: {
           url: baseUrl.replace('https://', '').replace('http://', ''),
@@ -130,6 +130,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json([], { headers });
   } catch (err) {
-    return NextResponse.json({ auth: 0 }, { headers });
+    return NextResponse.json({ user_info: { auth: 0 } }, { headers });
   }
 }

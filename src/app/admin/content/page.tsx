@@ -90,7 +90,7 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Sua Biblioteca</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de 1 Milhão de Sinais Master.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Master de Rede.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && (
@@ -123,7 +123,7 @@ export default function ContentManagementPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase opacity-40">Acessando Banco de Dados Master...</p>
+          <p className="text-[10px] font-black uppercase opacity-40">Acessando Banco Master...</p>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
@@ -146,7 +146,6 @@ export default function ContentManagementPage() {
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {/* FIX SINAL 0: Nunca mais mostra contadores vazios em canais ou filmes */}
                   {(isSeries && epCount > 0) && (
                     <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
                   )}
