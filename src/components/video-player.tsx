@@ -20,10 +20,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    if (url) {
-      setLoading(true)
-      setError(false)
-    }
+    setLoading(true)
+    setError(false)
   }, [url])
 
   const { processedUrl, type } = React.useMemo(() => {
@@ -31,31 +29,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const targetUrl = url.trim()
     
     // 1. DETECÇÃO DE IMAGEM
-    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
-                   targetUrl.includes('gstatic.com') || 
-                   targetUrl.includes('images?q=tbn') ||
-                   targetUrl.includes('picsum.photos') ||
-                   targetUrl.includes('encrypted-tbn');
-    
-    if (isImage) return { processedUrl: targetUrl, type: 'image' }
+    if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || targetUrl.includes('gstatic.com') || targetUrl.includes('picsum.photos')) {
+      return { processedUrl: targetUrl, type: 'image' }
+    }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // SINTONIZADOR XVIDEOS SNIPER v2.1 (Página do Vídeo com ID Alfanumérico)
+    // SINTONIZADOR XVIDEOS SNIPER v3.0 (ID Alfanumérico)
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
       const id = match ? match[1] : null;
       if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
-    }
-
-    if (
-      targetUrl.includes('redecanaistv.cafe') || 
-      targetUrl.includes('rdcanais') || 
-      targetUrl.includes('redecanais') ||
-      targetUrl.includes('ch.php') ||
-      targetUrl.includes('embed') ||
-      targetUrl.includes('player')
-    ) {
-      return { processedUrl: targetUrl, type: 'iframe' }
     }
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -70,25 +53,25 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content / CDNs Bloqueadas
+    if (targetUrl.includes('redecanaistv.cafe') || targetUrl.includes('ch.php')) {
+      return { processedUrl: targetUrl, type: 'iframe' }
+    }
+
+    // 3. TÚNEL MASTER PARA LINKS PROTEGIDOS (Archive.org, CDNs, HTTP)
     let finalUrl = targetUrl;
     const lowUrl = targetUrl.toLowerCase();
     
-    // QUALQUER LINK HTTP ou CDNs PROTEGIDAS (Archive, XVideos CDN) precisam de Túnel
     if (
       targetUrl.startsWith('http://') || 
+      targetUrl.includes('archive.org') || 
       targetUrl.includes('xvideos-cdn.com') || 
-      targetUrl.includes('blinder.space') ||
-      targetUrl.includes('archive.org')
+      targetUrl.includes('blinder.space')
     ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
-    // SINTONIZADOR M3U8 SNIPER (HLS)
-    if (lowUrl.includes('.m3u8') || lowUrl.includes('chunklist')) return { processedUrl: finalUrl, type: 'hls' }
-    
-    // SINTONIZADOR MP4 CINEMA
-    if (lowUrl.includes('.mp4')) return { processedUrl: finalUrl, type: 'video' }
+    if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
+    if (lowUrl.includes('.mp4') || lowUrl.includes('.webm')) return { processedUrl: finalUrl, type: 'video' }
     
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
@@ -100,21 +83,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let hls: any = null;
     
     const initPlayer = () => {
+      // Limpa estado anterior para não sobrepor áudio
       video.pause();
       video.removeAttribute('src');
       video.load();
 
-      // MOTOR HLS MASTER (SNIPER)
+      // MOTOR HLS MASTER
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
         hls = new window.Hls({ 
           enableWorker: true, 
           lowLatencyMode: true,
-          backBufferLength: 60,
-          xhrSetup: (xhr: any) => {
-             xhr.withCredentials = false;
-          }
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
@@ -122,15 +103,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
-        hls.on('hlsError', (e: any, data: any) => { 
-          if (data.fatal) setError(true); 
-        });
+        hls.on('hlsError', (e: any, data: any) => { if (data.fatal) setError(true); });
       } 
-      // MOTOR NATIVO PARA MP4
+      // MOTOR NATIVO MP4 / WEBM
       else if (type === 'video') {
         video.src = processedUrl;
-        video.preload = "auto";
-        video.load();
         video.play().catch(() => {
           video.muted = true;
           video.play().catch(() => { setLoading(false); });
@@ -162,18 +139,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
           <h3 className="text-lg font-black uppercase text-white">Sinal Offline ou Incompatível</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar fora do ar ou o servidor bloqueou o túnel.</p>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar fora do ar ou bloqueou o acesso.</p>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">REENTRAR NO SINAL</Button>
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">REENTRAR</Button>
             <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR EXTERNO</Button>
           </div>
         </div>
       )}
 
       {type === 'image' ? (
-        <img src={processedUrl!} alt={title} className="w-full h-full object-contain" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
+        <img src={processedUrl!} alt={title} className="w-full h-full object-contain" onLoad={() => setLoading(false)} />
       ) : type === 'iframe' ? (
         <iframe 
+          key={processedUrl}
           src={processedUrl!} 
           className="h-full w-full border-0" 
           allowFullScreen 
@@ -207,7 +185,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v41</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v9.2</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
