@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Key, Plus, Loader2, Users, ShieldAlert, Timer, Trash2, Mail, Phone, Calendar as CalendarIcon, FileText } from "lucide-react"
+import { ChevronLeft, Key, Plus, Loader2, Users, ShieldAlert, Timer, Trash2, Mail, Phone, Calendar as CalendarIcon, FileText, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getRemoteResellers, saveReseller, saveUser, generateRandomPin, getRemoteUsers, removeReseller, Reseller, User } from "@/lib/store"
+import { getRemoteResellers, saveReseller, saveUser, generateRandomPin, getRemoteUsers, removeReseller, Reseller, User, getBeautifulMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -77,6 +77,7 @@ export default function ResellerManagementPage() {
       maxScreens: 1,
       activeDevices: [],
       isBlocked: false,
+      isAdultEnabled: false,
       resellerId: reseller.id as string
     }
 
@@ -97,6 +98,11 @@ export default function ResellerManagementPage() {
       toast({ title: type === 'test' ? "TESTE 6H GERADO!" : "PIN 30 DIAS GERADO!", description: `CÓDIGO: ${newPin}` })
     }
     setIsGenerating(false)
+  }
+
+  const sendAccess = (u: User) => {
+    const msg = getBeautifulMessage(u.pin, u.subscriptionTier, window.location.origin, u.maxScreens);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   if (loading || !reseller) return <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin" /></div>
@@ -210,10 +216,15 @@ export default function ResellerManagementPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`text-[10px] font-black uppercase ${u.isBlocked ? 'text-destructive' : 'text-emerald-500'}`}>
-                          {u.isBlocked ? 'BLOQUEADO/EXPIRADO' : u.expiryDate ? `EXPIRA: ${new Date(u.expiryDate).toLocaleString()}` : 'ESTOQUE'}
-                        </span>
+                      <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => sendAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar acesso WhatsApp">
+                          <Send className="h-5 w-5" />
+                        </Button>
+                        <div className="text-right">
+                          <span className={`text-[10px] font-black uppercase ${u.isBlocked ? 'text-destructive' : 'text-emerald-500'}`}>
+                            {u.isBlocked ? 'BLOQUEADO/EXPIRADO' : u.expiryDate ? `EXPIRA: ${new Date(u.expiryDate).toLocaleString()}` : 'ESTOQUE'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))

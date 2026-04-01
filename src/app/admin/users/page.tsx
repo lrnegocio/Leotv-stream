@@ -163,7 +163,7 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10"><Send className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar acesso WhatsApp"><Send className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXCLUIR SINAL?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
