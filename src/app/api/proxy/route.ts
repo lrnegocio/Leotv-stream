@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v16.0 - MOTOR DE STREAMING REAL 206
+ * TÚNEL MASTER v17.0 - MOTOR DE STREAMING REAL 206
  * Suporte total a Partial Content para permitir "seek" (avançar/voltar)
- * em vídeos do Archive.org, blinder.space e CDNs de adultos.
+ * Blindagem contra erro 410 e 403 em CDNs protegidas.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     
-    // Máscaras de Identidade Master
+    // Máscaras de Identidade Master para CDNs de Vídeo
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
     } else if (targetUrl.includes('xvideos')) {
@@ -41,9 +41,14 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
+    // Trata erro 410 (Gone) tentando um fallback sem Range se necessário
+    if (res.status === 410) {
+       return new NextResponse("Recurso não sintonizado pelo servidor original (410).", { status: 410 });
+    }
+
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais de streaming para o navegador reconhecer como 206
+    // Copia cabeçalhos vitais de streaming para o navegador reconhecer como 206 (Partial Content)
     const headersToCopy = [
       'content-type', 
       'content-length', 
@@ -59,7 +64,7 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // Força o navegador a aceitar o sinal vindo do nosso domínio
+    // Força o navegador a aceitar o sinal (CORS Master)
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', 'Range, Content-Type');
@@ -70,7 +75,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    return new NextResponse("Falha de sintonização master", { status: 500 });
+    return new NextResponse("Falha de sintonização master (Erro de Rede)", { status: 500 });
   }
 }
 

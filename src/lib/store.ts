@@ -3,27 +3,68 @@ import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 
-export interface Episode { id: string; title: string; number: number; streamUrl: string; directStreamUrl?: string; }
-export interface Season { id: string; number: number; episodes: Episode[]; }
+export interface Episode { 
+  id: string; 
+  title: string; 
+  number: number; 
+  streamUrl: string; 
+  directStreamUrl?: string; 
+}
+
+export interface Season { 
+  id: string; 
+  number: number; 
+  episodes: Episode[]; 
+}
+
 export interface ContentItem {
-  id: string; title: string; type: ContentType; description: string; genre: string;
-  isRestricted: boolean; streamUrl?: string; directStreamUrl?: string; imageUrl?: string;
-  seasons?: Season[]; episodes?: Episode[]; created_at?: string;
+  id: string; 
+  title: string; 
+  type: ContentType; 
+  description: string; 
+  genre: string;
+  isRestricted: boolean; 
+  streamUrl?: string; 
+  directStreamUrl?: string; 
+  imageUrl?: string;
+  seasons?: Season[]; 
+  episodes?: Episode[]; 
+  created_at?: string;
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
+
 export interface User {
-  id: string; pin: string; role: 'admin' | 'user'; subscriptionTier: SubscriptionTier;
-  expiryDate?: string; maxScreens: number; activeDevices: any[]; isBlocked: boolean;
-  isAdultEnabled: boolean; resellerId?: string; activatedAt?: string;
+  id: string; 
+  pin: string; 
+  role: 'admin' | 'user'; 
+  subscriptionTier: SubscriptionTier;
+  expiryDate?: string; 
+  maxScreens: number; 
+  activeDevices: any[]; 
+  isBlocked: boolean;
+  isAdultEnabled: boolean; 
+  resellerId?: string; 
+  activatedAt?: string;
 }
 
 export interface Reseller {
-  id: string; name: string; username: string; password?: string; credits: number;
-  totalSold: number; isBlocked: boolean; email?: string; phone?: string; cpf?: string;
+  id: string; 
+  name: string; 
+  username: string; 
+  password?: string; 
+  credits: number;
+  totalSold: number; 
+  isBlocked: boolean; 
+  email?: string; 
+  phone?: string; 
+  cpf?: string;
   birthDate?: string;
 }
 
+/**
+ * BUSCA ALFABÉTICA SOBERANA v38
+ */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -36,7 +77,9 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
       isRestricted: i.isRestricted || false,
       title: i.title.toUpperCase()
     }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    return []; 
+  }
 }
 
 export async function saveContent(item: ContentItem) {
@@ -47,7 +90,9 @@ export async function saveContent(item: ContentItem) {
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase()
     });
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    return false; 
+  }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
@@ -71,7 +116,9 @@ export async function clearAllM3UContent() {
     if (!items || items.length === 0) return true;
     const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    return false; 
+  }
 }
 
 export async function processM3UImport(m3u: string, onProgress: (m: string) => void) {

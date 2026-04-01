@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v8.0 - Detecção de IDs Alfanuméricos
+    // SINTONIZADOR SNIPER v10.0 - Detecção de IDs Alfanuméricos
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
       const id = match ? (match[1] || match[0]) : null;
@@ -80,7 +80,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              // MOTOR HLS SNIPER v10.0 - Força todos os segmentos pelo proxy
+              // MOTOR HLS SNIPER v12.0 - Força todos os segmentos pelo proxy
               if (isRestricted || requestUrl.includes('.ts') || requestUrl.includes('.m3u8')) {
                 if (!requestUrl.includes('/api/proxy')) {
                   xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
@@ -117,7 +117,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
         }
       } else if (type === 'video') {
-        video.src = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+        const finalUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+        video.src = finalUrl;
         video.load();
         video.play().catch(() => {
           video.muted = true;
@@ -182,10 +183,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Offline ou Protegido</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige player externo ou recalibragem.</p>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido ou Removido (410)</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O recurso solicitado não está mais disponível no servidor original.</p>
           <div className="flex gap-4 mt-6">
-            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Reiniciar</Button>
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Novamente</Button>
             <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
               <ExternalLink className="mr-2 h-4 w-4" /> Abrir Externo
             </Button>
