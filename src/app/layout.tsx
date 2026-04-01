@@ -39,6 +39,7 @@ export default function RootLayout({
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
       </head>
       <body className="font-body antialiased bg-background text-foreground select-none">
+        <SecurityBlocker />
         {children}
         <Toaster />
         <OfflineIndicator />
@@ -46,5 +47,42 @@ export default function RootLayout({
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
       </body>
     </html>
+  );
+}
+
+/**
+ * COMPONENTE DE BLINDAGEM MESTRE LÉO
+ * Bloqueia Botão Direito e F12 em produção.
+ * Mantém liberado em ambiente local (Firebase Studio) para o Mestre.
+ */
+function SecurityBlocker() {
+  return (
+    <script dangerouslySetInnerHTML={{ __html: `
+      (function() {
+        const isLocal = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' || 
+                        window.location.hostname.includes('web-workstation');
+        
+        if (isLocal) {
+          console.log("MESTRE LÉO DETECTADO: Botão direito liberado para extração.");
+          return;
+        }
+
+        // Bloqueio de Botão Direito
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Bloqueio de Teclas de Inspeção (F12, Ctrl+Shift+I, etc)
+        document.addEventListener('keydown', e => {
+          if (
+            e.keyCode === 123 || // F12
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || // Ctrl+Shift+I/J
+            (e.ctrlKey && e.keyCode === 85) // Ctrl+U (Ver código fonte)
+          ) {
+            e.preventDefault();
+            return false;
+          }
+        });
+      })();
+    `}} />
   );
 }

@@ -15,7 +15,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
-  const [isMuted, setIsMuted] = React.useState(false) // Inicia com som (false para muted)
+  const [isMuted, setIsMuted] = React.useState(false) 
   const [isPlaying, setIsPlaying] = React.useState(true)
 
   const { processedUrl, type } = React.useMemo(() => {
@@ -41,7 +41,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER (Archive.org, blinder.space, CDNs Bloqueadas, HTTP)
+    // 3. TÚNEL MASTER (Archive.org, blinder.space, CDNs, HTTP)
     const isRestrictedHost = u.includes('archive.org') || u.includes('blinder.space') || u.includes('phncdn.com') || u.includes('xvideos-cdn.com') || u.startsWith('http://');
     
     if (isRestrictedHost) {
@@ -61,6 +61,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
+      // Tenta iniciar SEMPRE com som liberado
+      video.muted = false;
+      setIsMuted(false);
+
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
@@ -70,10 +74,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
-            video.muted = false; // Tenta iniciar com som
             video.play().catch(() => {
-              // Se o navegador bloquear som automático, inicia mudo para não travar o vídeo
+              // Regra de segurança do navegador: se falhar autoplay com som, inicia mudo
               video.muted = true;
+              setIsMuted(true);
               video.play().catch(() => setError(true));
             });
             setLoading(false);
@@ -83,10 +87,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
-          video.muted = false;
           video.addEventListener('loadedmetadata', () => { 
             video.play().catch(() => {
               video.muted = true;
+              setIsMuted(true);
               video.play();
             }); 
             setLoading(false); 
@@ -95,9 +99,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       } else {
         video.src = processedUrl;
         video.load();
-        video.muted = false;
         video.play().catch(() => {
           video.muted = true;
+          setIsMuted(true);
           video.play().catch(() => setError(true));
         });
       }
@@ -107,7 +111,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return () => { if (hls) hls.destroy(); };
   }, [processedUrl, type])
 
-  const toggleVolume = () => {
+  const toggleVolume = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (videoRef.current) {
       const newMute = !videoRef.current.muted;
       videoRef.current.muted = newMute;
@@ -115,13 +120,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   };
 
-  const skip = (seconds: number) => {
+  const skip = (seconds: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.currentTime += seconds;
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (videoRef.current) {
       if (videoRef.current.paused) {
         videoRef.current.play();
@@ -133,8 +140,21 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   };
 
+  // Liberação de Áudio Master no primeiro clique na tela
+  const handleContainerClick = () => {
+    if (videoRef.current && videoRef.current.muted) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
+    togglePlay();
+  };
+
   return (
-    <div ref={containerRef} className="relative aspect-video w-full bg-black rounded-[2rem] overflow-hidden border border-white/5 group shadow-2xl">
+    <div 
+      ref={containerRef} 
+      onClick={handleContainerClick}
+      className="relative aspect-video w-full bg-black rounded-[2rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
+    >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -180,7 +200,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           </div>
 
           <div className="flex items-center justify-center gap-12">
-            <button onClick={() => skip(-10)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
+            <button onClick={(e) => skip(-10, e)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
               <RotateCcw className="h-8 w-8 text-white group-hover/btn:scale-110" />
             </button>
             
@@ -188,14 +208,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
               {isPlaying ? <Pause className="h-10 w-10 text-white" fill="currentColor" /> : <Play className="h-10 w-10 text-white ml-1" fill="currentColor" />}
             </button>
 
-            <button onClick={() => skip(10)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
+            <button onClick={(e) => skip(10, e)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
               <RotateCw className="h-8 w-8 text-white group-hover/btn:scale-110" />
             </button>
           </div>
 
           <div className="flex justify-end">
             <button 
-              onClick={() => containerRef.current?.requestFullscreen()} 
+              onClick={(e) => { e.stopPropagation(); containerRef.current?.requestFullscreen(); }} 
               className="h-12 w-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all"
             >
               <Maximize className="h-6 w-6 text-white" />

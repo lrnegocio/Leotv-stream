@@ -108,7 +108,7 @@ export async function getGlobalSettings() {
 }
 
 export async function updateGlobalSettings(value: any) {
-  // AJUSTE DE SOBERANIA: Garante que o PIN seja salvo usando a estrutura correta do Supabase
+  // ALINHAMENTO DE SEGURANÇA: Salva usando a coluna 'key' correta
   const { error } = await supabase.from('settings').upsert({ key: 'global', value });
   return !error;
 }
