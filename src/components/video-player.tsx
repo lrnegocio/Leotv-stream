@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -41,7 +40,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER (Archive.org, blinder.space, CDNs, HTTP)
+    // 3. TÚNEL MASTER v11.0 (Archive.org, blinder.space, CDNs, HTTP)
     const isRestrictedHost = u.includes('archive.org') || u.includes('blinder.space') || u.includes('phncdn.com') || u.includes('xvideos-cdn.com') || u.startsWith('http://');
     
     if (isRestrictedHost) {
@@ -69,7 +68,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
-            lowLatencyMode: true
+            lowLatencyMode: true,
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
@@ -153,12 +153,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div 
       ref={containerRef} 
       onClick={handleContainerClick}
-      className="relative aspect-video w-full bg-black rounded-[2rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
+      className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v11...</p>
         </div>
       )}
 
@@ -166,7 +166,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
           <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline ou Bloqueado</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">Verifique o link ou tente recalibrar.</p>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link pode ter expirado ou exige recalibragem.</p>
           <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Reentry</Button>
         </div>
       )}
@@ -188,37 +188,37 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
       {/* CONTROLES SOBERANOS (Visíveis no Hover) */}
       {!loading && !error && type !== 'iframe' && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-6">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-8">
           <div className="flex justify-between items-center">
-            <h3 className="text-white font-black uppercase italic truncate max-w-md tracking-tighter drop-shadow-md">{title}</h3>
+            <h3 className="text-white font-black uppercase italic truncate max-w-xl tracking-tighter drop-shadow-2xl text-lg">{title}</h3>
             <button 
               onClick={toggleVolume} 
-              className="h-12 w-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all shadow-xl border border-white/5"
+              className="h-14 w-14 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center hover:bg-primary transition-all shadow-2xl border border-white/10"
             >
-              {isMuted ? <VolumeX className="h-6 w-6 text-white" /> : <Volume2 className="h-6 w-6 text-white" />}
+              {isMuted ? <VolumeX className="h-7 w-7 text-white" /> : <Volume2 className="h-7 w-7 text-white" />}
             </button>
           </div>
 
-          <div className="flex items-center justify-center gap-12">
-            <button onClick={(e) => skip(-10, e)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
-              <RotateCcw className="h-8 w-8 text-white group-hover/btn:scale-110" />
+          <div className="flex items-center justify-center gap-16">
+            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
+              <RotateCcw className="h-10 w-10 text-white group-hover/btn:scale-110" />
             </button>
             
-            <button onClick={togglePlay} className="p-6 bg-primary rounded-full hover:scale-110 transition-all shadow-2xl shadow-primary/40">
-              {isPlaying ? <Pause className="h-10 w-10 text-white" fill="currentColor" /> : <Play className="h-10 w-10 text-white ml-1" fill="currentColor" />}
+            <button onClick={togglePlay} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)] border-4 border-white/10">
+              {isPlaying ? <Pause className="h-12 w-12 text-white" fill="currentColor" /> : <Play className="h-12 w-12 text-white ml-2" fill="currentColor" />}
             </button>
 
-            <button onClick={(e) => skip(10, e)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
-              <RotateCw className="h-8 w-8 text-white group-hover/btn:scale-110" />
+            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
+              <RotateCw className="h-10 w-10 text-white group-hover/btn:scale-110" />
             </button>
           </div>
 
           <div className="flex justify-end">
             <button 
               onClick={(e) => { e.stopPropagation(); containerRef.current?.requestFullscreen(); }} 
-              className="h-12 w-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all"
+              className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all border border-white/10"
             >
-              <Maximize className="h-6 w-6 text-white" />
+              <Maximize className="h-7 w-7 text-white" />
             </button>
           </div>
         </div>

@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -108,7 +107,6 @@ export async function getGlobalSettings() {
 }
 
 export async function updateGlobalSettings(value: any) {
-  // ALINHAMENTO DE SEGURANÇA: Salva usando a coluna 'key' correta
   const { error } = await supabase.from('settings').upsert({ key: 'global', value });
   return !error;
 }

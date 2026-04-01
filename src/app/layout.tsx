@@ -51,7 +51,7 @@ export default function RootLayout({
 }
 
 /**
- * COMPONENTE DE BLINDAGEM MESTRE LÉO
+ * COMPONENTE DE BLINDAGEM MESTRE LÉO v2
  * Bloqueia Botão Direito e F12 em produção.
  * Mantém liberado em ambiente local (Firebase Studio) para o Mestre.
  */
