@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // 1. MOTOR SNIPER v8.0: XVideos (IDs Alfanuméricos Novos)
+    // 1. MOTOR SNIPER v8.0: XVideos (Suporte total a novos IDs alfanuméricos)
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
       const id = match ? match[1] : null;
@@ -45,8 +45,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    // 4. IFRAMES GERAIS (RedeCanais, etc)
-    if (u.includes('ch.php?') || u.includes('redecanaistv') || u.includes('rdcanais') || u.includes('player')) {
+    // 4. IFRAMES GERAIS (RedeCanais, RD Canais, etc)
+    if (u.includes('ch.php?') || u.includes('redecanais') || u.includes('rdcanais') || u.includes('player')) {
       return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
@@ -63,6 +63,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
+      // Tenta iniciar com som. Se o navegador travar, o fallback no clique resolve.
       video.muted = false;
       setIsMuted(false);
 
@@ -73,7 +74,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             lowLatencyMode: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
               xhr.withCredentials = false;
-              // INTERCEPTAÇÃO DE SEGMENTOS MASTER
+              // INTERCEPTAÇÃO DE SEGMENTOS MASTER: Força cada pedaço do vídeo pelo proxy
               if (!requestUrl.includes('/api/proxy')) {
                 const isRestricted = originalUrl && (
                   originalUrl.includes('phncdn.com') || 
@@ -178,6 +179,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   };
 
   const handleContainerClick = () => {
+    // Destrava o áudio no primeiro toque se estiver mudo por restrição do navegador
     if (videoRef.current && videoRef.current.muted) {
       videoRef.current.muted = false;
       setIsMuted(false);

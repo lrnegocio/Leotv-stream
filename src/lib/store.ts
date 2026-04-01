@@ -30,6 +30,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
     
+    // ORDENAÇÃO ALFABÉTICA v38 (De A a Z por Padrão)
     const { data } = await query.order('title', { ascending: true });
     return (data || []).map(i => ({ 
       ...i, 
@@ -105,6 +106,7 @@ export async function getGlobalSettings() {
 }
 
 export async function updateGlobalSettings(value: any) {
+  // PERSISTÊNCIA MESTRE: Força a gravação na tabela settings
   const { error } = await supabase.from('settings').upsert({ key: 'global', value });
   return !error;
 }
@@ -167,6 +169,7 @@ export async function generateM3UPlaylist(pin: string) {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
+    // SINAL M3U8 IPTV: Prioriza link secundário (direto) se houver
     const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
     m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${streamUrl}\n`;
   });

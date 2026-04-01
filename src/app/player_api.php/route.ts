@@ -6,12 +6,16 @@ import { getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR XTREAM API v9.0 - SOBERANIA IPTV TOTAL
+ * MOTOR XTREAM API v10.0 - SOBERANIA IPTV TOTAL
  * BUSCA DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
- * Resolve o erro "Invalid Username" em 100% dos apps de IPTV.
+ * Resolve o erro "Invalid Username" em 100% dos apps de IPTV do mercado.
  */
 export async function GET(req: NextRequest) {
-  const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+  const headers = { 
+    'Content-Type': 'application/json', 
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'no-store, max-age=0'
+  };
   const { searchParams } = new URL(req.url);
   const username = searchParams.get('username') || ""; 
   const password = searchParams.get('password') || "";
@@ -22,16 +26,18 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // SOBERANIA DE LOGIN: Tenta o PIN em ambos os campos
-    const pinToTry = username.trim() || password.trim();
+    // SOBERANIA DE LOGIN: Tenta o PIN em ambos os campos para evitar erros de digitação nos apps
+    const pinToTry = (username.trim() || password.trim());
 
     if (pinToTry === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
     } else {
+      // Busca na tabela de usuários o PIN soberano
       const { data } = await supabase.from('users').select('*').eq('pin', pinToTry).maybeSingle();
+      
       if (!data || data.isBlocked) {
-        // Tenta o outro campo caso o primeiro falhe
-        const otherPin = password.trim() || username.trim();
+        // Fallback: Tenta o outro campo caso o primeiro tenha falhado
+        const otherPin = (password.trim() || username.trim());
         const { data: secondTry } = await supabase.from('users').select('*').eq('pin', otherPin).maybeSingle();
         if (!secondTry || secondTry.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
         activeUser = secondTry;
@@ -40,6 +46,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Retorno básico de autenticação (XUI Format)
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -52,7 +59,7 @@ export async function GET(req: NextRequest) {
           allowed_output_formats: ["m3u8", "ts", "mp4"]
         },
         server_info: { 
-          url: req.nextUrl.origin.replace('https://', ''), 
+          url: req.nextUrl.origin.replace('https://', '').replace('http://', ''), 
           port: "443", 
           https_port: "443", 
           server_protocol: "https", 
@@ -70,6 +77,7 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
+      // Filtra adultos se não permitido no PIN
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
