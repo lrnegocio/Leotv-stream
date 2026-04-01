@@ -39,13 +39,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. EMBEDS OFICIAIS
+    // 2. EMBEDS OFICIAIS (SINTONIZADORES DE ELITE)
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
         const id = parts[1].split('/')[0];
         return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
       }
+    }
+
+    if (targetUrl.includes('redecanaistv.cafe') || targetUrl.includes('rdcanais') || targetUrl.includes('redecanais')) {
+      return { processedUrl: targetUrl, type: 'iframe' }
     }
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -68,8 +72,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const lowUrl = targetUrl.toLowerCase();
     
-    // EXTERMÍNIO DE .TS: Foco absoluto em .m3u8 e .mp4 para o Web Player
+    // SOVEREIGN M3U8 & MP4
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
+    if (lowUrl.includes('.mp4')) return { processedUrl: finalUrl, type: 'video' }
     
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
@@ -85,7 +90,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       video.removeAttribute('src');
       video.load();
 
-      // Motor HLS Soberano para .m3u8
+      // Motor HLS Soberano para .m3u8 (Sintonização Bruta)
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -104,8 +109,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           if (data.fatal) setError(true); 
         });
       } 
-      // Motor Nativo para MP4
-      else {
+      // Motor Nativo para MP4 (Túnel Master)
+      else if (type === 'video') {
         video.src = processedUrl;
         video.preload = "auto";
         video.load();
@@ -176,7 +181,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v38</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v39</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
