@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v8.0 - ESPECIALISTA EM HLS E MP4 CDNs
- * Resolve o problema de Mixed Content e Trava de Referer/Origin.
+ * TÚNEL DE FLUXO SOBERANO v9.0 - MOTOR DE STREAMING BRUTO
+ * Resolve Mixed Content, Trava de Referer e Range para MP4 (blinder.space).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,12 +24,13 @@ export async function GET(req: NextRequest) {
       headers.set('Range', range);
     }
     
-    // Máscara de Navegador para CDNs do XVideos e outros players protegidos
+    // Máscara de Navegador Master para burlar CDNs do XVideos e outros
     headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     headers.set('Accept', '*/*');
     headers.set('Connection', 'keep-alive');
     
     const targetUrlObj = new URL(targetUrl);
+    // Mascarar a origem para enganar a proteção de Hotlink
     headers.set('Referer', targetUrlObj.origin + '/');
     headers.set('Origin', targetUrlObj.origin);
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos críticos
+    // Copia cabeçalhos críticos do servidor original
     const criticalHeaders = [
       'content-type',
       'content-length',
@@ -55,15 +56,17 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Força tipos HLS para que o player não confunda o sinal
+    // Força o tipo M3U8 se o arquivo for chunklist ou manifest
     if (targetUrl.includes('.m3u8')) {
       responseHeaders.set('content-type', 'application/x-mpegurl');
     }
 
+    // Liberação de CORS Total para o Navegador aceitar o sinal do Túnel
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v8');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9');
 
+    // Suporte para Partial Content (206) - Necessário para Seek de Vídeo MP4
     const status = res.status === 206 ? 206 : 200;
 
     return new NextResponse(res.body, {
@@ -72,7 +75,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Erro no Túnel Master:", error);
+    console.error("Erro no Túnel Master v9:", error);
     return new NextResponse("Falha ao sintonizar fluxo externo", { status: 500 });
   }
 }

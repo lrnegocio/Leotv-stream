@@ -40,9 +40,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // SINTONIZADOR XVIDEOS SNIPER (Página do Vídeo)
+    // SINTONIZADOR XVIDEOS SNIPER v2 (Página do Vídeo com ID Alfanumérico)
     if (targetUrl.includes('xvideos.com/video')) {
-      const match = targetUrl.match(/video\.([^/]+)/);
+      const match = targetUrl.match(/video[./]([\w\d]+)/);
       const id = match ? match[1] : null;
       if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
     }
@@ -74,8 +74,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let finalUrl = targetUrl;
     const lowUrl = targetUrl.toLowerCase();
     
-    // Links de CDN de XVideos ou Links Inseguros precisam de Túnel
-    if (targetUrl.startsWith('http://') || targetUrl.includes('xvideos-cdn.com')) {
+    // QUALQUER LINK HTTP ou CDNs PROTEGIDAS precisam de Túnel para rodar em HTTPS
+    if (targetUrl.startsWith('http://') || targetUrl.includes('xvideos-cdn.com') || targetUrl.includes('blinder.space')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
@@ -158,7 +158,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
           <h3 className="text-lg font-black uppercase text-white">Sinal Offline ou Incompatível</h3>
           <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar fora do ar ou o servidor bloqueou o túnel.</p>
-          <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR FONTE EXTERNA</Button>
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">REENTRAR NO SINAL</Button>
+            <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR EXTERNO</Button>
+          </div>
         </div>
       )}
 
