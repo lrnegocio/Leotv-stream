@@ -17,29 +17,28 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [isMuted, setIsMuted] = React.useState(false) 
   const [isPlaying, setIsPlaying] = React.useState(true)
 
-  const { processedUrl, type } = React.useMemo(() => {
-    if (!url) return { processedUrl: null, type: 'unknown' }
+  const { processedUrl, type, originalUrl } = React.useMemo(() => {
+    if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
     // 1. IFRAMES MASTER (RedeCanais, RD Canais, Players Prontos)
     if (u.includes('ch.php?') || u.includes('redecanaistv') || u.includes('rdcanais') || u.includes('player')) {
-      return { processedUrl: u, type: 'iframe' }
+      return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
     // 2. EMBEDS DE ELITE (XVideos, Pornhub, YouTube)
     if (u.includes('xvideos.com')) {
-      // Captura IDs numéricos ou alfanuméricos como ouethob80a6
       const idMatch = u.match(/video\.?([a-z0-9]+)/i);
       const id = idMatch ? idMatch[1] : u.split('video')[1]?.split('/')[0]?.replace(/^\.|\//g, '');
-      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, type: 'iframe' }
+      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, type: 'iframe', originalUrl: u }
     }
     if (u.includes('pornhub.com')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
-      return { processedUrl: id ? `https://www.pornhub.com/embed/${id}` : u, type: 'iframe' }
+      return { processedUrl: id ? `https://www.pornhub.com/embed/${id}` : u, type: 'iframe', originalUrl: u }
     }
     if (u.includes('youtube.com') || u.includes('youtu.be')) {
       const id = u.includes('v=') ? u.split('v=')[1]?.split('&')[0] : u.split('youtu.be/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
+      return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
     // 3. TÚNEL MASTER v11.0 (Archive.org, blinder.space, CDNs, HTTP)
@@ -47,10 +46,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isRestrictedHost) {
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(u)}`;
-      return { processedUrl: proxyUrl, type: u.includes('.m3u8') ? 'hls' : 'video' }
+      return { processedUrl: proxyUrl, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
     }
 
-    return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video' }
+    return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
   }, [url])
 
   React.useEffect(() => {
@@ -62,7 +61,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
-      // Tenta iniciar SEMPRE com som liberado
       video.muted = false;
       setIsMuted(false);
 
@@ -71,12 +69,30 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            xhrSetup: (xhr: any, url: string) => { 
+            // MOTOR HLS v2.0: Reconstrução de caminhos para pedaços de vídeo
+            xhrSetup: (xhr: any, segmentUrl: string) => { 
               xhr.withCredentials = false;
-              // Força chunks de CDNs restritas a passarem pelo proxy para evitar CORS/Referer
-              if (url.includes('phncdn.com') || url.includes('xvideos-cdn.com') || url.includes('cdn77')) {
-                const proxiedChunk = `/api/proxy?url=${encodeURIComponent(url)}`;
-                xhr.open('GET', proxiedChunk, true);
+              
+              // Se a URL for relativa (resolvida contra o proxy), reconstrói com a URL real
+              let absoluteUrl = segmentUrl;
+              if (!segmentUrl.startsWith('http') && originalUrl) {
+                try {
+                  const urlObj = new URL(originalUrl);
+                  absoluteUrl = new URL(segmentUrl, urlObj.href).href;
+                } catch (e) { console.error("URL reconstruction fail", e); }
+              }
+
+              // Verifica se o pedaço precisa de proxy (CORS/Referer)
+              const needsProxy = absoluteUrl.includes('phncdn.com') || 
+                               absoluteUrl.includes('xvideos-cdn.com') || 
+                               absoluteUrl.includes('archive.org') ||
+                               absoluteUrl.startsWith('http://');
+
+              if (needsProxy) {
+                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
+                xhr.open('GET', proxiedUrl, true);
+              } else if (absoluteUrl !== segmentUrl) {
+                xhr.open('GET', absoluteUrl, true);
               }
             }
           });
@@ -92,8 +108,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
-              console.error("HLS Fatal Error:", data);
-              setError(true);
+              console.error("HLS Fatal Error Recovering...", data);
+              if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) {
+                hls.startLoad();
+              } else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError();
+              } else {
+                hls.destroy();
+                setError(true);
+              }
             }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -120,7 +143,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     init();
     return () => { if (hls) hls.destroy(); };
-  }, [processedUrl, type])
+  }, [processedUrl, type, originalUrl])
 
   const toggleVolume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -196,7 +219,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         />
       )}
 
-      {/* CONTROLES SOBERANOS (Visíveis no Hover) */}
       {!loading && !error && type !== 'iframe' && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-8">
           <div className="flex justify-between items-center">
