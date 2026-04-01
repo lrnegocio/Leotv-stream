@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -30,7 +29,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // 1. DETECÇÃO DE IMAGEM
+    // 1. DETECÇÃO DE IMAGEM (Fotos do Google, etc)
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -39,7 +38,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. SINTONIZADOR XVIDEOS (Embed Oficial)
+    // 2. EMBEDS OFICIAIS (XVideos, YouTube, Dailymotion)
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
@@ -48,26 +47,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     }
 
-    // 3. SUPORTE YOUTUBE (Embed Oficial)
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
       const id = targetUrl.includes('v=') ? targetUrl.split('v=')[1]?.split('&')[0] : targetUrl.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 4. SUPORTE DAILYMOTION (Embed Oficial)
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       let id = "";
-      if (targetUrl.includes('video/')) {
-        const pathParts = targetUrl.split('video/');
-        id = pathParts[1]?.split(/[?#]/)[0];
-      } else if (targetUrl.includes('dai.ly/')) {
-        const pathParts = targetUrl.split('dai.ly/');
-        id = pathParts[1]?.split(/[?#]/)[0];
-      }
+      if (targetUrl.includes('video/')) id = targetUrl.split('video/')[1]?.split(/[?#]/)[0];
+      else if (targetUrl.includes('dai.ly/')) id = targetUrl.split('dai.ly/')[1]?.split(/[?#]/)[0];
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 5. TÚNEL MASTER PARA LINKS HTTP (MP4 do blinder.space, M3U8, etc)
+    // 3. TÚNEL MASTER PARA LINKS HTTP (MP4 do blinder.space, M3U8, etc)
+    // Se o link for HTTP e o site HTTPS, usamos o nosso proxy interno para pular o Mixed Content
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://') && !targetUrl.includes(window.location.host)) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -75,7 +68,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const lowUrl = targetUrl.toLowerCase();
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
-    if (lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'mpegts' }
     
     // Padrão para MP4 e outros vídeos diretos
     return { processedUrl: finalUrl, type: 'video' }
@@ -86,10 +78,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const video = videoRef.current;
     let hls: any = null;
-    let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
-      // Limpa o sinal anterior antes de sintonizar
+      // Limpa sinal anterior
       video.pause();
       video.removeAttribute('src');
       video.load();
@@ -105,17 +96,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
+        hls.on('hlsError', (e: any, data: any) => { if (data.fatal) setError(true); });
       } 
-      // Motor MPEG-TS para .ts
-      // @ts-ignore
-      else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
-        // @ts-ignore
-        mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl, isLive: true });
-        mpegtsPlayer.attachMediaElement(video);
-        mpegtsPlayer.load();
-        mpegtsPlayer.play().catch(() => { video.muted = true; mpegtsPlayer.play().catch(() => {}); });
-        setLoading(false);
-      }
       // Motor Nativo para MP4 (blinder.space) e vídeos diretos
       else {
         video.src = processedUrl;
@@ -132,7 +114,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return () => { 
       clearTimeout(timeout);
       if (hls) hls.destroy(); 
-      if (mpegtsPlayer) mpegtsPlayer.destroy();
     };
   }, [type, processedUrl]);
 
@@ -152,8 +133,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-black uppercase text-white">Sinal Externo com Oscilação</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado pelo servidor de origem.</p>
+          <h3 className="text-lg font-black uppercase text-white">Sinal Offline ou Incompatível</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar fora do ar ou o servidor bloqueou o túnel.</p>
           <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR FONTE EXTERNA</Button>
         </div>
       )}
@@ -173,7 +154,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
-          onError={() => { setLoading(false); setError(true); }} 
+          onError={() => { if (!loading) setError(true); }} 
         />
       )}
       
@@ -190,7 +171,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V6.0</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V7.0</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
