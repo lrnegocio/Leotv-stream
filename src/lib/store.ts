@@ -104,7 +104,8 @@ export async function getGlobalSettings() {
 }
 
 export async function updateGlobalSettings(value: any) {
-  const { error } = await supabase.from('settings').upsert({ key: 'global', value });
+  // SOBERANIA DE PERSISTÊNCIA: Força o upsert com a chave correta
+  const { error } = await supabase.from('settings').upsert({ key: 'global', value }, { onConflict: 'key' });
   return !error;
 }
 

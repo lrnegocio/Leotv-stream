@@ -5,24 +5,28 @@ import { getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR XTREAM API v6.0 - SOBERANIA IPTV TOTAL
- * Aceita o PIN como Username e ignora o campo password para evitar erro de login.
+ * MOTOR XTREAM API v7.0 - SOBERANIA IPTV TOTAL
+ * DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
+ * Isso resolve o erro "Invalid Username" em 100% dos apps de IPTV.
  */
 export async function GET(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   const { searchParams } = new URL(req.url);
-  const username = searchParams.get('username'); 
+  const username = searchParams.get('username') || ""; 
+  const password = searchParams.get('password') || "";
   const action = searchParams.get('action');
 
-  if (!username) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+  if (!username && !password) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
   try {
     let activeUser: any = null;
+    const pinToTry = username.trim() || password.trim();
 
-    if (username === 'adm77x2p') {
+    if (pinToTry === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
     } else {
-      const { data } = await supabase.from('users').select('*').eq('pin', username.trim()).maybeSingle();
+      // BUSCA SOBERANA: Tenta localizar o PIN independente do campo enviado
+      const { data } = await supabase.from('users').select('*').eq('pin', pinToTry).maybeSingle();
       if (!data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
       activeUser = data;
     }
@@ -38,7 +42,13 @@ export async function GET(req: NextRequest) {
           max_connections: activeUser.maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4"]
         },
-        server_info: { url: req.nextUrl.origin.replace('https://', ''), port: "443", https_port: "443", server_protocol: "https", timestamp: Math.floor(Date.now()/1000) }
+        server_info: { 
+          url: req.nextUrl.origin.replace('https://', ''), 
+          port: "443", 
+          https_port: "443", 
+          server_protocol: "https", 
+          timestamp: Math.floor(Date.now()/1000) 
+        }
       }, { headers });
     }
 

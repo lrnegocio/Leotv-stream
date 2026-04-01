@@ -45,8 +45,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const isRestrictedHost = u.includes('archive.org') || u.includes('blinder.space') || u.includes('phncdn.com') || u.includes('xvideos-cdn.com') || u.startsWith('http://');
     
     if (isRestrictedHost) {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(u)}`;
-      return { processedUrl: proxyUrl, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
+      // MOTOR SNIPER: Usamos a URL original para o HLS.js resolver os pedaços, mas o túnel intercepta tudo.
+      return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
     }
 
     return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
@@ -57,11 +57,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const video = videoRef.current;
     let hls: any = null;
 
-    const init = () => {
+    const init = async () => {
       setLoading(true);
       setError(false);
       
-      // TENTA INICIAR SEM MUDO
+      // TENTA INICIAR COM ÁUDIO LIBERADO
       video.muted = false;
       setIsMuted(false);
 
@@ -70,38 +70,51 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            // MOTOR HLS v3.0: Interceptação total de segmentos para bypass de CORS
-            xhrSetup: (xhr: any, segmentUrl: string) => { 
+            // MOTOR HLS SNIPER v4.0: Interceptação e redirecionamento de todos os pedaços do vídeo
+            xhrSetup: (xhr: any, requestUrl: string) => { 
               xhr.withCredentials = false;
               
-              // Se o manifesto original exigia proxy, o segmento também exige!
-              const needsProxy = originalUrl && (
+              const isRestricted = originalUrl && (
                 originalUrl.includes('phncdn.com') || 
                 originalUrl.includes('xvideos') || 
                 originalUrl.includes('archive.org') ||
+                originalUrl.includes('blinder.space') ||
                 originalUrl.startsWith('http://')
               );
 
-              if (needsProxy && !segmentUrl.includes('/api/proxy')) {
-                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(segmentUrl)}`;
+              if (isRestricted && !requestUrl.includes('/api/proxy')) {
+                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxiedUrl, true);
               }
             }
           });
-          hls.loadSource(processedUrl);
+
+          // Se for restrito, passamos o manifesto pelo proxy na carga inicial
+          const isRestricted = originalUrl && (
+            originalUrl.includes('phncdn.com') || 
+            originalUrl.includes('xvideos') || 
+            originalUrl.includes('archive.org') ||
+            originalUrl.includes('blinder.space') ||
+            originalUrl.startsWith('http://')
+          );
+
+          const finalManifestUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+          
+          hls.loadSource(finalManifestUrl);
           hls.attachMedia(video);
+          
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => {
-              // Fallback se o browser travar o autoplay com som
+              // Bloqueio de Autoplay: Libera mudo e tenta de novo
               video.muted = true;
               setIsMuted(true);
               video.play().catch(() => setError(true));
             });
             setLoading(false);
           });
+
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
-              console.error("HLS Fatal Error Recovering...", data);
               if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) {
                 hls.startLoad();
               } else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) {
@@ -124,7 +137,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
         }
       } else {
-        video.src = processedUrl;
+        const isRestricted = originalUrl && (
+          originalUrl.includes('archive.org') || 
+          originalUrl.includes('blinder.space') ||
+          originalUrl.startsWith('http://')
+        );
+        video.src = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.load();
         video.play().catch(() => {
           video.muted = true;
