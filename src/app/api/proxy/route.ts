@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v9.0 - MOTOR DE STREAMING BRUTO
- * Resolve Mixed Content, Trava de Referer e Range para MP4 (blinder.space).
+ * TÚNEL DE FLUXO SOBERANO v9.1 - MOTOR DE STREAMING BRUTO
+ * Resolve Mixed Content, Trava de Referer e Range para MP4 (blinder.space, archive.org).
+ * Suporta Partial Content (206) para permitir Seek (Avançar/Voltar).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,19 +19,19 @@ export async function GET(req: NextRequest) {
   try {
     const headers = new Headers();
     
-    // Repassa o cabeçalho de Range (Vital para MP4 e HLS Seek)
+    // Repassa o cabeçalho de Range (VITAL para MP4 e HLS Seek)
     const range = req.headers.get('range');
     if (range) {
       headers.set('Range', range);
     }
     
-    // Máscara de Navegador Master para burlar CDNs do XVideos e outros
-    headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    // Máscara de Navegador Master para burlar CDNs (XVideos, Archive.org)
+    headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     headers.set('Accept', '*/*');
     headers.set('Connection', 'keep-alive');
     
     const targetUrlObj = new URL(targetUrl);
-    // Mascarar a origem para enganar a proteção de Hotlink
+    // Mascarar a origem para enganar a proteção de Hotlink/CORS
     headers.set('Referer', targetUrlObj.origin + '/');
     headers.set('Origin', targetUrlObj.origin);
 
@@ -42,13 +43,15 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos críticos do servidor original
+    // Copia cabeçalhos críticos do servidor original para manter a integridade do vídeo
     const criticalHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control'
+      'cache-control',
+      'last-modified',
+      'etag'
     ];
 
     criticalHeaders.forEach(h => {
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Força o tipo M3U8 se o arquivo for chunklist ou manifest
+    // Força o tipo correto se for M3U8
     if (targetUrl.includes('.m3u8')) {
       responseHeaders.set('content-type', 'application/x-mpegurl');
     }
@@ -64,10 +67,10 @@ export async function GET(req: NextRequest) {
     // Liberação de CORS Total para o Navegador aceitar o sinal do Túnel
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9.1');
 
     // Suporte para Partial Content (206) - Necessário para Seek de Vídeo MP4
-    const status = res.status === 206 ? 206 : 200;
+    const status = res.status === 206 ? 206 : res.status;
 
     return new NextResponse(res.body, {
       status: status,
@@ -75,7 +78,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Erro no Túnel Master v9:", error);
+    console.error("Erro no Túnel Master v9.1:", error);
     return new NextResponse("Falha ao sintonizar fluxo externo", { status: 500 });
   }
 }

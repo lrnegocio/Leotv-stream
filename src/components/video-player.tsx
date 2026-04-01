@@ -40,9 +40,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // SINTONIZADOR XVIDEOS SNIPER v2 (Página do Vídeo com ID Alfanumérico)
+    // SINTONIZADOR XVIDEOS SNIPER v2.1 (Página do Vídeo com ID Alfanumérico)
     if (targetUrl.includes('xvideos.com/video')) {
-      const match = targetUrl.match(/video[./]([\w\d]+)/);
+      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
       const id = match ? match[1] : null;
       if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
     }
@@ -74,8 +74,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let finalUrl = targetUrl;
     const lowUrl = targetUrl.toLowerCase();
     
-    // QUALQUER LINK HTTP ou CDNs PROTEGIDAS precisam de Túnel para rodar em HTTPS
-    if (targetUrl.startsWith('http://') || targetUrl.includes('xvideos-cdn.com') || targetUrl.includes('blinder.space')) {
+    // QUALQUER LINK HTTP ou CDNs PROTEGIDAS (Archive, XVideos CDN) precisam de Túnel
+    if (
+      targetUrl.startsWith('http://') || 
+      targetUrl.includes('xvideos-cdn.com') || 
+      targetUrl.includes('blinder.space') ||
+      targetUrl.includes('archive.org')
+    ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
@@ -172,7 +177,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           src={processedUrl!} 
           className="h-full w-full border-0" 
           allowFullScreen 
-          allow="autoplay; encrypted-media" 
+          allow="autoplay; encrypted-media; picture-in-picture" 
           onLoad={() => setLoading(false)} 
         />
       ) : (
