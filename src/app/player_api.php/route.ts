@@ -6,7 +6,7 @@ import { getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR XTREAM API v8.0 - SOBERANIA IPTV TOTAL
+ * MOTOR XTREAM API v9.0 - SOBERANIA IPTV TOTAL
  * BUSCA DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
  * Resolve o erro "Invalid Username" em 100% dos apps de IPTV.
  */

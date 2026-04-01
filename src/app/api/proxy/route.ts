@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v13.0 - MOTOR DE STREAMING PROFISSIONAL
+ * TÚNEL DE FLUXO SOBERANO v14.0 - MOTOR DE STREAMING PROFISSIONAL
  * Suporte total a Partial Content (206) para seek em MP4 (Dona Aranha/Archive).
- * Mascaramento de Identidade (Referer) para CDNs restritas.
+ * Mascaramento de Identidade (Referer) para CDNs restritas (Pornhub/XVideos).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -22,8 +22,6 @@ export async function GET(req: NextRequest) {
     
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     
-    const targetUrlObj = new URL(targetUrl);
-    
     // MÁSCARAS DE SOBERANIA (Bypass de Referer e Segurança)
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
@@ -31,8 +29,6 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
     } else if (targetUrl.includes('archive.org')) {
       requestHeaders.set('Referer', 'https://archive.org/');
-    } else {
-      requestHeaders.set('Referer', targetUrlObj.origin + '/');
     }
 
     const res = await fetch(targetUrl, { 

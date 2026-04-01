@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, RotateCcw, RotateCw, Play, Pause } from "lucide-react"
+import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, RotateCcw, RotateCw, Play, Pause, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -22,9 +22,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // 1. MOTOR SNIPER v7.0: XVideos (IDs Alfanuméricos Novos como ouethob80a6)
+    // 1. MOTOR SNIPER v8.0: XVideos (IDs Alfanuméricos Novos)
     if (u.includes('xvideos.com')) {
-      // Tenta extrair ID após 'video.' ou após '/video'
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
       const id = match ? match[1] : null;
       return { 
@@ -51,7 +50,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
-    // 5. TÚNEL MASTER v13.0 (Archive.org, MP4, HLS)
+    // 5. TÚNEL MASTER v14.0 (Archive.org, MP4, HLS)
     return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
   }, [url])
 
@@ -64,7 +63,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
-      // TENTA INICIAR COM ÁUDIO LIBERADO (Soberania de Som)
       video.muted = false;
       setIsMuted(false);
 
@@ -75,26 +73,26 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             lowLatencyMode: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
               xhr.withCredentials = false;
-              // INTERCEPTAÇÃO DE SEGMENTOS: Força cada pedaço do vídeo a passar pelo túnel seguro
-              if (!requestUrl.includes('/api/proxy') && (
-                originalUrl?.includes('phncdn.com') || 
-                originalUrl?.includes('xvideos') || 
-                originalUrl?.includes('archive.org') ||
-                originalUrl?.includes('blinder.space') ||
-                originalUrl?.startsWith('http://')
-              )) {
-                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
+              // INTERCEPTAÇÃO DE SEGMENTOS MASTER
+              if (!requestUrl.includes('/api/proxy')) {
+                const isRestricted = originalUrl && (
+                  originalUrl.includes('phncdn.com') || 
+                  originalUrl.includes('xvideos') || 
+                  originalUrl.includes('archive.org') ||
+                  originalUrl.includes('blinder.space')
+                );
+                if (isRestricted) {
+                  xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
+                }
               }
             }
           });
 
-          // Carga inicial via Proxy para sites restritos
           const isRestricted = originalUrl && (
             originalUrl.includes('phncdn.com') || 
             originalUrl.includes('xvideos') || 
             originalUrl.includes('archive.org') ||
-            originalUrl.includes('blinder.space') ||
-            originalUrl.startsWith('http://')
+            originalUrl.includes('blinder.space')
           );
 
           const finalUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
@@ -130,8 +128,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             setLoading(false); 
           });
         }
-      } else {
-        // VÍDEOS MP4 (Archive.org / Dona Aranha)
+      } else if (type === 'video') {
         const isRestricted = originalUrl && (
           originalUrl.includes('archive.org') || 
           originalUrl.includes('blinder.space') ||
@@ -197,7 +194,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v13...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v14...</p>
         </div>
       )}
 
@@ -205,8 +202,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
           <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige recalibragem ou proxy adicional.</p>
-          <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Reiniciar Sinal</Button>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige recalibragem ou player externo.</p>
+          <div className="flex gap-4 mt-6">
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Reiniciar</Button>
+            <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
+              <ExternalLink className="mr-2 h-4 w-4" /> Abrir Externo
+            </Button>
+          </div>
         </div>
       )}
 
