@@ -79,16 +79,12 @@ export const generateSafeId = (name: string) => {
   return "leo_" + clean.substring(0, 15) + "_" + Math.random().toString(36).substring(2, 6);
 };
 
-/**
- * BUSCA MASTER: Agora com ORDENAÇÃO ALFABÉTICA (A-Z) por padrão em todo o sistema.
- */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
 
-    // ORDENAÇÃO ALFABÉTICA MESTRE LÉO (A-Z)
     const { data: rawData, error } = await query.order('title', { ascending: true });
     if (error) throw error;
 
@@ -171,6 +167,57 @@ export async function bulkRemoveContent(ids: string[]) {
     const { error } = await supabase.from('content').delete().in('id', ids);
     return !error;
   } catch (e) { return false; }
+}
+
+/**
+ * IMPORTAÇÃO M3U MASTER - VERSÃO 276.0
+ */
+export async function clearAllM3UContent() {
+  try {
+    const { data: items } = await supabase.from('content').select('id');
+    if (!items || items.length === 0) return true;
+    const ids = items.map(i => i.id);
+    // Deletar em blocos de 500 para evitar timeout
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500);
+      await supabase.from('content').delete().in('id', chunk);
+    }
+    return true;
+  } catch (e) { return false; }
+}
+
+export async function processM3UImport(m3uContent: string, onProgress: (msg: string) => void) {
+  const lines = m3uContent.split('\n');
+  let successCount = 0;
+  let currentItem: Partial<ContentItem> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('#EXTINF:')) {
+      const title = line.split(',')[1] || "SINAL SEM NOME";
+      const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
+      const groupMatch = line.match(/group-title="([^"]+)"/i);
+      
+      currentItem = {
+        title: title.trim(),
+        imageUrl: logoMatch ? logoMatch[1] : "",
+        genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO",
+        type: 'channel',
+        isRestricted: false,
+        description: "Sinal Master Importado via M3U"
+      };
+    } else if (line.startsWith('http')) {
+      if (currentItem.title) {
+        currentItem.streamUrl = line;
+        currentItem.id = generateSafeId(currentItem.title);
+        await saveContent(currentItem as ContentItem);
+        successCount++;
+        if (successCount % 10 === 0) onProgress(`Sintonizando: ${successCount} sinais...`);
+      }
+      currentItem = {};
+    }
+  }
+  return { success: successCount };
 }
 
 export async function saveUser(user: User) {

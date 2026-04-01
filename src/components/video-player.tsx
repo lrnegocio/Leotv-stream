@@ -34,7 +34,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // SINTONIZADOR XVIDEOS SNIPER v3.0 (ID Alfanumérico)
+    // SINTONIZADOR XVIDEOS SNIPER v3.0 (ID Alfanumérico Master)
     if (targetUrl.includes('xvideos.com/video')) {
       const match = targetUrl.match(/video\.([a-z0-9]+)/i);
       const id = match ? match[1] : null;
@@ -53,11 +53,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
+    // Sintonizador RedeCanais Master
     if (targetUrl.includes('redecanaistv.cafe') || targetUrl.includes('ch.php')) {
       return { processedUrl: targetUrl, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS PROTEGIDOS (Archive.org, CDNs, HTTP)
+    // 3. TÚNEL MASTER PARA LINKS PROTEGIDOS (Archive.org, CDNs, HTTP, blinder.space)
+    // SINTONIZADOR SOBERANO: Qualquer MP4 ou HLS que possa ser bloqueado passa pelo túnel.
     let finalUrl = targetUrl;
     const lowUrl = targetUrl.toLowerCase();
     
@@ -65,7 +67,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       targetUrl.startsWith('http://') || 
       targetUrl.includes('archive.org') || 
       targetUrl.includes('xvideos-cdn.com') || 
-      targetUrl.includes('blinder.space')
+      targetUrl.includes('blinder.space') ||
+      targetUrl.includes('cdn77')
     ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
@@ -83,12 +86,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let hls: any = null;
     
     const initPlayer = () => {
-      // Limpa estado anterior para não sobrepor áudio
       video.pause();
       video.removeAttribute('src');
       video.load();
 
-      // MOTOR HLS MASTER
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -105,7 +106,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         });
         hls.on('hlsError', (e: any, data: any) => { if (data.fatal) setError(true); });
       } 
-      // MOTOR NATIVO MP4 / WEBM
       else if (type === 'video') {
         video.src = processedUrl;
         video.play().catch(() => {
@@ -185,7 +185,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v9.2</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v276.0</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
