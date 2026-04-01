@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
     'Cache-Control': 'no-store, max-age=0'
   };
   const { searchParams } = new URL(req.url);
+  
+  // XEQUE-MATE NO LOGIN IPTV: PIN pode estar em username ou password
   const username = searchParams.get('username') || ""; 
   const password = searchParams.get('password') || "";
   const action = searchParams.get('action');

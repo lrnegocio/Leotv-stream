@@ -22,19 +22,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
+    // SINTONIZADOR SNIPER v8.0 - Detecção de IDs Alfanuméricos
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
-      const id = match ? match[1] : null;
-      return { 
-        processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, 
-        type: 'iframe', 
-        originalUrl: u 
+      const id = match ? (match[1] || match[0]) : null;
+      if (id && !u.includes('embedframe')) {
+        return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe', originalUrl: u }
       }
     }
 
     if (u.includes('pornhub.com')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
-      return { processedUrl: id ? `https://www.pornhub.com/embed/${id}` : u, type: 'iframe', originalUrl: u }
+      if (id && !u.includes('embed')) {
+        return { processedUrl: `https://www.pornhub.com/embed/${id}`, type: 'iframe', originalUrl: u }
+      }
     }
 
     if (u.includes('youtube.com') || u.includes('youtu.be')) {
@@ -46,7 +47,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
-    return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
+    return { 
+      processedUrl: u, 
+      type: u.includes('.m3u8') ? 'hls' : 'video', 
+      originalUrl: u 
+    }
   }, [url])
 
   React.useEffect(() => {
@@ -58,6 +63,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
+      // Tenta iniciar com som (Mestre Léo v282)
       video.muted = false;
       setIsMuted(false);
 
@@ -73,10 +79,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
-            lowLatencyMode: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              if (isRestricted && !requestUrl.includes('/api/proxy')) {
-                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
+              // MOTOR HLS SNIPER v10.0 - Força todos os segmentos pelo proxy
+              if (isRestricted || requestUrl.includes('.ts') || requestUrl.includes('.m3u8')) {
+                if (!requestUrl.includes('/api/proxy')) {
+                  xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
+                }
               }
             }
           });
@@ -106,12 +114,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
                 setError(true);
               }
             }
-          });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
-          video.addEventListener('loadedmetadata', () => { 
-            video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
-            setLoading(false); 
           });
         }
       } else if (type === 'video') {
@@ -158,32 +160,30 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   };
 
-  const handleContainerClick = () => {
-    if (videoRef.current && videoRef.current.muted) {
-      videoRef.current.muted = false;
-      setIsMuted(false);
-    }
-    togglePlay();
-  };
-
   return (
     <div 
       ref={containerRef} 
-      onClick={handleContainerClick}
+      onClick={() => {
+        if (videoRef.current && videoRef.current.muted) {
+          videoRef.current.muted = false;
+          setIsMuted(false);
+        }
+        togglePlay();
+      }}
       className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v15...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Canal Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige recalibragem ou player externo.</p>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Offline ou Protegido</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige player externo ou recalibragem.</p>
           <div className="flex gap-4 mt-6">
             <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Reiniciar</Button>
             <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
@@ -222,22 +222,22 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
           <div className="flex items-center justify-center gap-16">
             <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
-              <RotateCcw className="h-10 w-10 text-white group-hover/btn:scale-110" />
+              <RotateCcw className="h-10 w-10 text-white" />
             </button>
             
-            <button onClick={togglePlay} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)] border-4 border-white/10">
+            <button onClick={(e) => togglePlay(e)} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)]">
               {isPlaying ? <Pause className="h-12 w-12 text-white" fill="currentColor" /> : <Play className="h-12 w-12 text-white ml-2" fill="currentColor" />}
             </button>
 
             <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
-              <RotateCw className="h-10 w-10 text-white group-hover/btn:scale-110" />
+              <RotateCw className="h-10 w-10 text-white" />
             </button>
           </div>
 
           <div className="flex justify-end">
             <button 
               onClick={(e) => { e.stopPropagation(); containerRef.current?.requestFullscreen(); }} 
-              className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all border border-white/10"
+              className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all"
             >
               <Maximize className="h-7 w-7 text-white" />
             </button>
