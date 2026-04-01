@@ -40,6 +40,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
+    // SINTONIZADOR XVIDEOS SNIPER (Página do Vídeo)
+    if (targetUrl.includes('xvideos.com/video')) {
+      const match = targetUrl.match(/video\.([^/]+)/);
+      const id = match ? match[1] : null;
+      if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
+    }
+
     if (
       targetUrl.includes('redecanaistv.cafe') || 
       targetUrl.includes('rdcanais') || 
@@ -49,15 +56,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       targetUrl.includes('player')
     ) {
       return { processedUrl: targetUrl, type: 'iframe' }
-    }
-
-    // SINTONIZADOR XVIDEOS MASTER
-    if (targetUrl.includes('xvideos.com')) {
-      const parts = targetUrl.split('video.');
-      if (parts.length > 1) {
-        const id = parts[1].split('/')[0];
-        return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
-      }
     }
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -72,14 +70,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content (MP4 e M3U8)
+    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content / CDNs Bloqueadas
     let finalUrl = targetUrl;
-    if (targetUrl.startsWith('http://')) {
+    const lowUrl = targetUrl.toLowerCase();
+    
+    // Links de CDN de XVideos ou Links Inseguros precisam de Túnel
+    if (targetUrl.startsWith('http://') || targetUrl.includes('xvideos-cdn.com')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
-    const lowUrl = targetUrl.toLowerCase();
-    
     // SINTONIZADOR M3U8 SNIPER (HLS)
     if (lowUrl.includes('.m3u8') || lowUrl.includes('chunklist')) return { processedUrl: finalUrl, type: 'hls' }
     

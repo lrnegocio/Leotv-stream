@@ -1,11 +1,11 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v7.0 - ESPECIALISTA EM MP4 E M3U8
- * Resolve o problema de Mixed Content (HTTP em site HTTPS).
- * Suporta Range Requests para MP4 (permitindo seek/avançar).
+ * TÚNEL DE FLUXO SOBERANO v8.0 - ESPECIALISTA EM HLS E MP4 CDNs
+ * Resolve o problema de Mixed Content e Trava de Referer/Origin.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,13 +18,13 @@ export async function GET(req: NextRequest) {
   try {
     const headers = new Headers();
     
-    // Repassa o cabeçalho de Range (Vital para MP4 carregar e permitir avançar o filme)
+    // Repassa o cabeçalho de Range (Vital para MP4 e HLS Seek)
     const range = req.headers.get('range');
     if (range) {
       headers.set('Range', range);
     }
     
-    // Identidade de Navegador Master para pular bloqueios de servidores externos
+    // Máscara de Navegador para CDNs do XVideos e outros players protegidos
     headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     headers.set('Accept', '*/*');
     headers.set('Connection', 'keep-alive');
@@ -41,15 +41,13 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos críticos do servidor original para o player não bugar
+    // Copia cabeçalhos críticos
     const criticalHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control',
-      'last-modified',
-      'etag'
+      'cache-control'
     ];
 
     criticalHeaders.forEach(h => {
@@ -57,17 +55,15 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Se o servidor original não enviou accept-ranges, nós forçamos para permitir o seek em MP4
-    if (!responseHeaders.has('accept-ranges')) {
-      responseHeaders.set('accept-ranges', 'bytes');
+    // Força tipos HLS para que o player não confunda o sinal
+    if (targetUrl.includes('.m3u8')) {
+      responseHeaders.set('content-type', 'application/x-mpegurl');
     }
 
-    // Liberação total de CORS para o navegador não barrar o sinal
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v7');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v8');
 
-    // Se o sinal for parcial (Range), retornamos 206 para o navegador não cancelar o download
     const status = res.status === 206 ? 206 : 200;
 
     return new NextResponse(res.body, {
