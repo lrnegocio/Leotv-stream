@@ -57,8 +57,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     // 4. SUPORTE DAILYMOTION (Embed Oficial)
     if (targetUrl.includes('dailymotion.com') || targetUrl.includes('dai.ly')) {
       let id = "";
-      if (targetUrl.includes('video/')) id = targetUrl.split('video/')[1]?.split('?')[0];
-      else if (targetUrl.includes('dai.ly/')) id = targetUrl.split('dai.ly/')[1]?.split('?')[0];
+      if (targetUrl.includes('video/')) {
+        const pathParts = targetUrl.split('video/');
+        id = pathParts[1]?.split(/[?#]/)[0];
+      } else if (targetUrl.includes('dai.ly/')) {
+        const pathParts = targetUrl.split('dai.ly/');
+        id = pathParts[1]?.split(/[?#]/)[0];
+      }
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
@@ -185,7 +190,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V5.0</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V6.0</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">

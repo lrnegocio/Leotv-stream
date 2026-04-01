@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 5.0 (MOTOR DE FLUXO CINEMA)
+ * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 6.0 (MOTOR DE FLUXO CINEMA)
  * Suporte absoluto a Range Requests para arquivos MP4 gigantes (blinder.space).
  * Permite seek (avançar/voltar) e pula bloqueios de Mixed Content.
  */
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     headers.set('Accept', '*/*');
     headers.set('Connection', 'keep-alive');
+    headers.set('Referer', new URL(targetUrl).origin + '/');
 
     const res = await fetch(targetUrl, { 
       headers,
@@ -63,11 +64,14 @@ export async function GET(req: NextRequest) {
     // Liberação total de CORS para o navegador não barrar o sinal
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Blindado-v5');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Blindado-v6');
+
+    // Se o sinal for parcial (Range), retornamos 206 para o navegador não cancelar o download
+    const status = res.status === 206 ? 206 : 200;
 
     // Retorna o corpo do vídeo como stream direto para performance máxima
     return new NextResponse(res.body, {
-      status: res.status,
+      status: status,
       statusText: res.statusText,
       headers: responseHeaders,
     });
