@@ -190,7 +190,7 @@ export default function EditContentPage() {
                 <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto)</h3>
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto IPTV)</h3>
                 <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link .m3u8, .ts ou .mp4" />
               </div>
             </div>
@@ -209,11 +209,16 @@ export default function EditContentPage() {
                       <span className="text-[10px] font-black text-primary uppercase italic">EPISÓDIO {ep.number}</span>
                       <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <Input placeholder="Link do Vídeo" value={ep.streamUrl || ""} onChange={e => {
+                    <Input placeholder="Link Web Principal" value={ep.streamUrl || ""} onChange={e => {
                       const newEps = [...episodes];
                       newEps[idx].streamUrl = e.target.value;
                       setEpisodes(newEps);
                     }} className="h-10 bg-black/40 border-white/5 font-mono text-[10px]" />
+                    <Input placeholder="Link Secundário (IPTV)" value={ep.directStreamUrl || ""} onChange={e => {
+                      const newEps = [...episodes];
+                      newEps[idx].directStreamUrl = e.target.value;
+                      setEpisodes(newEps);
+                    }} className="h-10 bg-emerald-500/5 border-emerald-500/10 font-mono text-[10px]" />
                   </div>
                 ))}
               </div>
@@ -244,11 +249,16 @@ export default function EditContentPage() {
                                 setSeasons(newSeasons);
                              }}><Trash2 className="h-3 w-3" /></Button>
                           </div>
-                          <Input placeholder="Link do Vídeo" value={ep.streamUrl || ""} onChange={e => {
+                          <Input placeholder="Link Web Principal" value={ep.streamUrl || ""} onChange={e => {
                             const newSeasons = [...seasons];
                             newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
                             setSeasons(newSeasons);
                           }} className="h-9 bg-black/40 text-[9px] font-mono" />
+                          <Input placeholder="Link Secundário (IPTV)" value={ep.directStreamUrl || ""} onChange={e => {
+                            const newSeasons = [...seasons];
+                            newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
+                            setSeasons(newSeasons);
+                          }} className="h-9 bg-emerald-500/5 text-[9px] font-mono" />
                         </div>
                       ))}
                     </div>

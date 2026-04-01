@@ -40,7 +40,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
     // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // Especialista em RedeCanais, YouTube, XVideos e Dailymotion
     if (
       targetUrl.includes('redecanaistv.cafe') || 
       targetUrl.includes('rdcanais') || 
@@ -52,6 +51,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: targetUrl, type: 'iframe' }
     }
 
+    // SINTONIZADOR XVIDEOS MASTER
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
@@ -80,13 +80,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const lowUrl = targetUrl.toLowerCase();
     
-    // SOVEREIGN HLS & MP4
-    if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
+    // SINTONIZADOR M3U8 SNIPER (HLS)
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('chunklist')) return { processedUrl: finalUrl, type: 'hls' }
+    
+    // SINTONIZADOR MP4 CINEMA
     if (lowUrl.includes('.mp4')) return { processedUrl: finalUrl, type: 'video' }
     
-    // Fallback para HLS se houver chunklist no link
-    if (lowUrl.includes('chunklist')) return { processedUrl: finalUrl, type: 'hls' }
-
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
@@ -101,7 +100,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       video.removeAttribute('src');
       video.load();
 
-      // Motor HLS Soberano para .m3u8 (Sintonização Bruta)
+      // MOTOR HLS MASTER (SNIPER)
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -123,7 +122,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           if (data.fatal) setError(true); 
         });
       } 
-      // Motor Nativo para MP4
+      // MOTOR NATIVO PARA MP4
       else if (type === 'video') {
         video.src = processedUrl;
         video.preload = "auto";
@@ -201,7 +200,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v40</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v41</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
