@@ -4,9 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v9.3 - MOTOR DE STREAMING DE ELITE
- * Resolve Archive.org, XVideos, blinder.space, Mixed Content e Trava de Referer.
- * Implementação Robusta de Partial Content (206) para suporte a Seek (Avançar/Voltar).
+ * TÚNEL DE FLUXO SOBERANO v9.4 - MOTOR DE STREAMING DE ELITE
+ * Resolve Archive.org, Pornhub CDN, XVideos, Mixed Content e Trava de Referer.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -30,10 +29,16 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // Mascarar a origem para evitar bloqueio de Hotlink/CORS (XVideos e JMV)
+    // Máscara de Referer Baseada na Origem do Sinal
     const targetUrlObj = new URL(targetUrl);
-    requestHeaders.set('Referer', targetUrlObj.origin + '/');
-    requestHeaders.set('Origin', targetUrlObj.origin);
+    
+    if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
+      requestHeaders.set('Referer', 'https://www.pornhub.com/');
+      requestHeaders.set('Origin', 'https://www.pornhub.com');
+    } else {
+      requestHeaders.set('Referer', targetUrlObj.origin + '/');
+      requestHeaders.set('Origin', targetUrlObj.origin);
+    }
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -61,13 +66,13 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Liberação de CORS Total para o Navegador do Cliente aceitar o sinal
+    // Liberação de CORS Total para o Navegador do Cliente
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9.3');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9.4');
 
-    // Se o sinal for do Archive.org, forçar Content-Type de vídeo caso esteja ausente
+    // Forçar Content-Type para garantir carregamento em sites exigentes
     if (targetUrl.includes('archive.org') && !responseHeaders.get('content-type')) {
       responseHeaders.set('content-type', 'video/mp4');
     }
@@ -78,7 +83,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Erro no Túnel Master v9.3:", error);
+    console.error("Erro no Túnel Master v9.4:", error);
     return new NextResponse("Falha ao sintonizar fluxo soberano", { status: 500 });
   }
 }

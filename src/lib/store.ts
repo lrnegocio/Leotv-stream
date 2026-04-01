@@ -266,14 +266,25 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
   try {
     if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 999, activeDevices: [], isBlocked: false, isAdultEnabled: true } as any };
     
-    const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
+    // Busca exata pelo PIN (Username no IPTV)
+    const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin.trim()).maybeSingle();
     if (error || !user) return { error: "PIN INVÁLIDO OU NÃO CADASTRADO." };
     if (user["isBlocked"]) return { error: "ACESSO SUSPENSO PELO ADMINISTRADOR." };
 
     let devices = user["activeDevices"] || [];
+    
+    // Se for um login de IPTV (device ID fixo), tratamos como um slot especial para não travar
+    const isXtream = deviceId === "xtream_api_call";
+    
     if (!devices.some((d: any) => d.id === deviceId)) {
-      if (devices.length >= user["maxScreens"]) return { error: "LIMITE DE TELAS EXCEDIDO NO PLANO." };
+      // Verifica limite de telas
+      if (devices.length >= user["maxScreens"] && !isXtream) {
+        return { error: "LIMITE DE TELAS EXCEDIDO NO PLANO." };
+      }
       devices.push({ id: deviceId, lastActive: new Date().toISOString() });
+    } else {
+      // Atualiza atividade do dispositivo
+      devices = devices.map((d: any) => d.id === deviceId ? { ...d, lastActive: new Date().toISOString() } : d);
     }
 
     const updatedUser: User = { 
@@ -290,6 +301,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string): Promis
       activatedAt: user["activatedAt"] || new Date().toISOString()
     };
 
+    // Ativação no primeiro login
     if (!user["activatedAt"]) {
       if (updatedUser.subscriptionTier === 'test') updatedUser.expiryDate = new Date(Date.now() + 6*3600000).toISOString();
       else if (updatedUser.subscriptionTier === 'monthly') updatedUser.expiryDate = new Date(Date.now() + 30*86400000).toISOString();
@@ -370,6 +382,8 @@ export async function getTotalContentCount(): Promise<number> {
 export async function generateM3UPlaylist(pin: string): Promise<string> {
   const content = await getRemoteContent();
   let m3u = "#EXTM3U\n";
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  
   content.forEach(item => {
     const streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return;
@@ -377,26 +391,24 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${item.imageUrl || ""}" group-title="${item.genre}",${item.title}\n`;
     
     const typePath = item.type === 'channel' ? 'live' : item.type === 'series' ? 'series' : 'movie';
-    m3u += `${window.location.origin}/${typePath}/${pin}/pass/${item.id}.ts\n`;
+    m3u += `${baseUrl}/${typePath}/${pin}/pass/${item.id}.ts\n`;
   });
   return m3u;
 }
 
 export async function getGlobalSettings() {
   try {
-    const { data, error } = await supabase.from('settings').select('*').eq('id', 'global').maybeSingle();
-    if (error) console.error("Erro ao buscar settings:", error);
-    return data || { parentalPin: "1234" };
+    // Sincroniza com a tabela 'settings' usando a coluna 'key' conforme seu SQL
+    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    if (error) return { parentalPin: "1234" };
+    return data?.value || { parentalPin: "1234" };
   } catch (e) { return { parentalPin: "1234" }; }
 }
 
 export async function updateGlobalSettings(settings: any) {
   try {
-    const { error } = await supabase.from('settings').upsert({ id: 'global', ...settings });
-    if (error) {
-      console.error("Erro no upsert de settings:", error);
-      return false;
-    }
+    const { error } = await supabase.from('settings').upsert({ key: 'global', value: settings });
+    if (error) throw error;
     return true;
   } catch (e) { 
     console.error("Erro fatal updateGlobalSettings:", e);

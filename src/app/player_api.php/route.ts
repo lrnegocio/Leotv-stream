@@ -5,6 +5,10 @@ import { getRemoteContent } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * MOTOR XTREAM API v4.0 - SINTONIA IPTV MASTER
+ * Resolve o erro "Invalid Username or Password" aceitando o PIN de forma soberana.
+ */
 export async function GET(req: NextRequest) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
@@ -20,19 +24,28 @@ export async function GET(req: NextRequest) {
 
     let activeUser: any = null;
 
+    // Login Mestre Adm
     if (username === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, expiryDate: null, subscriptionTier: 'lifetime', maxScreens: 999 };
     } else {
-      // BUSCA CASE-SENSITIVE NAS NOVAS COLUNAS
+      // BUSCA SOBERANA PELO PIN (Xtream Username)
       const { data, error } = await supabase.from('users').select('*').eq('pin', username.trim()).maybeSingle();
-      if (error || !data) return NextResponse.json({ user_info: { auth: 0, message: "PIN NAO LOCALIZADO" } }, { headers });
-      if (data["isBlocked"]) return NextResponse.json({ user_info: { auth: 0, message: "ACESSO SUSPENSO" } }, { headers });
+      
+      if (error || !data) {
+        return NextResponse.json({ user_info: { auth: 0, message: "PIN NAO LOCALIZADO" } }, { headers });
+      }
+      
+      if (data["isBlocked"]) {
+        return NextResponse.json({ user_info: { auth: 0, message: "ACESSO SUSPENSO" } }, { headers });
+      }
+      
       activeUser = data;
     }
 
     const baseUrl = req.nextUrl.origin;
     const expiryTimestamp = activeUser["expiryDate"] ? Math.floor(new Date(activeUser["expiryDate"]).getTime() / 1000).toString() : "1999999999";
 
+    // Resposta de Login (Handshake Xtream)
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -57,6 +70,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
+    // Listagem de Conteúdo
     const content = await getRemoteContent(true);
 
     if (action === 'get_live_categories') {
