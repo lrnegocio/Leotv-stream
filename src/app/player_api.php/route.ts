@@ -5,11 +5,6 @@ import { getRemoteContent } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * MOTOR XTREAM API v10.0 - SOBERANIA IPTV TOTAL
- * BUSCA DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
- * Resolve o erro "Invalid Username" em 100% dos apps de IPTV do mercado.
- */
 export async function GET(req: NextRequest) {
   const headers = { 
     'Content-Type': 'application/json', 
@@ -25,35 +20,23 @@ export async function GET(req: NextRequest) {
 
   try {
     let activeUser: any = null;
-    
-    // SOBERANIA DE LOGIN: Tenta o PIN em ambos os campos para evitar erros de digitação nos apps
     const pinToTry = (username.trim() || password.trim());
 
     if (pinToTry === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
     } else {
-      // Busca na tabela de usuários o PIN soberano
       const { data } = await supabase.from('users').select('*').eq('pin', pinToTry).maybeSingle();
-      
-      if (!data || data.isBlocked) {
-        // Fallback: Tenta o outro campo caso o primeiro tenha falhado
-        const otherPin = (password.trim() || username.trim());
-        const { data: secondTry } = await supabase.from('users').select('*').eq('pin', otherPin).maybeSingle();
-        if (!secondTry || secondTry.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
-        activeUser = secondTry;
-      } else {
-        activeUser = data;
-      }
+      if (!data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+      activeUser = data;
     }
 
-    // Retorno básico de autenticação (XUI Format)
     if (!action) {
       return NextResponse.json({
         user_info: {
           auth: 1,
           status: "Active",
-          exp_date: "1999999999",
-          is_trial: "0",
+          exp_date: activeUser.expiryDate ? Math.floor(new Date(activeUser.expiryDate).getTime() / 1000).toString() : "1999999999",
+          is_trial: activeUser.subscriptionTier === 'test' ? "1" : "0",
           active_cons: "0",
           max_connections: activeUser.maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4"]
@@ -77,7 +60,6 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
-      // Filtra adultos se não permitido no PIN
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
