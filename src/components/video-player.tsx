@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize } from "lucide-react"
+import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, RotateCcw, RotateCw, Play, Pause } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -15,7 +15,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
-  const [isMuted, setIsMuted] = React.useState(false)
+  const [isMuted, setIsMuted] = React.useState(false) // Inicia com som (false para muted)
+  const [isPlaying, setIsPlaying] = React.useState(true)
 
   const { processedUrl, type } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown' }
@@ -27,11 +28,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     // 2. EMBEDS DE ELITE (XVideos, Pornhub, YouTube)
-    if (u.includes('xvideos.com/video')) {
-      const id = u.match(/video\.?([a-z0-9]+)/i)?.[1];
-      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, type: 'iframe' }
+    if (u.includes('xvideos.com')) {
+      const id = u.match(/video\.?([a-z0-9]+)/i)?.[1] || u.split('video')[1]?.split('/')[0];
+      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id.replace('.', '')}` : u, type: 'iframe' }
     }
-    if (u.includes('pornhub.com/view_video.php')) {
+    if (u.includes('pornhub.com')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
       return { processedUrl: id ? `https://www.pornhub.com/embed/${id}` : u, type: 'iframe' }
     }
@@ -62,11 +63,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
-          hls = new (window as any).Hls();
+          hls = new (window as any).Hls({
+            enableWorker: true,
+            lowLatencyMode: true
+          });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(() => {});
+            video.muted = false; // Tenta iniciar com som
+            video.play().catch(() => {
+              // Se o navegador bloquear som automático, inicia mudo para não travar o vídeo
+              video.muted = true;
+              video.play().catch(() => setError(true));
+            });
             setLoading(false);
           });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
@@ -74,11 +83,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
-          video.addEventListener('loadedmetadata', () => { video.play(); setLoading(false); });
+          video.muted = false;
+          video.addEventListener('loadedmetadata', () => { 
+            video.play().catch(() => {
+              video.muted = true;
+              video.play();
+            }); 
+            setLoading(false); 
+          });
         }
       } else {
         video.src = processedUrl;
         video.load();
+        video.muted = false;
         video.play().catch(() => {
           video.muted = true;
           video.play().catch(() => setError(true));
@@ -89,6 +106,32 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     init();
     return () => { if (hls) hls.destroy(); };
   }, [processedUrl, type])
+
+  const toggleVolume = () => {
+    if (videoRef.current) {
+      const newMute = !videoRef.current.muted;
+      videoRef.current.muted = newMute;
+      setIsMuted(newMute);
+    }
+  };
+
+  const skip = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
+  };
 
   return (
     <div ref={containerRef} className="relative aspect-video w-full bg-black rounded-[2rem] overflow-hidden border border-white/5 group shadow-2xl">
@@ -102,30 +145,64 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase">Sinal Master Offline</h3>
-          <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px]">Tentar Reentry</Button>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline ou Bloqueado</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">Verifique o link ou tente recalibrar.</p>
+          <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Reentry</Button>
         </div>
       )}
 
       {type === 'iframe' ? (
         <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay" onLoad={() => setLoading(false)} />
       ) : (
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={!loading} onLoadedData={() => setLoading(false)} onError={() => setError(true)} crossOrigin="anonymous" />
+        <video 
+          ref={videoRef} 
+          className="w-full h-full object-contain" 
+          autoPlay 
+          playsInline 
+          controls={false} 
+          onLoadedData={() => setLoading(false)} 
+          onError={() => setError(true)} 
+          crossOrigin="anonymous" 
+        />
       )}
 
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="absolute top-0 inset-x-0 p-6 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center pointer-events-auto">
-          <h3 className="text-white font-black uppercase italic truncate max-w-md">{title}</h3>
-          <button onClick={() => setIsMuted(!isMuted)} className="h-10 w-10 bg-black/40 rounded-full flex items-center justify-center hover:bg-primary transition-all">
-            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
+      {/* CONTROLES SOBERANOS (Visíveis no Hover) */}
+      {!loading && !error && type !== 'iframe' && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-white font-black uppercase italic truncate max-w-md tracking-tighter drop-shadow-md">{title}</h3>
+            <button 
+              onClick={toggleVolume} 
+              className="h-12 w-12 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all shadow-xl border border-white/5"
+            >
+              {isMuted ? <VolumeX className="h-6 w-6 text-white" /> : <Volume2 className="h-6 w-6 text-white" />}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-12">
+            <button onClick={() => skip(-10)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
+              <RotateCcw className="h-8 w-8 text-white group-hover/btn:scale-110" />
+            </button>
+            
+            <button onClick={togglePlay} className="p-6 bg-primary rounded-full hover:scale-110 transition-all shadow-2xl shadow-primary/40">
+              {isPlaying ? <Pause className="h-10 w-10 text-white" fill="currentColor" /> : <Play className="h-10 w-10 text-white ml-1" fill="currentColor" />}
+            </button>
+
+            <button onClick={() => skip(10)} className="p-4 bg-white/10 backdrop-blur-md rounded-full hover:bg-primary transition-all group/btn">
+              <RotateCw className="h-8 w-8 text-white group-hover/btn:scale-110" />
+            </button>
+          </div>
+
+          <div className="flex justify-end">
+            <button 
+              onClick={() => containerRef.current?.requestFullscreen()} 
+              className="h-12 w-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all"
+            >
+              <Maximize className="h-6 w-6 text-white" />
+            </button>
+          </div>
         </div>
-        <div className="absolute bottom-6 right-6 pointer-events-auto">
-          <Button variant="ghost" size="icon" onClick={() => containerRef.current?.requestFullscreen()} className="text-white h-12 w-12 hover:bg-primary/20 rounded-full">
-            <Maximize className="h-6 w-6" />
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
