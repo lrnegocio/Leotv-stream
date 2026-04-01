@@ -183,16 +183,18 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
-            <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal</h3>
-              <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+          {showMainStreamUrl && (
+            <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
+              <div className="space-y-2">
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal</h3>
+                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto IPTV)</h3>
+                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link .m3u8, .ts ou .mp4" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto IPTV)</h3>
-              <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link .m3u8, .ts ou .mp4" />
-            </div>
-          </div>
+          )}
 
           {formData.type === 'series' && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
