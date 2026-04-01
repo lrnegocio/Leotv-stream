@@ -41,7 +41,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    // 3. TÚNEL MASTER v11.0 (Archive.org, blinder.space, CDNs, HTTP)
+    // 3. TÚNEL MASTER v12.0 (Archive.org, blinder.space, CDNs, HTTP)
     const isRestrictedHost = u.includes('archive.org') || u.includes('blinder.space') || u.includes('phncdn.com') || u.includes('xvideos-cdn.com') || u.startsWith('http://');
     
     if (isRestrictedHost) {
@@ -61,6 +61,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
+      // TENTA INICIAR SEM MUDO
       video.muted = false;
       setIsMuted(false);
 
@@ -69,30 +70,21 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            // MOTOR HLS v2.0: Reconstrução de caminhos para pedaços de vídeo
+            // MOTOR HLS v3.0: Interceptação total de segmentos para bypass de CORS
             xhrSetup: (xhr: any, segmentUrl: string) => { 
               xhr.withCredentials = false;
               
-              // Se a URL for relativa (resolvida contra o proxy), reconstrói com a URL real
-              let absoluteUrl = segmentUrl;
-              if (!segmentUrl.startsWith('http') && originalUrl) {
-                try {
-                  const urlObj = new URL(originalUrl);
-                  absoluteUrl = new URL(segmentUrl, urlObj.href).href;
-                } catch (e) { console.error("URL reconstruction fail", e); }
-              }
+              // Se o manifesto original exigia proxy, o segmento também exige!
+              const needsProxy = originalUrl && (
+                originalUrl.includes('phncdn.com') || 
+                originalUrl.includes('xvideos') || 
+                originalUrl.includes('archive.org') ||
+                originalUrl.startsWith('http://')
+              );
 
-              // Verifica se o pedaço precisa de proxy (CORS/Referer)
-              const needsProxy = absoluteUrl.includes('phncdn.com') || 
-                               absoluteUrl.includes('xvideos-cdn.com') || 
-                               absoluteUrl.includes('archive.org') ||
-                               absoluteUrl.startsWith('http://');
-
-              if (needsProxy) {
-                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
+              if (needsProxy && !segmentUrl.includes('/api/proxy')) {
+                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(segmentUrl)}`;
                 xhr.open('GET', proxiedUrl, true);
-              } else if (absoluteUrl !== segmentUrl) {
-                xhr.open('GET', absoluteUrl, true);
               }
             }
           });
@@ -100,6 +92,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => {
+              // Fallback se o browser travar o autoplay com som
               video.muted = true;
               setIsMuted(true);
               video.play().catch(() => setError(true));
@@ -191,7 +184,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v11...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v12...</p>
         </div>
       )}
 

@@ -23,9 +23,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * SORENARÍA ALFABÉTICA v38 - Sincronização A-Z Nativa
- */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -151,15 +148,6 @@ export async function saveReseller(reseller: any) {
 
 export async function removeReseller(id: string) {
   const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
-export async function renewUserSubscription(userId: string, days: number) {
-  const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
-  if (!user) return false;
-  const currentExpiry = user.expiryDate ? new Date(user.expiryDate) : new Date();
-  const newExpiry = new Date(currentExpiry.getTime() + (days * 24 * 60 * 60 * 1000));
-  const { error } = await supabase.from('users').update({ expiryDate: newExpiry.toISOString(), isBlocked: false }).eq('id', userId);
   return !error;
 }
 

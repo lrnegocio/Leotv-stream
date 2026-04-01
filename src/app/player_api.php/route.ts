@@ -5,7 +5,7 @@ import { getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR XTREAM API v5.0 - SOBERANIA IPTV TOTAL
+ * MOTOR XTREAM API v6.0 - SOBERANIA IPTV TOTAL
  * Aceita o PIN como Username e ignora o campo password para evitar erro de login.
  */
 export async function GET(req: NextRequest) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v11.0 - MOTOR DE STREAMING DEFINITIVO
+ * TÚNEL DE FLUXO SOBERANO v12.0 - MOTOR DE STREAMING DEFINITIVO
  * Suporta Partial Content (206) vital para Archive.org e blinder.space.
  * Mascara identidades para CDNs de adultos e CDNs de alta performance.
  */
