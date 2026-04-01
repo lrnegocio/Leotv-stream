@@ -53,10 +53,39 @@ export async function GET(req: NextRequest) {
     if (action === 'get_live_streams') {
       let items = content.filter(i => i.type === 'channel');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
-      return NextResponse.json(items.map(i => ({ num: i.id, name: i.title, stream_id: i.id, stream_icon: i.imageUrl || "", category_id: "1", stream_type: "live" })), { headers });
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, 
+        name: i.title, 
+        stream_id: i.id, 
+        stream_icon: i.imageUrl || "", 
+        category_id: "1", 
+        stream_type: "live" 
+      })), { headers });
     }
 
-    // Handlers para VOD e Series seguem a mesma lógica simplificada...
+    if (action === 'get_vod_categories') {
+      const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
+      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 100).toString(), category_name: name, parent_id: "0" })), { headers });
+    }
+
+    if (action === 'get_vod_streams') {
+      let items = content.filter(i => i.type === 'movie');
+      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, 
+        name: i.title, 
+        stream_id: i.id, 
+        stream_icon: i.imageUrl || "", 
+        category_id: "100", 
+        container_extension: "mp4" 
+      })), { headers });
+    }
+
+    if (action === 'get_series_categories') {
+      const cats = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre.toUpperCase()))).sort();
+      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 200).toString(), category_name: name, parent_id: "0" })), { headers });
+    }
+
     return NextResponse.json([], { headers });
   } catch (err) {
     return NextResponse.json({ user_info: { auth: 0 } }, { headers });
