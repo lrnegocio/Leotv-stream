@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -29,7 +30,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // 1. DETECÇÃO DE IMAGEM (Fotos do Google, etc)
+    // 1. DETECÇÃO DE IMAGEM
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -38,7 +39,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. EMBEDS OFICIAIS (XVideos, YouTube, Dailymotion)
+    // 2. EMBEDS OFICIAIS
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
@@ -59,17 +60,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS HTTP (MP4 do blinder.space, M3U8, etc)
-    // Se o link for HTTP e o site HTTPS, usamos o nosso proxy interno para pular o Mixed Content
+    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content
     let finalUrl = targetUrl;
-    if (targetUrl.startsWith('http://') && !targetUrl.includes(window.location.host)) {
+    if (targetUrl.startsWith('http://')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
     const lowUrl = targetUrl.toLowerCase();
+    
+    // EXTERMÍNIO DE .TS: Agora o sistema foca apenas em .m3u8 e .mp4
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     
-    // Padrão para MP4 e outros vídeos diretos
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
@@ -80,25 +81,31 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let hls: any = null;
     
     const initPlayer = () => {
-      // Limpa sinal anterior
       video.pause();
       video.removeAttribute('src');
       video.load();
 
-      // Motor HLS para .m3u8
+      // Motor HLS Soberano para .m3u8 (Live e VOD)
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
+        hls = new window.Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true,
+          backBufferLength: 60
+        });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
-        hls.on('hlsError', (e: any, data: any) => { if (data.fatal) setError(true); });
+        hls.on('hlsError', (e: any, data: any) => { 
+          console.error("HLS Error:", data);
+          if (data.fatal) setError(true); 
+        });
       } 
-      // Motor Nativo para MP4 (blinder.space) e vídeos diretos
+      // Motor Nativo para MP4
       else {
         video.src = processedUrl;
         video.preload = "auto";
@@ -158,7 +165,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         />
       )}
       
-      {/* Controles Customizados Visíveis no Hover */}
       <div className="absolute inset-0 z-40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
         <div className="absolute top-0 inset-x-0 p-8 bg-gradient-to-b from-black/90 to-transparent flex items-center justify-between pointer-events-auto">
           <h3 className="text-xl font-black text-white uppercase italic truncate max-w-xl tracking-tighter">{title}</h3>
@@ -171,7 +177,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V7.0</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v38</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">

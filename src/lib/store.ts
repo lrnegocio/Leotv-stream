@@ -79,13 +79,17 @@ export const generateSafeId = (name: string) => {
   return "leo_" + clean.substring(0, 15) + "_" + Math.random().toString(36).substring(2, 6);
 };
 
+/**
+ * BUSCA MASTER: Agora com ORDENAÇÃO ALFABÉTICA (A-Z) por padrão em todo o sistema.
+ */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
 
-    const { data: rawData, error } = await query.order('created_at', { ascending: false });
+    // ORDENAÇÃO ALFABÉTICA MESTRE LÉO
+    const { data: rawData, error } = await query.order('title', { ascending: true });
     if (error) throw error;
 
     return (rawData || []).map(item => ({

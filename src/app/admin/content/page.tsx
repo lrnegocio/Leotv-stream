@@ -25,6 +25,7 @@ export default function ContentManagementPage() {
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
+      // SORENARÍA ALFABÉTICA v38: O store.ts já retorna ordenado de A-Z
       const data = await getRemoteContent(false, query)
       setItems(data)
     } catch (error) {
@@ -75,7 +76,7 @@ export default function ContentManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Biblioteca Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Total de Canais e VOD.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Total de Canais e VOD (A-Z).</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && (
@@ -101,7 +102,7 @@ export default function ContentManagementPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase opacity-40">Acessando Núcleo Master...</p></div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase opacity-40">Sincronizando Lista Alfabética...</p></div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
           {items.map((item) => {
@@ -131,7 +132,7 @@ export default function ContentManagementPage() {
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/20" onClick={() => {
                       if (isSeries) setPreviewItem(item);
-                      else setActiveEpisode({ url: item.streamUrl || "", title: item.title });
+                      else setActiveEpisode({ url: item.directStreamUrl || item.streamUrl || "", title: item.title });
                     }}><PlayCircle className="h-3 w-3" /></Button>
                     <Button variant="ghost" size="icon" asChild className="h-7 w-7"><Link href={`/admin/content/edit/${item.id}`}><Edit2 className="h-3 w-3" /></Link></Button>
                   </div>
@@ -148,7 +149,7 @@ export default function ContentManagementPage() {
           <DialogHeader><DialogTitle className="uppercase font-black text-primary italic text-xl">Episódios: {previewItem?.title}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
             {previewItem?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
+              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.directStreamUrl || ep.streamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
                 <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                 <PlayCircle className="ml-auto h-4 w-4 text-primary" />
               </Button>
@@ -157,7 +158,7 @@ export default function ContentManagementPage() {
               <div key={season.id} className="space-y-2 mb-4">
                 <p className="text-[10px] font-black text-primary uppercase pl-2 border-l-2 border-primary ml-2">Temporada {season.number}</p>
                 {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                  <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || "", title: `${previewItem.title} - T${season.number} EP ${ep.number}` })} className="w-full h-10 justify-start bg-white/5 border-white/5 hover:border-primary px-6 rounded-lg">
+                  <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.directStreamUrl || ep.streamUrl || "", title: `${previewItem.title} - T${season.number} EP ${ep.number}` })} className="w-full h-10 justify-start bg-white/5 border-white/5 hover:border-primary px-6 rounded-lg">
                     <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
                     <PlayCircle className="ml-auto h-3 w-3 text-primary" />
                   </Button>
