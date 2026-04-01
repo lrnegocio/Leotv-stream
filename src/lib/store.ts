@@ -169,15 +169,11 @@ export async function bulkRemoveContent(ids: string[]) {
   } catch (e) { return false; }
 }
 
-/**
- * IMPORTAÇÃO M3U MASTER - VERSÃO 276.0
- */
 export async function clearAllM3UContent() {
   try {
     const { data: items } = await supabase.from('content').select('id');
     if (!items || items.length === 0) return true;
     const ids = items.map(i => i.id);
-    // Deletar em blocos de 500 para evitar timeout
     for (let i = 0; i < ids.length; i += 500) {
       const chunk = ids.slice(i, i + 500);
       await supabase.from('content').delete().in('id', chunk);
@@ -388,7 +384,8 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
 
 export async function getGlobalSettings() {
   try {
-    const { data } = await supabase.from('settings').select('*').eq('id', 'global').maybeSingle();
+    const { data, error } = await supabase.from('settings').select('*').eq('id', 'global').maybeSingle();
+    if (error) console.error("Erro ao buscar settings:", error);
     return data || { parentalPin: "1234" };
   } catch (e) { return { parentalPin: "1234" }; }
 }
@@ -396,8 +393,15 @@ export async function getGlobalSettings() {
 export async function updateGlobalSettings(settings: any) {
   try {
     const { error } = await supabase.from('settings').upsert({ id: 'global', ...settings });
-    return !error;
-  } catch (e) { return false; }
+    if (error) {
+      console.error("Erro no upsert de settings:", error);
+      return false;
+    }
+    return true;
+  } catch (e) { 
+    console.error("Erro fatal updateGlobalSettings:", e);
+    return false; 
+  }
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {

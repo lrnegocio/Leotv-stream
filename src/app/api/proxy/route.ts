@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v9.2 - MOTOR DE STREAMING BRUTO
- * Resolve Mixed Content, Trava de Referer e Range para MP4 (Archive.org, blinder.space).
- * Suporta Partial Content (206) para permitir Seek (Avançar/Voltar) sem travas.
+ * TÚNEL DE FLUXO SOBERANO v9.3 - MOTOR DE STREAMING DE ELITE
+ * Resolve Archive.org, XVideos, blinder.space, Mixed Content e Trava de Referer.
+ * Implementação Robusta de Partial Content (206) para suporte a Seek (Avançar/Voltar).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,26 +17,26 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const headers = new Headers();
+    const requestHeaders = new Headers();
     
-    // Repassa o cabeçalho de Range (VITAL para MP4 e HLS Seek)
+    // Repassa o cabeçalho de Range (VITAL para MP4, M3U8 e seeks no player)
     const range = req.headers.get('range');
     if (range) {
-      headers.set('Range', range);
+      requestHeaders.set('Range', range);
     }
     
-    // Máscara de Navegador Master para burlar CDNs (Archive.org, XVideos, JMV)
-    headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    headers.set('Accept', '*/*');
-    headers.set('Connection', 'keep-alive');
+    // Máscara de Navegador Master para burlar CDNs rígidas
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Connection', 'keep-alive');
     
+    // Mascarar a origem para evitar bloqueio de Hotlink/CORS (XVideos e JMV)
     const targetUrlObj = new URL(targetUrl);
-    // Mascarar a origem para enganar a proteção de Hotlink/CORS
-    headers.set('Referer', targetUrlObj.origin + '/');
-    headers.set('Origin', targetUrlObj.origin);
+    requestHeaders.set('Referer', targetUrlObj.origin + '/');
+    requestHeaders.set('Origin', targetUrlObj.origin);
 
     const res = await fetch(targetUrl, { 
-      headers,
+      headers: requestHeaders,
       cache: 'no-store',
       redirect: 'follow',
       method: 'GET'
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos críticos do servidor original para manter a integridade do vídeo
+    // Copia cabeçalhos críticos para garantir o funcionamento do Player
     const criticalHeaders = [
       'content-type',
       'content-length',
@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
       'accept-ranges',
       'cache-control',
       'last-modified',
-      'etag'
+      'etag',
+      'content-disposition'
     ];
 
     criticalHeaders.forEach(h => {
@@ -60,10 +61,16 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // Liberação de CORS Total para o Navegador aceitar o sinal do Túnel
+    // Liberação de CORS Total para o Navegador do Cliente aceitar o sinal
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9.2');
+    responseHeaders.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Soberano-v9.3');
+
+    // Se o sinal for do Archive.org, forçar Content-Type de vídeo caso esteja ausente
+    if (targetUrl.includes('archive.org') && !responseHeaders.get('content-type')) {
+      responseHeaders.set('content-type', 'video/mp4');
+    }
 
     return new NextResponse(res.body, {
       status: res.status,
@@ -71,8 +78,8 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Erro no Túnel Master v9.2:", error);
-    return new NextResponse("Falha ao sintonizar fluxo externo", { status: 500 });
+    console.error("Erro no Túnel Master v9.3:", error);
+    return new NextResponse("Falha ao sintonizar fluxo soberano", { status: 500 });
   }
 }
 

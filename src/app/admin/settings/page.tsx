@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [parentalPin, setParentalPin] = React.useState("")
   const [m3uContent, setM3uContent] = React.useState("")
   const [loading, setLoading] = React.useState(true)
+  const [saving, setSaving] = React.useState(false)
   const [importing, setImporting] = React.useState(false)
   const [importMsg, setImportingMsg] = React.useState("")
 
@@ -33,12 +34,21 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (parentalPin.length < 4) {
-      toast({ variant: "destructive", title: "Senha Parental curta (4 dígitos)." })
+      toast({ variant: "destructive", title: "Senha Parental curta", description: "Mestre, use no mínimo 4 dígitos." })
       return
     }
-    const success = await updateGlobalSettings({ parentalPin })
-    if (success) {
-      toast({ title: "Senha Parental Atualizada" })
+    setSaving(true)
+    try {
+      const success = await updateGlobalSettings({ parentalPin })
+      if (success) {
+        toast({ title: "SENHA ATUALIZADA!", description: `Novo PIN: ${parentalPin}` })
+      } else {
+        toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O banco de dados recusou a sintonização." })
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "ERRO DE CONEXÃO", description: "Sinal instável com o Supabase." })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -61,10 +71,10 @@ export default function SettingsPage() {
   }
 
   const handleClearAll = async () => {
-    if (confirm("Deseja apagar TODOS os canais?")) {
+    if (confirm("Mestre, deseja apagar TODOS os sinais da rede agora?")) {
       const success = await clearAllM3UContent()
       if (success) {
-        toast({ title: "Banco Resetado" })
+        toast({ title: "BANCO MASTER RESETADO" })
       }
     }
   }
@@ -98,10 +108,14 @@ export default function SettingsPage() {
             />
             {importing && <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center"><p className="text-xs font-black uppercase text-emerald-500">{importMsg}</p></div>}
             <div className="flex gap-4">
-              <Button onClick={handleImportM3U} disabled={importing} className="flex-1 h-16 bg-emerald-500 hover:bg-emerald-600 font-black uppercase rounded-2xl">
-                {importing ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : "INICIAR IMPORTAÇÃO M3U"}
-              </Button>
-              <Button onClick={handleClearAll} variant="outline" className="border-destructive/20 text-destructive h-16 px-8 rounded-2xl">
+              <button 
+                onClick={handleImportM3U} 
+                disabled={importing} 
+                className="flex-1 h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-black uppercase rounded-2xl transition-all shadow-xl shadow-emerald-500/20"
+              >
+                {importing ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : "INICIAR IMPORTAÇÃO M3U"}
+              </button>
+              <Button onClick={handleClearAll} variant="outline" className="border-destructive/20 text-destructive h-16 px-8 rounded-2xl hover:bg-destructive hover:text-white">
                 <Trash className="h-6 w-6" />
               </Button>
             </div>
@@ -121,9 +135,20 @@ export default function SettingsPage() {
           <CardContent className="p-8 space-y-6">
             <div className="flex gap-4 items-end">
               <div className="space-y-2 flex-1">
-                <Input value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 rounded-2xl" maxLength={4} />
+                <Input 
+                  value={parentalPin} 
+                  onChange={(e) => setParentalPin(e.target.value)} 
+                  className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 rounded-2xl focus:border-primary border-white/10" 
+                  maxLength={4} 
+                />
               </div>
-              <Button onClick={handleSave} className="h-16 px-10 font-black uppercase bg-primary rounded-2xl shadow-xl shadow-primary/20">SALVAR PIN</Button>
+              <button 
+                onClick={handleSave} 
+                disabled={saving}
+                className="h-16 px-10 font-black uppercase bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "SALVAR PIN"}
+              </button>
             </div>
           </CardContent>
         </Card>

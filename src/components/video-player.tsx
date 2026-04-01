@@ -33,10 +33,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: targetUrl, type: 'image' }
     }
 
-    // 2. EMBEDS DE ELITE (IFRAME MASTER)
-    // SINTONIZADOR XVIDEOS SNIPER v3.0 (ID Alfanumérico Master)
+    // 2. EMBEDS DE ELITE (XVideos, YouTube, Dailymotion)
+    // SINTONIZADOR SNIPER v4.0: Extração de ID Alfanumérico (kabopuh3e7b)
     if (targetUrl.includes('xvideos.com/video')) {
-      const match = targetUrl.match(/video\.([a-z0-9]+)/i);
+      const match = targetUrl.match(/video\.?([a-z0-9]+)/i);
       const id = match ? match[1] : null;
       if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
     }
@@ -58,23 +58,25 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: targetUrl, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS PROTEGIDOS (Archive.org, CDNs, HTTP, blinder.space)
-    // SINTONIZADOR SOBERANO: Qualquer MP4 ou HLS que possa ser bloqueado passa pelo túnel.
+    // 3. TÚNEL MASTER v9.3: Links MP4/M3U8 com Mixed Content ou travas de CDN
+    // SINTONIZADOR SOBERANO: Archive.org, CDNs, HTTP, blinder.space
     let finalUrl = targetUrl;
     const lowUrl = targetUrl.toLowerCase();
     
+    // Qualquer sinal que possa ser bloqueado ou que precise de suporte a "Range" (Archive, MP4, HTTP)
     if (
       targetUrl.startsWith('http://') || 
       targetUrl.includes('archive.org') || 
       targetUrl.includes('xvideos-cdn.com') || 
       targetUrl.includes('blinder.space') ||
-      targetUrl.includes('cdn77')
+      targetUrl.includes('cdn77') ||
+      targetUrl.includes('cdn.live')
     ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
     }
 
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
-    if (lowUrl.includes('.mp4') || lowUrl.includes('.webm')) return { processedUrl: finalUrl, type: 'video' }
+    if (lowUrl.includes('.mp4') || lowUrl.includes('.webm') || lowUrl.includes('.ts')) return { processedUrl: finalUrl, type: 'video' }
     
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
@@ -83,30 +85,30 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!videoRef.current || !processedUrl || type === 'image' || type === 'iframe') return;
 
     const video = videoRef.current;
-    let hls: any = null;
+    // @ts-ignore
+    let hls: any = window.Hls ? new window.Hls({ 
+      enableWorker: true, 
+      lowLatencyMode: true,
+      xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+    }) : null;
     
     const initPlayer = () => {
+      setLoading(true);
+      setError(false);
       video.pause();
-      video.removeAttribute('src');
+      video.src = "";
       video.load();
 
-      // @ts-ignore
-      if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
-        // @ts-ignore
-        hls = new window.Hls({ 
-          enableWorker: true, 
-          lowLatencyMode: true,
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-        });
+      if (type === 'hls' && hls && hls.constructor.isSupported()) {
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); }); 
           setLoading(false); 
         });
-        hls.on('hlsError', (e: any, data: any) => { if (data.fatal) setError(true); });
+        hls.on('hlsError', (e: any, data: any) => { if (data.fatal) { console.error("HLS Fatal:", data); setError(true); } });
       } 
-      else if (type === 'video') {
+      else {
         video.src = processedUrl;
         video.play().catch(() => {
           video.muted = true;
@@ -115,7 +117,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     };
 
-    const timeout = setTimeout(initPlayer, 300);
+    const timeout = setTimeout(initPlayer, 200);
     return () => { 
       clearTimeout(timeout);
       if (hls) hls.destroy(); 
@@ -138,10 +140,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-black uppercase text-white">Sinal Offline ou Incompatível</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar fora do ar ou bloqueou o acesso.</p>
+          <h3 className="text-lg font-black uppercase text-white">Sinal Master com Falha</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar bloqueado ou fora do ar.</p>
           <div className="flex gap-4">
-            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">REENTRAR</Button>
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">TENTAR REENTRY</Button>
             <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR EXTERNO</Button>
           </div>
         </div>
@@ -169,7 +171,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           crossOrigin="anonymous" 
           className="h-full w-full object-contain" 
           onLoadedData={() => setLoading(false)} 
-          onError={() => { if (!loading) setError(true); }} 
+          onError={() => { if (!loading) { console.error("Video Error"); setError(true); } }} 
         />
       )}
       
@@ -185,7 +187,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v276.0</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL SOBERANO v277.0</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
