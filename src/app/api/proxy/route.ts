@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 4.0 (FLUXO CINEMA)
- * Suporte total a Range Requests para permitir streaming de MP4 e Seek (pular partes).
- * Resolve o bloqueio de Mixed Content (HTTP em HTTPS) de forma transparente.
+ * TÚNEL DE SINAL MASTER LÉO TV - VERSÃO 5.0 (MOTOR DE FLUXO CINEMA)
+ * Suporte absoluto a Range Requests para arquivos MP4 gigantes (blinder.space).
+ * Permite seek (avançar/voltar) e pula bloqueios de Mixed Content.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,28 +19,28 @@ export async function GET(req: NextRequest) {
   try {
     const headers = new Headers();
     
-    // Repassa o cabeçalho de Range (Essencial para MP4 permitir avançar o filme)
+    // Repassa o cabeçalho de Range (Vital para MP4 carregar e permitir avançar o filme)
     const range = req.headers.get('range');
     if (range) {
       headers.set('Range', range);
     }
     
-    // Identidade Master para pular bloqueios de servidores externos
+    // Identidade de Navegador Master para pular bloqueios de servidores externos
     headers.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    headers.set('Referer', new URL(targetUrl).origin);
     headers.set('Accept', '*/*');
+    headers.set('Connection', 'keep-alive');
 
-    const response = await fetch(targetUrl, { 
+    const res = await fetch(targetUrl, { 
       headers,
       cache: 'no-store',
       redirect: 'follow'
     });
 
-    // Prepara os cabeçalhos de resposta para o navegador aceitar o fluxo
+    // Prepara os cabeçalhos de resposta para o navegador aceitar o fluxo como vídeo real
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais do servidor de origem para o player funcionar
-    const contentHeaders = [
+    // Copia cabeçalhos críticos do servidor original para o player não bugar
+    const criticalHeaders = [
       'content-type',
       'content-length',
       'content-range',
@@ -50,23 +50,40 @@ export async function GET(req: NextRequest) {
       'etag'
     ];
 
-    contentHeaders.forEach(h => {
-      const val = response.headers.get(h);
+    criticalHeaders.forEach(h => {
+      const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);
     });
 
-    // Força o navegador a aceitar o sinal via CORS
-    responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('X-Sinal-Status', 'Blindado-Master');
+    // Se o servidor original não enviou accept-ranges, nós forçamos para permitir o seek
+    if (!responseHeaders.has('accept-ranges')) {
+      responseHeaders.set('accept-ranges', 'bytes');
+    }
 
-    // Retorna o corpo do vídeo como stream para performance máxima
-    return new NextResponse(response.body, {
-      status: response.status,
-      statusText: response.statusText,
+    // Liberação total de CORS para o navegador não barrar o sinal
+    responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    responseHeaders.set('X-Sinal-Status', 'Fluxo-Blindado-v5');
+
+    // Retorna o corpo do vídeo como stream direto para performance máxima
+    return new NextResponse(res.body, {
+      status: res.status,
+      statusText: res.statusText,
       headers: responseHeaders,
     });
   } catch (error) {
-    console.error("Erro no Túnel de Sinal Master:", error);
-    return new NextResponse("Falha ao sintonizar sinal externo", { status: 500 });
+    console.error("Erro no Túnel de Fluxo Master:", error);
+    return new NextResponse("Falha ao sintonizar fluxo externo", { status: 500 });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    },
+  });
 }

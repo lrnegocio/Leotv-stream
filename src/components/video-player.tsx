@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url || typeof url !== 'string') return { processedUrl: null, type: 'unknown' }
     const targetUrl = url.trim()
     
-    // 1. DETECÇÃO DE IMAGEM (Evita carregar fotos como vídeo)
+    // 1. DETECÇÃO DE IMAGEM
     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(targetUrl) || 
                    targetUrl.includes('gstatic.com') || 
                    targetUrl.includes('images?q=tbn') ||
@@ -84,11 +84,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     let mpegtsPlayer: any = null;
     
     const initPlayer = () => {
+      // Limpa o sinal anterior antes de sintonizar
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+
       // Motor HLS para .m3u8
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
-        hls = new window.Hls({ enableWorker: true });
+        hls = new window.Hls({ enableWorker: true, lowLatencyMode: true });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hls.on('hlsManifestParsed', () => { 
@@ -100,7 +105,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       // @ts-ignore
       else if (type === 'mpegts' && window.mpegts && window.mpegts.isSupported()) {
         // @ts-ignore
-        mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl });
+        mpegtsPlayer = window.mpegts.createPlayer({ type: 'mse', url: processedUrl, isLive: true });
         mpegtsPlayer.attachMediaElement(video);
         mpegtsPlayer.load();
         mpegtsPlayer.play().catch(() => { video.muted = true; mpegtsPlayer.play().catch(() => {}); });
@@ -109,6 +114,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       // Motor Nativo para MP4 (blinder.space) e vídeos diretos
       else {
         video.src = processedUrl;
+        video.preload = "auto";
         video.load();
         video.play().catch(() => {
           video.muted = true;
@@ -131,15 +137,18 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     <div ref={containerRef} className="group relative aspect-video w-full overflow-hidden bg-black shadow-2xl rounded-[2.5rem] border border-white/5 select-none">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            <p className="text-[10px] font-black uppercase text-primary tracking-[0.3em] animate-pulse">Sintonizando Fluxo Master...</p>
+          </div>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 z-20 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-black uppercase text-white">Sinal Master com Oscilação</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado pelo servidor.</p>
+          <h3 className="text-lg font-black uppercase text-white">Sinal Externo com Oscilação</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">O link original pode estar offline ou bloqueado pelo servidor de origem.</p>
           <Button variant="outline" onClick={() => window.open(url, '_blank')} className="border-white/10 uppercase font-black text-[10px] h-12 px-8 rounded-xl">ABRIR FONTE EXTERNA</Button>
         </div>
       )}
@@ -176,7 +185,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO V5.0</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
