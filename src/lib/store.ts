@@ -69,10 +69,12 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 export async function clearAllM3UContent() {
-  const { data: items } = await supabase.from('content').select('id');
-  if (!items || items.length === 0) return true;
-  const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
-  return !error;
+  try {
+    const { data: items } = await supabase.from('content').select('id');
+    if (!items || items.length === 0) return true;
+    const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function processM3UImport(m3u: string, onProgress: (m: string) => void) {
@@ -170,6 +172,17 @@ export async function getCategoryCount(genre: string) {
 export async function getTotalContentCount() {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
   return count || 0;
+}
+
+export async function generateM3UPlaylist(pin: string) {
+  const content = await getRemoteContent();
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  let m3u = "#EXTM3U\n";
+  content.forEach(item => {
+    const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
+    m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${streamUrl}\n`;
+  });
+  return m3u;
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
