@@ -28,8 +28,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     // 2. EMBEDS DE ELITE (XVideos, Pornhub, YouTube)
     if (u.includes('xvideos.com')) {
-      const id = u.match(/video\.?([a-z0-9]+)/i)?.[1] || u.split('video')[1]?.split('/')[0];
-      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id.replace('.', '')}` : u, type: 'iframe' }
+      // Captura IDs numéricos ou alfanuméricos como ouethob80a6
+      const idMatch = u.match(/video\.?([a-z0-9]+)/i);
+      const id = idMatch ? idMatch[1] : u.split('video')[1]?.split('/')[0]?.replace(/^\.|\//g, '');
+      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, type: 'iframe' }
     }
     if (u.includes('pornhub.com')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
@@ -69,13 +71,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+            xhrSetup: (xhr: any, url: string) => { 
+              xhr.withCredentials = false;
+              // Força chunks de CDNs restritas a passarem pelo proxy para evitar CORS/Referer
+              if (url.includes('phncdn.com') || url.includes('xvideos-cdn.com') || url.includes('cdn77')) {
+                const proxiedChunk = `/api/proxy?url=${encodeURIComponent(url)}`;
+                xhr.open('GET', proxiedChunk, true);
+              }
+            }
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => {
-              // Regra de segurança do navegador: se falhar autoplay com som, inicia mudo
               video.muted = true;
               setIsMuted(true);
               video.play().catch(() => setError(true));
@@ -83,7 +91,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             setLoading(false);
           });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
-            if (data.fatal) setError(true);
+            if (data.fatal) {
+              console.error("HLS Fatal Error:", data);
+              setError(true);
+            }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
@@ -140,7 +151,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   };
 
-  // Liberação de Áudio Master no primeiro clique na tela
   const handleContainerClick = () => {
     if (videoRef.current && videoRef.current.muted) {
       videoRef.current.muted = false;
