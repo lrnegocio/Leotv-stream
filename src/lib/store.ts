@@ -88,7 +88,7 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
 
-    // ORDENAÇÃO ALFABÉTICA MESTRE LÉO
+    // ORDENAÇÃO ALFABÉTICA MESTRE LÉO (A-Z)
     const { data: rawData, error } = await query.order('title', { ascending: true });
     if (error) throw error;
 
@@ -328,17 +328,29 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   const content = await getRemoteContent();
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
-    // Prioriza o link direto para IPTV
     const streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return;
 
     m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${item.imageUrl || ""}" group-title="${item.genre}",${item.title}\n`;
     
-    // Gera a rota de acesso baseada no tipo
     const typePath = item.type === 'channel' ? 'live' : item.type === 'series' ? 'series' : 'movie';
     m3u += `${window.location.origin}/${typePath}/${pin}/pass/${item.id}.ts\n`;
   });
   return m3u;
+}
+
+export async function getGlobalSettings() {
+  try {
+    const { data } = await supabase.from('settings').select('*').eq('id', 'global').maybeSingle();
+    return data || { parentalPin: "1234" };
+  } catch (e) { return { parentalPin: "1234" }; }
+}
+
+export async function updateGlobalSettings(settings: any) {
+  try {
+    const { error } = await supabase.from('settings').upsert({ id: 'global', ...settings });
+    return !error;
+  } catch (e) { return false; }
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {

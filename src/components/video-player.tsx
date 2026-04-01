@@ -60,7 +60,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content
+    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content (Foco em MP4 e M3U8)
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -68,7 +68,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const lowUrl = targetUrl.toLowerCase();
     
-    // EXTERMÍNIO DE .TS: Agora o sistema foca apenas em .m3u8 e .mp4
+    // EXTERMÍNIO DE .TS: Foco absoluto em .m3u8 e .mp4 para o Web Player
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     
     return { processedUrl: finalUrl, type: 'video' }
@@ -85,7 +85,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       video.removeAttribute('src');
       video.load();
 
-      // Motor HLS Soberano para .m3u8 (Live e VOD)
+      // Motor HLS Soberano para .m3u8
       // @ts-ignore
       if (type === 'hls' && window.Hls && window.Hls.isSupported()) {
         // @ts-ignore
@@ -101,7 +101,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           setLoading(false); 
         });
         hls.on('hlsError', (e: any, data: any) => { 
-          console.error("HLS Error:", data);
           if (data.fatal) setError(true); 
         });
       } 
