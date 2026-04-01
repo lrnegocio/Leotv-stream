@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -21,34 +22,36 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // 1. IFRAMES MASTER (RedeCanais, RD Canais, Players Prontos)
-    if (u.includes('ch.php?') || u.includes('redecanaistv') || u.includes('rdcanais') || u.includes('player')) {
-      return { processedUrl: u, type: 'iframe', originalUrl: u }
+    // 1. MOTOR SNIPER v7.0: XVideos (IDs Alfanuméricos Novos como ouethob80a6)
+    if (u.includes('xvideos.com')) {
+      // Tenta extrair ID após 'video.' ou após '/video'
+      const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
+      const id = match ? match[1] : null;
+      return { 
+        processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, 
+        type: 'iframe', 
+        originalUrl: u 
+      }
     }
 
-    // 2. EMBEDS DE ELITE (XVideos, Pornhub, YouTube)
-    if (u.includes('xvideos.com')) {
-      const idMatch = u.match(/video\.?([a-z0-9]+)/i);
-      const id = idMatch ? idMatch[1] : u.split('video')[1]?.split('/')[0]?.replace(/^\.|\//g, '');
-      return { processedUrl: id ? `https://www.xvideos.com/embedframe/${id}` : u, type: 'iframe', originalUrl: u }
-    }
+    // 2. MOTOR SNIPER: Pornhub
     if (u.includes('pornhub.com')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
       return { processedUrl: id ? `https://www.pornhub.com/embed/${id}` : u, type: 'iframe', originalUrl: u }
     }
+
+    // 3. MOTOR SNIPER: YouTube
     if (u.includes('youtube.com') || u.includes('youtu.be')) {
       const id = u.includes('v=') ? u.split('v=')[1]?.split('&')[0] : u.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    // 3. TÚNEL MASTER v12.0 (Archive.org, blinder.space, CDNs, HTTP)
-    const isRestrictedHost = u.includes('archive.org') || u.includes('blinder.space') || u.includes('phncdn.com') || u.includes('xvideos-cdn.com') || u.startsWith('http://');
-    
-    if (isRestrictedHost) {
-      // MOTOR SNIPER: Usamos a URL original para o HLS.js resolver os pedaços, mas o túnel intercepta tudo.
-      return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
+    // 4. IFRAMES GERAIS (RedeCanais, etc)
+    if (u.includes('ch.php?') || u.includes('redecanaistv') || u.includes('rdcanais') || u.includes('player')) {
+      return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
+    // 5. TÚNEL MASTER v13.0 (Archive.org, MP4, HLS)
     return { processedUrl: u, type: u.includes('.m3u8') ? 'hls' : 'video', originalUrl: u }
   }, [url])
 
@@ -61,7 +64,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
-      // TENTA INICIAR COM ÁUDIO LIBERADO
+      // TENTA INICIAR COM ÁUDIO LIBERADO (Soberania de Som)
       video.muted = false;
       setIsMuted(false);
 
@@ -70,26 +73,22 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            // MOTOR HLS SNIPER v4.0: Interceptação e redirecionamento de todos os pedaços do vídeo
             xhrSetup: (xhr: any, requestUrl: string) => { 
               xhr.withCredentials = false;
-              
-              const isRestricted = originalUrl && (
-                originalUrl.includes('phncdn.com') || 
-                originalUrl.includes('xvideos') || 
-                originalUrl.includes('archive.org') ||
-                originalUrl.includes('blinder.space') ||
-                originalUrl.startsWith('http://')
-              );
-
-              if (isRestricted && !requestUrl.includes('/api/proxy')) {
-                const proxiedUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
-                xhr.open('GET', proxiedUrl, true);
+              // INTERCEPTAÇÃO DE SEGMENTOS: Força cada pedaço do vídeo a passar pelo túnel seguro
+              if (!requestUrl.includes('/api/proxy') && (
+                originalUrl?.includes('phncdn.com') || 
+                originalUrl?.includes('xvideos') || 
+                originalUrl?.includes('archive.org') ||
+                originalUrl?.includes('blinder.space') ||
+                originalUrl?.startsWith('http://')
+              )) {
+                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
               }
             }
           });
 
-          // Se for restrito, passamos o manifesto pelo proxy na carga inicial
+          // Carga inicial via Proxy para sites restritos
           const isRestricted = originalUrl && (
             originalUrl.includes('phncdn.com') || 
             originalUrl.includes('xvideos') || 
@@ -98,17 +97,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             originalUrl.startsWith('http://')
           );
 
-          const finalManifestUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+          const finalUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
           
-          hls.loadSource(finalManifestUrl);
+          hls.loadSource(finalUrl);
           hls.attachMedia(video);
           
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => {
-              // Bloqueio de Autoplay: Libera mudo e tenta de novo
               video.muted = true;
               setIsMuted(true);
-              video.play().catch(() => setError(true));
+              video.play();
             });
             setLoading(false);
           });
@@ -128,15 +126,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
           video.addEventListener('loadedmetadata', () => { 
-            video.play().catch(() => {
-              video.muted = true;
-              setIsMuted(true);
-              video.play();
-            }); 
+            video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
             setLoading(false); 
           });
         }
       } else {
+        // VÍDEOS MP4 (Archive.org / Dona Aranha)
         const isRestricted = originalUrl && (
           originalUrl.includes('archive.org') || 
           originalUrl.includes('blinder.space') ||
@@ -202,16 +197,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v12...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master v13...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline ou Bloqueado</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link pode ter expirado ou exige recalibragem.</p>
-          <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Reentry</Button>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Master Offline</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O link exige recalibragem ou proxy adicional.</p>
+          <Button variant="outline" onClick={() => window.location.reload()} className="mt-6 border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Reiniciar Sinal</Button>
         </div>
       )}
 

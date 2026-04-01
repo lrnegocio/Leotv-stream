@@ -1,11 +1,12 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE FLUXO SOBERANO v12.0 - MOTOR DE STREAMING DEFINITIVO
- * Suporta Partial Content (206) vital para Archive.org e blinder.space.
- * Mascara identidades para CDNs de adultos e CDNs de alta performance.
+ * TÚNEL DE FLUXO SOBERANO v13.0 - MOTOR DE STREAMING PROFISSIONAL
+ * Suporte total a Partial Content (206) para seek em MP4 (Dona Aranha/Archive).
+ * Mascaramento de Identidade (Referer) para CDNs restritas.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     
     const targetUrlObj = new URL(targetUrl);
     
-    // MÁSCARAS DE SOBERANIA (Bypass Referer e CORS)
+    // MÁSCARAS DE SOBERANIA (Bypass de Referer e Segurança)
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
     } else if (targetUrl.includes('xvideos')) {
@@ -40,14 +41,14 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
+    // MOTOR DE STREAMING 206: Repassa o corpo como stream para o navegador
     const responseHeaders = new Headers();
     const headersToCopy = [
       'content-type', 
       'content-length', 
       'content-range', 
       'accept-ranges', 
-      'cache-control',
-      'access-control-allow-origin'
+      'cache-control'
     ];
     
     headersToCopy.forEach(h => {
@@ -55,7 +56,6 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // Forçamos CORS para o navegador não bloquear o túnel
     responseHeaders.set('Access-Control-Allow-Origin', '*');
 
     return new NextResponse(res.body, {

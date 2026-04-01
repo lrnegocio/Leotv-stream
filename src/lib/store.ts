@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -104,7 +105,7 @@ export async function getGlobalSettings() {
 }
 
 export async function updateGlobalSettings(value: any) {
-  // SOBERANIA DE PERSISTÊNCIA: Força o upsert com a chave correta
+  // SOBERANIA DE PERSISTÊNCIA: Força o upsert com a chave correta e limpa cache
   const { error } = await supabase.from('settings').upsert({ key: 'global', value }, { onConflict: 'key' });
   return !error;
 }

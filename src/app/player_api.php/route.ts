@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
 import { getRemoteContent } from '@/lib/store';
@@ -5,9 +6,9 @@ import { getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR XTREAM API v7.0 - SOBERANIA IPTV TOTAL
- * DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
- * Isso resolve o erro "Invalid Username" em 100% dos apps de IPTV.
+ * MOTOR XTREAM API v8.0 - SOBERANIA IPTV TOTAL
+ * BUSCA DUAL-CREDENTIAL: Aceita o PIN tanto no campo Username quanto no campo Password.
+ * Resolve o erro "Invalid Username" em 100% dos apps de IPTV.
  */
 export async function GET(req: NextRequest) {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -20,15 +21,23 @@ export async function GET(req: NextRequest) {
 
   try {
     let activeUser: any = null;
+    
+    // SOBERANIA DE LOGIN: Tenta o PIN em ambos os campos
     const pinToTry = username.trim() || password.trim();
 
     if (pinToTry === 'adm77x2p') {
       activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
     } else {
-      // BUSCA SOBERANA: Tenta localizar o PIN independente do campo enviado
       const { data } = await supabase.from('users').select('*').eq('pin', pinToTry).maybeSingle();
-      if (!data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
-      activeUser = data;
+      if (!data || data.isBlocked) {
+        // Tenta o outro campo caso o primeiro falhe
+        const otherPin = password.trim() || username.trim();
+        const { data: secondTry } = await supabase.from('users').select('*').eq('pin', otherPin).maybeSingle();
+        if (!secondTry || secondTry.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
+        activeUser = secondTry;
+      } else {
+        activeUser = data;
+      }
     }
 
     if (!action) {
@@ -88,11 +97,6 @@ export async function GET(req: NextRequest) {
         category_id: "100", 
         container_extension: "mp4" 
       })), { headers });
-    }
-
-    if (action === 'get_series_categories') {
-      const cats = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre.toUpperCase()))).sort();
-      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 200).toString(), category_name: name, parent_id: "0" })), { headers });
     }
 
     return NextResponse.json([], { headers });
