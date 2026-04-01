@@ -39,17 +39,25 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     if (isImage) return { processedUrl: targetUrl, type: 'image' }
 
-    // 2. EMBEDS OFICIAIS (SINTONIZADORES DE ELITE)
+    // 2. EMBEDS DE ELITE (IFRAME MASTER)
+    // Especialista em RedeCanais, YouTube, XVideos e Dailymotion
+    if (
+      targetUrl.includes('redecanaistv.cafe') || 
+      targetUrl.includes('rdcanais') || 
+      targetUrl.includes('redecanais') ||
+      targetUrl.includes('ch.php') ||
+      targetUrl.includes('embed') ||
+      targetUrl.includes('player')
+    ) {
+      return { processedUrl: targetUrl, type: 'iframe' }
+    }
+
     if (targetUrl.includes('xvideos.com')) {
       const parts = targetUrl.split('video.');
       if (parts.length > 1) {
         const id = parts[1].split('/')[0];
         return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe' }
       }
-    }
-
-    if (targetUrl.includes('redecanaistv.cafe') || targetUrl.includes('rdcanais') || targetUrl.includes('redecanais')) {
-      return { processedUrl: targetUrl, type: 'iframe' }
     }
 
     if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
@@ -64,7 +72,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe' }
     }
 
-    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content (Foco em MP4 e M3U8)
+    // 3. TÚNEL MASTER PARA LINKS HTTP / Mixed Content (MP4 e M3U8)
     let finalUrl = targetUrl;
     if (targetUrl.startsWith('http://')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
@@ -72,10 +80,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     const lowUrl = targetUrl.toLowerCase();
     
-    // SOVEREIGN M3U8 & MP4
+    // SOVEREIGN HLS & MP4
     if (lowUrl.includes('.m3u8')) return { processedUrl: finalUrl, type: 'hls' }
     if (lowUrl.includes('.mp4')) return { processedUrl: finalUrl, type: 'video' }
     
+    // Fallback para HLS se houver chunklist no link
+    if (lowUrl.includes('chunklist')) return { processedUrl: finalUrl, type: 'hls' }
+
     return { processedUrl: finalUrl, type: 'video' }
   }, [url])
 
@@ -97,7 +108,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         hls = new window.Hls({ 
           enableWorker: true, 
           lowLatencyMode: true,
-          backBufferLength: 60
+          backBufferLength: 60,
+          xhrSetup: (xhr: any) => {
+             xhr.withCredentials = false;
+          }
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
@@ -109,7 +123,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           if (data.fatal) setError(true); 
         });
       } 
-      // Motor Nativo para MP4 (Túnel Master)
+      // Motor Nativo para MP4
       else if (type === 'video') {
         video.src = processedUrl;
         video.preload = "auto";
@@ -153,7 +167,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {type === 'image' ? (
         <img src={processedUrl!} alt={title} className="w-full h-full object-contain" onLoad={() => setLoading(false)} onError={() => { setLoading(false); setError(true); }} />
       ) : type === 'iframe' ? (
-        <iframe src={processedUrl!} className="h-full w-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
+        <iframe 
+          src={processedUrl!} 
+          className="h-full w-full border-0" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
         <video 
           ref={videoRef} 
@@ -181,7 +201,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex gap-4">
              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
                <ShieldCheck className="h-4 w-4 text-primary" />
-               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v39</span>
+               <span className="text-[10px] font-black uppercase tracking-widest text-primary">SINAL BLINDADO v40</span>
              </div>
           </div>
           <div className="flex gap-4 items-center">
