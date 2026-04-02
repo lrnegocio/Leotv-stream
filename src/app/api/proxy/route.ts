@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v17.0 - MOTOR DE STREAMING REAL 206
- * Suporte total a Partial Content para permitir "seek" (avançar/voltar)
- * Blindagem contra erro 410 e 403 em CDNs protegidas.
+ * TÚNEL MASTER v18.0 - MOTOR DE STREAMING REAL 206
+ * Suporte total a Partial Content para permitir "seek" (avançar/voltar).
+ * Blindagem contra erro 410, 403 e NotSupportedError.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -22,9 +22,9 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Range', range);
     }
     
+    // Identidade Camuflada Master
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     
-    // Máscaras de Identidade Master para CDNs de Vídeo
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
     } else if (targetUrl.includes('xvideos')) {
@@ -41,14 +41,9 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // Trata erro 410 (Gone) tentando um fallback sem Range se necessário
-    if (res.status === 410) {
-       return new NextResponse("Recurso não sintonizado pelo servidor original (410).", { status: 410 });
-    }
-
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais de streaming para o navegador reconhecer como 206 (Partial Content)
+    // Cabeçalhos vitais de streaming para o navegador reconhecer como 206 (Partial Content)
     const headersToCopy = [
       'content-type', 
       'content-length', 
@@ -69,8 +64,11 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', 'Range, Content-Type');
 
+    // Se o navegador pediu Range, o status DEVE ser 206 para evitar NotSupportedError
+    const status = range ? 206 : res.status;
+
     return new NextResponse(res.body, {
-      status: res.status,
+      status: status,
       statusText: res.statusText,
       headers: responseHeaders,
     });

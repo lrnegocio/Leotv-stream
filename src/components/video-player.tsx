@@ -23,7 +23,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v10.0 - Detecção de IDs Alfanuméricos
+    // SINTONIZADOR SNIPER v12.0 - Detecção Total
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
       const id = match ? (match[1] || match[0]) : null;
@@ -44,7 +44,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    if (u.includes('ch.php?') || u.includes('redecanais') || u.includes('rdcanais') || u.includes('player')) {
+    if (u.includes('redecanais') || u.includes('rdcanais') || u.includes('ch.php?')) {
       return { processedUrl: u, type: 'iframe', originalUrl: u }
     }
 
@@ -63,7 +63,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setIsPlaying(true);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        console.error("Erro ao dar play:", err);
         videoRef.current.muted = true;
         setIsMuted(true);
         videoRef.current.play().catch(() => {});
@@ -76,7 +75,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const safePause = React.useCallback(async () => {
     if (!videoRef.current) return;
     if (playPromiseRef.current) {
-      await playPromiseRef.current;
+      try { await playPromiseRef.current; } catch (e) {}
     }
     videoRef.current.pause();
     setIsPlaying(false);
@@ -91,9 +90,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
-      video.muted = false;
-      setIsMuted(false);
-
       const isRestricted = originalUrl && (
         originalUrl.includes('phncdn.com') || 
         originalUrl.includes('xvideos') || 
@@ -116,7 +112,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           });
 
           const finalUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
-          
           hls.loadSource(finalUrl);
           hls.attachMedia(video);
           
@@ -127,14 +122,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
-              if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) {
-                hls.startLoad();
-              } else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) {
-                hls.recoverMediaError();
-              } else {
-                hls.destroy();
-                setError(true);
-              }
+              if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+              else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+              else { hls.destroy(); setError(true); }
             }
           });
         }
@@ -155,7 +145,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         video.load();
       }
     };
-  }, [processedUrl, type, originalUrl, safePlay])
+  }, [processedUrl, type, originalUrl, safePlay]);
 
   const toggleVolume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -176,11 +166,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const togglePlay = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (videoRef.current) {
-      if (videoRef.current.paused) {
-        safePlay();
-      } else {
-        safePause();
-      }
+      if (videoRef.current.paused) safePlay();
+      else safePause();
     }
   };
 
@@ -206,8 +193,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido ou Removido (410)</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O recurso solicitado não está mais disponível no servidor original.</p>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido (410) ou Fonte Incompatível</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">O navegador não suporta esta fonte via proxy direto.</p>
           <div className="flex gap-4 mt-6">
             <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Novamente</Button>
             <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
@@ -235,34 +222,26 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {!loading && !error && type !== 'iframe' && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-8">
           <div className="flex justify-between items-center">
-            <h3 className="text-white font-black uppercase italic truncate max-w-xl tracking-tighter drop-shadow-2xl text-lg">{title}</h3>
-            <button 
-              onClick={toggleVolume} 
-              className="h-14 w-14 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center hover:bg-primary transition-all shadow-2xl border border-white/10"
-            >
+            <h3 className="text-white font-black uppercase italic truncate max-w-xl tracking-tighter text-lg">{title}</h3>
+            <button onClick={toggleVolume} className="h-14 w-14 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center hover:bg-primary transition-all border border-white/10">
               {isMuted ? <VolumeX className="h-7 w-7 text-white" /> : <Volume2 className="h-7 w-7 text-white" />}
             </button>
           </div>
 
           <div className="flex items-center justify-center gap-16">
-            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
+            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5">
               <RotateCcw className="h-10 w-10 text-white" />
             </button>
-            
             <button onClick={(e) => togglePlay(e)} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)]">
               {isPlaying ? <Pause className="h-12 w-12 text-white" fill="currentColor" /> : <Play className="h-12 w-12 text-white ml-2" fill="currentColor" />}
             </button>
-
-            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all group/btn border border-white/5">
+            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5">
               <RotateCw className="h-10 w-10 text-white" />
             </button>
           </div>
 
           <div className="flex justify-end">
-            <button 
-              onClick={(e) => { e.stopPropagation(); containerRef.current?.requestFullscreen(); }} 
-              className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all"
-            >
+            <button onClick={(e) => { e.stopPropagation(); containerRef.current?.requestFullscreen(); }} className="h-14 w-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-primary transition-all">
               <Maximize className="h-7 w-7 text-white" />
             </button>
           </div>
