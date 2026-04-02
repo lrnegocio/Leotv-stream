@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v65.0 - BUSCA SOBERANA TOTAL EM TODOS OS CAMPOS
+  // XEQUE-MATE IPTV v70.0 - BUSCA MULTI-CAMPO SOBERANA
   const username = (searchParams.get('username') || searchParams.get('user') || searchParams.get('u') || "").trim(); 
   const password = (searchParams.get('password') || searchParams.get('pass') || searchParams.get('p') || "").trim();
   const action = searchParams.get('action');
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         user_info: { 
           auth: 0, 
           status: "Acesso Negado", 
-          message: "PIN não localizado, bloqueado ou expirado." 
+          message: "PIN INVÁLIDO OU EXPIRADO" 
         } 
       }, { headers });
     }
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // ISOLAMENTO DE SINAIS MASTER: Para a TV, só envia o que tem Link Secundário (IPTV)
+    // ISOLAMENTO DE SINAIS MASTER: Na TV, só entra o que tem directStreamUrl (Link Secundário)
     const remoteContent = await getRemoteContent(true);
     const content = remoteContent;
 

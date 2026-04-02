@@ -66,7 +66,6 @@ export interface Reseller {
 
 /**
  * BUSCA SOBERANA v250.0 - ALFABÉTICA POR PADRÃO
- * Filtra por sinal dependendo se é Web ou IPTV (Xtream)
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -82,7 +81,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
       title: (i.title || "").toUpperCase()
     }));
 
-    // ISOLAMENTO DE SINAIS: Web só vê o que tem streamUrl, IPTV só o que tem directStreamUrl
     if (isIptv) {
       return rawItems.filter(i => !!i.directStreamUrl && (i.directStreamUrl.includes('.m3u8') || i.directStreamUrl.includes('.ts') || i.directStreamUrl.includes('.mp4') || i.directStreamUrl.includes('chunklist')));
     } else {
@@ -103,46 +101,48 @@ export async function incrementViews(id: string) {
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await queryTopContent(limit);
+    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
     return data || [];
   } catch (e) { return []; }
 }
 
-async function queryTopContent(limit: number) {
-  return supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
-}
-
 /**
- * SALVAMENTO BLINDADO v4.0 - FIX ERRO AO SALVAR & PRESERVAÇÃO DE LINKS
- * Garante que o Link Web e o Link IPTV nunca se substituam.
+ * SALVAMENTO BLINDADO v5.0 - XEQUE-MATE NO ERRO DE GRAVAÇÃO
+ * Blinda as gavetas de links para que um não substitua o outro.
  */
 export async function saveContent(item: ContentItem) {
   try {
-    const id = (item.id && item.id !== "") ? item.id : "leo_" + Math.random().toString(36).substring(2, 12);
+    const id = (item.id && item.id.trim() !== "") ? item.id : "leo_" + Math.random().toString(36).substring(2, 12);
+    
+    // Tenta buscar o existente para não apagar a gaveta oposta
     const { data: existing } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
 
     const finalItem = {
       id,
-      title: (item.title || existing?.title || "").toUpperCase().trim(),
+      title: (item.title || existing?.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || existing?.genre || "LÉO TV AO VIVO").toUpperCase(),
-      views: item.views !== undefined ? item.views : (existing?.views || 0),
-      // BLINDAGEM: Só atualiza se o campo vier preenchido, senão mantém o que já tinha
-      streamUrl: item.streamUrl !== undefined ? item.streamUrl : (existing?.streamUrl || ""),
-      directStreamUrl: item.directStreamUrl !== undefined ? item.directStreamUrl : (existing?.directStreamUrl || ""),
-      description: item.description !== undefined ? item.description : (existing?.description || "Sinal Master Léo TV"),
       type: item.type || existing?.type || 'channel',
-      isRestricted: item.isRestricted !== undefined ? item.isRestricted : (existing?.isRestricted || false),
+      description: item.description !== undefined ? item.description : (existing?.description || "Sinal Master Léo TV"),
       imageUrl: item.imageUrl !== undefined ? item.imageUrl : (existing?.imageUrl || ""),
-      episodes: item.episodes || existing?.episodes || null,
-      seasons: item.seasons || existing?.seasons || null,
+      isRestricted: item.isRestricted !== undefined ? item.isRestricted : (existing?.isRestricted || false),
+      views: item.views !== undefined ? item.views : (existing?.views || 0),
+      
+      // BLINDAGEM DE LINKS: Só altera se o novo valor não for vazio
+      streamUrl: (item.streamUrl && item.streamUrl !== "") ? item.streamUrl : (existing?.streamUrl || ""),
+      directStreamUrl: (item.directStreamUrl && item.directStreamUrl !== "") ? item.directStreamUrl : (existing?.directStreamUrl || ""),
+      
+      episodes: item.episodes !== undefined ? item.episodes : (existing?.episodes || null),
+      seasons: item.seasons !== undefined ? item.seasons : (existing?.seasons || null),
+      
       created_at: item.created_at || existing?.created_at || new Date().toISOString()
     };
 
-    const { error } = await supabase.from('content').upsert(finalItem);
-    if (error) throw error;
+    const { error: upsertError } = await supabase.from('content').upsert(finalItem);
+    if (upsertError) throw upsertError;
+    
     return true;
-  } catch (e) { 
-    console.error("Erro no saveContent:", e);
+  } catch (e: any) { 
+    console.error("Erro crítico no saveContent:", e.message || e);
     return false; 
   }
 }
@@ -185,9 +185,7 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
           ...current, 
           id: "", 
           streamUrl: line.trim(), 
-          directStreamUrl: line.trim(),
-          description: "Importado via M3U Master",
-          views: 0
+          directStreamUrl: line.trim()
         });
         count++;
         if (count % 10 === 0) onProgress(`Sintonizando: ${count} sinais...`);

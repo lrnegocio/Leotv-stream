@@ -5,14 +5,13 @@ export const dynamic = 'force-dynamic';
 
 /**
  * TÚNEL MASTER v40.0 - MOTOR DE STREAMING PROFISSIONAL 206
- * Suporte nativo para SEEK (Avançar/Voltar) via cabeçalhos de Range.
- * Blindagem total contra CORS e Hotlink.
+ * Blindagem total para Partial Content e headers camuflados.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const targetUrl = searchParams.get('url');
 
-  if (!targetUrl) return new NextResponse("Sinal sniper ausente", { status: 400 });
+  if (!targetUrl) return new NextResponse("Sinal Sniper Ausente", { status: 400 });
 
   try {
     const requestHeaders = new Headers();
@@ -22,16 +21,21 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Range', range);
     }
     
+    // CAMUFLAGEM MASTER v4
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
+      requestHeaders.set('Origin', 'https://www.pornhub.com');
     } else if (targetUrl.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
+      requestHeaders.set('Origin', 'https://www.xvideos.com');
     } else if (targetUrl.includes('dailymotion')) {
       requestHeaders.set('Referer', 'https://www.dailymotion.com/');
-    } else if (targetUrl.includes('archive.org')) {
-      requestHeaders.set('Referer', 'https://archive.org/');
+    } else if (targetUrl.includes('jmvstream')) {
+      requestHeaders.set('Referer', 'https://jmvstream.com/');
     }
 
     const res = await fetch(targetUrl, { 
@@ -39,6 +43,10 @@ export async function GET(req: NextRequest) {
       cache: 'no-store',
       redirect: 'follow'
     });
+
+    if (!res.ok && res.status !== 206) {
+      console.warn(`Proxy Sniper: Resposta do servidor original: ${res.status}`);
+    }
 
     const responseHeaders = new Headers();
     const headersToCopy = [
@@ -60,7 +68,6 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', 'Range, Content-Type');
 
-    // MODO STREAMING: Vital para que MP4 e M3U8 permitam avançar/voltar no player
     const status = (range && (res.status === 200 || res.status === 206)) ? 206 : res.status;
 
     return new Response(res.body, {
@@ -68,8 +75,9 @@ export async function GET(req: NextRequest) {
       statusText: res.statusText,
       headers: responseHeaders,
     });
-  } catch (error) {
-    return new NextResponse("Falha de sintonização sniper", { status: 500 });
+  } catch (error: any) {
+    console.error("Erro no Túnel Master:", error.message);
+    return new NextResponse("Falha de sintonização Sniper 206", { status: 500 });
   }
 }
 
