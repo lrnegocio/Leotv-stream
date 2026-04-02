@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v60.0 - BUSCA SOBERANA TOTAL EM TODOS OS CAMPOS
+  // XEQUE-MATE IPTV v65.0 - BUSCA SOBERANA TOTAL EM TODOS OS CAMPOS
   const username = (searchParams.get('username') || searchParams.get('user') || searchParams.get('u') || "").trim(); 
   const password = (searchParams.get('password') || searchParams.get('pass') || searchParams.get('p') || "").trim();
   const action = searchParams.get('action');
@@ -22,8 +22,6 @@ export async function GET(req: NextRequest) {
 
   try {
     let activeUser: any = null;
-    
-    // VARREDURA TOTAL: O PIN pode estar no usuário OU na senha
     const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
@@ -34,7 +32,6 @@ export async function GET(req: NextRequest) {
       
       const { data } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
       if (data && !data.isBlocked) {
-        // Verifica expiração
         if (data.expiryDate && new Date(data.expiryDate) < new Date()) continue;
         activeUser = data;
         break;
@@ -72,9 +69,9 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // FILTRAGEM IPTV: Apenas canais que possuem o Link Secundário (IPTV)
+    // ISOLAMENTO DE SINAIS MASTER: Para a TV, só envia o que tem Link Secundário (IPTV)
     const remoteContent = await getRemoteContent(true);
-    const content = remoteContent.filter(i => !!i.directStreamUrl);
+    const content = remoteContent;
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();

@@ -24,9 +24,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const { processedUrl, type, originalUrl } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
-    const u = url.trim().replace('pt.pornhub', 'www.pornhub'); // Fix subdomínios
+    const u = url.trim().replace('pt.pornhub', 'www.pornhub');
 
-    // SINTONIZADOR SNIPER v100.0 - MESTRE LÉO TV
+    // SINTONIZADOR SNIPER v150.0 - MESTRE LÉO TV
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
       const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split(/[.?/]/)[0] : null;
@@ -59,9 +59,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const handleUserInteraction = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
-      setShowControls(false);
-    }, 4000);
+    controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 4000);
   };
 
   React.useEffect(() => {
@@ -101,7 +99,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls.loadSource(finalUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
-            video.play().catch(() => { video.muted = true; setIsMuted(true); video.play().catch(() => {}); });
+            video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
             setLoading(false); 
             if (id) incrementViews(id);
           });
@@ -117,7 +115,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
-        video.play().catch(() => { video.muted = true; setIsMuted(true); video.play().catch(() => {}); });
+        video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
         setLoading(false);
         if (id) incrementViews(id);
       }
@@ -131,20 +129,24 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     <div 
       onMouseMove={handleUserInteraction}
       onTouchStart={handleUserInteraction}
-      onClick={handleUserInteraction}
+      onClick={() => {
+        if (type === 'iframe') return;
+        if (videoRef.current?.paused) videoRef.current.play();
+        else videoRef.current?.pause();
+      }}
       className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl"
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sniper v100.0...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sniper v150.0...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Sniper Bloqueado</h3>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Snipper Bloqueado</h3>
           <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6">
             <ExternalLink className="mr-2 h-4 w-4" /> Tentar Modo Externo
           </Button>
@@ -160,19 +162,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           autoPlay 
           playsInline 
           controls={false} 
-          onLoadedData={() => setLoading(false)} 
-          onError={() => setError(true)} 
           crossOrigin="anonymous" 
         />
       )}
 
-      {/* NAVEGAÇÃO MASTER: TROCA DE CANAL (APENAS SETAS LATERAIS) */}
+      {/* NAVEGAÇÃO MASTER: APENAS SETAS LATERAIS PARA TROCA DE CANAL */}
       {!loading && !error && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           <button 
             onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
             className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn"
-            title="Canal Anterior"
           >
             <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
           </button>
@@ -180,14 +179,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <button 
             onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
             className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn"
-            title="Próximo Canal"
           >
             <ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" />
           </button>
         </div>
       )}
 
-      {/* BOTÃO MUDO MASTER (CANTO SUPERIOR) */}
+      {/* BOTÃO MUDO MASTER */}
       {!loading && !error && type !== 'iframe' && (
         <div className={`absolute top-8 right-8 z-10 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
            <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-primary transition-all">

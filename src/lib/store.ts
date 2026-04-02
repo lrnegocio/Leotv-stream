@@ -24,8 +24,8 @@ export interface ContentItem {
   description: string; 
   genre: string;
   isRestricted: boolean; 
-  streamUrl?: string; 
-  directStreamUrl?: string; 
+  streamUrl?: string; // LINK WEB PRINCIPAL (PWA)
+  directStreamUrl?: string; // LINK SECUNDÁRIO (IPTV / XTREAM)
   imageUrl?: string;
   views?: number;
   seasons?: Season[]; 
@@ -66,19 +66,28 @@ export interface Reseller {
 
 /**
  * BUSCA SOBERANA v250.0 - ALFABÉTICA POR PADRÃO
+ * Filtra por sinal dependendo se é Web ou IPTV (Xtream)
  */
-export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
+export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
     
     const { data } = await query.order('title', { ascending: true });
-    return (data || []).map(i => ({ 
+    
+    const rawItems = (data || []).map(i => ({ 
       ...i, 
       isRestricted: i.isRestricted || false,
       title: (i.title || "").toUpperCase()
     }));
+
+    // ISOLAMENTO DE SINAIS: Web só vê o que tem streamUrl, IPTV só o que tem directStreamUrl
+    if (isIptv) {
+      return rawItems.filter(i => !!i.directStreamUrl && (i.directStreamUrl.includes('.m3u8') || i.directStreamUrl.includes('.ts') || i.directStreamUrl.includes('.mp4') || i.directStreamUrl.includes('chunklist')));
+    } else {
+      return rawItems.filter(i => !!i.streamUrl || i.type === 'series' || i.type === 'multi-season');
+    }
   } catch (e) { 
     return []; 
   }
@@ -94,43 +103,46 @@ export async function incrementViews(id: string) {
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
+    const { data } = await queryTopContent(limit);
     return data || [];
   } catch (e) { return []; }
 }
 
+async function queryTopContent(limit: number) {
+  return supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
+}
+
 /**
- * SALVAMENTO BLINDADO v3.0 - FIX ERRO AO SALVAR
- * O sistema agora garante que o ID e os links nunca entrem em conflito.
+ * SALVAMENTO BLINDADO v4.0 - FIX ERRO AO SALVAR & PRESERVAÇÃO DE LINKS
+ * Garante que o Link Web e o Link IPTV nunca se substituam.
  */
 export async function saveContent(item: ContentItem) {
   try {
-    // Se não tiver ID, gera um soberano agora para evitar erro de banco
     const id = (item.id && item.id !== "") ? item.id : "leo_" + Math.random().toString(36).substring(2, 12);
-    
-    // Busca o que já existe para proteger links que não estão sendo editados
     const { data: existing } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
 
     const finalItem = {
-      ...item,
       id,
-      title: (item.title || "").toUpperCase().trim(),
-      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      views: item.views || existing?.views || 0,
+      title: (item.title || existing?.title || "").toUpperCase().trim(),
+      genre: (item.genre || existing?.genre || "LÉO TV AO VIVO").toUpperCase(),
+      views: item.views !== undefined ? item.views : (existing?.views || 0),
+      // BLINDAGEM: Só atualiza se o campo vier preenchido, senão mantém o que já tinha
       streamUrl: item.streamUrl !== undefined ? item.streamUrl : (existing?.streamUrl || ""),
       directStreamUrl: item.directStreamUrl !== undefined ? item.directStreamUrl : (existing?.directStreamUrl || ""),
-      description: item.description || existing?.description || "Sinal Master Léo TV",
-      type: item.type || existing?.type || 'channel'
+      description: item.description !== undefined ? item.description : (existing?.description || "Sinal Master Léo TV"),
+      type: item.type || existing?.type || 'channel',
+      isRestricted: item.isRestricted !== undefined ? item.isRestricted : (existing?.isRestricted || false),
+      imageUrl: item.imageUrl !== undefined ? item.imageUrl : (existing?.imageUrl || ""),
+      episodes: item.episodes || existing?.episodes || null,
+      seasons: item.seasons || existing?.seasons || null,
+      created_at: item.created_at || existing?.created_at || new Date().toISOString()
     };
 
     const { error } = await supabase.from('content').upsert(finalItem);
-    if (error) {
-      console.error("Erro Supabase:", error);
-      return false;
-    }
+    if (error) throw error;
     return true;
   } catch (e) { 
-    console.error("Erro catch save:", e);
+    console.error("Erro no saveContent:", e);
     return false; 
   }
 }
@@ -156,9 +168,7 @@ export async function clearAllM3UContent() {
     if (!items || items.length === 0) return true;
     const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
     return !error;
-  } catch (e) { 
-    return false; 
-  }
+  } catch (e) { return false; }
 }
 
 export async function processM3UImport(m3u: string, onProgress: (m: string) => void) {
@@ -213,23 +223,12 @@ export async function removeUser(id: string) {
   return !error;
 }
 
-/**
- * LOGIN SOBERANO v10.0 - BUSCA TOTAL EM QUALQUER CAMPO
- */
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true } };
-  
-  // Xeque-mate: Busca o PIN de forma flexível
   const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim()).maybeSingle();
-  
   if (!user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
-  
-  // Verifica expiração
-  if (user.expiryDate && new Date(user.expiryDate) < new Date()) {
-    return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
-  }
-
+  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
   return { user };
 }
 
@@ -265,9 +264,7 @@ export async function getTotalContentCount() {
 }
 
 export async function generateM3UPlaylist(pin: string) {
-  const allContent = await getRemoteContent();
-  // Só entrega pra TV o que tem link secundário
-  const content = allContent.filter(i => !!i.directStreamUrl);
+  const content = await getRemoteContent(true);
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
