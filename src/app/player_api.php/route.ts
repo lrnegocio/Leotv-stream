@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v900.0 - BUSCA SOBERANA MULTI-CAMPO
+  // XEQUE-MATE IPTV v50.0 - BUSCA SOBERANA MULTI-CAMPO
   const username = searchParams.get('username')?.trim() || searchParams.get('user')?.trim() || ""; 
   const password = searchParams.get('password')?.trim() || searchParams.get('pass')?.trim() || "";
   const action = searchParams.get('action');
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // Varredura Total: O PIN pode estar em qualquer campo enviado pelo App de TV
+    // VARREDURA TOTAL: O PIN pode estar no campo de usuário OU no campo de senha
     const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         user_info: { 
           auth: 0, 
           status: "Acesso Negado", 
-          message: "PIN Soberano não localizado ou bloqueado." 
+          message: "Sinal Sniper: PIN não localizado ou bloqueado." 
         } 
       }, { headers });
     }
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // FILTRAGEM MASTER IPTV: Apenas canais com Link Secundário (IPTV)
+    // FILTRAGEM IPTV: Apenas canais que possuem o Link Secundário (IPTV)
     const remoteContent = await getRemoteContent(true);
     const content = remoteContent.filter(i => !!i.directStreamUrl);
 

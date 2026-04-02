@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, ExternalLink, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react"
+import { Loader2, AlertTriangle, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { incrementViews } from "@/lib/store"
 
@@ -10,28 +10,27 @@ interface VideoPlayerProps {
   url: string
   title: string
   id?: string
+  onNext?: () => void
+  onPrev?: () => void
 }
 
-export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
-  const containerRef = React.useRef<HTMLDivElement>(null)
+export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false) 
-  const [isPlaying, setIsPlaying] = React.useState(true)
   const [showControls, setShowControls] = React.useState(true)
-  const playPromiseRef = React.useRef<Promise<void> | null>(null)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const { processedUrl, type, originalUrl } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v40.0 - MOTOR DE DETECÇÃO SOBERANO
+    // SINTONIZADOR SNIPER v50.0 - MESTRE LÉO TV
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
-      const videoId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split('/')[0] : null;
-      if (videoId) return { processedUrl: `https://www.xvideos.com/embedframe/${videoId}`, type: 'iframe', originalUrl: u }
+      const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split('/')[0] : null;
+      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe', originalUrl: u }
     }
 
     if (u.includes('dailymotion.com')) {
@@ -56,33 +55,6 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
       originalUrl: u 
     }
   }, [url])
-
-  const safePlay = React.useCallback(async () => {
-    if (!videoRef.current) return;
-    try {
-      playPromiseRef.current = videoRef.current.play();
-      await playPromiseRef.current;
-      setIsPlaying(true);
-      if (id) incrementViews(id);
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        videoRef.current.muted = true;
-        setIsMuted(true);
-        videoRef.current.play().catch(() => {});
-      }
-    } finally {
-      playPromiseRef.current = null;
-    }
-  }, [id]);
-
-  const safePause = React.useCallback(async () => {
-    if (!videoRef.current) return;
-    if (playPromiseRef.current) {
-      try { await playPromiseRef.current; } catch (e) {}
-    }
-    videoRef.current.pause();
-    setIsPlaying(false);
-  }, []);
 
   const handleUserInteraction = () => {
     setShowControls(true);
@@ -125,7 +97,11 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
           const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
           hls.loadSource(finalUrl);
           hls.attachMedia(video);
-          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { safePlay(); setLoading(false); });
+          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
+            video.play().catch(() => {});
+            setLoading(false); 
+            if (id) incrementViews(id);
+          });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
               if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
@@ -138,44 +114,39 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
         const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
-        safePlay();
+        video.play().catch(() => {
+          video.muted = true;
+          setIsMuted(true);
+          video.play().catch(() => {});
+        });
+        setLoading(false);
+        if (id) incrementViews(id);
       }
     };
 
     init();
     return () => { if (hls) hls.destroy(); if (video) { video.pause(); video.src = ""; video.load(); } };
-  }, [processedUrl, type, originalUrl, safePlay]);
-
-  const seek = (seconds: number) => {
-    if (videoRef.current) videoRef.current.currentTime += seconds;
-    handleUserInteraction();
-  };
+  }, [processedUrl, type, originalUrl, id]);
 
   return (
     <div 
-      ref={containerRef} 
       onMouseMove={handleUserInteraction}
       onTouchStart={handleUserInteraction}
-      onClick={() => {
-        if (videoRef.current?.muted) { videoRef.current.muted = false; setIsMuted(false); }
-        isPlaying ? safePause() : safePlay();
-        handleUserInteraction();
-      }}
-      className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
+      className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl"
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Rede Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sniper v50.0...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Recusado pela Fonte</h3>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Recusado (Sniper Offline)</h3>
           <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6">
-            <ExternalLink className="mr-2 h-4 w-4" /> Abrir Externamente
+            <ExternalLink className="mr-2 h-4 w-4" /> Tentar Modo Externo
           </Button>
         </div>
       )}
@@ -183,54 +154,43 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
       {type === 'iframe' ? (
         <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay" onLoad={() => setLoading(false)} />
       ) : (
-        <>
-          <video 
-            ref={videoRef} 
-            className="w-full h-full object-contain" 
-            autoPlay 
-            playsInline 
-            controls={false} 
-            onLoadedData={() => setLoading(false)} 
-            onError={() => setError(true)} 
-            crossOrigin="anonymous" 
-          />
-          
-          {/* CONTROLES MASTER LÉO TV */}
-          {!loading && !error && (
-            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="flex items-center gap-12">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); seek(-10); }} 
-                  className="pointer-events-auto h-20 w-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all scale-90 hover:scale-100"
-                >
-                  <ChevronLeft className="h-10 w-10 text-white" />
-                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">-10s</span>
-                </button>
-                
-                <button 
-                  onClick={(e) => { e.stopPropagation(); isPlaying ? safePause() : safePlay(); handleUserInteraction(); }} 
-                  className="pointer-events-auto h-24 w-24 rounded-full bg-primary flex items-center justify-center shadow-2xl shadow-primary/40 hover:scale-110 transition-transform"
-                >
-                  {isPlaying ? <Pause className="h-10 w-10 text-white fill-white" /> : <Play className="h-10 w-10 text-white fill-white ml-2" />}
-                </button>
+        <video 
+          ref={videoRef} 
+          className="w-full h-full object-contain" 
+          autoPlay 
+          playsInline 
+          controls={false} 
+          onLoadedData={() => setLoading(false)} 
+          onError={() => setError(true)} 
+          crossOrigin="anonymous" 
+        />
+      )}
 
-                <button 
-                  onClick={(e) => { e.stopPropagation(); seek(10); }} 
-                  className="pointer-events-auto h-20 w-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all scale-90 hover:scale-100"
-                >
-                  <ChevronRight className="h-10 w-10 text-white" />
-                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">+10s</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </>
+      {/* NAVEGAÇÃO MASTER: TROCA DE CANAL */}
+      {!loading && !error && (
+        <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
+            className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl"
+            title="Canal Anterior"
+          >
+            <ChevronLeft className="h-8 w-8 text-white" />
+          </button>
+          
+          <button 
+            onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
+            className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl"
+            title="Próximo Canal"
+          >
+            <ChevronRight className="h-8 w-8 text-white" />
+          </button>
+        </div>
       )}
 
       {/* BOTÃO MUDO MASTER */}
       {!loading && !error && type !== 'iframe' && (
         <div className={`absolute top-8 right-8 z-10 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-           <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; handleUserInteraction(); }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10">
+           <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10">
               {isMuted ? <VolumeX className="h-5 w-5 text-white" /> : <Volume2 className="h-5 w-5 text-white" />}
             </button>
         </div>

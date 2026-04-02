@@ -30,7 +30,7 @@ const CATEGORIES = [
 export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
-  const [activeVideo, setActiveVideo] = React.useState<any>(null)
+  const [activeVideo, setActiveVideo] = React.useState<{ items: ContentItem[], index: number } | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [selectedCat, setSelectedCat] = React.useState<string | null>(null)
   const [isPinOpen, setIsPinOpen] = React.useState(false)
@@ -61,12 +61,11 @@ export default function HomeContent() {
       
       const data = await getRemoteContent(false, queryStr, targetGenre);
       
-      // FILTRAGEM MASTER PWA: Apenas canais com Link Web Principal
+      // SEPARAÇÃO INTELIGENTE: PWA mostra apenas o Link Web Principal
       const filtered = data.filter(item => {
         if (item.type === 'channel' || item.type === 'movie') {
           return !!item.streamUrl;
         }
-        // Para séries, verificamos se há algum link web nos episódios
         return true; 
       });
 
@@ -88,11 +87,12 @@ export default function HomeContent() {
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
-  const handleItemClick = (item: ContentItem, idx: number) => {
+  const handleItemClick = (idx: number) => {
+    const item = content[idx];
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
     } else {
-      setActiveVideo({ item, index: idx });
+      setActiveVideo({ items: content, index: idx });
     }
   };
 
@@ -117,10 +117,18 @@ export default function HomeContent() {
     }
   };
 
+  const navigateChannel = (direction: 'next' | 'prev') => {
+    if (!activeVideo) return;
+    let nextIdx = direction === 'next' ? activeVideo.index + 1 : activeVideo.index - 1;
+    if (nextIdx < 0) nextIdx = activeVideo.items.length - 1;
+    if (nextIdx >= activeVideo.items.length) nextIdx = 0;
+    setActiveVideo({ ...activeVideo, index: nextIdx });
+  }
+
   if (loading && content.length === 0) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic">
       <Loader2 className="h-16 w-16 animate-spin text-primary" />
-      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Alfabético...</p>
+      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p>
     </div>
   );
 
@@ -135,7 +143,7 @@ export default function HomeContent() {
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Soberania Alfabética Online</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v50.0</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
@@ -188,7 +196,7 @@ export default function HomeContent() {
             </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (
-                <div key={item.id} onClick={() => handleItemClick(item, idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
+                <div key={item.id} onClick={() => handleItemClick(idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
                   {item.imageUrl ? <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-primary/10"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                     <h3 className="font-black text-[12px] uppercase italic truncate text-white group-hover:text-primary leading-tight">{item.title}</h3>
@@ -196,12 +204,6 @@ export default function HomeContent() {
                 </div>
               ))}
             </div>
-            {content.length === 0 && (
-              <div className="text-center py-40 opacity-20">
-                <Search className="h-16 w-16 mx-auto mb-4" />
-                <p className="font-black uppercase tracking-widest">Nenhum sinal localizado nesta pasta.</p>
-              </div>
-            )}
           </div>
         )}
       </main>
@@ -220,7 +222,7 @@ export default function HomeContent() {
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ item: { ...selectedSeries, streamUrl: ep.streamUrl, directStreamUrl: ep.directStreamUrl, title: `${selectedSeries.title} - EP ${ep.number}` }, index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, directStreamUrl: ep.directStreamUrl, title: `${selectedSeries.title} - EP ${ep.number}` }], index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
                         <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span>
                       </Button>
@@ -232,7 +234,7 @@ export default function HomeContent() {
                       <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                       <div className="flex flex-col gap-2">
                         {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ item: { ...selectedSeries, streamUrl: ep.streamUrl, directStreamUrl: ep.directStreamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}` }, index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
+                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, directStreamUrl: ep.directStreamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}` }], index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
                             <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
                             <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
                           </Button>
@@ -249,7 +251,15 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-          {activeVideo && <VideoPlayer url={activeVideo.item.streamUrl || activeVideo.item.directStreamUrl} title={activeVideo.item.title} id={activeVideo.item.id} />}
+          {activeVideo && (
+            <VideoPlayer 
+              url={activeVideo.items[activeVideo.index].streamUrl || activeVideo.items[activeVideo.index].directStreamUrl || ""} 
+              title={activeVideo.items[activeVideo.index].title} 
+              id={activeVideo.items[activeVideo.index].id}
+              onNext={() => navigateChannel('next')}
+              onPrev={() => navigateChannel('prev')}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
