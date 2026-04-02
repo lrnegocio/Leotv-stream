@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -9,10 +10,10 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 const ADMIN_GAMES = [
   { name: "Super Mario World", console: "SNES", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html" },
-  { name: "Counter-Strike Web", console: "PC", url: "https://v6p9d9t4.ssl.hwcdn.net/html/1671333/index.html" },
+  { name: "Counter-Strike Web", console: "PC", url: "https://play-cs.com/pt/servers" },
   { name: "Mortal Kombat 3", console: "SNES", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" },
   { name: "Resident Evil 3", console: "PS1", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
-  { name: "Chess Master AI", console: "BOARD", url: "https://www.sparkchess.com/play-chess-online.html" }
+  { name: "Crazy Taxi Arcade", console: "ARCADE", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" }
 ]
 
 export default function AdminGamesPage() {

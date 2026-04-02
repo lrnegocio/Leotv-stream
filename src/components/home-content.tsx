@@ -43,7 +43,7 @@ const CONSOLES = [
     { name: "Mortal Kombat 3", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" }
   ]},
   { name: "ARENA MULTIPLAYER (WEB)", icon: "⚔️", games: [
-    { name: "Counter-Strike Web", url: "https://v6p9d9t4.ssl.hwcdn.net/html/1671333/index.html" },
+    { name: "Counter-Strike Web", url: "https://play-cs.com/pt/servers" },
     { name: "Crazy Taxi Arcade", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
     { name: "Alien vs Predator", url: "https://www.retrogames.cc/embed/9264-alien-vs-predator-world.html" }
   ]},
@@ -249,7 +249,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); updateUrlWithId(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v3200.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v3400.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">

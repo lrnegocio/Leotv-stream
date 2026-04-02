@@ -40,7 +40,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
     const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist');
 
-    if (isProblematic) {
+    if (isProblematic || isHls) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
       return { processedUrl: proxied, type: isHls ? 'hls' : 'video' }
     }
@@ -78,7 +78,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => {
               // BLINDAGEM M3U8: Força todos os fragmentos (.ts) a passarem pelo proxy se necessário
-              if (processedUrl.includes('/api/proxy') && !requestUrl.includes('/api/proxy')) {
+              if (!requestUrl.includes('/api/proxy') && (processedUrl.includes('/api/proxy') || requestUrl.includes('blinder.space') || requestUrl.includes('jmvstream'))) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxyUrl, true);
               }
@@ -97,6 +97,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               else { hls.destroy(); setError(true); setLoading(false); }
             }
           });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          // Fallback para Safari/iOS
+          video.src = processedUrl;
+          video.play().catch(() => {});
+          setLoading(false);
         }
       } else {
         video.src = processedUrl;
