@@ -88,7 +88,7 @@ export async function incrementViews(id: string) {
   } catch (e) {}
 }
 
-export async function getTopContent(limit = 5): Promise<ContentItem[]> {
+export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
     return data || [];
@@ -97,14 +97,20 @@ export async function getTopContent(limit = 5): Promise<ContentItem[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    const { error } = await supabase.from('content').upsert({
+    // BLINDAGEM MESTRE: Garante que o ID nunca seja vazio para não dar erro de banco
+    const finalItem = {
       ...item,
+      id: item.id && item.id !== "" ? item.id : "leo_" + Math.random().toString(36).substring(2, 10),
       title: item.title.toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
       views: item.views || 0
-    });
+    };
+
+    const { error } = await supabase.from('content').upsert(finalItem);
+    if (error) console.error("Erro Supabase Save:", error);
     return !error;
   } catch (e) { 
+    console.error("Erro Fatal Save:", e);
     return false; 
   }
 }
@@ -147,7 +153,7 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
       if (current.title) {
         await saveContent({ 
           ...current, 
-          id: "leo_" + Math.random().toString(36).substring(7), 
+          id: "", // Deixa o saveContent gerar o ID soberano
           streamUrl: line.trim(), 
           description: "Importado via M3U Master",
           views: 0
@@ -226,9 +232,7 @@ export async function getTotalContentCount() {
 
 export async function generateM3UPlaylist(pin: string) {
   const allContent = await getRemoteContent();
-  // FILTRAGEM M3U: Apenas quem tem Link Secundário (IPTV)
   const content = allContent.filter(i => !!i.directStreamUrl);
-  
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {

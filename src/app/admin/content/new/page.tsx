@@ -15,7 +15,7 @@ import { saveContent, Season, Episode, ContentType, cleanName } from "@/lib/stor
 import Link from "next/link"
 import Image from "next/image"
 
-function NewContentForm() {
+export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   
@@ -38,7 +38,7 @@ function NewContentForm() {
     setLoading(true)
     
     const success = await saveContent({
-      id: "", 
+      id: "", // O store.ts vai gerar o ID soberano automaticamente
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
@@ -57,14 +57,14 @@ function NewContentForm() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+      toast({ variant: "destructive", title: "ERRO DE BANCO", description: "Verifique o sinal do banco de dados." })
     }
   }
 
   const addEpisode = (seasonId?: string) => {
     const nextNum = seasonId ? (seasons.find(s => s.id === seasonId)?.episodes.length || 0) + 1 : episodes.length + 1;
     const newEp: Episode = {
-      id: "ep_" + Date.now() + Math.random().toString(36).substring(2, 7),
+      id: "ep_" + Date.now() + Math.random().toString(36).substring(7),
       title: `Episódio ${nextNum}`,
       number: nextNum,
       streamUrl: "",
@@ -128,13 +128,13 @@ function NewContentForm() {
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
                     <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
+                    <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
                     <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
                     <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
-                    <SelectItem value="LÉO TV MUSICAS">LÉO TV MUSICAS</SelectItem>
-                    <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -261,8 +261,4 @@ function NewContentForm() {
       </form>
     </div>
   )
-}
-
-export default function NewContentPage() {
-  return <NewContentForm />
 }
