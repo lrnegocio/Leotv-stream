@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -23,7 +24,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v900: Extração Cirúrgica de IDs Complexos (kabo...)
+    // SNIPER v1000: Extração Cirúrgica de IDs Complexos (XVideos, Pornhub, Dailymotion)
     if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
@@ -76,8 +77,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
+      // BLINDAGEM v2000: Força o uso do Túnel Master para domínios que bloqueiam HTTP ou CORS
       const useProxy = processedUrl.includes('jmvstream') || 
                        processedUrl.includes('chunklist') ||
+                       processedUrl.includes('blinder.space') ||
                        processedUrl.includes('.ts') ||
                        processedUrl.includes('.m3u8') ||
                        processedUrl.includes('archive.org');

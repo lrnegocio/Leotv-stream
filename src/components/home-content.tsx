@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -15,11 +16,11 @@ const CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
+  { id: 'MUSICAS', name: 'LÉO TV MÚSICAS', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV MÚSICAS' },
   { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Laugh, color: 'bg-yellow-400', genre: 'LÉO TV PIADAS' },
   { id: 'REELS', name: 'LÉO TV REELS', icon: Play, color: 'bg-pink-500', genre: 'LÉO TV REELS', restricted: true },
   { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
-  { id: 'CLIPS', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
   { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
   { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
@@ -73,8 +74,11 @@ export default function HomeContent() {
 
   const handleItemClick = (idx: number) => {
     const item = content[idx];
-    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-    else setActiveVideo({ items: content, index: idx });
+    if (item.type === 'series' || item.type === 'multi-season') {
+      setSelectedSeries(item);
+    } else {
+      setActiveVideo({ items: content, index: idx });
+    }
   };
 
   const handleEpisodeClick = (ep: Episode, parent: ContentItem) => {
@@ -119,7 +123,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v1900.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v2000.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">

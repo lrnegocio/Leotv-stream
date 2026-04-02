@@ -1,10 +1,11 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v90.0 - MOTOR DE STREAMING SOBERANO (ANTI-500)
- * Blindagem total para Partial Content e redirecionamentos infinitos.
+ * TÚNEL MASTER v2000.0 - MOTOR DE STREAMING SOBERANO (ANTI-ERRO 500)
+ * Blindagem total para links HTTP (Blinder Space) e sinais bloqueados (JMVStream).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,13 +19,16 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // CAMUFLAGEM MASTER v90 - Simula um navegador real de alta performance
+    // CAMUFLAGEM MASTER v2000 - Simula um navegador real de alta performance
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
+    // TRATAMENTO DE REFERRER PARA DOMÍNIOS ESPECÍFICOS
     if (targetUrl.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
+    } else if (targetUrl.includes('jmvstream')) {
+      requestHeaders.set('Origin', 'https://cdn.live.br1.jmvstream.com');
     }
 
     const res = await fetch(targetUrl, { 
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
     });
 
     const responseHeaders = new Headers();
-    const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+    const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
     
     headersToCopy.forEach(h => {
       const v = res.headers.get(h);
@@ -53,6 +57,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
   } catch (error: any) {
+    console.error("Falha no Túnel Master:", error.message);
     return new NextResponse("Falha Sniper 206", { status: 500 });
   }
 }
