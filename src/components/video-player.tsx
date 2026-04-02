@@ -4,7 +4,6 @@
 import * as React from "react"
 import { Loader2, AlertTriangle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { incrementViews } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -25,6 +24,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim().replace('pt.pornhub', 'www.pornhub')
 
+    // SNIPER v500: Detecção de IDs alfanuméricos complexos para Embeds
     if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)\//i);
       const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split(/[.?/]/)[0] : null;
@@ -32,7 +32,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     if (urlStr.includes('dailymotion.com')) {
-      const vidId = urlStr.split('/video/')[1]?.split(/[?#&]/)[0];
+      // Suporte para links normais e /video/x...
+      const vidId = urlStr.split('/video/')[1]?.split(/[?#&]/)[0] || urlStr.split('/embed/video/')[1]?.split(/[?#&]/)[0];
       if (vidId) return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
@@ -62,23 +63,29 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   };
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || type === 'iframe') {
-      if (type === 'iframe') setLoading(false);
+    if (!processedUrl) return;
+    if (type === 'iframe') {
+      setLoading(false);
       return;
     }
+
     const video = videoRef.current;
+    if (!video) return;
+
     let hls: any = null;
 
     const init = async () => {
       setLoading(true);
       setError(false);
       
+      // PROXY MASTER 206: Força passagem pelo túnel para sinais diretos e Archive.org
       const useProxy = processedUrl.includes('phncdn.com') || 
                        processedUrl.includes('xvideos') || 
                        processedUrl.includes('archive.org') ||
                        processedUrl.includes('jmvstream.com') ||
                        processedUrl.includes('.ts') ||
-                       processedUrl.includes('.mp4');
+                       processedUrl.includes('.mp4') ||
+                       processedUrl.includes('.m3u8');
 
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
@@ -97,7 +104,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
             video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
             setLoading(false); 
-            if (id) incrementViews(id);
           });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
@@ -113,7 +119,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.load();
         video.play().then(() => {
           setLoading(false);
-          if (id) incrementViews(id);
         }).catch(() => {
           video.muted = true;
           video.play().catch(() => {});
@@ -124,7 +129,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     init();
     return () => { if (hls) hls.destroy(); if (video) { video.pause(); video.src = ""; video.load(); } };
-  }, [processedUrl, type, id]);
+  }, [processedUrl, type]);
 
   return (
     <div 
@@ -150,7 +155,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       )}
 
       {type === 'iframe' ? (
-        <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay" onLoad={() => setLoading(false)} />
+        <iframe 
+          src={processedUrl!} 
+          className="w-full h-full border-0" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media; picture-in-picture" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
         <video 
           ref={videoRef} 

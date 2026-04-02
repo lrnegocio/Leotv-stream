@@ -25,7 +25,6 @@ export interface ContentItem {
   isRestricted: boolean; 
   streamUrl: string; 
   imageUrl?: string;
-  views?: number;
   seasons?: Season[] | null; 
   episodes?: Episode[] | null; 
   created_at?: string;
@@ -80,10 +79,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
   }
 }
 
-export async function incrementViews(id: string) {
-  return;
-}
-
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
@@ -95,6 +90,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
+    // BLINDAGEM MESTRE: Enviando apenas o que existe no banco (Removido 'views')
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -103,9 +99,9 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "",
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
-      streamUrl: item.streamUrl || "",
-      episodes: item.episodes || null,
-      seasons: item.seasons || null
+      streamUrl: (item.type === 'movie' || item.type === 'channel') ? (item.streamUrl || "") : "",
+      episodes: (item.type === 'series') ? (item.episodes || []) : null,
+      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
 
     const { error } = await supabase.from('content').upsert(payload);

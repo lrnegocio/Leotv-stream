@@ -116,6 +116,7 @@ export default function UserManagementPage() {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
+  // BUSCA INTELIGENTE v1500: Combina Filtro de Expiração + Pesquisa de Texto
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();

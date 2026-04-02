@@ -78,6 +78,7 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
+    // BLINDAGEM v1500: Unifica lógica de gravação para Series ou Canais
     const success = await saveContent({
       ...formData,
       episodes: (formData.type === 'series') ? episodes : null,
@@ -96,6 +97,8 @@ export default function EditContentPage() {
   if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando Banco Master Léo TV...</p></div>
 
   if (!formData) return null;
+
+  const isSeries = formData.type === 'series' || formData.type === 'multi-season';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -158,7 +161,7 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          {(formData.type === 'channel' || formData.type === 'movie') && (
+          {!isSeries && (
             <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master</h3>
