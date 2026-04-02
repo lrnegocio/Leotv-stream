@@ -24,7 +24,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v1000: Extração Cirúrgica de IDs Complexos (XVideos, Pornhub, Dailymotion)
+    // SNIPER v2100: Extração de IDs Alfanuméricos para XVideos (Blindado contra tela branca)
     if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
@@ -46,7 +46,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1`, type: 'iframe' }
     }
 
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('jmvstream');
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('jmvstream') || urlStr.includes('blinder.space/live');
     return { 
       processedUrl: urlStr, 
       type: isHls ? 'hls' : (urlStr.includes('.mp4') || urlStr.includes('.ts') ? 'video' : 'iframe')
@@ -77,20 +77,20 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
-      // BLINDAGEM v2000: Força o uso do Túnel Master para domínios que bloqueiam HTTP ou CORS
+      // BLINDAGEM v2100: Força o uso do Túnel Master para domínios HTTP ou CORS problemáticos
       const useProxy = processedUrl.includes('jmvstream') || 
-                       processedUrl.includes('chunklist') ||
                        processedUrl.includes('blinder.space') ||
+                       processedUrl.includes('archive.org') ||
                        processedUrl.includes('.ts') ||
-                       processedUrl.includes('.m3u8') ||
-                       processedUrl.includes('archive.org');
+                       processedUrl.includes('.m3u8');
 
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
+            // LOGICA MASTER: Cada pedaço (.ts) do m3u8 deve passar pelo proxy para evitar Mixed Content
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              if (useProxy) {
+              if (useProxy && !requestUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxyUrl, true);
               }

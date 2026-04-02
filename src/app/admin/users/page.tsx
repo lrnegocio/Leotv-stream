@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -118,6 +119,7 @@ export default function UserManagementPage() {
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
       const isExpiring = days !== null && days >= 0 && days <= 3;
+      // Se tiver termo de busca, prioriza ele dentro dos expirados
       return matchesSearch && isExpiring;
     }
     return matchesSearch;
