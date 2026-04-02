@@ -62,17 +62,22 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
+        // BLOQUEIO TOTAL MESTRE LÉO - VERSÃO SOBERANA
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
           if (
             e.keyCode === 123 || 
             (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
-            (e.ctrlKey && e.keyCode === 85)
+            (e.ctrlKey && e.keyCode === 85) ||
+            (e.ctrlKey && e.shiftKey && e.keyCode === 67)
           ) {
             e.preventDefault();
             return false;
           }
         });
+
+        // DESATIVA SELEÇÃO DE TEXTO
+        document.onselectstart = () => false;
       })();
     `}} />
   );

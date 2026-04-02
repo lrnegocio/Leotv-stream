@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -15,14 +15,44 @@ const CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
-  { id: 'MUSICAS', name: 'LÉO TV MÚSICAS', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV MÚSICAS' },
+  { id: 'CLIPES', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
   { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Laugh, color: 'bg-yellow-400', genre: 'LÉO TV PIADAS' },
   { id: 'REELS', name: 'LÉO TV REELS', icon: Play, color: 'bg-pink-500', genre: 'LÉO TV REELS', restricted: true },
   { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
   { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
   { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
+  { id: 'GAMES', name: 'GAMES RETRO', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
+]
+
+const RETRO_CONSOLES = [
+  { name: "SUPER NINTENDO", icon: "🎮", games: [
+    { name: "Super Mario World", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html" },
+    { name: "Donkey Kong Country", url: "https://www.retrogames.cc/embed/18852-donkey-kong-country-usa.html" },
+    { name: "Mortal Kombat 3", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" },
+    { name: "Street Fighter II Turbo", url: "https://www.retrogames.cc/embed/17468-street-fighter-ii-turbo-usa.html" }
+  ]},
+  { name: "PLAYSTATION 1", icon: "💿", games: [
+    { name: "Resident Evil 3", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
+    { name: "Crash Bandicoot", url: "https://www.retrogames.cc/embed/41723-crash-bandicoot-usa.html" },
+    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41730-winning-eleven-2002-japan.html" }
+  ]},
+  { name: "MEGA DRIVE", icon: "🕹️", games: [
+    { name: "Sonic The Hedgehog", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-usa-europe.html" },
+    { name: "Street of Rage", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-usa-europe.html" }
+  ]},
+  { name: "ARCADE / MAME", icon: "👾", games: [
+    { name: "Metal Slug", url: "https://www.retrogames.cc/embed/9264-metal-slug-super-vehicle-001.html" },
+    { name: "King of Fighters 98", url: "https://www.retrogames.cc/embed/9265-the-king-of-fighters-98-the-slugfest.html" },
+    { name: "Cadillacs and Dinosaurs", url: "https://www.retrogames.cc/embed/9266-cadillacs-and-dinosaurs-world.html" }
+  ]},
+  { name: "GAMES MODERNOS (WEB)", icon: "🌐", games: [
+    { name: "Counter-Strike Global", url: "https://v6p9d9t4.ssl.hwcdn.net/html/1671333/index.html" },
+    { name: "GTA V Legacy", url: "https://www.game-oldies.com/system/playstation/grand-theft-auto-ps1" },
+    { name: "Crazy Taxi", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
+    { name: "Sinuca Master", url: "https://games.atribuna.com.br/jogos/8ballpool/" }
+  ]}
 ]
 
 export default function HomeContent() {
@@ -32,16 +62,21 @@ export default function HomeContent() {
   const [loading, setLoading] = React.useState(true)
   const [selectedCat, setSelectedCat] = React.useState<string | null>(null)
   const [isPinOpen, setIsPinOpen] = React.useState(false)
+  const [isGamesPinOpen, setIsGamesPinOpen] = React.useState(false)
   const [pinInput, setPinInput] = React.useState("")
+  const [gamesPinInput, setGamesPinInput] = React.useState("")
   const [parentalPin, setParentalPin] = React.useState("1234")
   const [announcement, setAnnouncement] = React.useState("")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [pendingCategory, setPendingCategory] = React.useState<string | null>(null)
+  const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
+  const [activeGameUrl, setActiveGameUrl] = React.useState<string | null>(null)
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
+  const channelId = searchParams.get('id') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     setLoading(true);
@@ -61,18 +96,37 @@ export default function HomeContent() {
       const filtered = data.filter(item => !!item.streamUrl || (item.type === 'series' && item.episodes?.length) || (item.type === 'multi-season' && item.seasons?.length));
       setContent(filtered);
 
+      // AUTO-PLAY VIA ID NA URL
+      if (channelId && filtered.length > 0) {
+        const targetIdx = filtered.findIndex(i => i.id === channelId);
+        if (targetIdx !== -1) {
+          const item = filtered[targetIdx];
+          if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
+          else setActiveVideo({ items: filtered, index: targetIdx });
+        }
+      }
+
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
-        for (const cat of CATEGORIES) { counts[cat.id] = await getCategoryCount(cat.genre); }
+        for (const cat of CATEGORIES) { if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); }
         setCatCounts(counts);
       }
     } catch (err) { } finally { setLoading(false); }
-  }, [router]);
+  }, [router, channelId]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
+  const updateUrlWithId = (id: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set('id', id);
+    else params.delete('id');
+    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  };
+
   const handleItemClick = (idx: number) => {
     const item = content[idx];
+    updateUrlWithId(item.id);
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
     } else {
@@ -81,12 +135,12 @@ export default function HomeContent() {
   };
 
   const handleEpisodeClick = (ep: Episode, parent: ContentItem) => {
-    // Carregar todos os episódios da série para que as setas funcionem
     const episodesToPlay = parent.episodes || parent.seasons?.flatMap(s => s.episodes) || [];
     const contentItems = episodesToPlay.map(e => ({
       ...parent,
       streamUrl: e.streamUrl,
-      title: `${parent.title} - EP ${e.number} ${e.title}`
+      title: `${parent.title} - EP ${e.number} ${e.title}`,
+      id: e.id // Atualiza o ID para o episódio
     }));
     const startIndex = episodesToPlay.findIndex(e => e.id === ep.id);
     setActiveVideo({ items: contentItems, index: startIndex });
@@ -97,10 +151,20 @@ export default function HomeContent() {
     let nextIdx = direction === 'next' ? activeVideo.index + 1 : activeVideo.index - 1;
     if (nextIdx < 0) nextIdx = activeVideo.items.length - 1;
     if (nextIdx >= activeVideo.items.length) nextIdx = 0;
+    const nextItem = activeVideo.items[nextIdx];
+    updateUrlWithId(nextItem.id);
     setActiveVideo({ ...activeVideo, index: nextIdx });
   }
 
   const handleCategoryClick = (cat: any) => {
+    if (cat.special === 'games') {
+      if (!user?.isGamesEnabled) {
+        toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Games." });
+        return;
+      }
+      setIsGamesPinOpen(true);
+      return;
+    }
     if (cat.restricted && !user?.isAdultEnabled) {
       setPendingCategory(cat.id);
       setIsPinOpen(true);
@@ -114,6 +178,17 @@ export default function HomeContent() {
     } else { toast({ variant: "destructive", title: "PIN INCORRETO" }); setPinInput(""); }
   };
 
+  const verifyGamesPin = () => {
+    if (gamesPinInput === user?.gamesPassword) {
+      setIsGamesPinOpen(false);
+      setGamesPinInput("");
+      setGamesMenuOpen(true);
+    } else {
+      toast({ variant: "destructive", title: "SENHA DE GAMES INVÁLIDA" });
+      setGamesPinInput("");
+    }
+  };
+
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
 
   return (
@@ -121,9 +196,9 @@ export default function HomeContent() {
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
-            <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
+            <Button variant="ghost" onClick={() => { setSelectedCat(null); updateUrlWithId(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v2400.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v2500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -176,7 +251,61 @@ export default function HomeContent() {
         )}
       </main>
 
-      <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
+      {/* MODAL GAMES RETRO */}
+      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); setActiveGameUrl(null); } }}>
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
+          <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Gamepad2 className="h-8 w-8 text-emerald-500" />
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500">Léo Retro Games Master</h2>
+            </div>
+            <Button variant="ghost" onClick={() => { setActiveGameUrl(null); if(!activeGameUrl) setGamesMenuOpen(false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 bg-black/40 custom-scroll scrollbar-visible">
+            {activeGameUrl ? (
+              <iframe src={activeGameUrl} className="w-full h-full rounded-2xl border-0" allowFullScreen />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {RETRO_CONSOLES.map((console) => (
+                  <div key={console.name} className="space-y-4">
+                    <div className="flex items-center gap-3 border-l-4 border-emerald-500 pl-4">
+                      <span className="text-2xl">{console.icon}</span>
+                      <h3 className="font-black text-lg uppercase">{console.name}</h3>
+                    </div>
+                    <div className="grid gap-2">
+                      {console.games.map((game) => (
+                        <Button key={game.name} variant="outline" onClick={() => setActiveGameUrl(game.url)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[10px]">
+                          {game.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOGS DE SEGURANÇA */}
+      <Dialog open={isGamesPinOpen} onOpenChange={setIsGamesPinOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
+          <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
+          <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Games</div>
+          <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGamesPin()} autoFocus />
+          <Button onClick={verifyGamesPin} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR GAMES</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
+          <Lock className="h-16 w-16 text-primary mx-auto mb-6" /><div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Master</div>
+          <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} autoFocus />
+          <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20">DESBLOQUEAR ACESSO</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedSeries} onOpenChange={(val) => { if(!val) { setSelectedSeries(null); updateUrlWithId(null); } }}>
         <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
           {selectedSeries && (
             <div className="flex flex-col h-[85vh]">
@@ -209,17 +338,9 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
+      <Dialog open={!!activeVideo} onOpenChange={(val) => { if(!val) { setActiveVideo(null); updateUrlWithId(null); } }}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={() => navigateChannel('next')} onPrev={() => navigateChannel('prev')} />}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
-        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
-          <Lock className="h-16 w-16 text-primary mx-auto mb-6" /><div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Master</div>
-          <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPin()} autoFocus />
-          <Button onClick={verifyPin} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20">DESBLOQUEAR ACESSO</Button>
         </DialogContent>
       </Dialog>
     </div>

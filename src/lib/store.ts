@@ -41,6 +41,8 @@ export interface User {
   activeDevices: any[]; 
   isBlocked: boolean;
   isAdultEnabled: boolean; 
+  isGamesEnabled: boolean;
+  gamesPassword?: string;
   resellerId?: string; 
   activatedAt?: string;
   individualMessage?: string;
@@ -80,7 +82,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    // Sintonização v2400: Ordem alfabética como prioridade se não houver views
     const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -90,7 +91,6 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM v2400: Remove coluna 'views' para evitar erro PGRST204
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -105,13 +105,9 @@ export async function saveContent(item: Partial<ContentItem>) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase saveContent:", JSON.stringify(error));
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e: any) { 
-    console.error("Erro fatal saveContent:", e);
     return false; 
   }
 }
@@ -177,7 +173,6 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    // BLINDAGEM v2400: Garante que individualMessage seja gravado
     const { error } = await supabase.from('users').upsert({
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
@@ -188,6 +183,8 @@ export async function saveUser(user: User) {
       activeDevices: user.activeDevices,
       isBlocked: user.isBlocked,
       isAdultEnabled: user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      gamesPassword: user.gamesPassword || "",
       resellerId: user.resellerId,
       activatedAt: user.activatedAt,
       individualMessage: (user.individualMessage || "").trim()
@@ -205,7 +202,7 @@ export async function removeUser(id: string) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true } };
+  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin" } };
   const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
   if (!user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };

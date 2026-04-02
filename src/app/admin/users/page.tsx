@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Bell, MessageSquare, Clock, AlertTriangle } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -28,6 +28,8 @@ export default function UserManagementPage() {
     tier: "monthly" as SubscriptionTier,
     screens: "1",
     isAdultEnabled: false,
+    isGamesEnabled: false,
+    gamesPassword: "",
     individualMessage: ""
   })
 
@@ -78,6 +80,8 @@ export default function UserManagementPage() {
       activeDevices: existingUser?.activeDevices || [],
       isBlocked: existingUser?.isBlocked || false,
       isAdultEnabled: !!newUser.isAdultEnabled,
+      isGamesEnabled: !!newUser.isGamesEnabled,
+      gamesPassword: newUser.gamesPassword || "",
       activatedAt: existingUser?.activatedAt || "",
       individualMessage: newUser.individualMessage.trim()
     }
@@ -105,18 +109,19 @@ export default function UserManagementPage() {
       tier: user.subscriptionTier, 
       screens: user.maxScreens.toString(), 
       isAdultEnabled: !!user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      gamesPassword: user.gamesPassword || "",
       individualMessage: user.individualMessage || ""
     });
     setIsDialogOpen(true);
   }
 
-  // BUSCA INTELIGENTE v2400: Prioriza a busca mesmo com filtros ligados
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    if (searchTerm) return matchesSearch; // Se estiver digitando, ignora filtro de expiração
+    if (searchTerm) return matchesSearch; 
 
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
@@ -130,13 +135,13 @@ export default function UserManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle Soberano de PINs</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Mensagens VIP.</p>
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Games Ala Carte.</p>
         </div>
         <div className="flex gap-2">
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
-           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, gamesPassword: "", individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
@@ -161,7 +166,7 @@ export default function UserManagementPage() {
               <TableRow className="border-white/5 h-14">
                 <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VALIDADE</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">TELAS / ADULTO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">SISTEMAS</TableHead>
                 <TableHead className="uppercase text-[10px] font-black text-center">MSG VIP</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
               </TableRow>
@@ -182,10 +187,12 @@ export default function UserManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-black uppercase opacity-40">{u.maxScreens} TELA(S)</p>
-                        <Badge className={`uppercase text-[8px] font-black ${u.isAdultEnabled ? 'bg-primary/20 text-primary' : 'bg-muted opacity-40'}`}>
-                          {u.isAdultEnabled ? 'ADULTO LIBERADO' : 'ADULTO BLOQUEADO'}
+                      <div className="flex flex-col gap-1">
+                        <Badge className={`uppercase text-[8px] font-black ${u.isAdultEnabled ? 'bg-red-500/20 text-red-500' : 'bg-muted opacity-40'}`}>
+                          {u.isAdultEnabled ? 'ADULTO LIB' : 'ADULTO BLOQ'}
+                        </Badge>
+                        <Badge className={`uppercase text-[8px] font-black ${u.isGamesEnabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-muted opacity-40'}`}>
+                          {u.isGamesEnabled ? 'GAMES LIB' : 'GAMES BLOQ'}
                         </Badge>
                       </div>
                     </TableCell>
@@ -231,13 +238,28 @@ export default function UserManagementPage() {
               </div>
               <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Telas</Label><Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" /></div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-red-500" /><span className="text-[10px] font-black uppercase">Adulto</span></div>
+                <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
+              </div>
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2"><Gamepad2 className="h-4 w-4 text-emerald-500" /><span className="text-[10px] font-black uppercase">Games</span></div>
+                <Switch checked={newUser.isGamesEnabled} onCheckedChange={v => setNewUser({...newUser, isGamesEnabled: v})} />
+              </div>
+            </div>
+
+            {newUser.isGamesEnabled && (
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black text-emerald-500">Senha Exclusiva Games (Diferente do Adulto)</Label>
+                <Input value={newUser.gamesPassword} onChange={e => setNewUser({...newUser, gamesPassword: e.target.value})} placeholder="EX: 9988" className="bg-black/40 border-white/5 h-12 font-black text-center tracking-[0.5em]" />
+              </div>
+            )}
+
             <div className="space-y-2">
                <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP (Bloco de Notas)</Label>
-               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura vence hoje, entre em contato." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
-            </div>
-            <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-primary" /><span className="text-[10px] font-black uppercase">Adulto</span></div>
-              <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura vence hoje..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
           </div>
           <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS'}</Button></DialogFooter>
