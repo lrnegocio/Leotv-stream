@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase, BarChart3 } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase, BarChart3, Gamepad2 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -49,6 +48,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   <Link href="/admin/content">
                     <Film className="h-5 w-5 text-secondary" />
                     <span className="font-bold uppercase text-xs tracking-widest">Canais & Filmes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/admin/games">
+                    <Gamepad2 className="h-5 w-5 text-emerald-500" />
+                    <span className="font-bold uppercase text-xs tracking-widest">Arena de Games</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

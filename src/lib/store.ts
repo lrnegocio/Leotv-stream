@@ -46,6 +46,15 @@ export interface User {
   resellerId?: string; 
   activatedAt?: string;
   individualMessage?: string;
+  gamePoints?: number;
+}
+
+export interface GameRanking {
+  pin: string;
+  points: number;
+  victories: number;
+  draws: number;
+  losses: number;
 }
 
 export interface Reseller {
@@ -62,6 +71,39 @@ export interface Reseller {
   birthDate?: string;
 }
 
+// CONTAGEM DE PONTOS MASTER: Vitória 10, Empate 3, Derrota -5
+export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
+  try {
+    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
+    let currentPoints = user?.gamePoints || 0;
+    
+    if (result === 'win') currentPoints += 10;
+    else if (result === 'draw') currentPoints += 3;
+    else if (result === 'loss') currentPoints = Math.max(0, currentPoints - 5);
+
+    await supabase.from('users').update({ gamePoints: currentPoints }).eq('pin', pin.toUpperCase());
+    return true;
+  } catch (e) { return false; }
+}
+
+export async function getGameRankings(): Promise<GameRanking[]> {
+  try {
+    const { data } = await supabase.from('users')
+      .select('pin, gamePoints')
+      .gt('gamePoints', 0)
+      .order('gamePoints', { ascending: false })
+      .limit(50);
+    
+    return (data || []).map(u => ({
+      pin: u.pin,
+      points: u.gamePoints || 0,
+      victories: Math.floor((u.gamePoints || 0) / 10), // Estimativa visual
+      draws: 0,
+      losses: 0
+    }));
+  } catch (e) { return []; }
+}
+
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -75,22 +117,12 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
       isRestricted: !!i.isRestricted,
       title: (i.title || "").toUpperCase()
     }));
-  } catch (e) { 
-    return []; 
-  }
-}
-
-export async function getTopContent(limit = 10): Promise<ContentItem[]> {
-  try {
-    const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
-    return data || [];
   } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -103,13 +135,9 @@ export async function saveContent(item: Partial<ContentItem>) {
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
-
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) return false;
-    return true;
-  } catch (e: any) { 
-    return false; 
-  }
+    return !error;
+  } catch (e: any) { return false; }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
@@ -189,11 +217,8 @@ export async function saveUser(user: User) {
       activatedAt: user.activatedAt,
       individualMessage: (user.individualMessage || "").trim()
     });
-    if (error) return false;
-    return true;
-  } catch (e: any) {
-    return false;
-  }
+    return !error;
+  } catch (e: any) { return false; }
 }
 
 export async function removeUser(id: string) {
@@ -202,7 +227,7 @@ export async function removeUser(id: string) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin" } };
+  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
   const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
   if (!user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };

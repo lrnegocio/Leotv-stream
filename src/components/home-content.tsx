@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Send, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -22,36 +22,35 @@ const CATEGORIES = [
   { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
   { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
   { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
-  { id: 'GAMES', name: 'GAMES RETRO', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
+  { id: 'GAMES', name: 'ARENA GAMES RETRO', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
-const RETRO_CONSOLES = [
-  { name: "SUPER NINTENDO", icon: "🎮", games: [
+const CONSOLES = [
+  { name: "MASTER SYSTEM", icon: "🕹️", games: [
+    { name: "Alex Kidd in Miracle World", url: "https://www.retrogames.cc/embed/29166-alex-kidd-in-miracle-world-usa-europe.html" },
+    { name: "Sonic The Hedgehog (MS)", url: "https://www.retrogames.cc/embed/29167-sonic-the-hedgehog-usa-europe.html" },
+    { name: "Shinobi", url: "https://www.retrogames.cc/embed/29168-shinobi-usa-europe.html" }
+  ]},
+  { name: "MEGA DRIVE", icon: "🌀", games: [
+    { name: "Sonic 2", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-usa-europe.html" },
+    { name: "Street of Rage 2", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-usa-europe.html" }
+  ]},
+  { name: "SUPER NINTENDO", icon: "🔴", games: [
     { name: "Super Mario World", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html" },
     { name: "Donkey Kong Country", url: "https://www.retrogames.cc/embed/18852-donkey-kong-country-usa.html" },
-    { name: "Mortal Kombat 3", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" },
-    { name: "Street Fighter II Turbo", url: "https://www.retrogames.cc/embed/17468-street-fighter-ii-turbo-usa.html" }
+    { name: "Mortal Kombat 3", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" }
   ]},
-  { name: "PLAYSTATION 1", icon: "💿", games: [
-    { name: "Resident Evil 3", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
-    { name: "Crash Bandicoot", url: "https://www.retrogames.cc/embed/41723-crash-bandicoot-usa.html" },
-    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41730-winning-eleven-2002-japan.html" }
+  { name: "ARENA MULTIPLAYER (WEB)", icon: "⚔️", games: [
+    { name: "Counter-Strike Web", url: "https://v6p9d9t4.ssl.hwcdn.net/html/1671333/index.html" },
+    { name: "Crazy Taxi Arcade", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
+    { name: "Alien vs Predator", url: "https://www.retrogames.cc/embed/9264-alien-vs-predator-world.html" }
   ]},
-  { name: "MEGA DRIVE", icon: "🕹️", games: [
-    { name: "Sonic The Hedgehog", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-usa-europe.html" },
-    { name: "Street of Rage", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-usa-europe.html" }
-  ]},
-  { name: "ARCADE / MAME", icon: "👾", games: [
-    { name: "Metal Slug", url: "https://www.retrogames.cc/embed/9264-metal-slug-super-vehicle-001.html" },
-    { name: "King of Fighters 98", url: "https://www.retrogames.cc/embed/9265-the-king-of-fighters-98-the-slugfest.html" },
-    { name: "Cadillacs and Dinosaurs", url: "https://www.retrogames.cc/embed/9266-cadillacs-and-dinosaurs-world.html" }
-  ]},
-  { name: "GAMES MODERNOS (WEB)", icon: "🌐", games: [
-    { name: "Counter-Strike Global", url: "https://v6p9d9t4.ssl.hwcdn.net/html/1671333/index.html" },
-    { name: "GTA V Legacy", url: "https://www.game-oldies.com/system/playstation/grand-theft-auto-ps1" },
-    { name: "Crazy Taxi", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
-    { name: "Sinuca Master", url: "https://games.atribuna.com.br/jogos/8ballpool/" }
+  { name: "CLÁSSICOS (BOT / PVP)", icon: "♟️", games: [
+    { name: "Xadrez Master", url: "https://www.sparkchess.com/play-chess-online.html" },
+    { name: "Damas Online", url: "https://www.247checkers.com/" },
+    { name: "Sinuca 8 Ball", url: "https://games.atribuna.com.br/jogos/8ballpool/" },
+    { name: "Dominó Master", url: "https://www.coolmathgames.com/0-dominoes" }
   ]}
 ]
 
@@ -70,8 +69,15 @@ export default function HomeContent() {
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [pendingCategory, setPendingCategory] = React.useState<string | null>(null)
+  
+  // ESTADOS DA ARENA GAMES
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
-  const [activeGameUrl, setActiveGameUrl] = React.useState<string | null>(null)
+  const [activeGame, setActiveGame] = React.useState<{name: string, url: string} | null>(null)
+  const [gameRankings, setGameRankings] = React.useState<GameRanking[]>([])
+  const [opponent, setOpponent] = React.useState<{pin: string, rank: number} | null>(null)
+  const [chatMessages, setChatMessages] = React.useState<{pin: string, msg: string}[]>([])
+  const [chatInput, setChatInput] = React.useState("")
+  const [searchingOpponent, setSearchingOpponent] = React.useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -96,7 +102,6 @@ export default function HomeContent() {
       const filtered = data.filter(item => !!item.streamUrl || (item.type === 'series' && item.episodes?.length) || (item.type === 'multi-season' && item.seasons?.length));
       setContent(filtered);
 
-      // AUTO-PLAY VIA ID NA URL
       if (channelId && filtered.length > 0) {
         const targetIdx = filtered.findIndex(i => i.id === channelId);
         if (targetIdx !== -1) {
@@ -111,6 +116,11 @@ export default function HomeContent() {
         for (const cat of CATEGORIES) { if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); }
         setCatCounts(counts);
       }
+
+      // CARREGA RANKINGS
+      const ranks = await getGameRankings();
+      setGameRankings(ranks);
+
     } catch (err) { } finally { setLoading(false); }
   }, [router, channelId]);
 
@@ -127,11 +137,8 @@ export default function HomeContent() {
   const handleItemClick = (idx: number) => {
     const item = content[idx];
     updateUrlWithId(item.id);
-    if (item.type === 'series' || item.type === 'multi-season') {
-      setSelectedSeries(item);
-    } else {
-      setActiveVideo({ items: content, index: idx });
-    }
+    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
+    else setActiveVideo({ items: content, index: idx });
   };
 
   const handleEpisodeClick = (ep: Episode, parent: ContentItem) => {
@@ -140,7 +147,7 @@ export default function HomeContent() {
       ...parent,
       streamUrl: e.streamUrl,
       title: `${parent.title} - EP ${e.number} ${e.title}`,
-      id: e.id // Atualiza o ID para o episódio
+      id: e.id
     }));
     const startIndex = episodesToPlay.findIndex(e => e.id === ep.id);
     setActiveVideo({ items: contentItems, index: startIndex });
@@ -159,7 +166,7 @@ export default function HomeContent() {
   const handleCategoryClick = (cat: any) => {
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
-        toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Games." });
+        toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Arena Games." });
         return;
       }
       setIsGamesPinOpen(true);
@@ -187,6 +194,52 @@ export default function HomeContent() {
       toast({ variant: "destructive", title: "SENHA DE GAMES INVÁLIDA" });
       setGamesPinInput("");
     }
+  };
+
+  // LÓGICA DE ARENA MULTIPLAYER SNIPER
+  const startMatch = (game: {name: string, url: string}) => {
+    setSearchingOpponent(true);
+    setOpponent(null);
+    setChatMessages([]);
+    
+    setTimeout(() => {
+      const myPoints = user?.gamePoints || 0;
+      // FILTRO DE ELITE: Busca oponente com rank próximo (+/- 50) ou se for Admin
+      const possibleOpponents = gameRankings.filter(r => 
+        r.pin !== user?.pin && 
+        (user?.role === 'admin' || Math.abs(r.points - myPoints) <= 50)
+      );
+
+      if (possibleOpponents.length > 0) {
+        const selected = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
+        setOpponent({ pin: selected.pin, rank: gameRankings.indexOf(selected) + 1 });
+        toast({ title: "OPONENTE LOCALIZADO!", description: `Desafiando: ${selected.pin}` });
+      } else {
+        setOpponent({ pin: "ROBÔ LÉO TV", rank: 999 });
+        toast({ title: "SINAL DE ROBÔ ATIVO", description: "Nenhum combatente do seu nível online. Treine com a IA!" });
+      }
+      
+      setActiveGame(game);
+      setSearchingOpponent(false);
+    }, 2000);
+  };
+
+  const sendChatMessage = () => {
+    if (!chatInput.trim() || !user) return;
+    setChatMessages(prev => [...prev, { pin: user.pin, msg: chatInput }]);
+    setChatInput("");
+  };
+
+  const finishGame = async (result: 'win' | 'draw' | 'loss') => {
+    if (!user) return;
+    const success = await updateGameScore(user.pin, result);
+    if (success) {
+      toast({ title: result === 'win' ? "VITÓRIA SUPREMA! +10 PTS" : "COMBATE ENCERRADO" });
+      const ranks = await getGameRankings();
+      setGameRankings(ranks);
+    }
+    setActiveGame(null);
+    setOpponent(null);
   };
 
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
@@ -251,38 +304,131 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* MODAL GAMES RETRO */}
-      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); setActiveGameUrl(null); } }}>
+      {/* MODAL ARENA GAMES MASTER */}
+      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); setActiveGame(null); } }}>
         <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500">Léo Retro Games Master</h2>
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer</h2>
             </div>
-            <Button variant="ghost" onClick={() => { setActiveGameUrl(null); if(!activeGameUrl) setGamesMenuOpen(false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
+            <div className="flex items-center gap-6">
+               <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
+                  <Trophy className="h-4 w-4 text-yellow-500" />
+                  <span className="text-[10px] font-black uppercase text-yellow-500">Seu Rank: #{gameRankings.findIndex(r => r.pin === user?.pin) + 1 || '--'} | {user?.gamePoints || 0} Pts</span>
+               </div>
+               <Button variant="ghost" onClick={() => { setActiveGame(null); if(!activeGame) setGamesMenuOpen(false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-8 bg-black/40 custom-scroll scrollbar-visible">
-            {activeGameUrl ? (
-              <iframe src={activeGameUrl} className="w-full h-full rounded-2xl border-0" allowFullScreen />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {RETRO_CONSOLES.map((console) => (
-                  <div key={console.name} className="space-y-4">
-                    <div className="flex items-center gap-3 border-l-4 border-emerald-500 pl-4">
-                      <span className="text-2xl">{console.icon}</span>
-                      <h3 className="font-black text-lg uppercase">{console.name}</h3>
+          
+          <div className="flex-1 flex overflow-hidden bg-black/40">
+            {/* LISTA DE CONSOLES E GAMES */}
+            <div className={`w-80 border-r border-white/5 p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
+               <h3 className="text-[10px] font-black uppercase text-emerald-500 mb-6 tracking-widest italic">Consoles de Elite</h3>
+               <div className="space-y-8">
+                  {CONSOLES.map(console => (
+                    <div key={console.name} className="space-y-3">
+                       <div className="flex items-center gap-2 text-xs font-black uppercase opacity-40"><span>{console.icon}</span> {console.name}</div>
+                       <div className="grid gap-2">
+                          {console.games.map(game => (
+                            <Button key={game.name} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">
+                               {game.name}
+                            </Button>
+                          ))}
+                       </div>
                     </div>
-                    <div className="grid gap-2">
-                      {console.games.map((game) => (
-                        <Button key={game.name} variant="outline" onClick={() => setActiveGameUrl(game.url)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[10px]">
-                          {game.name}
-                        </Button>
-                      ))}
+                  ))}
+               </div>
+            </div>
+
+            {/* ÁREA DE JOGO E CHAT */}
+            <div className="flex-1 relative flex flex-col">
+               {activeGame ? (
+                 <div className="flex-1 flex flex-col">
+                    <div className="h-14 bg-black/60 flex items-center justify-between px-6 border-b border-white/5">
+                       <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                             <span className="text-[10px] font-black uppercase text-primary">{user?.pin}</span>
+                          </div>
+                          <span className="text-white opacity-20">VS</span>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-black uppercase text-emerald-500">{opponent?.pin}</span>
+                             <span className="text-[8px] font-bold opacity-40">RANK #{opponent?.rank}</span>
+                          </div>
+                       </div>
+                       <div className="flex gap-2">
+                          <Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button>
+                          <Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button>
+                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
+                    
+                    {/* CHAT DE ARENA */}
+                    <div className="h-40 bg-black/80 border-t border-white/5 p-4 flex flex-col">
+                       <div className="flex-1 overflow-y-auto mb-2 space-y-1">
+                          {chatMessages.map((m, i) => (
+                            <p key={i} className="text-[9px] font-bold">
+                               <span className={m.pin === user?.pin ? 'text-primary' : 'text-emerald-500'}>{m.pin}:</span> {m.msg}
+                            </p>
+                          ))}
+                       </div>
+                       <div className="flex gap-2">
+                          <input 
+                            value={chatInput} 
+                            onChange={e => setChatInput(e.target.value)} 
+                            onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
+                            placeholder="Mande um recado..." 
+                            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 text-[10px] font-bold outline-none focus:border-emerald-500" 
+                          />
+                          <Button size="icon" onClick={sendChatMessage} className="bg-emerald-600 h-10 w-10 rounded-lg"><Send className="h-4 w-4" /></Button>
+                       </div>
+                    </div>
+                 </div>
+               ) : (
+                 <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                    {searchingOpponent ? (
+                      <div className="space-y-6 animate-pulse">
+                         <Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" />
+                         <h3 className="text-2xl font-black uppercase italic text-emerald-500">Buscando Oponente...</h3>
+                         <p className="text-[10px] font-bold uppercase opacity-40">Sintonizando sinal de combate nível Sniper.</p>
+                      </div>
+                    ) : (
+                      <div className="max-w-md space-y-8">
+                         <Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-4" />
+                         <h3 className="text-4xl font-black uppercase italic tracking-tighter leading-none">Arena dos Melhores</h3>
+                         <p className="text-xs font-bold uppercase opacity-40 leading-relaxed">Escolha um console ao lado para iniciar um duelo. Somente os melhores sobem no ranking global do Mestre Léo.</p>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
+                               <p className="text-2xl font-black text-emerald-500">#{gameRankings.length}</p>
+                               <p className="text-[8px] font-black uppercase opacity-40">Players Ativos</p>
+                            </div>
+                            <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
+                               <p className="text-2xl font-black text-primary">{user?.gamePoints || 0}</p>
+                               <p className="text-[8px] font-black uppercase opacity-40">Seus Pontos</p>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+                 </div>
+               )}
+            </div>
+
+            {/* RANKING LATERAL */}
+            <div className="w-72 border-l border-white/5 p-6 overflow-y-auto custom-scroll hidden xl:block">
+               <h3 className="text-[10px] font-black uppercase text-yellow-500 mb-6 tracking-widest italic">Top Guerreiros</h3>
+               <div className="space-y-4">
+                  {gameRankings.slice(0, 10).map((r, i) => (
+                    <div key={r.pin} className={`flex items-center gap-3 p-3 rounded-2xl border ${r.pin === user?.pin ? 'bg-primary/10 border-primary/30' : 'bg-white/5 border-white/5'}`}>
+                       <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-[10px] font-black italic">{i+1}</div>
+                       <div className="flex-1">
+                          <p className="text-[10px] font-black uppercase truncate">{r.pin}</p>
+                          <p className="text-[8px] font-bold text-emerald-500">{r.points} PONTOS</p>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -291,9 +437,9 @@ export default function HomeContent() {
       <Dialog open={isGamesPinOpen} onOpenChange={setIsGamesPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Games</div>
+          <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Arena</div>
           <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGamesPin()} autoFocus />
-          <Button onClick={verifyGamesPin} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR GAMES</Button>
+          <Button onClick={verifyGamesPin} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR ARENA</Button>
         </DialogContent>
       </Dialog>
 
