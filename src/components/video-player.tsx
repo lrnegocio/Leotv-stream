@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -24,11 +23,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim().replace('pt.pornhub', 'www.pornhub')
 
-    // SNIPER v600: Detecção ultra-agressiva de IDs alfanuméricos (ex: kabopuh3e7b)
+    // SNIPER v700: Extração Cirúrgica de IDs (ex: video.kabopuh3e7b ou /video69ccea0dd6223/)
     if (urlStr.includes('xvideos.com')) {
-      const match = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)\//i);
-      const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split(/[.?/]/)[0] : null;
-      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
+      // Tenta capturar ID após "video." ou após "/video"
+      const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
+      const vidId = match ? match[1] : null;
+      if (vidId) {
+        return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
+      }
     }
 
     if (urlStr.includes('dailymotion.com')) {
@@ -77,12 +79,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
+      // BLINDAGEM v700: Força Proxy em sinais de rede protegida (JMVStream, XVideos Assets, M3U8)
       const useProxy = processedUrl.includes('phncdn.com') || 
                        processedUrl.includes('xvideos') || 
-                       processedUrl.includes('archive.org') ||
                        processedUrl.includes('jmvstream.com') ||
                        processedUrl.includes('.ts') ||
-                       processedUrl.includes('.mp4') ||
                        processedUrl.includes('.m3u8');
 
       if (type === 'hls' && (window as any).Hls) {
