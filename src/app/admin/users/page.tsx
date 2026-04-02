@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -119,7 +118,7 @@ export default function UserManagementPage() {
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
       const isExpiring = days !== null && days >= 0 && days <= 3;
-      // Se tiver termo de busca, prioriza ele dentro dos expirados
+      // SNIPER v2200: A busca agora funciona junto com o filtro de expiração
       return matchesSearch && isExpiring;
     }
     return matchesSearch;

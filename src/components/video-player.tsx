@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -24,7 +23,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v2100: Extração de IDs Alfanuméricos para XVideos (Blindado contra tela branca)
+    // SNIPER v2200: Suporte para players externos (webplayer.one)
+    if (urlStr.includes('webplayer.one')) {
+      return { processedUrl: urlStr, type: 'iframe' }
+    }
+
     if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
@@ -46,7 +49,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1`, type: 'iframe' }
     }
 
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('jmvstream') || urlStr.includes('blinder.space/live');
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('jmvstream') || urlStr.includes('blinder.space');
     return { 
       processedUrl: urlStr, 
       type: isHls ? 'hls' : (urlStr.includes('.mp4') || urlStr.includes('.ts') ? 'video' : 'iframe')
@@ -77,18 +80,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
-      // BLINDAGEM v2100: Força o uso do Túnel Master para domínios HTTP ou CORS problemáticos
-      const useProxy = processedUrl.includes('jmvstream') || 
-                       processedUrl.includes('blinder.space') ||
-                       processedUrl.includes('archive.org') ||
-                       processedUrl.includes('.ts') ||
-                       processedUrl.includes('.m3u8');
+      const useProxy = processedUrl.includes('blinder.space') || 
+                       processedUrl.includes('jmvstream') || 
+                       processedUrl.includes('.m3u8') || 
+                       processedUrl.includes('.ts');
 
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
-            // LOGICA MASTER: Cada pedaço (.ts) do m3u8 deve passar pelo proxy para evitar Mixed Content
             xhrSetup: (xhr: any, requestUrl: string) => { 
               if (useProxy && !requestUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
@@ -115,13 +115,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
-        video.play().then(() => {
-          setLoading(false);
-        }).catch(() => {
-          video.muted = true;
-          video.play().catch(() => {});
-          setLoading(false);
-        });
+        video.play().then(() => { setLoading(false); }).catch(() => { video.muted = true; video.play().catch(() => {}); setLoading(false); });
       }
     };
 
@@ -130,11 +124,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [processedUrl, type]);
 
   return (
-    <div 
-      onMouseMove={handleUserInteraction}
-      onTouchStart={handleUserInteraction}
-      className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl"
-    >
+    <div onMouseMove={handleUserInteraction} onTouchStart={handleUserInteraction} className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl">
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -153,37 +143,17 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       )}
 
       {type === 'iframe' ? (
-        <iframe 
-          src={processedUrl!} 
-          className="w-full h-full border-0" 
-          allowFullScreen 
-          allow="autoplay; encrypted-media; picture-in-picture" 
-          onLoad={() => setLoading(false)} 
-        />
+        <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay; encrypted-media; picture-in-picture" onLoad={() => setLoading(false)} />
       ) : (
-        <video 
-          ref={videoRef} 
-          className="w-full h-full object-contain" 
-          autoPlay 
-          playsInline 
-          controls={false} 
-          crossOrigin="anonymous" 
-        />
+        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={false} crossOrigin="anonymous" />
       )}
 
       {!loading && !error && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
-            className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn">
             <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
           </button>
-          
-          <button 
-            onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
-            className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn">
             <ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" />
           </button>
         </div>
