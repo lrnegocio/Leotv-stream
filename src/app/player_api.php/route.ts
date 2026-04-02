@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v600.0 - BUSCA SOBERANA MULTI-CAMPO
+  // XEQUE-MATE IPTV v800.0 - BUSCA SOBERANA MULTI-CAMPO (INDISTRUTÍVEL)
   const username = searchParams.get('username')?.trim() || searchParams.get('user')?.trim() || ""; 
   const password = searchParams.get('password')?.trim() || searchParams.get('pass')?.trim() || "";
   const action = searchParams.get('action');
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // Testa o PIN em todos os campos possíveis para garantir login em qualquer app (v600)
+    // Varredura Total: O PIN pode estar em qualquer campo enviado pelo App de TV
     const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
@@ -43,13 +43,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ 
         user_info: { 
           auth: 0, 
-          status: "Invalid Username or Password", 
-          message: "PIN não localizado ou sinal bloqueado." 
+          status: "Acesso Negado", 
+          message: "PIN Soberano não localizado ou bloqueado." 
         } 
       }, { headers });
     }
 
-    // Retorno de Sucesso Soberano
     if (!action) {
       return NextResponse.json({
         user_info: {

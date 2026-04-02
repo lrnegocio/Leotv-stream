@@ -27,6 +27,7 @@ export interface ContentItem {
   streamUrl?: string; 
   directStreamUrl?: string; 
   imageUrl?: string;
+  views?: number;
   seasons?: Season[]; 
   episodes?: Episode[]; 
   created_at?: string;
@@ -62,9 +63,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * BUSCA ALFABÉTICA SOBERANA v38
- */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -75,11 +73,26 @@ export async function getRemoteContent(forceRefresh = false, searchQuery = "", c
     return (data || []).map(i => ({ 
       ...i, 
       isRestricted: i.isRestricted || false,
-      title: i.title.toUpperCase()
+      title: (i.title || "").toUpperCase()
     }));
   } catch (e) { 
     return []; 
   }
+}
+
+export async function incrementViews(id: string) {
+  try {
+    const { data: item } = await supabase.from('content').select('views').eq('id', id).single();
+    const newViews = (item?.views || 0) + 1;
+    await supabase.from('content').update({ views: newViews }).eq('id', id);
+  } catch (e) {}
+}
+
+export async function getTopContent(limit = 5): Promise<ContentItem[]> {
+  try {
+    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveContent(item: ContentItem) {
@@ -87,7 +100,8 @@ export async function saveContent(item: ContentItem) {
     const { error } = await supabase.from('content').upsert({
       ...item,
       title: item.title.toUpperCase().trim(),
-      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase()
+      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
+      views: item.views || 0
     });
     return !error;
   } catch (e) { 
@@ -135,7 +149,8 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
           ...current, 
           id: "leo_" + Math.random().toString(36).substring(7), 
           streamUrl: line.trim(), 
-          description: "Importado via M3U Master" 
+          description: "Importado via M3U Master",
+          views: 0
         });
         count++;
         if (count % 10 === 0) onProgress(`Sintonizando: ${count} sinais...`);
@@ -148,7 +163,7 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
 
 export async function getGlobalSettings() {
   const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return data?.value || { parentalPin: "1234" };
+  return data?.value || { parentalPin: "1234", announcement: "" };
 }
 
 export async function updateGlobalSettings(value: any) {
@@ -215,7 +230,7 @@ export async function generateM3UPlaylist(pin: string) {
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
     const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
-    m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${streamUrl}\n`;
+    m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
   });
   return m3u;
 }

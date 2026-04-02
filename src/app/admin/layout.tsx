@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
-import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase } from "lucide-react"
+import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase, BarChart3 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
 
@@ -27,7 +28,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <Sidebar className="border-r border-white/5 shadow-xl bg-card">
           <SidebarHeader className="p-6">
             <Link href="/admin" className="flex items-center gap-3 group">
-              <div className="bg-primary p-2 rounded-lg group-hover:scale-110 transition-transform">
+              <div className="bg-primary p-2 rounded-lg group-hover:scale-110 transition-transform shadow-lg shadow-primary/20">
                 <Tv className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold text-primary font-headline uppercase tracking-tighter italic text-[14px]">Léo Admin</span>
@@ -48,6 +49,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   <Link href="/admin/content">
                     <Film className="h-5 w-5 text-secondary" />
                     <span className="font-bold uppercase text-xs tracking-widest">Canais & Filmes</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/admin/stats">
+                    <BarChart3 className="h-5 w-5 text-yellow-500" />
+                    <span className="font-bold uppercase text-xs tracking-widest">Estatísticas</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -78,7 +87,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-white/5">
-            <SidebarMenuButton asChild className="text-destructive hover:bg-destructive/10 h-12 rounded-xl">
+            <SidebarMenuButton asChild className="text-destructive hover:bg-destructive/10 h-12 rounded-xl transition-all">
               <Link href="/login">
                 <LogOut className="h-5 w-5" />
                 <span className="font-bold uppercase text-xs tracking-widest">Sair</span>
@@ -96,7 +105,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+              <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-white/5 shadow-inner">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-white shadow-lg">L</div>
                 <span className="text-[10px] font-bold uppercase tracking-widest">Mestre Léo</span>
               </div>
