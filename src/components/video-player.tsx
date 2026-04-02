@@ -23,9 +23,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v15.0 - MOTOR DE DETECÇÃO SOBERANO
+    // SINTONIZADOR SNIPER v20.0 - MOTOR DE DETECÇÃO SOBERANO (EMBED MASTER)
     
-    // XVideos Sniper (Suporte a IDs Alfanuméricos Novos)
+    // XVideos Sniper
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
       const id = match ? (match[1] || match[0]).replace('video.', '').replace('/', '') : null;
@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     // Dailymotion Sniper
     if (u.includes('dailymotion.com')) {
       const id = u.split('/video/')[1]?.split(/[?#&]/)[0];
-      if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}`, type: 'iframe', originalUrl: u }
+      if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
     // Pornhub Sniper
@@ -189,15 +189,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Canal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido ou Fonte Incompatível</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">Tente abrir externamente para verificar o link original.</p>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Recusado pela Fonte Original</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">Tente abrir o link original em outra aba.</p>
           <div className="flex gap-4 mt-6">
             <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Recalibrar</Button>
             <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
@@ -231,13 +231,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           </div>
 
           <div className="flex items-center justify-center gap-16">
-            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5">
+            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5" title="Voltar 10s">
               <RotateCcw className="h-10 w-10 text-white" />
             </button>
             <button onClick={(e) => togglePlay(e)} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)]">
               {isPlaying ? <Pause className="h-12 w-12 text-white" fill="currentColor" /> : <Play className="h-12 w-12 text-white ml-2" fill="currentColor" />}
             </button>
-            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5">
+            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5" title="Avançar 10s">
               <RotateCw className="h-10 w-10 text-white" />
             </button>
           </div>

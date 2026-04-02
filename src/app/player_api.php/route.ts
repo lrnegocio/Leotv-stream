@@ -13,8 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v501.0 - BUSCA SOBERANA
-  // O sistema agora aceita o PIN em qualquer um dos campos (username ou password)
+  // XEQUE-MATE IPTV v502.0 - BUSCA SOBERANA DUAL
   const username = searchParams.get('username')?.trim() || ""; 
   const password = searchParams.get('password')?.trim() || "";
   const action = searchParams.get('action');
@@ -24,8 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // Testa o PIN nos dois campos para garantir que o app logue de qualquer forma
-    // Alguns apps de TV enviam o PIN no campo de senha (password)
+    // Testa o PIN nos dois campos para garantir login em qualquer app (v502)
     const pinsToTry = [username, password].filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
@@ -46,7 +44,7 @@ export async function GET(req: NextRequest) {
         user_info: { 
           auth: 0, 
           status: "Invalid Username or Password", 
-          message: "Mestre, este PIN não foi localizado ou está bloqueado." 
+          message: "PIN não localizado ou sinal bloqueado." 
         } 
       }, { headers });
     }
@@ -85,7 +83,7 @@ export async function GET(req: NextRequest) {
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
-        name: i.title, 
+        name: i.title.toUpperCase(), 
         stream_id: i.id, 
         stream_icon: i.imageUrl || "", 
         category_id: "1", 
@@ -103,7 +101,7 @@ export async function GET(req: NextRequest) {
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
-        name: i.title, 
+        name: i.title.toUpperCase(), 
         stream_id: i.id, 
         stream_icon: i.imageUrl || "", 
         category_id: "100", 

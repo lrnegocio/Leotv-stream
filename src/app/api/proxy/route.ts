@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v20.0 - MOTOR DE STREAMING REAL 206
+ * TÚNEL MASTER v25.0 - MOTOR DE STREAMING REAL 206
  * Suporte total a Partial Content para permitir "seek" (avançar/voltar).
  * Blindagem total contra Erro de Conexão Recusada.
  */
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Headers', 'Range, Content-Type');
 
     // Se o navegador pediu Range, o status DEVE ser 206 para permitir seek
-    const status = range ? 206 : res.status;
+    const status = (range && res.status === 200) ? 206 : res.status;
 
     return new NextResponse(res.body, {
       status: status,
