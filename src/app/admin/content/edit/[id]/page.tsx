@@ -78,9 +78,11 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
-    // BLINDAGEM v1500: Unifica lógica de gravação para Series ou Canais
+    // BLINDAGEM: Unifica lógica de gravação para Series ou Canais
+    const isSeries = formData.type === 'series' || formData.type === 'multi-season';
     const success = await saveContent({
       ...formData,
+      streamUrl: isSeries ? "" : formData.streamUrl,
       episodes: (formData.type === 'series') ? episodes : null,
       seasons: (formData.type === 'multi-season') ? seasons : null,
     })

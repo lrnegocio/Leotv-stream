@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -7,6 +8,7 @@ export interface Episode {
   title: string; 
   number: number; 
   streamUrl: string; 
+  directStreamUrl?: string;
 }
 
 export interface Season { 
@@ -23,6 +25,7 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl: string; 
+  directStreamUrl?: string;
   imageUrl?: string;
   seasons?: Season[] | null; 
   episodes?: Episode[] | null; 
@@ -53,9 +56,6 @@ export interface User {
 export interface GameRanking {
   pin: string;
   points: number;
-  victories: number;
-  draws: number;
-  losses: number;
 }
 
 export interface Reseller {
@@ -72,15 +72,15 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// RANKING DE AUDIÊNCIA (Build Fix)
+// RANKING DE AUDIÊNCIA
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
-    return (data || []).map(i => ({ ...i, views: 0 })); // Fallback seguro
+    const { data } = await supabase.from('content').select('*').limit(limit);
+    return (data || []).map(i => ({ ...i, views: i.views || 0 }));
   } catch (e) { return []; }
 }
 
-// CONTAGEM DE PONTOS MASTER: Vitória 10, Empate 3, Derrota -5
+// ATUALIZAÇÃO DE PONTOS DA ARENA
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
     const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
@@ -105,10 +105,7 @@ export async function getGameRankings(): Promise<GameRanking[]> {
     
     return (data || []).map(u => ({
       pin: u.pin,
-      points: u.gamePoints || 0,
-      victories: Math.floor((u.gamePoints || 0) / 10),
-      draws: 0,
-      losses: 0
+      points: u.gamePoints || 0
     }));
   } catch (e) { return []; }
 }
@@ -132,6 +129,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
+    const isSeries = item.type === 'series' || item.type === 'multi-season';
+    
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -140,7 +139,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "",
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
-      streamUrl: item.streamUrl || "",
+      streamUrl: isSeries ? "" : (item.streamUrl || ""),
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
@@ -224,7 +223,8 @@ export async function saveUser(user: User) {
       gamesPassword: user.gamesPassword || "",
       resellerId: user.resellerId,
       activatedAt: user.activatedAt,
-      individualMessage: (user.individualMessage || "").trim()
+      individualMessage: (user.individualMessage || "").trim(),
+      gamePoints: user.gamePoints || 0
     });
     return !error;
   } catch (e: any) { return false; }

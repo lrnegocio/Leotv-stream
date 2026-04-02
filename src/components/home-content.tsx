@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -117,7 +118,6 @@ export default function HomeContent() {
         setCatCounts(counts);
       }
 
-      // CARREGA RANKINGS
       const ranks = await getGameRankings();
       setGameRankings(ranks);
 
@@ -196,7 +196,6 @@ export default function HomeContent() {
     }
   };
 
-  // LÓGICA DE ARENA MULTIPLAYER SNIPER
   const startMatch = (game: {name: string, url: string}) => {
     setSearchingOpponent(true);
     setOpponent(null);
@@ -204,7 +203,6 @@ export default function HomeContent() {
     
     setTimeout(() => {
       const myPoints = user?.gamePoints || 0;
-      // FILTRO DE ELITE: Busca oponente com rank próximo (+/- 50) ou se for Admin
       const possibleOpponents = gameRankings.filter(r => 
         r.pin !== user?.pin && 
         (user?.role === 'admin' || Math.abs(r.points - myPoints) <= 50)
@@ -212,7 +210,7 @@ export default function HomeContent() {
 
       if (possibleOpponents.length > 0) {
         const selected = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
-        setOpponent({ pin: selected.pin, rank: gameRankings.indexOf(selected) + 1 });
+        setOpponent({ pin: selected.pin, rank: gameRankings.findIndex(r => r.pin === selected.pin) + 1 });
         toast({ title: "OPONENTE LOCALIZADO!", description: `Desafiando: ${selected.pin}` });
       } else {
         setOpponent({ pin: "ROBÔ LÉO TV", rank: 999 });
@@ -251,7 +249,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); updateUrlWithId(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v2500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v3200.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -304,7 +302,6 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* MODAL ARENA GAMES MASTER */}
       <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); setActiveGame(null); } }}>
         <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
@@ -322,7 +319,6 @@ export default function HomeContent() {
           </div>
           
           <div className="flex-1 flex overflow-hidden bg-black/40">
-            {/* LISTA DE CONSOLES E GAMES */}
             <div className={`w-80 border-r border-white/5 p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
                <h3 className="text-[10px] font-black uppercase text-emerald-500 mb-6 tracking-widest italic">Consoles de Elite</h3>
                <div className="space-y-8">
@@ -341,7 +337,6 @@ export default function HomeContent() {
                </div>
             </div>
 
-            {/* ÁREA DE JOGO E CHAT */}
             <div className="flex-1 relative flex flex-col">
                {activeGame ? (
                  <div className="flex-1 flex flex-col">
@@ -364,7 +359,6 @@ export default function HomeContent() {
                     </div>
                     <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
                     
-                    {/* CHAT DE ARENA */}
                     <div className="h-40 bg-black/80 border-t border-white/5 p-4 flex flex-col">
                        <div className="flex-1 overflow-y-auto mb-2 space-y-1">
                           {chatMessages.map((m, i) => (
@@ -414,7 +408,6 @@ export default function HomeContent() {
                )}
             </div>
 
-            {/* RANKING LATERAL */}
             <div className="w-72 border-l border-white/5 p-6 overflow-y-auto custom-scroll hidden xl:block">
                <h3 className="text-[10px] font-black uppercase text-yellow-500 mb-6 tracking-widest italic">Top Guerreiros</h3>
                <div className="space-y-4">
@@ -433,7 +426,6 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOGS DE SEGURANÇA */}
       <Dialog open={isGamesPinOpen} onOpenChange={setIsGamesPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react"
@@ -83,7 +84,8 @@ export default function UserManagementPage() {
       isGamesEnabled: !!newUser.isGamesEnabled,
       gamesPassword: newUser.gamesPassword || "",
       activatedAt: existingUser?.activatedAt || "",
-      individualMessage: newUser.individualMessage.trim()
+      individualMessage: newUser.individualMessage.trim(),
+      gamePoints: existingUser?.gamePoints || 0
     }
 
     if (await saveUser(userData)) {
@@ -121,6 +123,9 @@ export default function UserManagementPage() {
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
+    // BLINDAGEM DE BUSCA: Se estiver pesquisando, ignora o filtro de expiração para achar o PIN
+    if (searchStr.length > 0) return matchesSearch;
+
     let matchesFilter = true;
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
