@@ -2,23 +2,20 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, Zap, Globe } from "lucide-react"
+import { Loader2, AlertTriangle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { incrementViews } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
-  secondaryUrl?: string
   title: string
   id?: string
   onNext?: () => void
   onPrev?: () => void
 }
 
-export function VideoPlayer({ url, secondaryUrl, title, id, onNext, onPrev }: VideoPlayerProps) {
+export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
-  const [currentUrl, setCurrentUrl] = React.useState(url)
-  const [activeSignal, setActiveSignal] = React.useState<'web' | 'iptv'>('web')
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
@@ -56,22 +53,12 @@ export function VideoPlayer({ url, secondaryUrl, title, id, onNext, onPrev }: Vi
     }
   }, [])
 
-  const { processedUrl, type } = React.useMemo(() => sintonize(currentUrl), [currentUrl, sintonize])
+  const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
 
   const handleUserInteraction = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 4000);
-  };
-
-  const switchSignal = () => {
-    if (activeSignal === 'web' && secondaryUrl) {
-      setActiveSignal('iptv');
-      setCurrentUrl(secondaryUrl);
-    } else {
-      setActiveSignal('web');
-      setCurrentUrl(url);
-    }
   };
 
   React.useEffect(() => {
@@ -148,16 +135,16 @@ export function VideoPlayer({ url, secondaryUrl, title, id, onNext, onPrev }: Vi
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sniper v300.0...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master v900.0...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Sinal Snipper Offline</h3>
-          <Button variant="default" onClick={switchSignal} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6">
-            <RefreshCw className="mr-2 h-4 w-4" /> Tentar Sinal Alternativo
+          <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Sinal Offline</h3>
+          <Button variant="default" onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6">
+            <RefreshCw className="mr-2 h-4 w-4" /> Recarregar Sinal
           </Button>
         </div>
       )}
@@ -175,29 +162,6 @@ export function VideoPlayer({ url, secondaryUrl, title, id, onNext, onPrev }: Vi
         />
       )}
 
-      {/* CONTROLES DE SINAL (TOP) */}
-      <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-50 flex gap-2 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <Button 
-          variant={activeSignal === 'web' ? 'default' : 'outline'} 
-          size="sm" 
-          onClick={() => { setActiveSignal('web'); setCurrentUrl(url); }}
-          className={`h-9 px-6 rounded-full font-black text-[9px] uppercase border-white/10 ${activeSignal === 'web' ? 'bg-primary text-white shadow-xl' : 'bg-black/40 text-white hover:bg-white/10'}`}
-        >
-          <Globe className="h-3 w-3 mr-2" /> Sinal Web
-        </Button>
-        {secondaryUrl && (
-          <Button 
-            variant={activeSignal === 'iptv' ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={() => { setActiveSignal('iptv'); setCurrentUrl(secondaryUrl); }}
-            className={`h-9 px-6 rounded-full font-black text-[9px] uppercase border-white/10 ${activeSignal === 'iptv' ? 'bg-primary text-white shadow-xl' : 'bg-black/40 text-white hover:bg-white/10'}`}
-          >
-            <Zap className="h-3 w-3 mr-2" /> Sinal IPTV
-          </Button>
-        )}
-      </div>
-
-      {/* NAVEGAÇÃO DE CANAIS (LATERAIS) */}
       {!loading && !error && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           <button 

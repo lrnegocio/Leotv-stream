@@ -8,7 +8,6 @@ export interface Episode {
   title: string; 
   number: number; 
   streamUrl: string; 
-  directStreamUrl?: string; 
 }
 
 export interface Season { 
@@ -25,7 +24,6 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl?: string; 
-  directStreamUrl?: string; 
   imageUrl?: string;
   views?: number;
   seasons?: Season[]; 
@@ -97,33 +95,33 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   } catch (e) { return []; }
 }
 
-export async function saveContent(item: ContentItem) {
+export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const id = (item.id && item.id.trim() !== "") ? item.id : "leo_" + Math.random().toString(36).substring(2, 12);
+    const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    const { data: existing } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-
-    const finalItem = {
+    const payload = {
       id,
-      title: (item.title || existing?.title || "NOVO SINAL").toUpperCase().trim(),
-      genre: (item.genre || existing?.genre || "LÉO TV AO VIVO").toUpperCase(),
-      type: item.type || existing?.type || 'channel',
-      description: item.description !== undefined ? item.description : (existing?.description || "Sinal Master Léo TV"),
-      imageUrl: item.imageUrl !== undefined ? item.imageUrl : (existing?.imageUrl || ""),
-      isRestricted: item.isRestricted !== undefined ? item.isRestricted : (existing?.isRestricted || false),
-      views: item.views !== undefined ? item.views : (existing?.views || 0),
-      streamUrl: (item.streamUrl !== undefined) ? item.streamUrl : (existing?.streamUrl || ""),
-      directStreamUrl: (item.directStreamUrl !== undefined) ? item.directStreamUrl : (existing?.directStreamUrl || ""),
-      episodes: item.episodes !== undefined ? item.episodes : (existing?.episodes || null),
-      seasons: item.seasons !== undefined ? item.seasons : (existing?.seasons || null),
-      created_at: item.created_at || existing?.created_at || new Date().toISOString()
+      title: (item.title || "NOVO SINAL").toUpperCase().trim(),
+      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
+      type: item.type || 'channel',
+      description: item.description || "Sinal Master Léo TV",
+      imageUrl: item.imageUrl || "",
+      isRestricted: !!item.isRestricted,
+      streamUrl: item.streamUrl || "",
+      views: item.views || 0,
+      episodes: item.episodes || null,
+      seasons: item.seasons || null,
+      created_at: item.created_at || new Date().toISOString()
     };
 
-    const { error } = await supabase.from('content').upsert(finalItem);
-    if (error) throw error;
+    const { error } = await supabase.from('content').upsert(payload);
+    if (error) {
+      console.error("Erro Supabase saveContent:", error);
+      throw error;
+    }
     return true;
   } catch (e) { 
-    console.error("Erro no saveContent:", e);
+    console.error("Erro fatal saveContent:", e);
     return false; 
   }
 }
@@ -164,9 +162,7 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
       if (current.title) {
         await saveContent({ 
           ...current, 
-          id: "", 
-          streamUrl: line.trim(), 
-          directStreamUrl: line.trim()
+          streamUrl: line.trim()
         });
         count++;
         if (count % 10 === 0) onProgress(`Sintonizando: ${count} sinais...`);
@@ -248,7 +244,7 @@ export async function generateM3UPlaylist(pin: string) {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
-    if (item.directStreamUrl) {
+    if (item.streamUrl) {
       const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
       m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
     }

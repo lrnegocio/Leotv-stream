@@ -13,7 +13,6 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v70.0 - BUSCA MULTI-CAMPO SOBERANA
   const username = (searchParams.get('username') || searchParams.get('user') || searchParams.get('u') || "").trim(); 
   const password = (searchParams.get('password') || searchParams.get('pass') || searchParams.get('p') || "").trim();
   const action = searchParams.get('action');
@@ -69,17 +68,15 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // ISOLAMENTO DE SINAIS MASTER: Na TV, só entra o que tem directStreamUrl (Link Secundário)
-    const remoteContent = await getRemoteContent(true);
-    const content = remoteContent;
+    const content = await getRemoteContent(true);
 
     if (action === 'get_live_categories') {
-      const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();
+      const cats = Array.from(new Set(content.filter(i => i.type === 'channel' && !!i.streamUrl).map(i => i.genre.toUpperCase()))).sort();
       return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 1).toString(), category_name: name, parent_id: "0" })), { headers });
     }
 
     if (action === 'get_live_streams') {
-      let items = content.filter(i => i.type === 'channel');
+      let items = content.filter(i => i.type === 'channel' && !!i.streamUrl);
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
@@ -92,12 +89,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (action === 'get_vod_categories') {
-      const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
+      const cats = Array.from(new Set(content.filter(i => i.type === 'movie' && !!i.streamUrl).map(i => i.genre.toUpperCase()))).sort();
       return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 100).toString(), category_name: name, parent_id: "0" })), { headers });
     }
 
     if (action === 'get_vod_streams') {
-      let items = content.filter(i => i.type === 'movie');
+      let items = content.filter(i => i.type === 'movie' && !!i.streamUrl);
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 

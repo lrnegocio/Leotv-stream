@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon, Zap } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,7 +25,6 @@ export default function NewContentPage() {
     genre: "LÉO TV AO VIVO", 
     description: "",
     streamUrl: "",
-    directStreamUrl: "",
     isRestricted: false,
     imageUrl: ""
   })
@@ -38,20 +37,16 @@ export default function NewContentPage() {
     if (!formData.title) return;
     setLoading(true)
     
-    // Motor de gravação Versão 400.0: Gera ID soberano antes do save
     const success = await saveContent({
-      id: "leo_" + Math.random().toString(36).substring(2, 12),
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
       description: formData.description,
       isRestricted: formData.isRestricted,
       streamUrl: formData.streamUrl,
-      directStreamUrl: formData.directStreamUrl,
       imageUrl: formData.imageUrl,
       episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : undefined,
       seasons: formData.type === 'multi-season' ? seasons : undefined,
-      created_at: new Date().toISOString()
     })
 
     if (success) {
@@ -62,30 +57,6 @@ export default function NewContentPage() {
       toast({ variant: "destructive", title: "ERRO DE BANCO", description: "O sistema gerou uma falha ao gravar o sinal." })
     }
   }
-
-  const addEpisode = (seasonId?: string) => {
-    const nextNum = seasonId ? (seasons.find(s => s.id === seasonId)?.episodes.length || 0) + 1 : episodes.length + 1;
-    const newEp: Episode = {
-      id: "ep_" + Date.now() + Math.random().toString(36).substring(7),
-      title: `Episódio ${nextNum}`,
-      number: nextNum,
-      streamUrl: "",
-      directStreamUrl: ""
-    };
-
-    if (seasonId) {
-      setSeasons(prev => prev.map(s => s.id === seasonId ? { ...s, episodes: [...s.episodes, newEp] } : s));
-    } else {
-      setEpisodes(prev => [...prev, newEp]);
-    }
-  }
-
-  const addSeason = () => {
-    const nextNum = seasons.length + 1;
-    setSeasons(prev => [...prev, { id: "sea_" + Date.now(), number: nextNum, episodes: [] }]);
-  }
-
-  const showMainStreamUrl = formData.type === 'channel' || formData.type === 'movie';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -150,20 +121,10 @@ export default function NewContentPage() {
 
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal (App Web)</h3>
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal (M3U8 / MP4 / WEB)</h3>
               <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
             </div>
-            <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (IPTV / Smart TV)</h3>
-              <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="Link .m3u8, .ts ou .mp4" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
-            </div>
           </div>
-
-          {(formData.type === 'series' || formData.type === 'multi-season') && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-               <p className="text-[10px] font-black text-primary uppercase opacity-60 italic">Nota: Para séries, preencha os links nos episódios abaixo.</p>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">

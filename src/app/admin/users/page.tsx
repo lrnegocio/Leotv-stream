@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage, getExpiryMessage } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -71,7 +71,7 @@ export default function UserManagementPage() {
     
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
-      pin: newUser.pin.toUpperCase(),
+      pin: newUser.pin.toUpperCase().trim(),
       role: 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || "",
@@ -117,8 +117,12 @@ export default function UserManagementPage() {
   }
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.pin.toLowerCase().includes(searchTerm.toLowerCase());
+    const pinStr = (u.pin || "").toLowerCase().trim();
+    const searchStr = searchTerm.toLowerCase().trim();
+    const matchesSearch = pinStr.includes(searchStr);
+    
     if (!filterExpiring) return matchesSearch;
+    
     const days = getExpiryDays(u.expiryDate);
     return matchesSearch && days !== null && days >= 0 && days <= 3;
   });
@@ -242,11 +246,11 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem VIP (Aparece no topo do App do Cliente)</Label>
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem VIP (Bloco de Notas / Individual)</Label>
                <Textarea 
                 value={newUser.individualMessage} 
                 onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} 
-                placeholder="Ex: Sua fatura vence amanhã! Clique aqui para renovar..." 
+                placeholder="Ex: Sua fatura está pendente, entre em contato..." 
                 className="bg-black/40 border-white/5 h-24 text-xs font-bold" 
                />
             </div>
