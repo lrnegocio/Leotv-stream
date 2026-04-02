@@ -17,6 +17,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [error, setError] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false) 
   const [isPlaying, setIsPlaying] = React.useState(true)
+  const playPromiseRef = React.useRef<Promise<void> | null>(null)
 
   const { processedUrl, type, originalUrl } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
@@ -54,6 +55,33 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   }, [url])
 
+  const safePlay = React.useCallback(async () => {
+    if (!videoRef.current) return;
+    try {
+      playPromiseRef.current = videoRef.current.play();
+      await playPromiseRef.current;
+      setIsPlaying(true);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error("Erro ao dar play:", err);
+        videoRef.current.muted = true;
+        setIsMuted(true);
+        videoRef.current.play().catch(() => {});
+      }
+    } finally {
+      playPromiseRef.current = null;
+    }
+  }, []);
+
+  const safePause = React.useCallback(async () => {
+    if (!videoRef.current) return;
+    if (playPromiseRef.current) {
+      await playPromiseRef.current;
+    }
+    videoRef.current.pause();
+    setIsPlaying(false);
+  }, []);
+
   React.useEffect(() => {
     if (!videoRef.current || !processedUrl || type === 'iframe') return;
     const video = videoRef.current;
@@ -63,7 +91,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setLoading(true);
       setError(false);
       
-      // Tenta iniciar com som (Mestre Léo v282)
       video.muted = false;
       setIsMuted(false);
 
@@ -80,7 +107,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls = new (window as any).Hls({
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              // MOTOR HLS SNIPER v12.0 - Força todos os segmentos pelo proxy
               if (isRestricted || requestUrl.includes('.ts') || requestUrl.includes('.m3u8')) {
                 if (!requestUrl.includes('/api/proxy')) {
                   xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
@@ -95,11 +121,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           hls.attachMedia(video);
           
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(() => {
-              video.muted = true;
-              setIsMuted(true);
-              video.play();
-            });
+            safePlay();
             setLoading(false);
           });
 
@@ -120,17 +142,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         const finalUrl = isRestricted ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
-        video.play().catch(() => {
-          video.muted = true;
-          setIsMuted(true);
-          video.play().catch(() => setError(true));
-        });
+        safePlay();
       }
     };
 
     init();
-    return () => { if (hls) hls.destroy(); };
-  }, [processedUrl, type, originalUrl])
+    return () => { 
+      if (hls) hls.destroy(); 
+      if (video) {
+        video.pause();
+        video.src = "";
+        video.load();
+      }
+    };
+  }, [processedUrl, type, originalUrl, safePlay])
 
   const toggleVolume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,11 +177,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (e) e.stopPropagation();
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
+        safePlay();
       } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
+        safePause();
       }
     }
   };
