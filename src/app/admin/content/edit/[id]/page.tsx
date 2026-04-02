@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -49,27 +49,39 @@ export default function EditContentPage() {
     load()
   }, [id, router])
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando Banco Master Léo TV...</p></div>
+  const addEpisode = () => {
+    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
+    setEpisodes([...episodes, newEp])
+  }
 
-  if (!formData) return null;
+  const removeEpisode = (eid: string) => setEpisodes(episodes.filter(e => e.id !== eid))
+
+  const addSeason = () => {
+    const newSeason: Season = { id: 'sea_' + Date.now(), number: seasons.length + 1, episodes: [] }
+    setSeasons([...seasons, newSeason])
+  }
+
+  const removeSeason = (sid: string) => setSeasons(seasons.filter(s => s.id !== sid))
+
+  const addEpisodeToSeason = (sid: string) => {
+    setSeasons(seasons.map(s => {
+      if (s.id === sid) {
+        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '' }
+        return { ...s, episodes: [...s.episodes, newEp] }
+      }
+      return s
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData) return
     setLoading(true)
     
-    // BLINDAGEM MESTRE: Somente os dados unificados e limpos
     const success = await saveContent({
-      id: formData.id,
-      title: formData.title,
-      type: formData.type,
-      genre: formData.genre,
-      description: formData.description,
-      streamUrl: formData.streamUrl,
-      imageUrl: formData.imageUrl,
-      isRestricted: !!formData.isRestricted,
-      views: formData.views,
-      episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : null,
-      seasons: formData.type === 'multi-season' ? seasons : null,
+      ...formData,
+      episodes: (formData.type === 'series') ? episodes : null,
+      seasons: (formData.type === 'multi-season') ? seasons : null,
     })
     
     if (success) {
@@ -77,9 +89,13 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR - VERIFIQUE O BANCO" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
     }
   }
+
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando Banco Master Léo TV...</p></div>
+
+  if (!formData) return null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -142,12 +158,109 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
-            <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master (Web & IPTV)</h3>
-              <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
+          {(formData.type === 'channel' || formData.type === 'movie') && (
+            <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
+              <div className="space-y-2">
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master</h3>
+                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
+              </div>
             </div>
-          </div>
+          )}
+
+          {formData.type === 'series' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase text-xs text-primary italic">Episódios da Série</h3>
+                <Button type="button" size="sm" onClick={addEpisode} className="bg-primary h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Adicionar Ep</Button>
+              </div>
+              <div className="grid gap-3">
+                {episodes.map((ep, idx) => (
+                  <div key={ep.id} className="p-4 bg-card/50 border border-white/5 rounded-xl flex gap-4 items-end">
+                    <div className="w-12 space-y-2 text-center">
+                      <Label className="text-[8px] font-black uppercase opacity-40">Num</Label>
+                      <Input type="number" value={ep.number} onChange={e => {
+                        const newEps = [...episodes]
+                        newEps[idx].number = parseInt(e.target.value) || 0
+                        setEpisodes(newEps)
+                      }} className="h-10 text-center font-black bg-black/40" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label className="text-[8px] font-black uppercase opacity-40">Título do Ep</Label>
+                      <Input value={ep.title} onChange={e => {
+                        const newEps = [...episodes]
+                        newEps[idx].title = e.target.value
+                        setEpisodes(newEps)
+                      }} className="h-10 bg-black/40" />
+                    </div>
+                    <div className="flex-[2] space-y-2">
+                      <Label className="text-[8px] font-black uppercase opacity-40">Link do Sinal</Label>
+                      <Input value={ep.streamUrl} onChange={e => {
+                        const newEps = [...episodes]
+                        newEps[idx].streamUrl = e.target.value
+                        setEpisodes(newEps)
+                      }} className="h-10 bg-black/40 font-mono text-[10px]" />
+                    </div>
+                    <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {formData.type === 'multi-season' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase text-xs text-primary italic">Temporadas Master</h3>
+                <Button type="button" size="sm" onClick={addSeason} className="bg-primary h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Adicionar Temp</Button>
+              </div>
+              <div className="space-y-8">
+                {seasons.map((season, sIdx) => (
+                  <div key={season.id} className="p-6 bg-card/50 border border-white/5 rounded-2xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Label className="uppercase text-[10px] font-black">Temp</Label>
+                        <Input type="number" value={season.number} onChange={e => {
+                          const newSeasons = [...seasons]
+                          newSeasons[sIdx].number = parseInt(e.target.value) || 0
+                          setSeasons(newSeasons)
+                        }} className="w-16 h-10 bg-black/40 text-center font-black" />
+                      </div>
+                      <div className="flex gap-2">
+                         <Button type="button" size="sm" onClick={() => addEpisodeToSeason(season.id)} className="bg-emerald-500 h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Add Ep na T{season.number}</Button>
+                         <Button type="button" variant="destructive" size="icon" onClick={() => removeSeason(season.id)} className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      {season.episodes.map((ep, eIdx) => (
+                        <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-2 rounded-lg">
+                           <Input type="number" value={ep.number} onChange={e => {
+                              const newSeasons = [...seasons]
+                              newSeasons[sIdx].episodes[eIdx].number = parseInt(e.target.value) || 0
+                              setSeasons(newSeasons)
+                           }} className="w-12 h-8 bg-black/40 text-[10px] font-black" />
+                           <Input value={ep.title} placeholder="Título do Ep" onChange={e => {
+                              const newSeasons = [...seasons]
+                              newSeasons[sIdx].episodes[eIdx].title = e.target.value
+                              setSeasons(newSeasons)
+                           }} className="flex-1 h-8 bg-black/40 text-[10px]" />
+                           <Input value={ep.streamUrl} placeholder="Link do Sinal" onChange={e => {
+                              const newSeasons = [...seasons]
+                              newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
+                              setSeasons(newSeasons)
+                           }} className="flex-[2] h-8 bg-black/40 text-[10px] font-mono" />
+                           <Button type="button" variant="ghost" size="icon" onClick={() => {
+                             const newSeasons = [...seasons]
+                             newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
+                             setSeasons(newSeasons)
+                           }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

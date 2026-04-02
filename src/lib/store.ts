@@ -81,13 +81,11 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 export async function incrementViews(id: string) {
-  // Desativado temporariamente para evitar erro de coluna inexistente no Supabase
   return;
 }
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    // Ordenando por título já que a coluna views não existe no schema
     const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -97,7 +95,6 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE V1300: Removida a coluna 'views' que não existe no banco
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -107,8 +104,8 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
-      episodes: Array.isArray(item.episodes) ? item.episodes : null,
-      seasons: Array.isArray(item.seasons) ? item.seasons : null
+      episodes: item.episodes || null,
+      seasons: item.seasons || null
     };
 
     const { error } = await supabase.from('content').upsert(payload);
@@ -187,7 +184,6 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    // BLINDAGEM MESTRE: Mensagem individual e PIN garantidos no salvamento
     const { error } = await supabase.from('users').upsert({
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
@@ -200,7 +196,7 @@ export async function saveUser(user: User) {
       isAdultEnabled: user.isAdultEnabled,
       resellerId: user.resellerId,
       activatedAt: user.activatedAt,
-      individualMessage: user.individualMessage || ""
+      individualMessage: (user.individualMessage || "").trim()
     });
     if (error) {
       console.error("Erro Supabase saveUser:", error.message);
@@ -208,7 +204,7 @@ export async function saveUser(user: User) {
     }
     return true;
   } catch (e: any) {
-    console.error("Erro fatal saveUser:", e?.message || e);
+    console.error("Erro fatal saveUser:", e);
     return false;
   }
 }

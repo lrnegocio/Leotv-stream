@@ -123,7 +123,8 @@ export default function UserManagementPage() {
     
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
-      return matchesSearch && days !== null && days >= 0 && days <= 3;
+      const isExpiring = days !== null && days >= 0 && days <= 3;
+      return matchesSearch && isExpiring;
     }
     return matchesSearch;
   });
@@ -149,7 +150,7 @@ export default function UserManagementPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
           placeholder="PESQUISAR PIN PARA VER VALIDADE..." 
-          className="pl-12 bg-card/50 border-white/5 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
+          className="pl-12 bg-card/50 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 
         />
@@ -254,6 +255,7 @@ export default function UserManagementPage() {
                 placeholder="Ex: Sua fatura está pendente, entre em contato..." 
                 className="bg-black/40 border-white/5 h-24 text-xs font-bold" 
                />
+               <p className="text-[8px] font-bold opacity-40 uppercase">Esta mensagem aparecerá apenas para este cliente no topo do App.</p>
             </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">

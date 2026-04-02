@@ -60,7 +60,7 @@ export default function HomeContent() {
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       const data = await getRemoteContent(false, queryStr, targetGenre);
       
-      const filtered = data.filter(item => !!item.streamUrl || item.type === 'series' || item.type === 'multi-season');
+      const filtered = data.filter(item => !!item.streamUrl || (item.type === 'series' && item.episodes?.length) || (item.type === 'multi-season' && item.seasons?.length));
       setContent(filtered);
 
       if (!categoryId && !queryStr) {
@@ -135,7 +135,7 @@ export default function HomeContent() {
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v900.0</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v1500.0</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
