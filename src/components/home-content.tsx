@@ -16,7 +16,7 @@ const CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
-  { id: 'CLIPES', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'CLIPES', name: 'LÉO TV VIDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VIDEO CLIPES' },
   { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Laugh, color: 'bg-yellow-400', genre: 'LÉO TV PIADAS' },
   { id: 'REELS', name: 'LÉO TV REELS', icon: Play, color: 'bg-pink-500', genre: 'LÉO TV REELS', restricted: true },
   { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },

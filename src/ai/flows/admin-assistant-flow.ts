@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Fluxo do App Prototyper - O parceiro de IA oficial do Léo Stream.
@@ -21,17 +22,21 @@ const getSystemStats = ai.defineTool(
     }),
   },
   async () => {
-    const users = await getRemoteUsers();
-    const content = await getRemoteContent();
-    const now = new Date();
-    
-    return {
-      totalUsers: users.length,
-      totalContent: content.length,
-      activeUsers: users.filter(u => !u.isBlocked).length,
-      blockedUsers: users.filter(u => u.isBlocked).length,
-      expiredUsers: users.filter(u => u.expiryDate && new Date(u.expiryDate) < now).length,
-    };
+    try {
+      const users = await getRemoteUsers();
+      const content = await getRemoteContent();
+      const now = new Date();
+      
+      return {
+        totalUsers: users.length,
+        totalContent: content.length,
+        activeUsers: users.filter(u => !u.isBlocked).length,
+        blockedUsers: users.filter(u => u.isBlocked).length,
+        expiredUsers: users.filter(u => u.expiryDate && new Date(u.expiryDate) < now).length,
+      };
+    } catch (e) {
+      return { totalUsers: 0, totalContent: 0, activeUsers: 0, blockedUsers: 0, expiredUsers: 0 };
+    }
   }
 );
 
@@ -45,8 +50,12 @@ const findUserByPin = ai.defineTool(
     outputSchema: z.any(),
   },
   async (input) => {
-    const users = await getRemoteUsers();
-    return users.find(u => u.pin === input.pin) || { error: 'Cliente não localizado na base de dados.' };
+    try {
+      const users = await getRemoteUsers();
+      return users.find(u => u.pin === input.pin) || { error: 'Cliente não localizado na base de dados.' };
+    } catch (e) {
+      return { error: 'Falha na conexão com o banco.' };
+    }
   }
 );
 
@@ -59,9 +68,9 @@ const AdminAssistantInputSchema = z.object({
 });
 
 export async function adminAssistant(input: z.infer<typeof AdminAssistantInputSchema>) {
-  // TRAVA DE SEGURANÇA MESTRE: Evita erro 500 se não houver chave
+  // SEGURANÇA MESTRE: Evita erro 500 se a IA não estiver configurada
   if (!isAiReady) {
-    return { response: "Mestre Léo, os protocolos de IA estão desativados. Por favor, configure a chave GOOGLE_GENAI_API_KEY nas variáveis de ambiente da Vercel para eu poder te ajudar." };
+    return { response: "Mestre Léo, os protocolos de IA estão desativados. Configure a chave GOOGLE_GENAI_API_KEY para eu poder te ajudar." };
   }
 
   try {
@@ -75,9 +84,8 @@ export async function adminAssistant(input: z.infer<typeof AdminAssistantInputSc
       history: input.history,
     });
 
-    return { response: output?.text || "Mestre Léo, houve uma oscilação no sinal. Pode repetir o comando?" };
+    return { response: output?.text || "Mestre Léo, sinal oscilou. Pode repetir?" };
   } catch (error) {
-    console.error("Erro no Admin Assistant:", error);
-    return { response: "Mestre Léo, houve um erro na conexão com o núcleo de IA. Verifique se a sua cota da API Key não expirou." };
+    return { response: "Mestre Léo, houve um erro no núcleo de IA. Verifique sua API Key." };
   }
 }

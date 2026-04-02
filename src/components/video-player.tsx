@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -23,33 +24,30 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v2400: Se o sinal for RedeCanais ou WebPlayer, usamos o Proxy Master para o Iframe
-    if (urlStr.includes('redecanaistv.cafe') || urlStr.includes('webplayer.one')) {
-      // Forçamos o iframe a passar pelo proxy para camuflar o IP do cliente (Bypass Error 1106)
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
-    }
-
+    // DETECÇÃO SNIPER XVIDEOS (IDs alfanuméricos complexos como kabopuh3e7b)
     if (urlStr.includes('xvideos.com')) {
-      // Captura ID alfanumérico (ex: kabopuh3e7b) ou numérico
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    if (urlStr.includes('dailymotion.com')) {
-      const vidId = urlStr.split('/video/')[1]?.split(/[?#&]/)[0] || urlStr.split('/embed/video/')[1]?.split(/[?#&]/)[0];
-      if (vidId) return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
+    // DETECÇÃO WEBPLAYER / REDECANAIS / SUPREMO (Bypass de Cloudflare 1106)
+    if (urlStr.includes('redecanaistv') || urlStr.includes('webplayer.one') || urlStr.includes('redecanais')) {
+      return { processedUrl: urlStr, type: 'iframe' }
     }
 
-    if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
-      const yid = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1`, type: 'iframe' }
+    // DETECÇÃO HLS / MP4 PROBLEMÁTICOS (JMVStream, Blinder, HTTP puro)
+    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist');
+
+    if (isProblematic) {
+      const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
+      return { processedUrl: proxied, type: isHls ? 'hls' : 'video' }
     }
 
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('jmvstream') || urlStr.includes('blinder.space');
     return { 
       processedUrl: urlStr, 
-      type: isHls ? 'hls' : (urlStr.includes('.mp4') || urlStr.includes('.ts') ? 'video' : 'iframe')
+      type: isHls ? 'hls' : (urlStr.includes('.mp4') ? 'video' : 'iframe')
     }
   }, [])
 
@@ -63,10 +61,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   React.useEffect(() => {
     if (!processedUrl) return;
-    if (type === 'iframe') {
-      setLoading(false);
-      return;
-    }
+    if (type === 'iframe') { setLoading(false); return; }
 
     const video = videoRef.current;
     if (!video) return;
@@ -77,29 +72,23 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
-      // FORÇAR PROXY PARA DOMÍNIOS QUE TRAVAM OU DÃO TELA PRETA
-      const forceProxy = processedUrl.includes('blinder.space') || 
-                         processedUrl.includes('jmvstream') || 
-                         processedUrl.includes('http://') ||
-                         processedUrl.includes('.m3u8');
-
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
-            xhrSetup: (xhr: any, requestUrl: string) => { 
-              if (forceProxy && !requestUrl.includes('/api/proxy')) {
+            xhrSetup: (xhr: any, requestUrl: string) => {
+              // BLINDAGEM M3U8: Força todos os fragmentos (.ts) a passarem pelo proxy se necessário
+              if (processedUrl.includes('/api/proxy') && !requestUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxyUrl, true);
               }
             }
           });
-          const finalUrl = forceProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
-          hls.loadSource(finalUrl);
+          hls.loadSource(processedUrl);
           hls.attachMedia(video);
-          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
+          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
-            setLoading(false); 
+            setLoading(false);
           });
           hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
@@ -110,10 +99,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           });
         }
       } else {
-        const finalUrl = forceProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
-        video.src = finalUrl;
+        video.src = processedUrl;
         video.load();
-        video.play().then(() => { setLoading(false); }).catch(() => { video.muted = true; video.play().catch(() => {}); setLoading(false); });
+        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; video.play().catch(() => {}); setLoading(false); });
       }
     };
 

@@ -72,32 +72,56 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// RANKING DE AUDIÊNCIA
+/**
+ * MOTOR DE INTELIGÊNCIA MASTER - ESTATÍSTICAS (v3300.0)
+ */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').limit(limit);
+    const { data, error } = await supabase
+      .from('content')
+      .select('*')
+      .order('views', { ascending: false })
+      .limit(limit);
+    
+    if (error) throw error;
     return (data || []).map(i => ({ ...i, views: i.views || 0 }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    // Fallback se a coluna views não existir
+    const { data } = await supabase.from('content').select('*').limit(limit);
+    return data || [];
+  }
 }
 
-// ATUALIZAÇÃO DE PONTOS DA ARENA
+/**
+ * MOTOR DE PONTUAÇÃO ARENA GAMES
+ */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
-    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
+    const { data: user } = await supabase
+      .from('users')
+      .select('gamePoints')
+      .eq('pin', pin.toUpperCase())
+      .single();
+    
     let currentPoints = user?.gamePoints || 0;
     
     if (result === 'win') currentPoints += 10;
     else if (result === 'draw') currentPoints += 3;
     else if (result === 'loss') currentPoints = Math.max(0, currentPoints - 5);
 
-    await supabase.from('users').update({ gamePoints: currentPoints }).eq('pin', pin.toUpperCase());
-    return true;
+    const { error } = await supabase
+      .from('users')
+      .update({ gamePoints: currentPoints })
+      .eq('pin', pin.toUpperCase());
+    
+    return !error;
   } catch (e) { return false; }
 }
 
 export async function getGameRankings(): Promise<GameRanking[]> {
   try {
-    const { data } = await supabase.from('users')
+    const { data } = await supabase
+      .from('users')
       .select('pin, gamePoints')
       .gt('gamePoints', 0)
       .order('gamePoints', { ascending: false })
@@ -110,13 +134,24 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
+/**
+ * MOTOR DE BUSCA DE SINAIS MASTER
+ */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
-    if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
     
-    const { data } = await query.order('title', { ascending: true });
+    if (searchQuery) {
+      query = query.ilike('title', `%${searchQuery}%`);
+    }
+    
+    if (categoryGenre) {
+      query = query.eq('genre', categoryGenre.toUpperCase());
+    }
+    
+    const { data, error } = await query.order('title', { ascending: true });
+    
+    if (error) throw error;
     
     return (data || []).map(i => ({ 
       ...i, 
@@ -143,24 +178,31 @@ export async function saveContent(item: Partial<ContentItem>) {
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
+    
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e: any) { return false; }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
-  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-  return data;
+  try {
+    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    return data;
+  } catch (e) { return null; }
 }
 
 export async function removeContent(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('content').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
+  try {
+    const { error } = await supabase.from('content').delete().in('id', ids);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function clearAllM3UContent() {
@@ -193,18 +235,27 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
 }
 
 export async function getGlobalSettings() {
-  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return data?.value || { parentalPin: "1234", announcement: "" };
+  try {
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    return data?.value || { parentalPin: "1234", announcement: "" };
+  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
 }
 
 export async function updateGlobalSettings(value: any) {
-  const { error } = await supabase.from('settings').upsert({ key: 'global', value });
-  return !error;
+  try {
+    const { error } = await supabase.from('settings').upsert({ key: 'global', value });
+    return !error;
+  } catch (e) { return false; }
 }
 
+/**
+ * MOTOR DE GESTÃO DE PINS MASTER
+ */
 export async function getRemoteUsers() {
-  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-  return data || [];
+  try {
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveUser(user: User) {
@@ -231,61 +282,95 @@ export async function saveUser(user: User) {
 }
 
 export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
-  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
-  if (!user) return { error: "PIN NÃO LOCALIZADO" };
-  if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
-  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
-  return { user };
+  try {
+    if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
+    
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('pin', pin.trim().toUpperCase())
+      .maybeSingle();
+    
+    if (!user) return { error: "PIN NÃO LOCALIZADO" };
+    if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
+    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
+    
+    return { user };
+  } catch (e) { return { error: "ERRO DE CONEXÃO COM O BANCO" }; }
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
-  const { data: reseller } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
-  if (!reseller || reseller.isBlocked) return { error: "ACESSO NEGADO" };
-  return { reseller };
+  try {
+    const { data: reseller } = await supabase
+      .from('resellers')
+      .select('*')
+      .eq('username', username.trim())
+      .eq('password', pass.trim())
+      .maybeSingle();
+    
+    if (!reseller || reseller.isBlocked) return { error: "ACESSO NEGADO" };
+    return { reseller };
+  } catch (e) { return { error: "ERRO NO SERVIDOR DE REVENDA" }; }
 }
 
 export async function getRemoteResellers() {
-  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-  return data || [];
+  try {
+    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveReseller(reseller: any) {
-  const { error } = await supabase.from('resellers').upsert(reseller);
-  return !error;
+  try {
+    const { error } = await supabase.from('resellers').upsert(reseller);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function getCategoryCount(genre: string) {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
-  return count || 0;
+  try {
+    const { count } = await supabase
+      .from('content')
+      .select('*', { count: 'exact', head: true })
+      .eq('genre', genre.toUpperCase());
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function getTotalContentCount() {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
-  return count || 0;
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function generateM3UPlaylist(pin: string) {
-  const content = await getRemoteContent(true);
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  let m3u = "#EXTM3U\n";
-  content.forEach(item => {
-    if (item.streamUrl) {
-      const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
-      m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
-    }
-  });
-  return m3u;
+  try {
+    const content = await getRemoteContent(true);
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    let m3u = "#EXTM3U\n";
+    content.forEach(item => {
+      if (item.streamUrl) {
+        const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
+        m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
+      }
+    });
+    return m3u;
+  } catch (e) { return "#EXTM3U\n"; }
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {

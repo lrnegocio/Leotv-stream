@@ -118,12 +118,14 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
+  /**
+   * MOTOR DE BUSCA SOBERANO: Ignora filtros se houver termo de pesquisa
+   */
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    // BLINDAGEM DE BUSCA: Se estiver pesquisando, ignora o filtro de expiração para achar o PIN
     if (searchStr.length > 0) return matchesSearch;
 
     let matchesFilter = true;
