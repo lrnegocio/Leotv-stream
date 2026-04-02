@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -111,12 +110,6 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
-  const sendWhatsAppAccess = (user: User) => {
-    const msg = getBeautifulMessage(user.pin, user.subscriptionTier, window.location.origin, user.maxScreens);
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-
-  // BUSCA INTELIGENTE v1500: Combina Filtro de Expiração + Pesquisa de Texto
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
@@ -150,7 +143,7 @@ export default function UserManagementPage() {
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
-          placeholder="PESQUISAR PIN PARA VER VALIDADE..." 
+          placeholder="PESQUISAR PIN..." 
           className="pl-12 bg-card/50 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 
@@ -199,9 +192,8 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar Acesso"><Send className="h-5 w-5" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXTERMINAR PIN?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
                       </div>
                     </TableCell>
@@ -221,56 +213,32 @@ export default function UserManagementPage() {
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (Letras e Números)</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN</Label>
               <div className="flex gap-2">
-                <Input 
-                  value={newUser.pin} 
-                  onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} 
-                  className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" 
-                />
+                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
                 <Button variant="outline" onClick={handleGeneratePin} className="h-14 border-white/5"><RefreshCcw className="h-4 w-4 text-primary" /></Button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Plano de Acesso</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">Plano</Label>
                 <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
                   <SelectTrigger className="h-12 border-white/5 bg-black/40 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="test">6 Horas (Teste)</SelectItem>
-                    <SelectItem value="monthly">30 Dias (Mensal)</SelectItem>
-                    <SelectItem value="lifetime">Acesso Vitalício</SelectItem>
-                  </SelectContent>
+                  <SelectContent><SelectItem value="test">Teste</SelectItem><SelectItem value="monthly">Mensal</SelectItem><SelectItem value="lifetime">Vitalício</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Limite de Telas</Label>
-                <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" />
-              </div>
+              <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Telas</Label><Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" /></div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Bloco de Notas (Mensagem Individual VIP)</Label>
-               <Textarea 
-                value={newUser.individualMessage} 
-                onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} 
-                placeholder="Ex: Sua fatura está pendente, entre em contato..." 
-                className="bg-black/40 border-white/5 h-24 text-xs font-bold" 
-               />
-               <p className="text-[8px] font-bold opacity-40 uppercase">Esta mensagem aparecerá apenas para este cliente no topo do App.</p>
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP</Label>
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Fatura pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black uppercase">Conteúdo Adulto</span>
-              </div>
+              <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-primary" /><span className="text-[10px] font-black uppercase">Adulto</span></div>
               <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>
-              {isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR ALTERAÇÕES MASTER'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

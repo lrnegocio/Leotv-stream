@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -28,6 +27,7 @@ export interface ContentItem {
   seasons?: Season[] | null; 
   episodes?: Episode[] | null; 
   created_at?: string;
+  directStreamUrl?: string; // Mantido para compatibilidade, mas unificado
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -90,7 +90,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE: Enviando apenas o que existe no banco (Removido 'views')
+    // BLINDAGEM MESTRE: Somente colunas existentes no banco (Sem 'views')
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -99,7 +99,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "",
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
-      streamUrl: (item.type === 'movie' || item.type === 'channel') ? (item.streamUrl || "") : "",
+      streamUrl: item.streamUrl || "",
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
@@ -150,10 +150,7 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
       current = { title: parts[parts.length - 1]?.trim(), type: 'channel', genre: 'LÉO TV AO VIVO', isRestricted: false };
     } else if (line.startsWith('http')) {
       if (current.title) {
-        await saveContent({ 
-          ...current, 
-          streamUrl: line.trim()
-        });
+        await saveContent({ ...current, streamUrl: line.trim() });
         count++;
         if (count % 10 === 0) onProgress(`Sintonizando: ${count} sinais...`);
       }
@@ -194,13 +191,9 @@ export async function saveUser(user: User) {
       activatedAt: user.activatedAt,
       individualMessage: (user.individualMessage || "").trim()
     });
-    if (error) {
-      console.error("Erro Supabase saveUser:", error.message);
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e: any) {
-    console.error("Erro fatal saveUser:", e);
     return false;
   }
 }
