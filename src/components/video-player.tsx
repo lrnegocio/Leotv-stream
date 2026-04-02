@@ -23,12 +23,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v2300: Suporte para redecanaistv e webplayer.one via Frame
-    if (urlStr.includes('webplayer.one') || urlStr.includes('redecanaistv.cafe')) {
-      return { processedUrl: urlStr, type: 'iframe' }
+    // SNIPER v2400: Se o sinal for RedeCanais ou WebPlayer, usamos o Proxy Master para o Iframe
+    if (urlStr.includes('redecanaistv.cafe') || urlStr.includes('webplayer.one')) {
+      // Forçamos o iframe a passar pelo proxy para camuflar o IP do cliente (Bypass Error 1106)
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
     }
 
     if (urlStr.includes('xvideos.com')) {
+      // Captura ID alfanumérico (ex: kabopuh3e7b) ou numérico
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
@@ -37,11 +39,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (urlStr.includes('dailymotion.com')) {
       const vidId = urlStr.split('/video/')[1]?.split(/[?#&]/)[0] || urlStr.split('/embed/video/')[1]?.split(/[?#&]/)[0];
       if (vidId) return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
-    }
-
-    if (urlStr.includes('pornhub.com')) {
-      const vKey = urlStr.split('viewkey=')[1]?.split(/[&?#]/)[0];
-      if (vKey) return { processedUrl: `https://www.pornhub.com/embed/${vKey}`, type: 'iframe' }
     }
 
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
@@ -80,24 +77,24 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
-      const useProxy = processedUrl.includes('blinder.space') || 
-                       processedUrl.includes('jmvstream') || 
-                       processedUrl.includes('.m3u8') || 
-                       processedUrl.includes('.ts');
+      // FORÇAR PROXY PARA DOMÍNIOS QUE TRAVAM OU DÃO TELA PRETA
+      const forceProxy = processedUrl.includes('blinder.space') || 
+                         processedUrl.includes('jmvstream') || 
+                         processedUrl.includes('http://') ||
+                         processedUrl.includes('.m3u8');
 
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              // SNIPER: Força segmentos .ts a usarem o proxy se o m3u8 estiver no proxy
-              if (useProxy && !requestUrl.includes('/api/proxy')) {
+              if (forceProxy && !requestUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxyUrl, true);
               }
             }
           });
-          const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+          const finalUrl = forceProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
           hls.loadSource(finalUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
@@ -113,7 +110,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           });
         }
       } else {
-        const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
+        const finalUrl = forceProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
         video.play().then(() => { setLoading(false); }).catch(() => { video.muted = true; video.play().catch(() => {}); setLoading(false); });

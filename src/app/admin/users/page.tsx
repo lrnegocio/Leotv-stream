@@ -110,17 +110,19 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
-  // SNIPER v2300: Lógica de busca blindada que ignora filtros
+  // BUSCA INTELIGENTE v2400: Prioriza a busca mesmo com filtros ligados
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    if (filterExpiring && !searchTerm) {
+    if (searchTerm) return matchesSearch; // Se estiver digitando, ignora filtro de expiração
+
+    if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
       return days !== null && days >= 0 && days <= 3;
     }
-    return matchesSearch;
+    return true;
   });
 
   return (

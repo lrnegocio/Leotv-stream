@@ -80,6 +80,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
+    // Sintonização v2400: Ordem alfabética como prioridade se não houver views
     const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -89,6 +90,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
+    // BLINDAGEM v2400: Remove coluna 'views' para evitar erro PGRST204
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -175,6 +177,7 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
+    // BLINDAGEM v2400: Garante que individualMessage seja gravado
     const { error } = await supabase.from('users').upsert({
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
