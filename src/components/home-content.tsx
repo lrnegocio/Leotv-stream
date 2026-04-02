@@ -5,7 +5,7 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -88,6 +88,18 @@ export default function HomeContent() {
     }
   };
 
+  const handleEpisodeClick = (ep: Episode, parent: ContentItem) => {
+    // NAVEGAÇÃO POR EPISÓDIOS v1700: Carrega todos os episódios no player para as setas funcionarem
+    const episodesToPlay = parent.episodes || parent.seasons?.flatMap(s => s.episodes) || [];
+    const contentItems = episodesToPlay.map(e => ({
+      ...parent,
+      streamUrl: e.streamUrl,
+      title: `${parent.title} - EP ${e.number} ${e.title}`
+    }));
+    const startIndex = episodesToPlay.findIndex(e => e.id === ep.id);
+    setActiveVideo({ items: contentItems, index: startIndex });
+  };
+
   const handleCategoryClick = (cat: any) => {
     if (cat.restricted && !user?.isAdultEnabled) {
       setPendingCategory(cat.id);
@@ -135,7 +147,7 @@ export default function HomeContent() {
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v1500.0</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v1700.0</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
@@ -227,7 +239,7 @@ export default function HomeContent() {
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}` }], index: 0 })} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
+                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries)} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
                         <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span>
                       </Button>
@@ -239,7 +251,7 @@ export default function HomeContent() {
                       <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                       <div className="flex flex-col gap-2">
                         {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                          <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}` }], index: 0 })} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
+                          <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries)} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all">
                             <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
                             <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
                           </Button>

@@ -24,7 +24,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim().replace('pt.pornhub', 'www.pornhub')
 
-    // SNIPER v500: Detecção de IDs alfanuméricos complexos para Embeds
+    // SNIPER v600: Detecção ultra-agressiva de IDs alfanuméricos (ex: kabopuh3e7b)
     if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)\//i);
       const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split(/[.?/]/)[0] : null;
@@ -32,7 +32,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     if (urlStr.includes('dailymotion.com')) {
-      // Suporte para links normais e /video/x...
       const vidId = urlStr.split('/video/')[1]?.split(/[?#&]/)[0] || urlStr.split('/embed/video/')[1]?.split(/[?#&]/)[0];
       if (vidId) return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
@@ -78,7 +77,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       setLoading(true);
       setError(false);
       
-      // PROXY MASTER 206: Força passagem pelo túnel para sinais diretos e Archive.org
       const useProxy = processedUrl.includes('phncdn.com') || 
                        processedUrl.includes('xvideos') || 
                        processedUrl.includes('archive.org') ||
