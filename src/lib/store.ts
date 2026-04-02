@@ -81,16 +81,14 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 export async function incrementViews(id: string) {
-  try {
-    const { data: item } = await supabase.from('content').select('views').eq('id', id).single();
-    const newViews = (item?.views || 0) + 1;
-    await supabase.from('content').update({ views: newViews }).eq('id', id);
-  } catch (e) {}
+  // Desativado temporariamente para evitar erro de coluna inexistente no Supabase
+  return;
 }
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
+    // Ordenando por título já que a coluna views não existe no schema
+    const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
     return data || [];
   } catch (e) { return []; }
 }
@@ -99,7 +97,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE V1200: Apenas campos soberanos permitidos pelo banco
+    // BLINDAGEM MESTRE V1300: Removida a coluna 'views' que não existe no banco
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -109,7 +107,6 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
-      views: Number(item.views || 0),
       episodes: Array.isArray(item.episodes) ? item.episodes : null,
       seasons: Array.isArray(item.seasons) ? item.seasons : null
     };
@@ -192,7 +189,17 @@ export async function saveUser(user: User) {
   try {
     // BLINDAGEM MESTRE: Mensagem individual e PIN garantidos no salvamento
     const { error } = await supabase.from('users').upsert({
-      ...user,
+      id: user.id,
+      pin: user.pin.toUpperCase().trim(),
+      role: user.role,
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices,
+      isBlocked: user.isBlocked,
+      isAdultEnabled: user.isAdultEnabled,
+      resellerId: user.resellerId,
+      activatedAt: user.activatedAt,
       individualMessage: user.individualMessage || ""
     });
     if (error) {
