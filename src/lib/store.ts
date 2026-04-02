@@ -72,7 +72,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     
     return (data || []).map(i => ({ 
       ...i, 
-      isRestricted: i.isRestricted || false,
+      isRestricted: !!i.isRestricted,
       title: (i.title || "").toUpperCase()
     }));
   } catch (e) { 
@@ -99,30 +99,30 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE: Limpa o objeto para garantir que o Supabase aceite
-    const payload: any = {
-      id,
+    // BLINDAGEM MESTRE: Somente campos que existem no banco (UNIFICAÇÃO TOTAL)
+    const payload = {
+      id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
       type: item.type || 'channel',
-      description: item.description || "Sinal Master Léo TV",
+      description: item.description || "",
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
-      views: item.views || 0,
-      episodes: item.episodes && item.episodes.length > 0 ? item.episodes : null,
-      seasons: item.seasons && item.seasons.length > 0 ? item.seasons : null,
+      views: Number(item.views || 0),
+      episodes: Array.isArray(item.episodes) && item.episodes.length > 0 ? item.episodes : null,
+      seasons: Array.isArray(item.seasons) && item.seasons.length > 0 ? item.seasons : null,
       created_at: item.created_at || new Date().toISOString()
     };
 
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
-      console.error("Erro Supabase saveContent:", error.message);
+      console.error("Erro Supabase saveContent:", error);
       return false;
     }
     return true;
   } catch (e: any) { 
-    console.error("Erro fatal saveContent:", e?.message || e);
+    console.error("Erro fatal saveContent:", e);
     return false; 
   }
 }

@@ -69,6 +69,7 @@ export default function UserManagementPage() {
     setIsSaving(true);
     const existingUser = users.find(u => u.id === editingUserId);
     
+    // BLINDAGEM MESTRE: Mensagem individual e PIN garantidos
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin.toUpperCase().trim(),
@@ -78,18 +79,18 @@ export default function UserManagementPage() {
       maxScreens: parseInt(newUser.screens) || 1,
       activeDevices: existingUser?.activeDevices || [],
       isBlocked: existingUser?.isBlocked || false,
-      isAdultEnabled: newUser.isAdultEnabled,
+      isAdultEnabled: !!newUser.isAdultEnabled,
       activatedAt: existingUser?.activatedAt || "",
-      individualMessage: newUser.individualMessage
+      individualMessage: newUser.individualMessage.trim()
     }
 
     if (await saveUser(userData)) {
-      toast({ title: "PIN ATUALIZADO NO BANCO!" });
+      toast({ title: "CLIENTE ATUALIZADO NO BANCO!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO AO SALVAR PIN" });
+      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE" });
     }
     setIsSaving(false);
   }
@@ -105,7 +106,7 @@ export default function UserManagementPage() {
       pin: user.pin, 
       tier: user.subscriptionTier, 
       screens: user.maxScreens.toString(), 
-      isAdultEnabled: user.isAdultEnabled,
+      isAdultEnabled: !!user.isAdultEnabled,
       individualMessage: user.individualMessage || ""
     });
     setIsDialogOpen(true);
@@ -246,7 +247,7 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem VIP (Bloco de Notas / Individual)</Label>
+               <Label className="uppercase text-[10px] font-black text-primary">Bloco de Notas (Mensagem Individual VIP)</Label>
                <Textarea 
                 value={newUser.individualMessage} 
                 onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} 

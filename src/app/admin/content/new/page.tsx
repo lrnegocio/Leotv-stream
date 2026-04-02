@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { saveContent, Season, Episode, ContentType, cleanName } from "@/lib/store"
+import { saveContent, ContentType, cleanName } from "@/lib/store"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -34,12 +34,13 @@ export default function NewContentPage() {
     if (!formData.title) return;
     setLoading(true)
     
+    // BLINDAGEM MESTRE: Somente campos unificados
     const success = await saveContent({
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
       description: formData.description,
-      isRestricted: formData.isRestricted,
+      isRestricted: !!formData.isRestricted,
       streamUrl: formData.streamUrl,
       imageUrl: formData.imageUrl,
       episodes: null,
@@ -51,7 +52,7 @@ export default function NewContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO DE BANCO" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR - VERIFIQUE O BANCO" })
     }
   }
 
@@ -118,7 +119,7 @@ export default function NewContentPage() {
 
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Soberano (M3U8 / MP4 / WEB)</h3>
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Soberano (Web & IPTV)</h3>
               <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link único para Web e IPTV" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
             </div>
           </div>

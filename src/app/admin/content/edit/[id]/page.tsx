@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Sparkles, Loader2, Save, Globe, Lock, Trash2, ListOrdered, Layers, Plus, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -57,8 +57,17 @@ export default function EditContentPage() {
     e.preventDefault()
     setLoading(true)
     
+    // BLINDAGEM MESTRE: Somente os dados unificados e limpos
     const success = await saveContent({
-      ...formData,
+      id: formData.id,
+      title: formData.title,
+      type: formData.type,
+      genre: formData.genre,
+      description: formData.description,
+      streamUrl: formData.streamUrl,
+      imageUrl: formData.imageUrl,
+      isRestricted: !!formData.isRestricted,
+      views: formData.views,
       episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : null,
       seasons: formData.type === 'multi-season' ? seasons : null,
     })
@@ -68,7 +77,7 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR - VERIFIQUE O BANCO" })
     }
   }
 
@@ -85,12 +94,12 @@ export default function EditContentPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome Oficial do Canal</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
               <Input 
                 value={formData.title || ""} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
                 required
-                className="h-12 bg-black/40 border-white/5 font-bold uppercase tracking-widest focus:border-primary"
+                className="h-12 bg-black/40 border-white/5 font-bold uppercase"
               />
             </div>
 
@@ -98,7 +107,7 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Tipo de Mídia</Label>
                 <Select value={formData.type} onValueChange={(val: any) => setFormData({...formData, type: val})}>
-                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold uppercase tracking-widest"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="channel">Canal ao Vivo</SelectItem>
                     <SelectItem value="movie">Filme Master</SelectItem>
@@ -108,7 +117,7 @@ export default function EditContentPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Categoria Master</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Pasta / Categoria</Label>
                 <Select value={formData.genre} onValueChange={v => setFormData({...formData, genre: v})}>
                   <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -135,7 +144,7 @@ export default function EditContentPage() {
 
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Soberano (M3U8 / MP4 / WEB)</h3>
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master (Web & IPTV)</h3>
               <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
             </div>
           </div>
