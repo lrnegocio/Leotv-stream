@@ -69,7 +69,6 @@ export default function UserManagementPage() {
     setIsSaving(true);
     const existingUser = users.find(u => u.id === editingUserId);
     
-    // BLINDAGEM MESTRE: Mensagem individual e PIN garantidos
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin.toUpperCase().trim(),
@@ -122,10 +121,11 @@ export default function UserManagementPage() {
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    if (!filterExpiring) return matchesSearch;
-    
-    const days = getExpiryDays(u.expiryDate);
-    return matchesSearch && days !== null && days >= 0 && days <= 3;
+    if (filterExpiring) {
+      const days = getExpiryDays(u.expiryDate);
+      return matchesSearch && days !== null && days >= 0 && days <= 3;
+    }
+    return matchesSearch;
   });
 
   return (

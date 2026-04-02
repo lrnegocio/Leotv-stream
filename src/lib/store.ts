@@ -99,7 +99,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE: Somente campos que existem no banco (UNIFICAÇÃO TOTAL)
+    // BLINDAGEM MESTRE V1200: Apenas campos soberanos permitidos pelo banco
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -110,14 +110,13 @@ export async function saveContent(item: Partial<ContentItem>) {
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
       views: Number(item.views || 0),
-      episodes: Array.isArray(item.episodes) && item.episodes.length > 0 ? item.episodes : null,
-      seasons: Array.isArray(item.seasons) && item.seasons.length > 0 ? item.seasons : null,
-      created_at: item.created_at || new Date().toISOString()
+      episodes: Array.isArray(item.episodes) ? item.episodes : null,
+      seasons: Array.isArray(item.seasons) ? item.seasons : null
     };
 
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
-      console.error("Erro Supabase saveContent:", error);
+      console.error("Erro Supabase saveContent:", JSON.stringify(error));
       return false;
     }
     return true;
@@ -191,7 +190,11 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    const { error } = await supabase.from('users').upsert(user);
+    // BLINDAGEM MESTRE: Mensagem individual e PIN garantidos no salvamento
+    const { error } = await supabase.from('users').upsert({
+      ...user,
+      individualMessage: user.individualMessage || ""
+    });
     if (error) {
       console.error("Erro Supabase saveUser:", error.message);
       return false;
