@@ -47,6 +47,7 @@ export interface User {
   isAdultEnabled: boolean; 
   resellerId?: string; 
   activatedAt?: string;
+  individualMessage?: string;
 }
 
 export interface Reseller {
@@ -97,20 +98,19 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
 
 export async function saveContent(item: ContentItem) {
   try {
-    // BLINDAGEM MESTRE: Garante que o ID nunca seja vazio para não dar erro de banco
     const finalItem = {
       ...item,
       id: item.id && item.id !== "" ? item.id : "leo_" + Math.random().toString(36).substring(2, 10),
       title: item.title.toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      views: item.views || 0
+      views: item.views || 0,
+      streamUrl: item.streamUrl || "",
+      directStreamUrl: item.directStreamUrl || ""
     };
 
     const { error } = await supabase.from('content').upsert(finalItem);
-    if (error) console.error("Erro Supabase Save:", error);
     return !error;
   } catch (e) { 
-    console.error("Erro Fatal Save:", e);
     return false; 
   }
 }
@@ -153,8 +153,9 @@ export async function processM3UImport(m3u: string, onProgress: (m: string) => v
       if (current.title) {
         await saveContent({ 
           ...current, 
-          id: "", // Deixa o saveContent gerar o ID soberano
+          id: "", 
           streamUrl: line.trim(), 
+          directStreamUrl: line.trim(),
           description: "Importado via M3U Master",
           views: 0
         });
@@ -244,6 +245,10 @@ export async function generateM3UPlaylist(pin: string) {
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
   return `🚀 *LÉO TV - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📺 *TELAS:* ${screens}\n🌐 *LINK:* ${url}\n\n*Bom entretenimento!*`;
+}
+
+export function getExpiryMessage(pin: string, days: number) {
+  return `⚠️ *ALERTA LÉO TV* ⚠️\n\nSeu sinal *${pin}* expira em *${days} dia(s)*!\n\nRenove agora para não ficar sem sintonizar o melhor conteúdo!`;
 }
 
 export const generateRandomPin = (l = 11) => Math.random().toString().substring(2, 2+l);

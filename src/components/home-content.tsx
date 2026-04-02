@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -61,7 +61,7 @@ export default function HomeContent() {
       
       const data = await getRemoteContent(false, queryStr, targetGenre);
       
-      // SEPARAÇÃO INTELIGENTE: PWA mostra apenas o Link Web Principal
+      // FILTRAGEM SOBERANA: No App Web, só mostra o que tem Link Web Principal
       const filtered = data.filter(item => {
         if (item.type === 'channel' || item.type === 'movie') {
           return !!item.streamUrl;
@@ -143,27 +143,42 @@ export default function HomeContent() {
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v50.0</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v250.0</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
-        <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full hover:bg-destructive/10">
-          <LogOut className="h-6 w-6" />
-        </Button>
+        <div className="flex items-center gap-2">
+           <div className="hidden sm:flex flex-col items-end mr-4">
+              <span className="text-[10px] font-black uppercase text-primary italic">Sinal Ativo</span>
+              <span className="text-[8px] font-bold opacity-40 uppercase">{user?.pin}</span>
+           </div>
+           <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full hover:bg-destructive/10">
+            <LogOut className="h-6 w-6" />
+          </Button>
+        </div>
       </header>
 
-      {announcement && !selectedCat && !q && (
-        <div className="max-w-[1800px] mx-auto px-8 mt-6">
-          <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-bounce-slow">
+      <div className="max-w-[1800px] mx-auto px-8 mt-6 space-y-4">
+        {/* MURAL GLOBAL */}
+        {announcement && !selectedCat && !q && (
+          <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4 duration-500">
             <div className="bg-primary p-2 rounded-xl"><MessageSquare className="h-5 w-5 text-white" /></div>
             <p className="text-[11px] font-black uppercase text-primary tracking-widest italic">{announcement}</p>
           </div>
-        </div>
-      )}
+        )}
+        
+        {/* MURAL INDIVIDUAL */}
+        {user?.individualMessage && !selectedCat && !q && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center gap-4 animate-pulse">
+            <div className="bg-emerald-500 p-2 rounded-xl"><Bell className="h-5 w-5 text-white" /></div>
+            <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">MENSAGEM PARA VOCÊ: {user.individualMessage}</p>
+          </div>
+        )}
+      </div>
 
       <main className="p-8 max-w-[1800px] mx-auto">
         {!selectedCat && !q ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-500">
             {CATEGORIES.map(c => {
               const count = catCounts[c.id] || 0;
               return (

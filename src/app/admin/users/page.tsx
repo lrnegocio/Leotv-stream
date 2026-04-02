@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Monitor, Globe, Clock, AlertTriangle } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Monitor, Globe, Clock, AlertTriangle, Bell, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -10,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
+import { Textarea } from "@/components/ui/textarea"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage, getExpiryMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -20,12 +22,14 @@ export default function UserManagementPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null)
+  const [filterExpiring, setFilterExpiring] = React.useState(false)
   
   const [newUser, setNewUser] = React.useState({
     pin: "",
     tier: "monthly" as SubscriptionTier,
     screens: "1",
-    isAdultEnabled: false
+    isAdultEnabled: false,
+    individualMessage: ""
   })
 
   const loadUsers = React.useCallback(async () => {
@@ -42,14 +46,18 @@ export default function UserManagementPage() {
 
   React.useEffect(() => { loadUsers() }, [loadUsers])
 
-  const getExpiryStatus = (expiryDate?: string) => {
-    if (!expiryDate) return { label: "DISPONÍVEL", color: "bg-blue-500/10 text-blue-400", icon: Clock };
+  const getExpiryDays = (expiryDate?: string) => {
+    if (!expiryDate) return null;
     const now = new Date();
     const exp = new Date(expiryDate);
     const diffTime = exp.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
-    if (diffTime < 0) return { label: "EXPIRADO", color: "bg-destructive/10 text-destructive", icon: AlertTriangle };
+  const getExpiryStatus = (expiryDate?: string) => {
+    const diffDays = getExpiryDays(expiryDate);
+    if (diffDays === null) return { label: "DISPONÍVEL", color: "bg-blue-500/10 text-blue-400", icon: Clock };
+    if (diffDays < 0) return { label: "EXPIRADO", color: "bg-destructive/10 text-destructive", icon: AlertTriangle };
     if (diffDays <= 3) return { label: `${diffDays} DIA(S) RESTANTE(S)`, color: "bg-orange-500/10 text-orange-500", icon: AlertTriangle };
     return { label: `${diffDays} DIA(S) ATIVO`, color: "bg-emerald-500/10 text-emerald-500", icon: UserCheck };
   };
@@ -70,7 +78,8 @@ export default function UserManagementPage() {
       activeDevices: editingUser?.activeDevices || [],
       isBlocked: editingUser?.isBlocked || false,
       isAdultEnabled: newUser.isAdultEnabled,
-      activatedAt: editingUser?.activatedAt || ""
+      activatedAt: editingUser?.activatedAt || "",
+      individualMessage: newUser.individualMessage
     }
     if (await saveUser(userData)) {
       toast({ title: "PIN SINTONIZADO NO BANCO!" });
@@ -88,7 +97,13 @@ export default function UserManagementPage() {
 
   const handleEditUser = (user: User) => {
     setEditingUserId(user.id);
-    setNewUser({ pin: user.pin, tier: user.subscriptionTier, screens: user.maxScreens.toString(), isAdultEnabled: user.isAdultEnabled });
+    setNewUser({ 
+      pin: user.pin, 
+      tier: user.subscriptionTier, 
+      screens: user.maxScreens.toString(), 
+      isAdultEnabled: user.isAdultEnabled,
+      individualMessage: user.individualMessage || ""
+    });
     setIsDialogOpen(true);
   }
 
@@ -97,18 +112,34 @@ export default function UserManagementPage() {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  const filteredUsers = users.filter(u => u.pin.includes(searchTerm)).sort((a,b) => b.id.localeCompare(a.id));
+  const sendExpiryNotice = (user: User) => {
+    const days = getExpiryDays(user.expiryDate) || 0;
+    const msg = getExpiryMessage(user.pin, days);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.pin.includes(searchTerm);
+    if (!filterExpiring) return matchesSearch;
+    const days = getExpiryDays(u.expiryDate);
+    return matchesSearch && days !== null && days > 0 && days <= 3;
+  }).sort((a,b) => b.id.localeCompare(a.id));
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle de PINs</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão Master de Validades e Acessos.</p>
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão Master de Validades e Mensagens Individuais.</p>
         </div>
-        <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false }); }} className="bg-primary font-black uppercase text-xs h-12 rounded-xl shadow-lg shadow-primary/20">
-          <Plus className="mr-2 h-4 w-4" /> GERAR NOVO PIN
-        </Button>
+        <div className="flex gap-2">
+           <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
+             <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
+           </Button>
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-4 w-4" /> NOVO PIN
+          </Button>
+        </div>
       </div>
 
       <div className="relative group">
@@ -126,13 +157,14 @@ export default function UserManagementPage() {
                 <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN / PLANO</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">STATUS DE VALIDADE</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">CONFIGURAÇÃO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">DISPOSITIVO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-center">MSG INDIVIDUAL</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
+                const days = getExpiryDays(u.expiryDate);
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
                     <TableCell className="px-8">
@@ -147,23 +179,21 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <p className="text-[9px] font-black uppercase opacity-40">{u.maxScreens} TELA(S) LIBERADA(S)</p>
+                        <p className="text-[9px] font-black uppercase opacity-40">{u.maxScreens} TELA(S)</p>
                         <Badge className={`uppercase text-[8px] font-black ${u.isAdultEnabled ? 'bg-primary/20 text-primary' : 'bg-muted opacity-40'}`}>
-                          ADULTOS: {u.isAdultEnabled ? 'LIBERADOS' : 'BLOQUEADOS'}
+                          ADULTOS: {u.isAdultEnabled ? 'LIB' : 'BLOQ'}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {u.activeDevices.length > 0 ? (
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-1"><Globe className="h-3 w-3"/> {u.activeDevices[0].ip || 'IP OCULTO'}</p>
-                          <p className="text-[8px] font-black opacity-40 uppercase flex items-center gap-1"><Monitor className="h-3 w-3"/> {u.activeDevices[0].id.substring(0,12)}...</p>
-                        </div>
-                      ) : <span className="text-[8px] opacity-20 font-black">AGUARDANDO ATIVAÇÃO</span>}
+                    <TableCell className="text-center">
+                       {u.individualMessage ? <MessageSquare className="h-4 w-4 text-primary mx-auto" /> : <span className="opacity-10">—</span>}
                     </TableCell>
                     <TableCell className="text-right px-8">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar acesso WhatsApp"><Send className="h-5 w-5" /></Button>
+                      <div className="flex justify-end gap-1">
+                        {days !== null && days > 0 && days <= 3 && (
+                          <Button variant="ghost" size="icon" onClick={() => sendExpiryNotice(u)} className="text-orange-500 hover:bg-orange-500/10" title="Avisar Expiração"><Bell className="h-5 w-5" /></Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar Acesso"><Send className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXCLUIR SINAL?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
@@ -178,8 +208,8 @@ export default function UserManagementPage() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-card border-white/10 rounded-[2.5rem] p-8">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Sintonizar Novo PIN</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-8">
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Master</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Código PIN Soberano</Label>
@@ -205,15 +235,19 @@ export default function UserManagementPage() {
                 <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5" />
               </div>
             </div>
+            <div className="space-y-2">
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual</Label>
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Escreva algo exclusivo para este cliente..." className="bg-black/40 border-white/5 h-20 text-xs" />
+            </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Lock className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black uppercase">Liberar Conteúdo Adulto</span>
+                <span className="text-[10px] font-black uppercase">Liberar Adultos</span>
               </div>
               <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR ACESSO MASTER'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR ALTERAÇÕES'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -30,7 +30,8 @@
         "role": { "type": "string", "enum": ["admin", "user"] },
         "subscriptionTier": { "type": "string" },
         "isBlocked": { "type": "boolean" },
-        "isAdultEnabled": { "type": "boolean" }
+        "isAdultEnabled": { "type": "boolean" },
+        "individualMessage": { "type": "string", "description": "Mensagem exclusiva para o cliente" }
       },
       "required": ["pin", "role"]
     }
