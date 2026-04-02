@@ -121,13 +121,13 @@ export default function UserManagementPage() {
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    if (searchTerm) return matchesSearch; 
-
+    let matchesFilter = true;
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
-      return days !== null && days >= 0 && days <= 3;
+      matchesFilter = days !== null && days >= 0 && days <= 3;
     }
-    return true;
+    
+    return matchesSearch && matchesFilter;
   });
 
   return (
@@ -252,7 +252,7 @@ export default function UserManagementPage() {
 
             {newUser.isGamesEnabled && (
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black text-emerald-500">Senha Exclusiva Games (Diferente do Adulto)</Label>
+                <Label className="uppercase text-[10px] font-black text-emerald-500">Senha Exclusiva Arena (Diferente do Adulto)</Label>
                 <Input value={newUser.gamesPassword} onChange={e => setNewUser({...newUser, gamesPassword: e.target.value})} placeholder="EX: 9988" className="bg-black/40 border-white/5 h-12 font-black text-center tracking-[0.5em]" />
               </div>
             )}

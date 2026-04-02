@@ -62,7 +62,6 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
-        // BLOQUEIO TOTAL MESTRE LÉO - VERSÃO SOBERANA
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
           if (
@@ -76,7 +75,6 @@ function SecurityBlocker() {
           }
         });
 
-        // DESATIVA SELEÇÃO DE TEXTO
         document.onselectstart = () => false;
       })();
     `}} />

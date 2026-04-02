@@ -27,6 +27,7 @@ export interface ContentItem {
   seasons?: Season[] | null; 
   episodes?: Episode[] | null; 
   created_at?: string;
+  views?: number;
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -71,6 +72,14 @@ export interface Reseller {
   birthDate?: string;
 }
 
+// RANKING DE AUDIÊNCIA (Build Fix)
+export async function getTopContent(limit = 10): Promise<ContentItem[]> {
+  try {
+    const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
+    return (data || []).map(i => ({ ...i, views: 0 })); // Fallback seguro
+  } catch (e) { return []; }
+}
+
 // CONTAGEM DE PONTOS MASTER: Vitória 10, Empate 3, Derrota -5
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
@@ -97,7 +106,7 @@ export async function getGameRankings(): Promise<GameRanking[]> {
     return (data || []).map(u => ({
       pin: u.pin,
       points: u.gamePoints || 0,
-      victories: Math.floor((u.gamePoints || 0) / 10), // Estimativa visual
+      victories: Math.floor((u.gamePoints || 0) / 10),
       draws: 0,
       losses: 0
     }));
