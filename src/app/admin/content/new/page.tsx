@@ -35,10 +35,12 @@ export default function NewContentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.title) return;
     setLoading(true)
     
+    // Motor de gravação Versão 400.0: Gera ID soberano antes do save
     const success = await saveContent({
-      id: "", // O store.ts vai gerar o ID soberano automaticamente
+      id: "leo_" + Math.random().toString(36).substring(2, 12),
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
@@ -57,7 +59,7 @@ export default function NewContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO DE BANCO", description: "Verifique o sinal do banco de dados." })
+      toast({ variant: "destructive", title: "ERRO DE BANCO", description: "O sistema gerou uma falha ao gravar o sinal." })
     }
   }
 
@@ -146,88 +148,20 @@ export default function NewContentPage() {
             </div>
           </div>
 
-          {showMainStreamUrl && (
-            <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
-              <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal</h3>
-                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (Direto IPTV)</h3>
-                <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="Link .m3u8, .ts ou .mp4" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
-              </div>
+          <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
+            <div className="space-y-2">
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Web Principal (App Web)</h3>
+              <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
             </div>
-          )}
+            <div className="space-y-2">
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Secundário (IPTV / Smart TV)</h3>
+              <Input value={formData.directStreamUrl} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} placeholder="Link .m3u8, .ts ou .mp4" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+            </div>
+          </div>
 
-          {formData.type === 'series' && (
+          {(formData.type === 'series' || formData.type === 'multi-season') && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-              <div className="flex justify-between items-center">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><ListOrdered className="h-4 w-4" /> Episódios Master</h3>
-                <Button type="button" size="sm" onClick={() => addEpisode()} className="bg-primary text-white h-8 uppercase text-[8px] font-black rounded-lg"><Plus className="h-4 w-4 mr-1" /> ADICIONAR EP</Button>
-              </div>
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scroll scrollbar-visible">
-                {episodes.map((ep, idx) => (
-                  <div key={ep.id} className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-primary uppercase italic">EPISÓDIO {ep.number}</span>
-                      <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEpisodes(prev => prev.filter(item => item.id !== ep.id))}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                    <Input placeholder="Link Web Principal" value={ep.streamUrl} onChange={e => {
-                      const newEps = [...episodes];
-                      newEps[idx].streamUrl = e.target.value;
-                      setEpisodes(newEps);
-                    }} className="h-10 bg-black/40 border-white/5 font-mono text-[10px]" />
-                    <Input placeholder="Link Secundário (IPTV)" value={ep.directStreamUrl} onChange={e => {
-                      const newEps = [...episodes];
-                      newEps[idx].directStreamUrl = e.target.value;
-                      setEpisodes(newEps);
-                    }} className="h-10 bg-emerald-500/5 border-emerald-500/10 font-mono text-[10px]" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {formData.type === 'multi-season' && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-6 shadow-2xl">
-              <div className="flex justify-between items-center">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Layers className="h-4 w-4" /> Temporadas Master</h3>
-                <Button type="button" size="sm" onClick={addSeason} className="bg-primary text-white h-8 uppercase text-[8px] font-black rounded-lg"><Plus className="h-4 w-4 mr-1" /> NOVA TEMP</Button>
-              </div>
-              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-4 custom-scroll scrollbar-visible">
-                {seasons.map((season, sIdx) => (
-                  <div key={season.id} className="p-4 bg-black/20 rounded-xl border border-white/5 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-black uppercase text-[10px] text-primary italic">Temporada {season.number}</h4>
-                      <Button type="button" variant="outline" size="sm" onClick={() => addEpisode(season.id)} className="h-7 text-[8px] uppercase font-black border-primary/20 text-primary"><Plus className="h-3 w-3 mr-1" /> ADD EP</Button>
-                    </div>
-                    <div className="space-y-4">
-                      {season.episodes.map((ep, eIdx) => (
-                        <div key={ep.id} className="grid gap-2 border-l-2 border-primary/20 pl-3">
-                          <div className="flex justify-between items-center">
-                             <span className="text-[9px] font-black opacity-40 uppercase italic">Episódio {ep.number}</span>
-                             <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
-                                const newSeasons = [...seasons];
-                                newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(item => item.id !== ep.id);
-                                setSeasons(newSeasons);
-                             }}><Trash2 className="h-3 w-3" /></Button>
-                          </div>
-                          <Input placeholder="Link Web Principal" value={ep.streamUrl} onChange={e => {
-                            const newSeasons = [...seasons];
-                            newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value;
-                            setSeasons(newSeasons);
-                          }} className="h-9 bg-black/40 text-[9px] font-mono" />
-                          <Input placeholder="Link Secundário (IPTV)" value={ep.directStreamUrl} onChange={e => {
-                            const newSeasons = [...seasons];
-                            newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value;
-                            setSeasons(newSeasons);
-                          }} className="h-9 bg-emerald-500/5 text-[9px] font-mono" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+               <p className="text-[10px] font-black text-primary uppercase opacity-60 italic">Nota: Para séries, preencha os links nos episódios abaixo.</p>
             </div>
           )}
         </div>
@@ -254,7 +188,7 @@ export default function NewContentPage() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full h-16 bg-primary text-lg font-black uppercase italic shadow-2xl shadow-primary/20 rounded-2xl" disabled={loading}>
+          <Button type="submit" className="w-full h-16 bg-primary text-lg font-black uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-105 active:scale-95 transition-all" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} SALVAR SINAL
           </Button>
         </div>

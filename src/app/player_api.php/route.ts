@@ -13,9 +13,9 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v50.0 - BUSCA SOBERANA MULTI-CAMPO
-  const username = searchParams.get('username')?.trim() || searchParams.get('user')?.trim() || ""; 
-  const password = searchParams.get('password')?.trim() || searchParams.get('pass')?.trim() || "";
+  // XEQUE-MATE IPTV v60.0 - BUSCA SOBERANA TOTAL EM TODOS OS CAMPOS
+  const username = (searchParams.get('username') || searchParams.get('user') || searchParams.get('u') || "").trim(); 
+  const password = (searchParams.get('password') || searchParams.get('pass') || searchParams.get('p') || "").trim();
   const action = searchParams.get('action');
 
   if (!username && !password) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // VARREDURA TOTAL: O PIN pode estar no campo de usuário OU no campo de senha
+    // VARREDURA TOTAL: O PIN pode estar no usuário OU na senha
     const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
       
       const { data } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
       if (data && !data.isBlocked) {
+        // Verifica expiração
+        if (data.expiryDate && new Date(data.expiryDate) < new Date()) continue;
         activeUser = data;
         break;
       }
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
         user_info: { 
           auth: 0, 
           status: "Acesso Negado", 
-          message: "Sinal Sniper: PIN não localizado ou bloqueado." 
+          message: "PIN não localizado, bloqueado ou expirado." 
         } 
       }, { headers });
     }

@@ -24,9 +24,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const { processedUrl, type, originalUrl } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
-    const u = url.trim()
+    const u = url.trim().replace('pt.pornhub', 'www.pornhub'); // Fix subdomínios
 
-    // SINTONIZADOR SNIPER v60.0 - MESTRE LÉO TV (ALFANUMÉRICO MASTER)
+    // SINTONIZADOR SNIPER v100.0 - MESTRE LÉO TV
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
       const vidId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split(/[.?/]/)[0] : null;
@@ -48,7 +48,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${yid}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    const isHls = u.includes('.m3u8') || u.includes('chunklist');
+    const isHls = u.includes('.m3u8') || u.includes('chunklist') || u.includes('jmvstream');
     return { 
       processedUrl: u, 
       type: isHls ? 'hls' : (u.includes('.mp4') || u.includes('.ts') ? 'video' : 'iframe'), 
@@ -65,7 +65,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   };
 
   React.useEffect(() => {
-    if (!videoRef.current || !processedUrl || type === 'iframe') return;
+    if (!videoRef.current || !processedUrl || type === 'iframe') {
+      if (type === 'iframe') setLoading(false);
+      return;
+    }
     const video = videoRef.current;
     let hls: any = null;
 
@@ -79,6 +82,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         originalUrl.includes('archive.org') ||
         originalUrl.includes('jmvstream.com') ||
         originalUrl.includes('.ts') ||
+        originalUrl.includes('.mp4') ||
         originalUrl.includes('chunklist')
       );
 
@@ -87,10 +91,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls = new (window as any).Hls({
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
-              if (useProxy || requestUrl.includes('.ts') || requestUrl.includes('.m3u8')) {
-                if (!requestUrl.includes('/api/proxy')) {
-                  xhr.open('GET', `/api/proxy?url=${encodeURIComponent(requestUrl)}`, true);
-                }
+              if (useProxy) {
+                const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
+                xhr.open('GET', proxyUrl, true);
               }
             }
           });
@@ -98,11 +101,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls.loadSource(finalUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { 
-            video.play().catch(() => {
-              video.muted = true;
-              setIsMuted(true);
-              video.play().catch(() => {});
-            });
+            video.play().catch(() => { video.muted = true; setIsMuted(true); video.play().catch(() => {}); });
             setLoading(false); 
             if (id) incrementViews(id);
           });
@@ -118,11 +117,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         const finalUrl = useProxy ? `/api/proxy?url=${encodeURIComponent(processedUrl)}` : processedUrl;
         video.src = finalUrl;
         video.load();
-        video.play().catch(() => {
-          video.muted = true;
-          setIsMuted(true);
-          video.play().catch(() => {});
-        });
+        video.play().catch(() => { video.muted = true; setIsMuted(true); video.play().catch(() => {}); });
         setLoading(false);
         if (id) incrementViews(id);
       }
@@ -142,7 +137,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sniper v60.0...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Sintonizando Sniper v100.0...</p>
         </div>
       )}
 
@@ -171,7 +166,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      {/* NAVEGAÇÃO MASTER: TROCA DE CANAL (SETAS LATERAIS APENAS) */}
+      {/* NAVEGAÇÃO MASTER: TROCA DE CANAL (APENAS SETAS LATERAIS) */}
       {!loading && !error && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           <button 
@@ -192,7 +187,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         </div>
       )}
 
-      {/* BOTÃO MUDO MASTER */}
+      {/* BOTÃO MUDO MASTER (CANTO SUPERIOR) */}
       {!loading && !error && type !== 'iframe' && (
         <div className={`absolute top-8 right-8 z-10 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
            <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
