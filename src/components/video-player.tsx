@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, ExternalLink, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { incrementViews } from "@/lib/store"
 
@@ -19,13 +19,15 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
   const [error, setError] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false) 
   const [isPlaying, setIsPlaying] = React.useState(true)
+  const [showControls, setShowControls] = React.useState(true)
   const playPromiseRef = React.useRef<Promise<void> | null>(null)
+  const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const { processedUrl, type, originalUrl } = React.useMemo(() => {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v30.0 - MOTOR DE DETECÇÃO SOBERANO
+    // SINTONIZADOR SNIPER v40.0 - MOTOR DE DETECÇÃO SOBERANO
     if (u.includes('xvideos.com')) {
       const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
       const videoId = match ? (match[1] || match[0]).replace('video.', '').replace('/', '').split('/')[0] : null;
@@ -82,6 +84,14 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
     setIsPlaying(false);
   }, []);
 
+  const handleUserInteraction = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
+  };
+
   React.useEffect(() => {
     if (!videoRef.current || !processedUrl || type === 'iframe') return;
     const video = videoRef.current;
@@ -95,7 +105,9 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
         originalUrl.includes('phncdn.com') || 
         originalUrl.includes('xvideos') || 
         originalUrl.includes('archive.org') ||
-        originalUrl.includes('jmvstream.com')
+        originalUrl.includes('jmvstream.com') ||
+        originalUrl.includes('.ts') ||
+        originalUrl.includes('chunklist')
       );
 
       if (type === 'hls' && (window as any).Hls) {
@@ -136,14 +148,18 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
 
   const seek = (seconds: number) => {
     if (videoRef.current) videoRef.current.currentTime += seconds;
+    handleUserInteraction();
   };
 
   return (
     <div 
       ref={containerRef} 
+      onMouseMove={handleUserInteraction}
+      onTouchStart={handleUserInteraction}
       onClick={() => {
         if (videoRef.current?.muted) { videoRef.current.muted = false; setIsMuted(false); }
         isPlaying ? safePause() : safePlay();
+        handleUserInteraction();
       }}
       className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl cursor-pointer"
     >
@@ -178,29 +194,32 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
             onError={() => setError(true)} 
             crossOrigin="anonymous" 
           />
+          
+          {/* CONTROLES MASTER LÉO TV */}
           {!loading && !error && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
               <div className="flex items-center gap-12">
                 <button 
                   onClick={(e) => { e.stopPropagation(); seek(-10); }} 
                   className="pointer-events-auto h-20 w-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all scale-90 hover:scale-100"
                 >
                   <ChevronLeft className="h-10 w-10 text-white" />
-                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">10s</span>
+                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">-10s</span>
                 </button>
+                
                 <button 
-                  onClick={(e) => { e.stopPropagation(); isPlaying ? safePause() : safePlay(); }} 
+                  onClick={(e) => { e.stopPropagation(); isPlaying ? safePause() : safePlay(); handleUserInteraction(); }} 
                   className="pointer-events-auto h-24 w-24 rounded-full bg-primary flex items-center justify-center shadow-2xl shadow-primary/40 hover:scale-110 transition-transform"
                 >
-                  {isPlaying ? <div className="h-8 w-2 bg-white rounded-full mr-1.5" /> : null}
-                  {isPlaying ? <div className="h-8 w-2 bg-white rounded-full ml-1.5" /> : <div className="w-0 h-0 border-t-[15px] border-t-transparent border-l-[25px] border-l-white border-b-[15px] border-b-transparent ml-2" />}
+                  {isPlaying ? <Pause className="h-10 w-10 text-white fill-white" /> : <Play className="h-10 w-10 text-white fill-white ml-2" />}
                 </button>
+
                 <button 
                   onClick={(e) => { e.stopPropagation(); seek(10); }} 
                   className="pointer-events-auto h-20 w-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all scale-90 hover:scale-100"
                 >
                   <ChevronRight className="h-10 w-10 text-white" />
-                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">10s</span>
+                  <span className="absolute bottom-4 text-[9px] font-black uppercase text-white">+10s</span>
                 </button>
               </div>
             </div>
@@ -208,9 +227,10 @@ export function VideoPlayer({ url, title, id }: VideoPlayerProps) {
         </>
       )}
 
+      {/* BOTÃO MUDO MASTER */}
       {!loading && !error && type !== 'iframe' && (
-        <div className="absolute top-8 right-8 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-           <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10">
+        <div className={`absolute top-8 right-8 z-10 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+           <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); if(videoRef.current) videoRef.current.muted = !isMuted; handleUserInteraction(); }} className="h-12 w-12 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10">
               {isMuted ? <VolumeX className="h-5 w-5 text-white" /> : <Volume2 className="h-5 w-5 text-white" />}
             </button>
         </div>

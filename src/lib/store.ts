@@ -225,7 +225,10 @@ export async function getTotalContentCount() {
 }
 
 export async function generateM3UPlaylist(pin: string) {
-  const content = await getRemoteContent();
+  const allContent = await getRemoteContent();
+  // FILTRAGEM M3U: Apenas quem tem Link Secundário (IPTV)
+  const content = allContent.filter(i => !!i.directStreamUrl);
+  
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {

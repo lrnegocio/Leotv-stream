@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v800.0 - BUSCA SOBERANA MULTI-CAMPO (INDISTRUTÍVEL)
+  // XEQUE-MATE IPTV v900.0 - BUSCA SOBERANA MULTI-CAMPO
   const username = searchParams.get('username')?.trim() || searchParams.get('user')?.trim() || ""; 
   const password = searchParams.get('password')?.trim() || searchParams.get('pass')?.trim() || "";
   const action = searchParams.get('action');
@@ -70,7 +70,9 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    const content = await getRemoteContent(true);
+    // FILTRAGEM MASTER IPTV: Apenas canais com Link Secundário (IPTV)
+    const remoteContent = await getRemoteContent(true);
+    const content = remoteContent.filter(i => !!i.directStreamUrl);
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();

@@ -60,7 +60,17 @@ export default function HomeContent() {
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       
       const data = await getRemoteContent(false, queryStr, targetGenre);
-      setContent(data);
+      
+      // FILTRAGEM MASTER PWA: Apenas canais com Link Web Principal
+      const filtered = data.filter(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+          return !!item.streamUrl;
+        }
+        // Para séries, verificamos se há algum link web nos episódios
+        return true; 
+      });
+
+      setContent(filtered);
 
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
