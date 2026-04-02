@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, RotateCcw, RotateCw, Play, Pause, ExternalLink } from "lucide-react"
+import { Loader2, AlertTriangle, Volume2, VolumeX, Maximize, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -23,7 +23,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v20.0 - MOTOR DE DETECÇÃO SOBERANO (EMBED MASTER)
+    // SINTONIZADOR SNIPER v25.0 - MOTOR DE DETECÇÃO SOBERANO (EMBED MASTER)
     
     // XVideos Sniper
     if (u.includes('xvideos.com')) {
@@ -159,13 +159,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   };
 
-  const skip = (seconds: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.currentTime += seconds;
-    }
-  };
-
   const togglePlay = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (videoRef.current) {
@@ -227,18 +220,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           <div className="flex justify-end items-start">
             <button onClick={toggleVolume} className="h-14 w-14 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center hover:bg-primary transition-all border border-white/10">
               {isMuted ? <VolumeX className="h-7 w-7 text-white" /> : <Volume2 className="h-7 w-7 text-white" />}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-center gap-16">
-            <button onClick={(e) => skip(-10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5" title="Voltar 10s">
-              <RotateCcw className="h-10 w-10 text-white" />
-            </button>
-            <button onClick={(e) => togglePlay(e)} className="p-8 bg-primary rounded-full hover:scale-110 transition-all shadow-[0_0_40px_rgba(var(--primary),0.5)]">
-              {isPlaying ? <Pause className="h-12 w-12 text-white" fill="currentColor" /> : <Play className="h-12 w-12 text-white ml-2" fill="currentColor" />}
-            </button>
-            <button onClick={(e) => skip(10, e)} className="p-5 bg-white/5 backdrop-blur-md rounded-full hover:bg-primary/20 transition-all border border-white/5" title="Avançar 10s">
-              <RotateCw className="h-10 w-10 text-white" />
             </button>
           </div>
 

@@ -13,9 +13,9 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v502.0 - BUSCA SOBERANA DUAL
-  const username = searchParams.get('username')?.trim() || ""; 
-  const password = searchParams.get('password')?.trim() || "";
+  // XEQUE-MATE IPTV v600.0 - BUSCA SOBERANA MULTI-CAMPO
+  const username = searchParams.get('username')?.trim() || searchParams.get('user')?.trim() || ""; 
+  const password = searchParams.get('password')?.trim() || searchParams.get('pass')?.trim() || "";
   const action = searchParams.get('action');
 
   if (!username && !password) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
   try {
     let activeUser: any = null;
     
-    // Testa o PIN nos dois campos para garantir login em qualquer app (v502)
-    const pinsToTry = [username, password].filter(p => p.length > 0);
+    // Testa o PIN em todos os campos possíveis para garantir login em qualquer app (v600)
+    const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
       if (pin === 'adm77x2p') {
