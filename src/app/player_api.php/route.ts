@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE IPTV v500.0 - BUSCA SOBERANA
+  // XEQUE-MATE IPTV v501.0 - BUSCA SOBERANA
   // O sistema agora aceita o PIN em qualquer um dos campos (username ou password)
   const username = searchParams.get('username')?.trim() || ""; 
   const password = searchParams.get('password')?.trim() || "";
@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     let activeUser: any = null;
     
     // Testa o PIN nos dois campos para garantir que o app logue de qualquer forma
+    // Alguns apps de TV enviam o PIN no campo de senha (password)
     const pinsToTry = [username, password].filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {

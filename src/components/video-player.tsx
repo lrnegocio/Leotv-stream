@@ -24,24 +24,33 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const u = url.trim()
 
     // SINTONIZADOR SNIPER v15.0 - MOTOR DE DETECÇÃO SOBERANO
-    // Se for link de página web (Pornhub/XVideos), converte para Embed
+    
+    // XVideos Sniper (Suporte a IDs Alfanuméricos Novos)
+    if (u.includes('xvideos.com')) {
+      const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([a-z0-9]+)\//i);
+      const id = match ? (match[1] || match[0]).replace('video.', '').replace('/', '') : null;
+      if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe', originalUrl: u }
+    }
+
+    // Dailymotion Sniper
+    if (u.includes('dailymotion.com')) {
+      const id = u.split('/video/')[1]?.split(/[?#&]/)[0];
+      if (id) return { processedUrl: `https://www.dailymotion.com/embed/video/${id}`, type: 'iframe', originalUrl: u }
+    }
+
+    // Pornhub Sniper
     if (u.includes('pornhub.com/view_video.php') || u.includes('viewkey=')) {
       const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
       if (id) return { processedUrl: `https://www.pornhub.com/embed/${id}`, type: 'iframe', originalUrl: u }
     }
 
-    if (u.includes('xvideos.com/video') || u.match(/video\.?[a-z0-9]+/i)) {
-      const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
-      const id = match ? (match[1] || match[0]).replace('video.', '') : null;
-      if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe', originalUrl: u }
-    }
-
+    // YouTube Sniper
     if (u.includes('youtube.com') || u.includes('youtu.be')) {
       const id = u.includes('v=') ? u.split('v=')[1]?.split('&')[0] : u.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    // Se for link direto de stream (M3U8/MP4/TS)
+    // Sinais Diretos (M3U8 / MP4 / TS)
     const isDirectStream = u.includes('.m3u8') || u.includes('.mp4') || u.includes('.ts') || u.includes('hls');
     return { 
       processedUrl: u, 

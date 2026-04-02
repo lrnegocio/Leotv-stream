@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v18.0 - MOTOR DE STREAMING REAL 206
+ * TÚNEL MASTER v20.0 - MOTOR DE STREAMING REAL 206
  * Suporte total a Partial Content para permitir "seek" (avançar/voltar).
- * Blindagem contra erro 410, 403 e NotSupportedError.
+ * Blindagem total contra Erro de Conexão Recusada.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -22,13 +22,15 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Range', range);
     }
     
-    // Identidade Camuflada Master
+    // Identidade Camuflada Master (User-Agent e Referer Sniper)
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     
     if (targetUrl.includes('phncdn.com') || targetUrl.includes('pornhub.com')) {
       requestHeaders.set('Referer', 'https://www.pornhub.com/');
     } else if (targetUrl.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
+    } else if (targetUrl.includes('dailymotion')) {
+      requestHeaders.set('Referer', 'https://www.dailymotion.com/');
     } else if (targetUrl.includes('archive.org')) {
       requestHeaders.set('Referer', 'https://archive.org/');
     } else if (targetUrl.includes('rdcanais') || targetUrl.includes('redecanais')) {
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', 'Range, Content-Type');
 
-    // Se o navegador pediu Range, o status DEVE ser 206 para evitar NotSupportedError
+    // Se o navegador pediu Range, o status DEVE ser 206 para permitir seek
     const status = range ? 206 : res.status;
 
     return new NextResponse(res.body, {
