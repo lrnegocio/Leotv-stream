@@ -23,20 +23,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     if (!url) return { processedUrl: null, type: 'unknown', originalUrl: null }
     const u = url.trim()
 
-    // SINTONIZADOR SNIPER v12.0 - Detecção Total
-    if (u.includes('xvideos.com')) {
-      const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
-      const id = match ? (match[1] || match[0]) : null;
-      if (id && !u.includes('embedframe')) {
-        return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe', originalUrl: u }
-      }
+    // SINTONIZADOR SNIPER v15.0 - MOTOR DE DETECÇÃO SOBERANO
+    // Se for link de página web (Pornhub/XVideos), converte para Embed
+    if (u.includes('pornhub.com/view_video.php') || u.includes('viewkey=')) {
+      const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
+      if (id) return { processedUrl: `https://www.pornhub.com/embed/${id}`, type: 'iframe', originalUrl: u }
     }
 
-    if (u.includes('pornhub.com')) {
-      const id = u.split('viewkey=')[1]?.split(/[&?#]/)[0];
-      if (id && !u.includes('embed')) {
-        return { processedUrl: `https://www.pornhub.com/embed/${id}`, type: 'iframe', originalUrl: u }
-      }
+    if (u.includes('xvideos.com/video') || u.match(/video\.?[a-z0-9]+/i)) {
+      const match = u.match(/video\.?([a-z0-9]+)/i) || u.match(/\/video([0-9]+)\//i);
+      const id = match ? (match[1] || match[0]).replace('video.', '') : null;
+      if (id) return { processedUrl: `https://www.xvideos.com/embedframe/${id}`, type: 'iframe', originalUrl: u }
     }
 
     if (u.includes('youtube.com') || u.includes('youtu.be')) {
@@ -44,13 +41,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`, type: 'iframe', originalUrl: u }
     }
 
-    if (u.includes('redecanais') || u.includes('rdcanais') || u.includes('ch.php?')) {
-      return { processedUrl: u, type: 'iframe', originalUrl: u }
-    }
-
+    // Se for link direto de stream (M3U8/MP4/TS)
+    const isDirectStream = u.includes('.m3u8') || u.includes('.mp4') || u.includes('.ts') || u.includes('hls');
     return { 
       processedUrl: u, 
-      type: u.includes('.m3u8') ? 'hls' : 'video', 
+      type: isDirectStream ? (u.includes('.m3u8') ? 'hls' : 'video') : 'iframe', 
       originalUrl: u 
     }
   }, [url])
@@ -94,8 +89,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         originalUrl.includes('phncdn.com') || 
         originalUrl.includes('xvideos') || 
         originalUrl.includes('archive.org') ||
-        originalUrl.includes('blinder.space') ||
-        originalUrl.startsWith('http://')
+        originalUrl.includes('blinder.space')
       );
 
       if (type === 'hls' && (window as any).Hls) {
@@ -193,12 +187,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido (410) ou Fonte Incompatível</h3>
-          <p className="text-[10px] text-muted-foreground uppercase mt-2">O navegador não suporta esta fonte via proxy direto.</p>
+          <h3 className="text-white font-black uppercase italic tracking-tighter">Sinal Perdido ou Fonte Incompatível</h3>
+          <p className="text-[10px] text-muted-foreground uppercase mt-2">Tente abrir externamente para verificar o link original.</p>
           <div className="flex gap-4 mt-6">
-            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Tentar Novamente</Button>
+            <Button variant="outline" onClick={() => window.location.reload()} className="border-white/10 uppercase font-black text-[10px] rounded-xl h-12 px-8">Recalibrar</Button>
             <Button variant="default" onClick={() => window.open(originalUrl!, '_blank')} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8">
-              <ExternalLink className="mr-2 h-4 w-4" /> Abrir Externo
+              <ExternalLink className="mr-2 h-4 w-4" /> Link Original
             </Button>
           </div>
         </div>
@@ -220,9 +214,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       )}
 
       {!loading && !error && type !== 'iframe' && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-8">
-          <div className="flex justify-between items-center">
-            <h3 className="text-white font-black uppercase italic truncate max-w-xl tracking-tighter text-lg">{title}</h3>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-8">
+          <div className="flex justify-end items-start">
             <button onClick={toggleVolume} className="h-14 w-14 bg-black/60 backdrop-blur-xl rounded-full flex items-center justify-center hover:bg-primary transition-all border border-white/10">
               {isMuted ? <VolumeX className="h-7 w-7 text-white" /> : <Volume2 className="h-7 w-7 text-white" />}
             </button>

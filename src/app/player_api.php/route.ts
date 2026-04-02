@@ -13,25 +13,44 @@ export async function GET(req: NextRequest) {
   };
   const { searchParams } = new URL(req.url);
   
-  // XEQUE-MATE NO LOGIN IPTV: PIN pode estar em username ou password
-  const username = searchParams.get('username') || ""; 
-  const password = searchParams.get('password') || "";
+  // XEQUE-MATE IPTV v500.0 - BUSCA SOBERANA
+  // O sistema agora aceita o PIN em qualquer um dos campos (username ou password)
+  const username = searchParams.get('username')?.trim() || ""; 
+  const password = searchParams.get('password')?.trim() || "";
   const action = searchParams.get('action');
 
   if (!username && !password) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
 
   try {
     let activeUser: any = null;
-    const pinToTry = (username.trim() || password.trim());
-
-    if (pinToTry === 'adm77x2p') {
-      activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
-    } else {
-      const { data } = await supabase.from('users').select('*').eq('pin', pinToTry).maybeSingle();
-      if (!data || data.isBlocked) return NextResponse.json({ user_info: { auth: 0 } }, { headers });
-      activeUser = data;
+    
+    // Testa o PIN nos dois campos para garantir que o app logue de qualquer forma
+    const pinsToTry = [username, password].filter(p => p.length > 0);
+    
+    for (const pin of pinsToTry) {
+      if (pin === 'adm77x2p') {
+        activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
+        break;
+      }
+      
+      const { data } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
+      if (data && !data.isBlocked) {
+        activeUser = data;
+        break;
+      }
     }
 
+    if (!activeUser) {
+      return NextResponse.json({ 
+        user_info: { 
+          auth: 0, 
+          status: "Invalid Username or Password", 
+          message: "Mestre, este PIN não foi localizado ou está bloqueado." 
+        } 
+      }, { headers });
+    }
+
+    // Retorno de Sucesso Soberano
     if (!action) {
       return NextResponse.json({
         user_info: {
