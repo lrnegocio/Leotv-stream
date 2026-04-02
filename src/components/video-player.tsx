@@ -135,7 +135,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master v900.0...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master Léo TV...</p>
         </div>
       )}
 

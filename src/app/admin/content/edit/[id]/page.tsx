@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { autoGenerateContentDescription } from "@/ai/flows/auto-generate-content-description-flow"
 import { toast } from "@/hooks/use-toast"
 import { getContentById, saveContent, Season, Episode, ContentItem } from "@/lib/store"
 import Link from "next/link"
@@ -23,7 +22,6 @@ export default function EditContentPage() {
   
   const [loading, setLoading] = React.useState(false)
   const [fetching, setFetching] = React.useState(true)
-  const [generating, setGenerating] = React.useState(false)
   
   const [formData, setFormData] = React.useState<ContentItem | null>(null)
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
@@ -61,8 +59,8 @@ export default function EditContentPage() {
     
     const success = await saveContent({
       ...formData,
-      episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : undefined,
-      seasons: formData.type === 'multi-season' ? seasons : undefined,
+      episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : null,
+      seasons: formData.type === 'multi-season' ? seasons : null,
     })
     
     if (success) {
@@ -111,7 +109,21 @@ export default function EditContentPage() {
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Categoria Master</Label>
-                <Input value={formData.genre || ""} onChange={e => setFormData({...formData, genre: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold uppercase tracking-widest" />
+                <Select value={formData.genre} onValueChange={v => setFormData({...formData, genre: v})}>
+                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
+                    <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
+                    <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
+                    <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
+                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
+                    <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                    <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
+                    <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -123,8 +135,8 @@ export default function EditContentPage() {
 
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal (M3U8 / MP4 / WEB)</h3>
-              <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Soberano (M3U8 / MP4 / WEB)</h3>
+              <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
             </div>
           </div>
         </div>
@@ -135,21 +147,18 @@ export default function EditContentPage() {
              <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
                 {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20 text-[10px] font-black uppercase italic">Sinal sem Capa</div>}
              </div>
-             <div className="space-y-2 mt-4 text-left">
-                <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">URL do Poster</Label>
-                <Input 
-                  value={formData.imageUrl || ""} 
-                  onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
-                  placeholder="https://..."
-                  className="h-10 bg-black/40 border-white/5 text-[10px] font-mono"
-                />
-             </div>
+             <Input 
+                value={formData.imageUrl || ""} 
+                onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
+                placeholder="https://..."
+                className="h-10 bg-black/40 border-white/5 text-[10px] font-mono"
+              />
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Lock className="h-4 w-4" /> Controle de Sinal</h3>
+            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Lock className="h-4 w-4" /> Segurança</h3>
             <div className="flex items-center justify-between">
-              <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Adulto</Label>
+              <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Restrito</Label>
               <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
             </div>
           </div>

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Plus, Trash2, ListOrdered, Layers, Lock, Image as ImageIcon } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,9 +29,6 @@ export default function NewContentPage() {
     imageUrl: ""
   })
 
-  const [episodes, setEpisodes] = React.useState<Episode[]>([])
-  const [seasons, setSeasons] = React.useState<Season[]>([])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title) return;
@@ -45,8 +42,8 @@ export default function NewContentPage() {
       isRestricted: formData.isRestricted,
       streamUrl: formData.streamUrl,
       imageUrl: formData.imageUrl,
-      episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : undefined,
-      seasons: formData.type === 'multi-season' ? seasons : undefined,
+      episodes: null,
+      seasons: null,
     })
 
     if (success) {
@@ -54,7 +51,7 @@ export default function NewContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO DE BANCO", description: "O sistema gerou uma falha ao gravar o sinal." })
+      toast({ variant: "destructive", title: "ERRO DE BANCO" })
     }
   }
 
@@ -121,8 +118,8 @@ export default function NewContentPage() {
 
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal (M3U8 / MP4 / WEB)</h3>
-              <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="https://..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+              <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Soberano (M3U8 / MP4 / WEB)</h3>
+              <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link único para Web e IPTV" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
             </div>
           </div>
         </div>

@@ -24,12 +24,12 @@ export async function GET(req: NextRequest) {
     const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
     
     for (const pin of pinsToTry) {
-      if (pin === 'adm77x2p') {
+      if (pin.toLowerCase() === 'adm77x2p') {
         activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
         break;
       }
       
-      const { data } = await supabase.from('users').select('*').eq('pin', pin).maybeSingle();
+      const { data } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase()).maybeSingle();
       if (data && !data.isBlocked) {
         if (data.expiryDate && new Date(data.expiryDate) < new Date()) continue;
         activeUser = data;

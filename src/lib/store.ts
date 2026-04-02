@@ -23,11 +23,11 @@ export interface ContentItem {
   description: string; 
   genre: string;
   isRestricted: boolean; 
-  streamUrl?: string; 
+  streamUrl: string; 
   imageUrl?: string;
   views?: number;
-  seasons?: Season[]; 
-  episodes?: Episode[]; 
+  seasons?: Season[] | null; 
+  episodes?: Episode[] | null; 
   created_at?: string;
 }
 
@@ -99,7 +99,8 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    const payload = {
+    // BLINDAGEM MESTRE: Limpa o objeto para garantir que o Supabase aceite
+    const payload: any = {
       id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
@@ -109,19 +110,19 @@ export async function saveContent(item: Partial<ContentItem>) {
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
       views: item.views || 0,
-      episodes: item.episodes || null,
-      seasons: item.seasons || null,
+      episodes: item.episodes && item.episodes.length > 0 ? item.episodes : null,
+      seasons: item.seasons && item.seasons.length > 0 ? item.seasons : null,
       created_at: item.created_at || new Date().toISOString()
     };
 
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
-      console.error("Erro Supabase saveContent:", error);
-      throw error;
+      console.error("Erro Supabase saveContent:", error.message);
+      return false;
     }
     return true;
-  } catch (e) { 
-    console.error("Erro fatal saveContent:", e);
+  } catch (e: any) { 
+    console.error("Erro fatal saveContent:", e?.message || e);
     return false; 
   }
 }
@@ -189,9 +190,17 @@ export async function getRemoteUsers() {
 }
 
 export async function saveUser(user: User) {
-  const { error } = await supabase.from('users').upsert(user);
-  if (error) console.error("Erro ao salvar usuário:", error);
-  return !error;
+  try {
+    const { error } = await supabase.from('users').upsert(user);
+    if (error) {
+      console.error("Erro Supabase saveUser:", error.message);
+      return false;
+    }
+    return true;
+  } catch (e: any) {
+    console.error("Erro fatal saveUser:", e?.message || e);
+    return false;
+  }
 }
 
 export async function removeUser(id: string) {
@@ -201,7 +210,7 @@ export async function removeUser(id: string) {
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true } };
-  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim()).maybeSingle();
+  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
   if (!user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
   if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
