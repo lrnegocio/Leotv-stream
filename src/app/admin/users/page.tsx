@@ -71,7 +71,7 @@ export default function UserManagementPage() {
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin.toUpperCase().trim(),
-      role: 'user',
+      role: editingUserId === 'master' ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || "",
       maxScreens: parseInt(newUser.screens) || 1,
@@ -110,16 +110,15 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
+  // SNIPER v2300: Lógica de busca blindada que ignora filtros
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
     const matchesSearch = pinStr.includes(searchStr);
     
-    if (filterExpiring) {
+    if (filterExpiring && !searchTerm) {
       const days = getExpiryDays(u.expiryDate);
-      const isExpiring = days !== null && days >= 0 && days <= 3;
-      // SNIPER v2200: A busca agora funciona junto com o filtro de expiração
-      return matchesSearch && isExpiring;
+      return days !== null && days >= 0 && days <= 3;
     }
     return matchesSearch;
   });
@@ -231,8 +230,8 @@ export default function UserManagementPage() {
               <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Telas</Label><Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" /></div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP</Label>
-               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Fatura pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP (Bloco de Notas)</Label>
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura vence hoje, entre em contato." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-primary" /><span className="text-[10px] font-black uppercase">Adulto</span></div>

@@ -23,8 +23,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SNIPER v2200: Suporte para players externos (webplayer.one)
-    if (urlStr.includes('webplayer.one')) {
+    // SNIPER v2300: Suporte para redecanaistv e webplayer.one via Frame
+    if (urlStr.includes('webplayer.one') || urlStr.includes('redecanaistv.cafe')) {
       return { processedUrl: urlStr, type: 'iframe' }
     }
 
@@ -90,6 +90,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls = new (window as any).Hls({
             enableWorker: true,
             xhrSetup: (xhr: any, requestUrl: string) => { 
+              // SNIPER: Força segmentos .ts a usarem o proxy se o m3u8 estiver no proxy
               if (useProxy && !requestUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
                 xhr.open('GET', proxyUrl, true);
@@ -107,7 +108,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             if (data.fatal) {
               if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
               else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-              else { hls.destroy(); setError(true); }
+              else { hls.destroy(); setError(true); setLoading(false); }
             }
           });
         }

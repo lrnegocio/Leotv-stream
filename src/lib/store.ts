@@ -80,7 +80,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    // SORENARÍA ALFABÉTICA SEM COLUNA VIEWS (Blindado v1300)
     const { data } = await supabase.from('content').select('*').order('title', { ascending: true }).limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -90,7 +89,6 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // BLINDAGEM MESTRE: Somente colunas existentes no banco (Sem 'views' e sem links fantasmas)
     const payload = {
       id: id,
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
