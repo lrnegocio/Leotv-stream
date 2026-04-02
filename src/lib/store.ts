@@ -24,8 +24,8 @@ export interface ContentItem {
   description: string; 
   genre: string;
   isRestricted: boolean; 
-  streamUrl?: string; // LINK WEB PRINCIPAL (PWA)
-  directStreamUrl?: string; // LINK SECUNDÁRIO (IPTV / XTREAM)
+  streamUrl?: string; 
+  directStreamUrl?: string; 
   imageUrl?: string;
   views?: number;
   seasons?: Season[]; 
@@ -64,9 +64,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * BUSCA SOBERANA v250.0 - ALFABÉTICA POR PADRÃO
- */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -75,17 +72,11 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     
     const { data } = await query.order('title', { ascending: true });
     
-    const rawItems = (data || []).map(i => ({ 
+    return (data || []).map(i => ({ 
       ...i, 
       isRestricted: i.isRestricted || false,
       title: (i.title || "").toUpperCase()
     }));
-
-    if (isIptv) {
-      return rawItems.filter(i => !!i.directStreamUrl && (i.directStreamUrl.includes('.m3u8') || i.directStreamUrl.includes('.ts') || i.directStreamUrl.includes('.mp4') || i.directStreamUrl.includes('chunklist')));
-    } else {
-      return rawItems.filter(i => !!i.streamUrl || i.type === 'series' || i.type === 'multi-season');
-    }
   } catch (e) { 
     return []; 
   }
@@ -106,15 +97,10 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   } catch (e) { return []; }
 }
 
-/**
- * SALVAMENTO BLINDADO v5.0 - XEQUE-MATE NO ERRO DE GRAVAÇÃO
- * Blinda as gavetas de links para que um não substitua o outro.
- */
 export async function saveContent(item: ContentItem) {
   try {
     const id = (item.id && item.id.trim() !== "") ? item.id : "leo_" + Math.random().toString(36).substring(2, 12);
     
-    // Tenta buscar o existente para não apagar a gaveta oposta
     const { data: existing } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
 
     const finalItem = {
@@ -126,23 +112,18 @@ export async function saveContent(item: ContentItem) {
       imageUrl: item.imageUrl !== undefined ? item.imageUrl : (existing?.imageUrl || ""),
       isRestricted: item.isRestricted !== undefined ? item.isRestricted : (existing?.isRestricted || false),
       views: item.views !== undefined ? item.views : (existing?.views || 0),
-      
-      // BLINDAGEM DE LINKS: Só altera se o novo valor não for vazio
-      streamUrl: (item.streamUrl && item.streamUrl !== "") ? item.streamUrl : (existing?.streamUrl || ""),
-      directStreamUrl: (item.directStreamUrl && item.directStreamUrl !== "") ? item.directStreamUrl : (existing?.directStreamUrl || ""),
-      
+      streamUrl: (item.streamUrl !== undefined) ? item.streamUrl : (existing?.streamUrl || ""),
+      directStreamUrl: (item.directStreamUrl !== undefined) ? item.directStreamUrl : (existing?.directStreamUrl || ""),
       episodes: item.episodes !== undefined ? item.episodes : (existing?.episodes || null),
       seasons: item.seasons !== undefined ? item.seasons : (existing?.seasons || null),
-      
       created_at: item.created_at || existing?.created_at || new Date().toISOString()
     };
 
-    const { error: upsertError } = await supabase.from('content').upsert(finalItem);
-    if (upsertError) throw upsertError;
-    
+    const { error } = await supabase.from('content').upsert(finalItem);
+    if (error) throw error;
     return true;
-  } catch (e: any) { 
-    console.error("Erro crítico no saveContent:", e.message || e);
+  } catch (e) { 
+    console.error("Erro no saveContent:", e);
     return false; 
   }
 }
@@ -213,6 +194,7 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   const { error } = await supabase.from('users').upsert(user);
+  if (error) console.error("Erro ao salvar usuário:", error);
   return !error;
 }
 
@@ -266,8 +248,10 @@ export async function generateM3UPlaylist(pin: string) {
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   let m3u = "#EXTM3U\n";
   content.forEach(item => {
-    const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
-    m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
+    if (item.directStreamUrl) {
+      const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
+      m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
+    }
   });
   return m3u;
 }
@@ -280,5 +264,5 @@ export function getExpiryMessage(pin: string, days: number) {
   return `⚠️ *ALERTA LÉO TV* ⚠️\n\nSeu sinal *${pin}* expira em *${days} dia(s)*!\n\nRenove agora para não ficar sem sintonizar o melhor conteúdo!`;
 }
 
-export const generateRandomPin = (l = 11) => Math.random().toString().substring(2, 2+l);
+export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();
 export const cleanName = (n: string) => n.toUpperCase().trim();

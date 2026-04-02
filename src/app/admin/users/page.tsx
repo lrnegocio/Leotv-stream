@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Monitor, Globe, Clock, AlertTriangle, Bell, MessageSquare } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Bell, MessageSquare, Clock, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -67,25 +67,29 @@ export default function UserManagementPage() {
   const handleSaveUser = async () => {
     if (!newUser.pin) return;
     setIsSaving(true);
-    const editingUser = users.find(u => u.id === editingUserId);
+    const existingUser = users.find(u => u.id === editingUserId);
+    
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
-      pin: newUser.pin,
+      pin: newUser.pin.toUpperCase(),
       role: 'user',
       subscriptionTier: newUser.tier,
-      expiryDate: editingUser?.expiryDate || "",
+      expiryDate: existingUser?.expiryDate || "",
       maxScreens: parseInt(newUser.screens) || 1,
-      activeDevices: editingUser?.activeDevices || [],
-      isBlocked: editingUser?.isBlocked || false,
+      activeDevices: existingUser?.activeDevices || [],
+      isBlocked: existingUser?.isBlocked || false,
       isAdultEnabled: newUser.isAdultEnabled,
-      activatedAt: editingUser?.activatedAt || "",
+      activatedAt: existingUser?.activatedAt || "",
       individualMessage: newUser.individualMessage
     }
+
     if (await saveUser(userData)) {
-      toast({ title: "PIN SINTONIZADO NO BANCO!" });
+      toast({ title: "PIN ATUALIZADO NO BANCO!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
+    } else {
+      toast({ variant: "destructive", title: "ERRO AO SALVAR PIN" });
     }
     setIsSaving(false);
   }
@@ -112,39 +116,38 @@ export default function UserManagementPage() {
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  const sendExpiryNotice = (user: User) => {
-    const days = getExpiryDays(user.expiryDate) || 0;
-    const msg = getExpiryMessage(user.pin, days);
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-
   const filteredUsers = users.filter(u => {
-    const matchesSearch = u.pin.includes(searchTerm);
+    const matchesSearch = u.pin.toLowerCase().includes(searchTerm.toLowerCase());
     if (!filterExpiring) return matchesSearch;
     const days = getExpiryDays(u.expiryDate);
-    return matchesSearch && days !== null && days > 0 && days <= 3;
-  }).sort((a,b) => b.id.localeCompare(a.id));
+    return matchesSearch && days !== null && days >= 0 && days <= 3;
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle de PINs</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão Master de Validades e Mensagens Individuais.</p>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle Soberano de PINs</h1>
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Mensagens VIP.</p>
         </div>
         <div className="flex gap-2">
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
            <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
-            <Plus className="mr-2 h-4 w-4" /> NOVO PIN
+            <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
       </div>
 
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-        <Input placeholder="PESQUISAR PIN PARA VER VALIDADE..." className="pl-12 bg-card/50 border-white/5 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+        <Input 
+          placeholder="PESQUISAR PIN PARA VER VALIDADE..." 
+          className="pl-12 bg-card/50 border-white/5 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
+          value={searchTerm} 
+          onChange={e => setSearchTerm(e.target.value)} 
+        />
       </div>
 
       {loading ? (
@@ -154,17 +157,16 @@ export default function UserManagementPage() {
           <Table>
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 h-14">
-                <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN / PLANO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">STATUS DE VALIDADE</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">CONFIGURAÇÃO</TableHead>
-                <TableHead className="uppercase text-[10px] font-black text-center">MSG INDIVIDUAL</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">VALIDADE</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">TELAS / ADULTO</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-center">MSG VIP</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
-                const days = getExpiryDays(u.expiryDate);
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
                     <TableCell className="px-8">
@@ -181,27 +183,27 @@ export default function UserManagementPage() {
                       <div className="space-y-1">
                         <p className="text-[9px] font-black uppercase opacity-40">{u.maxScreens} TELA(S)</p>
                         <Badge className={`uppercase text-[8px] font-black ${u.isAdultEnabled ? 'bg-primary/20 text-primary' : 'bg-muted opacity-40'}`}>
-                          ADULTOS: {u.isAdultEnabled ? 'LIB' : 'BLOQ'}
+                          {u.isAdultEnabled ? 'ADULTO LIBERADO' : 'ADULTO BLOQUEADO'}
                         </Badge>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                       {u.individualMessage ? <MessageSquare className="h-4 w-4 text-primary mx-auto" /> : <span className="opacity-10">—</span>}
+                       {u.individualMessage ? <MessageSquare className="h-4 w-4 text-emerald-500 mx-auto animate-pulse" /> : <span className="opacity-10">—</span>}
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-1">
-                        {days !== null && days > 0 && days <= 3 && (
-                          <Button variant="ghost" size="icon" onClick={() => sendExpiryNotice(u)} className="text-orange-500 hover:bg-orange-500/10" title="Avisar Expiração"><Bell className="h-5 w-5" /></Button>
-                        )}
                         <Button variant="ghost" size="icon" onClick={() => sendWhatsAppAccess(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar Acesso"><Send className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXCLUIR SINAL?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXTERMINAR PIN?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
+              {filteredUsers.length === 0 && (
+                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado.</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -209,45 +211,58 @@ export default function UserManagementPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-8">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Master</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN Soberano</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (Letras e Números)</Label>
               <div className="flex gap-2">
-                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
+                <Input 
+                  value={newUser.pin} 
+                  onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} 
+                  className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" 
+                />
                 <Button variant="outline" onClick={handleGeneratePin} className="h-14 border-white/5"><RefreshCcw className="h-4 w-4 text-primary" /></Button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Plano</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">Plano de Acesso</Label>
                 <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
-                  <SelectTrigger className="h-12 border-white/5 bg-black/40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-12 border-white/5 bg-black/40 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="test">6 Horas</SelectItem>
-                    <SelectItem value="monthly">30 Dias</SelectItem>
-                    <SelectItem value="lifetime">Vitalício</SelectItem>
+                    <SelectItem value="test">6 Horas (Teste)</SelectItem>
+                    <SelectItem value="monthly">30 Dias (Mensal)</SelectItem>
+                    <SelectItem value="lifetime">Acesso Vitalício</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Telas</Label>
-                <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5" />
+                <Label className="uppercase text-[10px] font-black opacity-60">Limite de Telas</Label>
+                <Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" />
               </div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual (Bloco de Notas Cliente)</Label>
-               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Escreva algo exclusivo para este cliente... Ele verá no topo do app." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem VIP (Aparece no topo do App do Cliente)</Label>
+               <Textarea 
+                value={newUser.individualMessage} 
+                onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} 
+                placeholder="Ex: Sua fatura vence amanhã! Clique aqui para renovar..." 
+                className="bg-black/40 border-white/5 h-24 text-xs font-bold" 
+               />
             </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Lock className="h-4 w-4 text-primary" />
-                <span className="text-[10px] font-black uppercase">Liberar Adultos</span>
+                <span className="text-[10px] font-black uppercase">Conteúdo Adulto</span>
               </div>
               <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR ALTERAÇÕES'}</Button></DialogFooter>
+          <DialogFooter>
+            <Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>
+              {isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR ALTERAÇÕES MASTER'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

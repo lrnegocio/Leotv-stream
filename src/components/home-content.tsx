@@ -58,17 +58,10 @@ export default function HomeContent() {
       setAnnouncement(settings.announcement || "");
 
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
-      
       const data = await getRemoteContent(false, queryStr, targetGenre);
       
-      // FILTRAGEM SOBERANA: No App Web, só mostra o que tem Link Web Principal
-      const filtered = data.filter(item => {
-        if (item.type === 'channel' || item.type === 'movie') {
-          return !!item.streamUrl;
-        }
-        return true; 
-      });
-
+      // MOSTRA TUDO: Se tiver qualquer um dos dois links, aparece no App
+      const filtered = data.filter(item => !!item.streamUrl || !!item.directStreamUrl || item.type === 'series' || item.type === 'multi-season');
       setContent(filtered);
 
       if (!categoryId && !queryStr) {
@@ -143,7 +136,7 @@ export default function HomeContent() {
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v250.0</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Alfabéticos v800.0</span>
           </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
@@ -159,7 +152,6 @@ export default function HomeContent() {
       </header>
 
       <div className="max-w-[1800px] mx-auto px-8 mt-6 space-y-4">
-        {/* MURAL GLOBAL */}
         {announcement && !selectedCat && !q && (
           <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4 duration-500">
             <div className="bg-primary p-2 rounded-xl"><MessageSquare className="h-5 w-5 text-white" /></div>
@@ -167,7 +159,6 @@ export default function HomeContent() {
           </div>
         )}
         
-        {/* MURAL INDIVIDUAL (BLOCO DE NOTAS CLIENTE) */}
         {user?.individualMessage && !selectedCat && !q && (
           <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center gap-4 animate-pulse">
             <div className="bg-emerald-500 p-2 rounded-xl"><Bell className="h-5 w-5 text-white" /></div>
@@ -268,7 +259,8 @@ export default function HomeContent() {
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
           {activeVideo && (
             <VideoPlayer 
-              url={activeVideo.items[activeVideo.index].streamUrl || activeVideo.items[activeVideo.index].directStreamUrl || ""} 
+              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
+              secondaryUrl={activeVideo.items[activeVideo.index].directStreamUrl}
               title={activeVideo.items[activeVideo.index].title} 
               id={activeVideo.items[activeVideo.index].id}
               onNext={() => navigateChannel('next')}
