@@ -167,11 +167,11 @@ export default function HomeContent() {
           </div>
         )}
         
-        {/* MURAL INDIVIDUAL */}
+        {/* MURAL INDIVIDUAL (BLOCO DE NOTAS CLIENTE) */}
         {user?.individualMessage && !selectedCat && !q && (
           <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center gap-4 animate-pulse">
             <div className="bg-emerald-500 p-2 rounded-xl"><Bell className="h-5 w-5 text-white" /></div>
-            <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">MENSAGEM PARA VOCÊ: {user.individualMessage}</p>
+            <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">NOTIFICAÇÃO VIP: {user.individualMessage}</p>
           </div>
         )}
       </div>

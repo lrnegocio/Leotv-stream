@@ -236,8 +236,8 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual</Label>
-               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Escreva algo exclusivo para este cliente..." className="bg-black/40 border-white/5 h-20 text-xs" />
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual (Bloco de Notas Cliente)</Label>
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Escreva algo exclusivo para este cliente... Ele verá no topo do app." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">

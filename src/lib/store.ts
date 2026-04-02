@@ -64,6 +64,9 @@ export interface Reseller {
   birthDate?: string;
 }
 
+/**
+ * BUSCA SOBERANA v250.0 - ALFABÉTICA POR PADRÃO
+ */
 export async function getRemoteContent(forceRefresh = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
@@ -96,16 +99,24 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   } catch (e) { return []; }
 }
 
+/**
+ * SALVAMENTO BLINDADO v2.0 - NÃO SOBRESCREVE LINKS VAZIOS
+ */
 export async function saveContent(item: ContentItem) {
   try {
+    const id = item.id && item.id !== "" ? item.id : "leo_" + Math.random().toString(36).substring(2, 10);
+    
+    // Busca o item existente para não apagar links que não foram enviados no form
+    const { data: existing } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+
     const finalItem = {
       ...item,
-      id: item.id && item.id !== "" ? item.id : "leo_" + Math.random().toString(36).substring(2, 10),
+      id,
       title: item.title.toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      views: item.views || 0,
-      streamUrl: item.streamUrl || "",
-      directStreamUrl: item.directStreamUrl || ""
+      views: item.views || existing?.views || 0,
+      streamUrl: item.streamUrl !== undefined ? item.streamUrl : (existing?.streamUrl || ""),
+      directStreamUrl: item.directStreamUrl !== undefined ? item.directStreamUrl : (existing?.directStreamUrl || "")
     };
 
     const { error } = await supabase.from('content').upsert(finalItem);
