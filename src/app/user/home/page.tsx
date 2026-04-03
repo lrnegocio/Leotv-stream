@@ -5,7 +5,6 @@ import * as React from 'react';
 import { Suspense } from 'react';
 import HomeContent from '@/components/home-content';
 import { Loader2 } from 'lucide-react';
-import { AiAssistant } from '@/components/ai-assistant';
 import { PwaInstall } from '@/components/pwa-install';
 
 export default function HomePage() {
@@ -29,7 +28,6 @@ export default function HomePage() {
     }>
       <PwaInstall />
       <HomeContent />
-      <AiAssistant />
     </Suspense>
   );
 }
