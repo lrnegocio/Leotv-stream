@@ -7,18 +7,14 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "title": { "type": "string", "description": "Nome do canal ou filme" },
-        "type": { "type": "string", "enum": ["movie", "series", "multi-season", "channel"], "description": "Tipo de mídia" },
-        "description": { "type": "string", "description": "Sinopse ou descrição" },
-        "genre": { "type": "string", "description": "Categoria/Pasta" },
-        "isRestricted": { "type": "boolean", "description": "Se requer senha parental" },
-        "streamUrl": { "type": "string", "description": "Link da stream (m3u8, youtube, mp4, etc)" },
-        "imageUrl": { "type": "string", "description": "URL da capa" },
-        "views": { "type": "number", "description": "Contagem total de acessos" },
-        "episodes": { "type": "array" },
-        "seasons": { "type": "array" }
-      },
-      "required": ["title", "type", "genre"]
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["movie", "series", "multi-season", "channel"] },
+        "genre": { "type": "string" },
+        "isRestricted": { "type": "boolean" },
+        "streamUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "views": { "type": "number" }
+      }
     },
     "User": {
       "title": "Cliente",
@@ -26,26 +22,19 @@
       "type": "object",
       "properties": {
         "pin": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "user"] },
-        "subscriptionTier": { "type": "string" },
-        "isBlocked": { "type": "boolean" },
-        "isAdultEnabled": { "type": "boolean" },
-        "individualMessage": { "type": "string", "description": "Mensagem exclusiva para o cliente" }
-      },
-      "required": ["pin", "role"]
+        "role": { "type": "string" },
+        "gamePoints": { "type": "number" },
+        "isSearchingMatch": { "type": "boolean" },
+        "searchingMatchAt": { "type": "string", "format": "date-time" },
+        "individualMessage": { "type": "string" }
+      }
     }
   },
   "auth": {
     "providers": ["anonymous", "password"]
   },
   "firestore": {
-    "/content/{contentId}": {
-      "schema": "ContentItem",
-      "description": "Biblioteca Master"
-    },
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "PINs Master"
-    }
+    "/content/{contentId}": { "schema": "ContentItem", "description": "Biblioteca" },
+    "/users/{userId}": { "schema": "User", "description": "PINs" }
   }
 }

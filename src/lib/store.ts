@@ -51,6 +51,8 @@ export interface User {
   activatedAt?: string;
   individualMessage?: string;
   gamePoints?: number;
+  isSearchingMatch?: boolean;
+  searchingMatchAt?: string;
 }
 
 export interface GameRanking {
@@ -72,305 +74,194 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * MOTOR DE INTELIGÊNCIA MASTER - ESTATÍSTICAS (v3300.0)
- */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data, error } = await supabase
-      .from('content')
-      .select('*')
-      .order('views', { ascending: false })
-      .limit(limit);
-    
-    if (error) throw error;
+    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
     return (data || []).map(i => ({ ...i, views: i.views || 0 }));
-  } catch (e) { 
-    // Fallback se a coluna views não existir
-    const { data } = await supabase.from('content').select('*').limit(limit);
-    return data || [];
-  }
+  } catch (e) { return []; }
 }
 
-/**
- * MOTOR DE PONTUAÇÃO ARENA GAMES
- */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
-    const { data: user } = await supabase
-      .from('users')
-      .select('gamePoints')
-      .eq('pin', pin.toUpperCase())
-      .single();
-    
-    let currentPoints = user?.gamePoints || 0;
-    
-    if (result === 'win') currentPoints += 10;
-    else if (result === 'draw') currentPoints += 3;
-    else if (result === 'loss') currentPoints = Math.max(0, currentPoints - 5);
-
-    const { error } = await supabase
-      .from('users')
-      .update({ gamePoints: currentPoints })
-      .eq('pin', pin.toUpperCase());
-    
+    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
+    let pts = user?.gamePoints || 0;
+    if (result === 'win') pts += 10;
+    else if (result === 'draw') pts += 3;
+    else if (result === 'loss') pts = Math.max(0, pts - 5);
+    const { error } = await supabase.from('users').update({ gamePoints: pts, isSearchingMatch: false }).eq('pin', pin.toUpperCase());
     return !error;
   } catch (e) { return false; }
 }
 
-export async function getGameRankings(): Promise<GameRanking[]> {
+export async function setUserSearchingMatch(pin: string, isSearching: boolean) {
   try {
-    const { data } = await supabase
-      .from('users')
-      .select('pin, gamePoints')
-      .gt('gamePoints', 0)
-      .order('gamePoints', { ascending: false })
-      .limit(50);
-    
-    return (data || []).map(u => ({
-      pin: u.pin,
-      points: u.gamePoints || 0
-    }));
+    const { error } = await supabase.from('users').update({ 
+      isSearchingMatch: isSearching, 
+      searchingMatchAt: isSearching ? new Date().toISOString() : null 
+    }).eq('pin', pin.toUpperCase());
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function getWaitingPlayers(): Promise<User[]> {
+  try {
+    const { data } = await supabase.from('users')
+      .select('*')
+      .eq('isSearchingMatch', true)
+      .order('searchingMatchAt', { ascending: false });
+    return data || [];
   } catch (e) { return []; }
 }
 
-/**
- * MOTOR DE BUSCA DE SINAIS MASTER
- */
+export async function getGameRankings(): Promise<GameRanking[]> {
+  try {
+    const { data } = await supabase.from('users').select('pin, gamePoints').gt('gamePoints', 0).order('gamePoints', { ascending: false }).limit(50);
+    return (data || []).map(u => ({ pin: u.pin, points: u.gamePoints || 0 }));
+  } catch (e) { return []; }
+}
+
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    
-    if (searchQuery) {
-      query = query.ilike('title', `%${searchQuery}%`);
-    }
-    
-    if (categoryGenre) {
-      query = query.eq('genre', categoryGenre.toUpperCase());
-    }
-    
-    const { data, error } = await query.order('title', { ascending: true });
-    
-    if (error) throw error;
-    
-    return (data || []).map(i => ({ 
-      ...i, 
-      isRestricted: !!i.isRestricted,
-      title: (i.title || "").toUpperCase()
-    }));
+    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
+    const { data } = await query.order('title', { ascending: true });
+    return (data || []).map(i => ({ ...i, isRestricted: !!i.isRestricted, title: (i.title || "").toUpperCase() }));
   } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    const isSeries = item.type === 'series' || item.type === 'multi-season';
-    
     const payload = {
-      id: id,
-      title: (item.title || "NOVO SINAL").toUpperCase().trim(),
+      id, title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      type: item.type || 'channel',
-      description: item.description || "",
-      imageUrl: item.imageUrl || "",
-      isRestricted: !!item.isRestricted,
-      streamUrl: isSeries ? "" : (item.streamUrl || ""),
+      type: item.type || 'channel', description: item.description || "",
+      imageUrl: item.imageUrl || "", isRestricted: !!item.isRestricted,
+      streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : (item.streamUrl || ""),
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
-    
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
-  } catch (e: any) { return false; }
+  } catch (e) { return false; }
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
-  try {
-    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    return data;
-  } catch (e) { return null; }
+  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+  return data;
 }
 
 export async function removeContent(id: string) {
-  try {
-    const { error } = await supabase.from('content').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
-  try {
-    const { error } = await supabase.from('content').delete().in('id', ids);
-    return !error;
-  } catch (e) { return false; }
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
 }
 
 export async function clearAllM3UContent() {
-  try {
-    const { data: items } = await supabase.from('content').select('id');
-    if (!items || items.length === 0) return true;
-    const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
-    return !error;
-  } catch (e) { return false; }
+  const { data: items } = await supabase.from('content').select('id');
+  if (!items || items.length === 0) return true;
+  const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
+  return !error;
 }
 
 export async function processM3UImport(m3u: string, onProgress: (m: string) => void) {
-  const lines = m3u.split('\n');
-  let count = 0;
-  let current: any = {};
+  const lines = m3u.split('\n'); let count = 0; let curr: any = {};
   for (const line of lines) {
     if (line.startsWith('#EXTINF:')) {
       const parts = line.split(',');
-      current = { title: parts[parts.length - 1]?.trim(), type: 'channel', genre: 'LÉO TV AO VIVO', isRestricted: false };
+      curr = { title: parts[parts.length - 1]?.trim(), type: 'channel', genre: 'LÉO TV AO VIVO', isRestricted: false };
     } else if (line.startsWith('http')) {
-      if (current.title) {
-        await saveContent({ ...current, streamUrl: line.trim() });
-        count++;
-        if (count % 10 === 0) onProgress(`Sintonizando: ${count} sinais...`);
-      }
-      current = {};
+      if (curr.title) { await saveContent({ ...curr, streamUrl: line.trim() }); count++; if (count % 10 === 0) onProgress(`Sintonizando: ${count}...`); }
+      curr = {};
     }
   }
   return { success: count };
 }
 
 export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return data?.value || { parentalPin: "1234", announcement: "" };
-  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
+  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+  return data?.value || { parentalPin: "1234", announcement: "" };
 }
 
 export async function updateGlobalSettings(value: any) {
-  try {
-    const { error } = await supabase.from('settings').upsert({ key: 'global', value });
-    return !error;
-  } catch (e) { return false; }
+  const { error } = await supabase.from('settings').upsert({ key: 'global', value });
+  return !error;
 }
 
-/**
- * MOTOR DE GESTÃO DE PINS MASTER
- */
 export async function getRemoteUsers() {
-  try {
-    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    return data || [];
-  } catch (e) { return []; }
+  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+  return data || [];
 }
 
 export async function saveUser(user: User) {
-  try {
-    const { error } = await supabase.from('users').upsert({
-      id: user.id,
-      pin: user.pin.toUpperCase().trim(),
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate,
-      maxScreens: user.maxScreens,
-      activeDevices: user.activeDevices,
-      isBlocked: user.isBlocked,
-      isAdultEnabled: user.isAdultEnabled,
-      isGamesEnabled: !!user.isGamesEnabled,
-      gamesPassword: user.gamesPassword || "",
-      resellerId: user.resellerId,
-      activatedAt: user.activatedAt,
-      individualMessage: (user.individualMessage || "").trim(),
-      gamePoints: user.gamePoints || 0
-    });
-    return !error;
-  } catch (e: any) { return false; }
+  const { error } = await supabase.from('users').upsert({
+    id: user.id, pin: user.pin.toUpperCase().trim(), role: user.role,
+    subscriptionTier: user.subscriptionTier, expiryDate: user.expiryDate,
+    maxScreens: user.maxScreens, activeDevices: user.activeDevices,
+    isBlocked: user.isBlocked, isAdultEnabled: user.isAdultEnabled,
+    isGamesEnabled: !!user.isGamesEnabled, gamesPassword: user.gamesPassword || "",
+    resellerId: user.resellerId, activatedAt: user.activatedAt,
+    individualMessage: (user.individualMessage || "").trim(), gamePoints: user.gamePoints || 0
+  });
+  return !error;
 }
 
 export async function removeUser(id: string) {
-  try {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  try {
-    if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
-    
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('pin', pin.trim().toUpperCase())
-      .maybeSingle();
-    
-    if (!user) return { error: "PIN NÃO LOCALIZADO" };
-    if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
-    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
-    
-    return { user };
-  } catch (e) { return { error: "ERRO DE CONEXÃO COM O BANCO" }; }
+  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
+  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
+  if (!user) return { error: "PIN NÃO LOCALIZADO" };
+  if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
+  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
+  return { user };
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
-  try {
-    const { data: reseller } = await supabase
-      .from('resellers')
-      .select('*')
-      .eq('username', username.trim())
-      .eq('password', pass.trim())
-      .maybeSingle();
-    
-    if (!reseller || reseller.isBlocked) return { error: "ACESSO NEGADO" };
-    return { reseller };
-  } catch (e) { return { error: "ERRO NO SERVIDOR DE REVENDA" }; }
+  const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
+  if (!res || res.isBlocked) return { error: "ACESSO NEGADO" };
+  return { reseller: res };
 }
 
 export async function getRemoteResellers() {
-  try {
-    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
-  } catch (e) { return []; }
+  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+  return data || [];
 }
 
-export async function saveReseller(reseller: any) {
-  try {
-    const { error } = await supabase.from('resellers').upsert(reseller);
-    return !error;
-  } catch (e) { return false; }
+export async function saveReseller(res: any) {
+  const { error } = await supabase.from('resellers').upsert(res);
+  return !error;
 }
 
 export async function removeReseller(id: string) {
-  try {
-    const { error } = await supabase.from('resellers').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
 }
 
 export async function getCategoryCount(genre: string) {
-  try {
-    const { count } = await supabase
-      .from('content')
-      .select('*', { count: 'exact', head: true })
-      .eq('genre', genre.toUpperCase());
-    return count || 0;
-  } catch (e) { return 0; }
+  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
+  return count || 0;
 }
 
 export async function getTotalContentCount() {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
-    return count || 0;
-  } catch (e) { return 0; }
+  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+  return count || 0;
 }
 
 export async function generateM3UPlaylist(pin: string) {
-  try {
-    const content = await getRemoteContent(true);
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    let m3u = "#EXTM3U\n";
-    content.forEach(item => {
-      if (item.streamUrl) {
-        const streamUrl = `${baseUrl}/live/${pin}/pass/${item.id}.ts`;
-        m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${(item.title || "").toUpperCase()}\n${streamUrl}\n`;
-      }
-    });
-    return m3u;
-  } catch (e) { return "#EXTM3U\n"; }
+  const content = await getRemoteContent(true);
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  let m3u = "#EXTM3U\n";
+  content.forEach(i => { if (i.streamUrl) m3u += `#EXTINF:-1 tvg-logo="${i.imageUrl || ''}" group-title="${i.genre.toUpperCase()}",${(i.title || "").toUpperCase()}\n${baseUrl}/live/${pin}/pass/${i.id}.ts\n`; });
+  return m3u;
 }
 
 export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
@@ -378,7 +269,7 @@ export function getBeautifulMessage(pin: string, tier: string, url: string, scre
 }
 
 export function getExpiryMessage(pin: string, days: number) {
-  return `⚠️ *ALERTA LÉO TV* ⚠️\n\nSeu sinal *${pin}* expira em *${days} dia(s)*!\n\nRenove agora para não ficar sem sintonizar o melhor conteúdo!`;
+  return `⚠️ *ALERTA LÉO TV* ⚠️\n\nSeu sinal *${pin}* expira em *${days} dia(s)*!\n\nRenove agora!`;
 }
 
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();

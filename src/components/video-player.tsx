@@ -24,31 +24,40 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // DETECÇÃO SNIPER XVIDEOS (IDs alfanuméricos complexos como kabopuh3e7b)
-    if (urlStr.includes('xvideos.com')) {
-      const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
-      const vidId = match ? match[1] : null;
-      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
+    // DETECÇÃO SNIPER YOUTUBE
+    if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
+      const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
+      return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    // DETECÇÃO WEBPLAYER / REDECANAIS / SUPREMO (Bypass de Cloudflare 1106)
-    if (urlStr.includes('redecanaistv') || urlStr.includes('webplayer.one') || urlStr.includes('redecanais')) {
+    // DETECÇÃO DAILYMOTION
+    if (urlStr.includes('dailymotion.com')) {
+      const vidId = urlStr.split('/video/')[1]?.split('?')[0];
+      return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
+    }
+
+    // DETECÇÃO ADULTA (XVideos, Brazzers, BangBros)
+    if (urlStr.includes('xvideos.com') || urlStr.includes('brazzers.com') || urlStr.includes('bangbros.com')) {
+      const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
+      const vidId = match ? match[1] : null;
+      if (vidId && urlStr.includes('xvideos')) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
+    }
+
+    // DETECÇÃO WEBPLAYER / SUPREMO
+    if (urlStr.includes('webplayer.one') || urlStr.includes('redecanaistv') || urlStr.includes('redecanais')) {
       return { processedUrl: urlStr, type: 'iframe' }
     }
 
-    // DETECÇÃO HLS / MP4 PROBLEMÁTICOS (JMVStream, Blinder, HTTP puro)
-    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
+    // DETECÇÃO HLS / MP4 (Proxy 206 para evitar Erro 500)
     const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist');
+    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
 
-    if (isProblematic || isHls) {
-      const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      return { processedUrl: proxied, type: isHls ? 'hls' : 'video' }
+    if (isHls || isProblematic) {
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHls ? 'hls' : 'video' }
     }
 
-    return { 
-      processedUrl: urlStr, 
-      type: isHls ? 'hls' : (urlStr.includes('.mp4') ? 'video' : 'iframe')
-    }
+    return { processedUrl: urlStr, type: urlStr.includes('.mp4') ? 'video' : 'iframe' }
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -67,51 +76,30 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!video) return;
 
     let hls: any = null;
-
     const init = async () => {
-      setLoading(true);
-      setError(false);
-      
+      setLoading(true); setError(false);
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
-            enableWorker: true,
-            xhrSetup: (xhr: any, requestUrl: string) => {
-              // BLINDAGEM M3U8: Força todos os fragmentos (.ts) a passarem pelo proxy se necessário
-              if (!requestUrl.includes('/api/proxy') && (processedUrl.includes('/api/proxy') || requestUrl.includes('blinder.space') || requestUrl.includes('jmvstream'))) {
-                const proxyUrl = `/api/proxy?url=${encodeURIComponent(requestUrl)}`;
-                xhr.open('GET', proxyUrl, true);
+            xhrSetup: (xhr: any, rUrl: string) => {
+              if (!rUrl.includes('/api/proxy') && (processedUrl?.includes('/api/proxy') || rUrl.includes('blinder') || rUrl.includes('jmvstream'))) {
+                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
             }
           });
-          hls.loadSource(processedUrl);
-          hls.attachMedia(video);
-          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
-            setLoading(false);
-          });
-          hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
-            if (data.fatal) {
-              if (data.type === (window as any).Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-              else if (data.type === (window as any).Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-              else { hls.destroy(); setError(true); setLoading(false); }
-            }
-          });
+          hls.loadSource(processedUrl); hls.attachMedia(video);
+          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => video.muted = true); setLoading(false); });
+          hls.on((window as any).Hls.Events.ERROR, (_: any, d: any) => { if (d.fatal) hls.startLoad(); });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          // Fallback para Safari/iOS
-          video.src = processedUrl;
-          video.play().catch(() => {});
-          setLoading(false);
+          video.src = processedUrl; video.play().catch(() => {}); setLoading(false);
         }
       } else {
-        video.src = processedUrl;
-        video.load();
-        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; video.play().catch(() => {}); setLoading(false); });
+        video.src = processedUrl!; video.load();
+        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; video.play(); setLoading(false); });
       }
     };
-
     init();
-    return () => { if (hls) hls.destroy(); if (video) { video.pause(); video.src = ""; video.load(); } };
+    return () => { if (hls) hls.destroy(); if (video) { video.pause(); video.src = ""; } };
   }, [processedUrl, type]);
 
   return (
@@ -122,31 +110,22 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master Léo TV...</p>
         </div>
       )}
-
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic tracking-tighter text-xl">Sinal Offline</h3>
-          <Button variant="default" onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6">
-            <RefreshCw className="mr-2 h-4 w-4" /> Recarregar Sinal
-          </Button>
+          <h3 className="text-white font-black uppercase italic text-xl">Sinal Offline</h3>
+          <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6"><RefreshCw className="mr-2 h-4 w-4" /> Recarregar</Button>
         </div>
       )}
-
       {type === 'iframe' ? (
-        <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay; encrypted-media; picture-in-picture" onLoad={() => setLoading(false)} />
+        <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
       ) : (
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={false} crossOrigin="anonymous" />
+        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={false} />
       )}
-
       {!loading && !error && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn">
-            <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-2xl group/btn">
-            <ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" />
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn"><ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn"><ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" /></button>
         </div>
       )}
     </div>
