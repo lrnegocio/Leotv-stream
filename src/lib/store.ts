@@ -200,8 +200,6 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    // BLINDAGEM MESTRE: Garante que apenas campos que existem no banco sejam enviados
-    // e que valores vazios sejam tratados como null ou padrão.
     const payload: any = {
       id: user.id,
       pin: user.pin.toUpperCase().trim(),

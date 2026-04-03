@@ -24,26 +24,22 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // DETECÇÃO SNIPER YOUTUBE
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    // DETECÇÃO DAILYMOTION
     if (urlStr.includes('dailymotion.com')) {
       const vidId = urlStr.split('/video/')[1]?.split('?')[0];
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    // DETECÇÃO PORNHUB SNIPER v3700.0
     if (urlStr.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' }
     }
 
-    // DETECÇÃO ADULTA (XVideos, Brazzers, BangBros)
     if (urlStr.includes('xvideos.com') || urlStr.includes('brazzers.com') || urlStr.includes('bangbros.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
@@ -51,12 +47,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
     }
 
-    // DETECÇÃO WEBPLAYER / SUPREMO
     if (urlStr.includes('webplayer.one') || urlStr.includes('redecanaistv') || urlStr.includes('redecanais')) {
       return { processedUrl: urlStr, type: 'iframe' }
     }
 
-    // DETECÇÃO HLS / MP4 (Proxy 206 para evitar Erro 500)
     const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist');
     const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
 
