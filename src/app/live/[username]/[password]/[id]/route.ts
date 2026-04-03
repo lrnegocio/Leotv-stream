@@ -23,7 +23,7 @@ export async function GET(
     let streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
 
-    // SINTONIZADOR MASTER: Suporte para YouTube, Dailymotion e Adultos
+    // SINTONIZADOR MASTER v3700.0: Suporte total para YouTube, Dailymotion, Pornhub e Adultos
     if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) {
       const vidId = streamUrl.includes('v=') ? streamUrl.split('v=')[1]?.split('&')[0] : streamUrl.split('youtu.be/')[1]?.split('?')[0];
       return NextResponse.redirect(`https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1`);
@@ -32,6 +32,12 @@ export async function GET(
     if (streamUrl.includes('dailymotion.com')) {
       const vidId = streamUrl.split('/video/')[1]?.split('?')[0];
       return NextResponse.redirect(`https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`);
+    }
+
+    if (streamUrl.includes('pornhub.com')) {
+      const viewKeyMatch = streamUrl.match(/viewkey=([a-z0-9]+)/i);
+      const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
+      if (viewKey) return NextResponse.redirect(`https://www.pornhub.com/embed/${viewKey}`);
     }
 
     if (streamUrl.includes('xvideos.com')) {

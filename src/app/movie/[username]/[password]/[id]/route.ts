@@ -20,9 +20,15 @@ export async function GET(
 
     if (!item) return new NextResponse("Filme não encontrado", { status: 404 });
 
-    // LIBERAÇÃO DUAL-LINK: Prioriza o secundário (direto) para IPTV
+    // LIBERAÇÃO DUAL-LINK v3700.0: Prioriza sinais blindados
     let streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
+
+    if (streamUrl.includes('pornhub.com')) {
+      const viewKeyMatch = streamUrl.match(/viewkey=([a-z0-9]+)/i);
+      const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
+      if (viewKey) return NextResponse.redirect(`https://www.pornhub.com/embed/${viewKey}`);
+    }
 
     if (streamUrl.includes('xvideos.com')) {
       const vidId = streamUrl.split('video.')[1]?.split('/')[0];

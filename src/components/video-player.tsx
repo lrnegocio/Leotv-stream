@@ -36,6 +36,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
+    // DETECÇÃO PORNHUB SNIPER v3700.0
+    if (urlStr.includes('pornhub.com')) {
+      const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
+      const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
+      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' }
+    }
+
     // DETECÇÃO ADULTA (XVideos, Brazzers, BangBros)
     if (urlStr.includes('xvideos.com') || urlStr.includes('brazzers.com') || urlStr.includes('bangbros.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
