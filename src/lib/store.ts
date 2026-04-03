@@ -199,16 +199,35 @@ export async function getRemoteUsers() {
 }
 
 export async function saveUser(user: User) {
-  const { error } = await supabase.from('users').upsert({
-    id: user.id, pin: user.pin.toUpperCase().trim(), role: user.role,
-    subscriptionTier: user.subscriptionTier, expiryDate: user.expiryDate,
-    maxScreens: user.maxScreens, activeDevices: user.activeDevices,
-    isBlocked: user.isBlocked, isAdultEnabled: user.isAdultEnabled,
-    isGamesEnabled: !!user.isGamesEnabled, gamesPassword: user.gamesPassword || "",
-    resellerId: user.resellerId, activatedAt: user.activatedAt,
-    individualMessage: (user.individualMessage || "").trim(), gamePoints: user.gamePoints || 0
-  });
-  return !error;
+  try {
+    const payload: any = {
+      id: user.id,
+      pin: user.pin.toUpperCase().trim(),
+      role: user.role,
+      subscriptionTier: user.subscriptionTier,
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens,
+      activeDevices: user.activeDevices || [],
+      isBlocked: !!user.isBlocked,
+      isAdultEnabled: !!user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      gamesPassword: user.gamesPassword || "",
+      resellerId: user.resellerId || null,
+      activatedAt: user.activatedAt || null,
+      individualMessage: (user.individualMessage || "").trim(),
+      gamePoints: user.gamePoints || 0
+    };
+
+    const { error } = await supabase.from('users').upsert(payload);
+    if (error) {
+      console.error("Erro Supabase SaveUser:", error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Erro Fatal SaveUser:", e);
+    return false;
+  }
 }
 
 export async function removeUser(id: string) {

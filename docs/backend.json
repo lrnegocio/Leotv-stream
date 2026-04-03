@@ -24,6 +24,8 @@
         "pin": { "type": "string" },
         "role": { "type": "string" },
         "gamePoints": { "type": "number" },
+        "isGamesEnabled": { "type": "boolean" },
+        "gamesPassword": { "type": "string" },
         "isSearchingMatch": { "type": "boolean" },
         "searchingMatchAt": { "type": "string", "format": "date-time" },
         "individualMessage": { "type": "string" }
