@@ -47,14 +47,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
     }
 
-    if (urlStr.includes('webplayer.one') || urlStr.includes('redecanaistv') || urlStr.includes('redecanais')) {
-      return { processedUrl: urlStr, type: 'iframe' }
-    }
+    // SNIPER 206: Qualquer link m3u8 ou mp4 externo passa pelo Túnel de Camuflagem
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('playlist.m3u8');
+    const isVideoFile = urlStr.includes('.mp4') || urlStr.includes('.mkv') || urlStr.includes('.avi') || urlStr.includes('.ts');
+    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.includes('redecanais') || urlStr.startsWith('http://');
 
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist');
-    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.startsWith('http://');
-
-    if (isHls || isProblematic) {
+    if (isHls || isVideoFile || isProblematic) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHls ? 'hls' : 'video' }
     }
 
@@ -82,11 +80,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
+            // SINTONIZADOR SNIPER: Força cada pedaço do m3u8 (.ts) a passar pelo proxy
             xhrSetup: (xhr: any, rUrl: string) => {
-              if (!rUrl.includes('/api/proxy') && (processedUrl?.includes('/api/proxy') || rUrl.includes('blinder') || rUrl.includes('jmvstream'))) {
+              if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8'))) {
                 xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
-            }
+            },
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90
           });
           hls.loadSource(processedUrl); hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => video.muted = true); setLoading(false); });

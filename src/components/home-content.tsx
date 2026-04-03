@@ -5,7 +5,7 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Send, Users, Swords, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore, getWaitingPlayers, setUserSearchingMatch } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore, getWaitingPlayers, setUserSearchingMatch, validateDeviceLogin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -76,13 +76,6 @@ export const CONSOLES_LIBRARY = [
     { name: "Pokemon FireRed (GBA)", url: "https://www.retrogames.cc/embed/32112-pokemon-fire-red-version-usa.html" },
     { name: "Mario Kart DS", url: "https://www.retrogames.cc/embed/32112-mario-kart-ds-usa.html" }
   ]},
-  { name: "ATARI / 3DO / SATURN", icon: "📀", games: [
-    { name: "Atari 2600 Classics", url: "https://www.retrogames.onl/p/play-atari-2600-games-online.html" },
-    { name: "Atari 7800 Games", url: "https://www.retrogames.onl/p/play-atari-7800-games-online.html" },
-    { name: "Atari Jaguar Games", url: "https://www.retrogames.onl/p/play-atari-jaguar-games-online.html" },
-    { name: "Panasonic 3DO", url: "https://www.retrogames.onl/p/play-3do-games-online.html" },
-    { name: "SEGA Saturn Games", url: "https://www.retrogames.onl/p/play-sega-saturn-games-online.html" }
-  ]},
   { name: "PC / TIRO / STEAM", icon: "🎯", games: [
     { name: "Counter-Strike Web", url: "https://play-cs.com/pt/servers" },
     { name: "GTA Online Web", url: "https://play-cs.com/pt/servers" },
@@ -98,14 +91,6 @@ export const CONSOLES_LIBRARY = [
     { name: "Baralho / Solitaire", url: "https://www.google.com/logos/2010/solitaire10-i.html" },
     { name: "Snake Retro", url: "https://www.google.com/search?q=play+snake" },
     { name: "Jogo da Memória", url: "https://matchthememory.com/play" }
-  ]},
-  { name: "OUTROS (MSX/AMIGA/SHARP)", icon: "⌨️", games: [
-    { name: "Amiga A1200 Games", url: "https://www.retrogames.onl/p/play-amiga-games-online.html" },
-    { name: "MSX / MSX2 Computer", url: "https://www.retrogames.onl/p/play-msx-games-online.html" },
-    { name: "Sharp X68000", url: "https://www.retrogames.onl/p/play-sharp-x68000-games-online.html" },
-    { name: "NEC PC-FX", url: "https://www.retrogames.onl/p/play-nec-pc-fx-games-online.html" },
-    { name: "Amstrad CPC", url: "https://www.retrogames.onl/p/play-amstrad-games-online.html" },
-    { name: "OpenBOR Engine", url: "https://www.retrogames.onl/p/play-openbor-games-online.html" }
   ]}
 ]
 
@@ -143,7 +128,15 @@ export default function HomeContent() {
       const session = localStorage.getItem("user_session");
       if (!session) { router.push("/login"); return; }
       const currentUser = JSON.parse(session);
-      setUser(currentUser);
+      
+      // REVALIDAÇÃO SNIPER: Busca dados frescos do banco para evitar senha antiga em cache
+      const fresh = await validateDeviceLogin(currentUser.pin, currentUser.deviceId || "web");
+      if (!fresh.error && fresh.user) {
+        setUser(fresh.user);
+        localStorage.setItem("user_session", JSON.stringify(fresh.user));
+      } else {
+        setUser(currentUser);
+      }
 
       const settings = await getGlobalSettings();
       setParentalPin(settings.parentalPin || "1234");
@@ -179,16 +172,6 @@ export default function HomeContent() {
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
-  React.useEffect(() => {
-    if (gamesMenuOpen) {
-      const interval = setInterval(async () => {
-        const waiting = await getWaitingPlayers();
-        setWaitingPlayers(waiting);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [gamesMenuOpen]);
-
   const handleItemClick = (idx: number) => {
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
@@ -205,11 +188,19 @@ export default function HomeContent() {
     setActiveVideo({ items: contentItems, index: startIndex });
   };
 
-  const handleCategoryClick = (cat: any) => {
+  const handleCategoryClick = async (cat: any) => {
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
         toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Arena Games." });
         return;
+      }
+      // Re-valida PIN antes de pedir senha para garantir que pegamos a senha mais nova do Admin
+      if (user) {
+        const fresh = await validateDeviceLogin(user.pin, "revalidate");
+        if (fresh.user) {
+          setUser(fresh.user);
+          localStorage.setItem("user_session", JSON.stringify(fresh.user));
+        }
       }
       setIsGamesPinOpen(true);
       return;
@@ -250,6 +241,19 @@ export default function HomeContent() {
     setOpponent(null);
   };
 
+  const verifyGamesPassword = () => {
+    const input = gamesPinInput.trim();
+    const correct = user?.gamesPassword?.trim();
+    
+    if (input === correct || (correct === "" && input === "0000")) {
+      setIsGamesPinOpen(false);
+      setGamesMenuOpen(true);
+      setGamesPinInput("");
+    } else {
+      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "A senha da Arena não confere." });
+    }
+  }
+
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
 
   return (
@@ -259,7 +263,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4100.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4200.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -328,7 +332,7 @@ export default function HomeContent() {
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4100</h2>
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4200</h2>
             </div>
             <div className="flex items-center gap-6">
                <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
@@ -415,8 +419,8 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Arena</div>
-          <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (gamesPinInput === user?.gamesPassword ? (setIsGamesPinOpen(false), setGamesMenuOpen(true)) : toast({ variant: "destructive", title: "SENHA INVÁLIDA" }))} autoFocus />
-          <Button onClick={() => gamesPinInput === user?.gamesPassword ? (setIsGamesPinOpen(false), setGamesMenuOpen(true)) : toast({ variant: "destructive", title: "SENHA INVÁLIDA" })} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR ARENA</Button>
+          <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGamesPassword()} autoFocus />
+          <Button onClick={verifyGamesPassword} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR ARENA</Button>
         </DialogContent>
       </Dialog>
 
