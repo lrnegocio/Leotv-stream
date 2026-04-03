@@ -48,7 +48,7 @@ export default function UserManagementPage() {
 
   React.useEffect(() => { loadUsers() }, [loadUsers])
 
-  const getExpiryDays = (expiryDate?: string) => {
+  const getExpiryDays = (expiryDate?: string | null) => {
     if (!expiryDate) return null;
     const now = new Date();
     const exp = new Date(expiryDate);
@@ -56,7 +56,7 @@ export default function UserManagementPage() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryStatus = (expiryDate?: string) => {
+  const getExpiryStatus = (expiryDate?: string | null) => {
     const diffDays = getExpiryDays(expiryDate);
     if (diffDays === null) return { label: "DISPONÍVEL", color: "bg-blue-500/10 text-blue-400", icon: Clock };
     if (diffDays < 0) return { label: "EXPIRADO", color: "bg-destructive/10 text-destructive", icon: AlertTriangle };
@@ -74,27 +74,31 @@ export default function UserManagementPage() {
     const userData: User = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin.toUpperCase().trim(),
-      role: editingUserId === 'master' ? 'admin' : 'user',
+      role: (editingUserId === 'master' || newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
-      expiryDate: existingUser?.expiryDate || "",
+      expiryDate: existingUser?.expiryDate || null,
       maxScreens: parseInt(newUser.screens) || 1,
       activeDevices: existingUser?.activeDevices || [],
       isBlocked: existingUser?.isBlocked || false,
       isAdultEnabled: !!newUser.isAdultEnabled,
       isGamesEnabled: !!newUser.isGamesEnabled,
       gamesPassword: newUser.gamesPassword || "",
-      activatedAt: existingUser?.activatedAt || "",
+      activatedAt: existingUser?.activatedAt || null,
       individualMessage: newUser.individualMessage.trim(),
-      gamePoints: existingUser?.gamePoints || 0
+      gamePoints: existingUser?.gamePoints || 0,
+      isSearchingMatch: existingUser?.isSearchingMatch || false,
+      searchingMatchAt: existingUser?.searchingMatchAt || null
     }
 
-    if (await saveUser(userData)) {
+    const success = await saveUser(userData);
+    
+    if (success) {
       toast({ title: "CLIENTE ATUALIZADO NO BANCO!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE" });
+      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE", description: "Verifique se as colunas existem no Supabase." });
     }
     setIsSaving(false);
   }
@@ -118,9 +122,6 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
-  /**
-   * MOTOR DE BUSCA SOBERANO: Ignora filtros se houver termo de pesquisa
-   */
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();

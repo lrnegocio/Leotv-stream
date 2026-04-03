@@ -40,19 +40,19 @@ export interface User {
   pin: string; 
   role: 'admin' | 'user'; 
   subscriptionTier: SubscriptionTier;
-  expiryDate?: string; 
+  expiryDate?: string | null; 
   maxScreens: number; 
   activeDevices: any[]; 
   isBlocked: boolean;
   isAdultEnabled: boolean; 
   isGamesEnabled: boolean;
   gamesPassword?: string;
-  resellerId?: string; 
-  activatedAt?: string;
+  resellerId?: string | null; 
+  activatedAt?: string | null;
   individualMessage?: string;
   gamePoints?: number;
   isSearchingMatch?: boolean;
-  searchingMatchAt?: string;
+  searchingMatchAt?: string | null;
 }
 
 export interface GameRanking {
@@ -205,8 +205,8 @@ export async function saveUser(user: User) {
       pin: user.pin.toUpperCase().trim(),
       role: user.role,
       subscriptionTier: user.subscriptionTier,
-      expiryDate: user.expiryDate,
-      maxScreens: user.maxScreens,
+      expiryDate: user.expiryDate || null,
+      maxScreens: user.maxScreens || 1,
       activeDevices: user.activeDevices || [],
       isBlocked: !!user.isBlocked,
       isAdultEnabled: !!user.isAdultEnabled,
@@ -215,7 +215,9 @@ export async function saveUser(user: User) {
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       individualMessage: (user.individualMessage || "").trim(),
-      gamePoints: user.gamePoints || 0
+      gamePoints: user.gamePoints || 0,
+      isSearchingMatch: !!user.isSearchingMatch,
+      searchingMatchAt: user.searchingMatchAt || null
     };
 
     const { error } = await supabase.from('users').upsert(payload);
