@@ -158,30 +158,38 @@ export async function removeContent(id: string) {
 
 export async function getGlobalSettings() {
   try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    if (error) throw error;
     if (data && data.value) {
       return {
-        parentalPin: data.value.parentalPin || "1234",
-        announcement: data.value.announcement || ""
+        parentalPin: String(data.value.parentalPin || "1234"),
+        announcement: String(data.value.announcement || "")
       };
     }
     return { parentalPin: "1234", announcement: "" };
   } catch (e) {
+    console.error("Erro ao ler settings:", e);
     return { parentalPin: "1234", announcement: "" };
   }
 }
 
 export async function updateGlobalSettings(value: any) {
   try {
-    const { error } = await supabase.from('settings').upsert({ 
-      key: 'global', 
+    const payload = {
+      key: 'global',
       value: {
         parentalPin: String(value.parentalPin || "1234"),
         announcement: String(value.announcement || "")
       }
-    });
-    return !error;
+    };
+    const { error } = await supabase.from('settings').upsert(payload);
+    if (error) {
+      console.error("Erro Supabase updateGlobalSettings:", error);
+      return false;
+    }
+    return true;
   } catch (e) {
+    console.error("Erro Fatal updateGlobalSettings:", e);
     return false;
   }
 }
@@ -213,8 +221,13 @@ export async function saveUser(user: User) {
     };
 
     const { error } = await supabase.from('users').upsert(payload);
-    return !error;
+    if (error) {
+      console.error("Erro Supabase SaveUser:", error);
+      return false;
+    }
+    return true;
   } catch (e) {
+    console.error("Erro Fatal SaveUser:", e);
     return false;
   }
 }

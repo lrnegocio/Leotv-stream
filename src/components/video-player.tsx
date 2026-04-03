@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // EMBEDS OFICIAIS (Não passam pelo proxy para evitar tela branca)
+    // EMBEDS OFICIAIS (YouTube / Dailymotion / Adultos)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -45,17 +45,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // REDECANAIS PLAYER DIRETO
-    if (urlStr.includes('redecanaistv') || urlStr.includes('ch.php')) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
-    }
-
-    // SINAIS M3U8 E MP4 (Passam pelo Túnel Master)
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('wurl.tv');
+    // SINAIS QUE EXIGEM TÚNEL (m3u8, mp4, RedeCanais)
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('wurl.tv') || urlStr.includes('playlist');
     const isVideoFile = urlStr.includes('.mp4') || urlStr.includes('.ts');
+    const isPhpPlayer = urlStr.includes('ch.php') || urlStr.includes('redecanaistv');
 
-    if (isHls || isVideoFile) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHls ? 'hls' : 'video' }
+    if (isHls || isVideoFile || isPhpPlayer) {
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
+      // Se for PHP (RedeCanais), abrimos como Iframe via Proxy
+      if (isPhpPlayer) return { processedUrl: proxyUrl, type: 'iframe' };
+      return { processedUrl: proxyUrl, type: isHls ? 'hls' : 'video' };
     }
 
     return { processedUrl: urlStr, type: 'iframe' }
@@ -83,18 +82,26 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             xhrSetup: (xhr: any, rUrl: string) => {
-              // Garante que cada chunk (.ts) também passe pelo proxy
-              if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8'))) {
-                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
+              // INTERCEPTADOR MASTER: Força cada pedaço (.ts) a passar pelo proxy
+              if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8') || rUrl.includes('.m4s'))) {
+                const proxiedChunk = `/api/proxy?url=${encodeURIComponent(rUrl)}`;
+                xhr.open('GET', proxiedChunk, true);
               }
             },
-            enableWorker: true
+            enableWorker: true,
+            lowLatencyMode: true
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => video.muted = true);
             setLoading(false);
+          });
+          hls.on((window as any).Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) {
+              console.warn("HLS Error:", data.type);
+              hls.recoverMediaError();
+            }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
@@ -120,7 +127,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master Léo TV...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sinal Master...</p>
         </div>
       )}
       {type === 'iframe' ? (

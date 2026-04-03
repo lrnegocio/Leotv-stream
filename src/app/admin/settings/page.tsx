@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, MessageSquare, ShieldCheck } from "lucide-react"
+import { Lock, Save, Loader2, MessageSquare, ShieldCheck, AlertCircle } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [announcement, setAnnouncement] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     const load = async () => {
@@ -32,8 +33,9 @@ export default function SettingsPage() {
   }, [])
 
   const handleSaveSettings = async () => {
+    setError(null);
     if (!parentalPin || parentalPin.length < 4) {
-      toast({ variant: "destructive", title: "Senha Parental curta", description: "Mestre, use no mínimo 4 dígitos." })
+      toast({ variant: "destructive", title: "Senha Curta", description: "Mestre, use no mínimo 4 dígitos." })
       return
     }
     setSaving(true)
@@ -42,7 +44,8 @@ export default function SettingsPage() {
       if (success) {
         toast({ title: "SENHA E AVISO ATUALIZADOS!" })
       } else {
-        toast({ variant: "destructive", title: "ERRO AO SALVAR CONFIGS" })
+        setError("O Banco de Dados recusou o salvamento. Verifique se a tabela 'settings' existe no Supabase.");
+        toast({ variant: "destructive", title: "ERRO DE BANCO" })
       }
     } catch (e) {
       toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
@@ -59,6 +62,12 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Mural Master</h1>
         <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão de Rede e Comunicação Blindada.</p>
       </div>
+
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-center gap-3 text-destructive text-xs font-black uppercase">
+          <AlertCircle className="h-5 w-5" /> {error}
+        </div>
+      )}
 
       <div className="grid gap-8">
         <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
