@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SINTONIZADOR DE ELITE: Identifica formatos e aplica o Túnel se necessário
+    // SINTONIZADOR DE ELITE: Identifica formatos e aplica a Blindagem
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -45,17 +45,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // LINKS QUE EXIGEM TÚNEL (HTTP, m3u8, mp4 com redirecionamento)
+    // LINKS QUE EXIGEM TÚNEL (HTTP, m3u8, mp4, players PHP)
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
-                       urlStr.includes('ch.php') || 
+                       urlStr.includes('.php') || 
+                       urlStr.includes('redecanais') || 
+                       urlStr.includes('blinder') || 
                        urlStr.includes('wurl.tv');
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      // Se for um link de player PHP (RedeCanais), abrimos como Iframe via Túnel
-      if (urlStr.includes('ch.php')) return { processedUrl: proxied, type: 'iframe' };
+      // Se for um link de player PHP ou página, abrimos como Iframe via Túnel
+      if (urlStr.includes('.php') || urlStr.includes('player')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
 
@@ -86,7 +88,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             xhrSetup: (xhr: any, rUrl: string) => {
-              // INTERCEPTADOR MASTER: Garante que cada pedaço do vídeo passe pelo túnel
+              // INTERCEPTADOR MASTER: Garante que cada fragmento do vídeo passe pelo túnel
               if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8') || rUrl.includes('.m4s'))) {
                 xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
@@ -134,7 +136,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media" 
           onLoad={() => setLoading(false)}
-          /* ESCUDO AD-BLOCK MASTER: Bloqueia popups e abas de propaganda */
+          /* ESCUDO AD-BLOCK MASTER: Bloqueia popups, novas abas e scripts de anúncio */
           sandbox="allow-scripts allow-same-origin allow-forms"
         />
       ) : (

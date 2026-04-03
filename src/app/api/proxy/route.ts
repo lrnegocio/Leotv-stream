@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER v5.0 (RESTAURAÇÃO TOTAL)
- * Motor de bypass camaleão para m3u8, mp4 e redirecionamentos complexos.
- * Resolve o problema de links HTTP em sites HTTPS.
+ * TÚNEL DE SINAL MASTER v5.0
+ * Motor de bypass transparente para m3u8, mp4 e players PHP.
+ * Resolve bloqueios de Referer, Origin e Mixed Content (HTTP/HTTPS).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,15 +20,17 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade de Smart TV Premium para enganar bloqueios
+    // Identidade de Smart TV Premium para evitar bloqueios de segurança
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/6.2 Chrome/110.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
-    // Injeção de Referer inteligente baseada no destino
+    // INJEÇÃO DE REFERER INTELIGENTE (O SEGREDO DO SINAL)
     const urlObj = new URL(targetUrl);
     if (targetUrl.includes('redecanais') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
+    } else if (targetUrl.includes('blinder.space')) {
+      requestHeaders.set('Referer', 'http://blinder.space/');
     } else if (targetUrl.includes('wurl.tv')) {
       requestHeaders.set('Referer', 'https://www.samsung.com/');
     } else {
@@ -38,12 +40,12 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow' // Segue o link de manifest/redirecionamento automaticamente
+      redirect: 'follow'
     });
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais para streaming e range
+    // Copia cabeçalhos vitais para streaming fluido e suporte a Range (avanço de vídeo)
     const headersToCopy = [
       'content-type', 
       'content-length', 
@@ -57,9 +59,11 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // Liberação total de CORS para o navegador do cliente
+    // Liberação total de CORS e remoção de travas de Iframe (X-Frame-Options)
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    responseHeaders.delete('x-frame-options');
+    responseHeaders.delete('content-security-policy');
 
     if (!res.body) return new NextResponse("Sinal Vazio", { status: 502 });
 
