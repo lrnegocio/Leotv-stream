@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Send, Users, Swords, Bot } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Swords, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore, getWaitingPlayers, setUserSearchingMatch, validateDeviceLogin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -32,9 +32,7 @@ export const CONSOLES_LIBRARY = [
   { name: "PLAYSTATION (PS1/PSX/PS2)", icon: "🎮", games: [
     { name: "Resident Evil 3 Nemesis", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
     { name: "Metal Gear Solid", url: "https://www.retrogames.cc/embed/41618-metal-gear-solid-usa.html" },
-    { name: "Crash Bandicoot 3", url: "https://www.retrogames.cc/embed/41618-crash-bandicoot-3-warped-usa.html" },
-    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" },
-    { name: "Xena: Warrior Princess", url: "https://www.retrogames.cc/embed/41727-xena-warrior-princess-usa.html" }
+    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" }
   ]},
   { name: "SUPER NINTENDO (SNES)", icon: "🔴", games: [
     { name: "Donkey Kong Country 1", url: "https://www.retrogames.cc/embed/18852-donkey-kong-country-usa.html" },
@@ -42,67 +40,18 @@ export const CONSOLES_LIBRARY = [
     { name: "Donkey Kong Country 3", url: "https://www.retrogames.cc/embed/18854-donkey-kong-country-3-dixie-kong-s-double-trouble-usa.html" },
     { name: "Mario Kart", url: "https://www.retrogames.cc/embed/17344-super-mario-kart-usa.html" },
     { name: "Top Gear 1", url: "https://www.retrogames.cc/embed/17441-top-gear-usa.html" },
-    { name: "Top Gear 2", url: "https://www.retrogames.cc/embed/17442-top-gear-2-usa.html" },
-    { name: "Top Gear 3000", url: "https://www.retrogames.cc/embed/17443-top-gear-3000-usa.html" },
-    { name: "Contra 3", url: "https://www.retrogames.cc/embed/16896-contra-iii-the-alien-wars-usa.html" },
-    { name: "Mortal Kombat Ultimate", url: "https://www.retrogames.cc/embed/17462-ultimate-mortal-kombat-3-usa.html" },
-    { name: "Metal Warriors", url: "https://www.retrogames.cc/embed/17161-metal-warriors-usa.html" },
-    { name: "Sonic Wings", url: "https://www.retrogames.cc/embed/17336-sonic-wings-japan.html" },
-    { name: "Aladdin", url: "https://www.retrogames.cc/embed/16801-aladdin-usa.html" },
-    { name: "Mario All Stars", url: "https://www.retrogames.cc/embed/17348-super-mario-all-stars-usa.html" },
-    { name: "Mega Man X", url: "https://www.retrogames.cc/embed/17161-mega-man-x-usa.html" }
+    { name: "Mortal Kombat Ultimate", url: "https://www.retrogames.cc/embed/17462-ultimate-mortal-kombat-3-usa.html" }
   ]},
-  { name: "NINTENDO 64 (N64)", icon: "🕹️", games: [
-    { name: "GoldenEye 007", url: "https://www.retrogames.cc/embed/32112-goldeneye-007-usa.html" },
-    { name: "Mario Kart 64", url: "https://www.retrogames.cc/embed/32112-mario-kart-64-usa.html" }
-  ]},
-  { name: "MEGA DRIVE / SEGA CD / 32X", icon: "🌀", games: [
-    { name: "Sonic The Hedgehog 2", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-2-world.html" },
-    { name: "Double Dragon", url: "https://www.retrogames.cc/embed/29165-double-dragon-world.html" },
-    { name: "Street of Rage 2", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-2-usa.html" },
-    { name: "Sonic CD", url: "https://www.retrogames.cc/embed/29161-sonic-cd-usa.html" },
-    { name: "Knuckles Chaotix (32X)", url: "https://www.retrogames.cc/embed/29161-knuckles-chaotix-usa.html" }
-  ]},
-  { name: "ATARI (2600/7800/JAGUAR)", icon: "🕹️", games: [
-    { name: "Pac-Man (2600)", url: "https://www.retrogames.cc/embed/19022-pac-man-usa.html" },
-    { name: "River Raid (2600)", url: "https://www.retrogames.cc/embed/19022-river-raid-usa.html" }
-  ]},
-  { name: "ARCADE / MAME / NEOGEO", icon: "🥊", games: [
+  { name: "ARCADE / MAME", icon: "🥊", games: [
     { name: "The King of Fighters 2002", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-2002-magic-plus-ii-bootleg.html" },
-    { name: "The King of Fighters 98", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-98-the-slugfest.html" },
-    { name: "Marvel vs Capcom", url: "https://www.retrogames.cc/embed/9264-marvel-vs-capcom-clash-of-super-heroes-usa-980123.html" },
-    { name: "Marvel vs SNK", url: "https://www.retrogames.cc/embed/42615-snk-vs-capcom-svc-chaos-plus-bootleg.html" },
-    { name: "X-Men vs Street Fighter", url: "https://www.retrogames.cc/embed/10142-x-men-vs-street-fighter-euro-961004.html" },
-    { name: "Crazy Taxi Arcade", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
-    { name: "Metal Slug 5", url: "https://www.retrogames.cc/embed/42615-metal-slug-5-mvs.html" }
-  ]},
-  { name: "NINTENDO DS / GBC / GBA", icon: "📱", games: [
-    { name: "Pokemon FireRed (GBA)", url: "https://www.retrogames.cc/embed/32112-pokemon-fire-red-version-usa.html" },
-    { name: "Mario Kart DS", url: "https://www.retrogames.cc/embed/32112-mario-kart-ds-usa.html" }
-  ]},
-  { name: "3DO / AMIGA / TURBOGRAFX", icon: "💿", games: [
-    { name: "Gex (3DO)", url: "https://www.retrogames.cc/embed/41727-gex-usa.html" },
-    { name: "Bonk's Adventure", url: "https://www.retrogames.cc/embed/17336-bonks-adventure-usa.html" }
-  ]},
-  { name: "MS-DOS / MSX / SHARP / NEC", icon: "💻", games: [
-    { name: "Doom 1", url: "https://www.retrogames.cc/embed/41727-doom-usa.html" },
-    { name: "Prince of Persia", url: "https://www.retrogames.cc/embed/17336-prince-of-persia-usa.html" }
-  ]},
-  { name: "PC / TIRO / STEAM", icon: "🎯", games: [
-    { name: "Counter-Strike Web", url: "https://play-cs.com/pt/servers" },
-    { name: "GTA Online Web", url: "https://play-cs.com/pt/servers" },
-    { name: "Call of Duty Web", url: "https://games.atribuna.com.br/jogos/cod-online/" },
-    { name: "Wild Guns", url: "https://www.retrogames.cc/embed/17336-wild-guns-usa.html" },
-    { name: "Sunset Riders", url: "https://www.retrogames.cc/embed/17336-sunset-riders-usa.html" }
+    { name: "Marvel vs Capcom", url: "https://www.retrogames.cc/embed/9264-marvel-vs-capcom-clash-of-super-heroes-usa-980123.html" }
   ]},
   { name: "CLÁSSICOS & IA (ARENA)", icon: "♟️", games: [
     { name: "Damas Brasileira (IA 1-20)", url: "https://www.playok.com/pt/damas/" },
     { name: "Xadrez Master", url: "https://www.sparkchess.com/play-chess-online.html" },
     { name: "Sinuca 8 Ball", url: "https://games.atribuna.com.br/jogos/8ballpool/" },
     { name: "Dominó Online", url: "https://www.coolmathgames.com/0-dominoes" },
-    { name: "Baralho / Solitaire", url: "https://www.google.com/logos/2010/solitaire10-i.html" },
-    { name: "Snake Retro", url: "https://www.google.com/search?q=play+snake" },
-    { name: "Jogo da Memória", url: "https://matchthememory.com/play" }
+    { name: "Snake Retro", url: "https://www.google.com/search?q=play+snake" }
   ]}
 ]
 
@@ -155,15 +104,13 @@ export default function HomeContent() {
 
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       const data = await getRemoteContent(false, queryStr, targetGenre);
-      
-      const filtered = data.filter(i => !!i.streamUrl || (i.type === 'series' && i.episodes?.length) || (i.type === 'multi-season' && i.seasons?.length));
-      setContent(filtered);
+      setContent(data);
 
       if (channelId) {
-        const foundIdx = filtered.findIndex(i => i.id === channelId);
-        if (foundIdx !== -1) {
-          if (filtered[foundIdx].type === 'series' || filtered[foundIdx].type === 'multi-season') setSelectedSeries(filtered[foundIdx]);
-          else setActiveVideo({ items: filtered, index: foundIdx });
+        const item = data.find(i => i.id === channelId);
+        if (item) {
+          if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
+          else setActiveVideo({ items: data, index: data.indexOf(item) });
         }
       }
 
@@ -192,25 +139,11 @@ export default function HomeContent() {
     else setActiveVideo({ items: content, index: idx });
   };
 
-  const handleEpisodeClick = (ep: Episode, parent: ContentItem) => {
-    const episodesToPlay = parent.episodes || parent.seasons?.flatMap(s => s.episodes) || [];
-    const contentItems = episodesToPlay.map(e => ({ ...parent, streamUrl: e.streamUrl, title: `${parent.title} - EP ${e.number}`, id: e.id }));
-    const startIndex = episodesToPlay.findIndex(e => e.id === ep.id);
-    setActiveVideo({ items: contentItems, index: startIndex });
-  };
-
   const handleCategoryClick = async (cat: any) => {
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
-        toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Arena Games." });
+        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Fale com o Mestre Léo para liberar a Arena." });
         return;
-      }
-      if (user) {
-        const fresh = await validateDeviceLogin(user.pin, "revalidate_pass");
-        if (fresh.user) {
-          setUser(fresh.user);
-          localStorage.setItem("user_session", JSON.stringify(fresh.user));
-        }
       }
       setIsGamesPinOpen(true);
       return;
@@ -218,33 +151,41 @@ export default function HomeContent() {
     if (cat.restricted && !user?.isAdultEnabled) { setIsPinOpen(true); } else setSelectedCat(cat.id);
   };
 
-  const verifyGamesPassword = () => {
-    const input = gamesPinInput.trim();
-    const correct = (user?.gamesPassword || "").trim();
-    if (input === correct || (correct === "" && input === "0000")) {
-      setIsGamesPinOpen(false);
-      setGamesMenuOpen(true);
-      setGamesPinInput("");
+  const verifyGamesPassword = async () => {
+    if (!user) return;
+    setLoading(true);
+    // SINCRONIZAÇÃO EM TEMPO REAL: Busca a senha direto no banco agora
+    const fresh = await validateDeviceLogin(user.pin, "password_check");
+    setLoading(false);
+
+    if (fresh.user) {
+      const correctPass = (fresh.user.gamesPassword || "").trim();
+      const inputPass = gamesPinInput.trim();
+      
+      if (inputPass === correctPass || (correctPass === "" && inputPass === "0000")) {
+        setIsGamesPinOpen(false);
+        setGamesMenuOpen(true);
+        setGamesPinInput("");
+        setUser(fresh.user);
+        localStorage.setItem("user_session", JSON.stringify(fresh.user));
+      } else {
+        toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso à Arena foi recusado." });
+      }
     } else {
-      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso à Arena foi recusado." });
+      toast({ variant: "destructive", title: "ERRO DE CONEXÃO", description: "Não foi possível validar o PIN." });
     }
   }
 
   const startMatch = async (game: {name: string, url: string}) => {
     setSearchingOpponent(true);
-    setOpponent(null);
     if (user) await setUserSearchingMatch(user.pin, true);
-    
     setTimeout(async () => {
       const waiting = await getWaitingPlayers();
       const possible = waiting.filter(w => w.pin !== user?.pin);
       if (possible.length > 0) {
-        const sel = possible[0];
-        setOpponent({ pin: sel.pin, rank: gameRankings.findIndex(r => r.pin === sel.pin) + 1 || 99 });
-        toast({ title: "OPONENTE LOCALIZADO!", description: `Desafiando: ${sel.pin}` });
+        setOpponent({ pin: possible[0].pin, rank: gameRankings.findIndex(r => r.pin === possible[0].pin) + 1 || 99 });
       } else {
         setOpponent({ pin: `IA LÉO TV (NÍVEL ${iaLevel})`, rank: 1 });
-        toast({ title: "MODO IA ATIVO", description: "Nenhum combatente online. Treine contra a maquina!" });
       }
       setActiveGame(game);
       setSearchingOpponent(false);
@@ -271,7 +212,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4600.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -284,15 +225,13 @@ export default function HomeContent() {
           <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center justify-between gap-4 animate-pulse">
             <div className="flex items-center gap-4">
               <div className="bg-emerald-500 p-2 rounded-xl"><Swords className="h-5 w-5 text-white" /></div>
-              <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">
-                ARENA ALERTA: {waitingPlayers.length} GUERREIRO(S) ESPERANDO COMBATE!
-              </p>
+              <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">ARENA ALERTA: {waitingPlayers.length} GUERREIRO(S) ESPERANDO COMBATE!</p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => handleCategoryClick({ special: 'games' })} className="text-emerald-500 font-black uppercase text-[10px]">ACEITAR DESAFIO</Button>
           </div>
         )}
         {announcement && !selectedCat && !q && (
-          <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4 duration-500">
+          <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4">
             <div className="bg-primary p-2 rounded-xl"><MessageSquare className="h-5 w-5 text-white" /></div>
             <p className="text-[11px] font-black uppercase text-primary tracking-widest italic">{announcement}</p>
           </div>
@@ -321,7 +260,7 @@ export default function HomeContent() {
             })}
           </div>
         ) : (
-          <div className="space-y-10 animate-in slide-in-from-bottom-10 duration-500">
+          <div className="space-y-10 animate-in slide-in-from-bottom-10">
             <div className="flex items-center justify-between border-b border-white/5 pb-6"><h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">{q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2></div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (
@@ -335,87 +274,46 @@ export default function HomeContent() {
         )}
       </main>
 
-      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); setActiveGame(null); if(user) setUserSearchingMatch(user.pin, false); } }}>
-        <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col shadow-2xl">
+      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); } }}>
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4500</h2>
-            </div>
+            <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-500" /><h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer</h2></div>
             <div className="flex items-center gap-6">
-               <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
-                  <Trophy className="h-4 w-4 text-yellow-500" />
-                  <span className="text-[10px] font-black uppercase text-yellow-500">Rank: #{gameRankings.findIndex(r => r.pin === user?.pin) + 1 || '--'} | {user?.gamePoints || 0} Pts</span>
-               </div>
+               <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5"><Trophy className="h-4 w-4 text-yellow-500" /><span className="text-[10px] font-black uppercase text-yellow-500">Rank: #{gameRankings.findIndex(r => r.pin === user?.pin) + 1 || '--'} | {user?.gamePoints || 0} Pts</span></div>
                <Button variant="ghost" onClick={() => { setActiveGame(null); if(!activeGame) setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
             </div>
           </div>
-          
           <div className="flex-1 flex overflow-hidden bg-black/40">
             <div className={`w-80 border-r border-white/5 p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
                <div className="space-y-8">
                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-3">
                      <div className="flex items-center gap-2"><Bot className="h-4 w-4 text-emerald-500" /><span className="text-[10px] font-black uppercase">IA Nível (1-20)</span></div>
                      <Slider value={[iaLevel]} min={1} max={20} step={1} onValueChange={v => setIaLevel(v[0])} />
-                     <p className="text-[8px] font-black text-center text-emerald-500/60 uppercase">Nível Atual: {iaLevel} / 20</p>
                   </div>
-
                   {CONSOLES_LIBRARY.map(console => (
                     <div key={console.name} className="space-y-3">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40"><span>{console.icon}</span> {console.name}</div>
+                       <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40">{console.icon} {console.name}</div>
                        <div className="grid gap-2">
                           {console.games.map(game => (
-                            <Button key={game.name} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">
-                               {game.name}
-                            </Button>
+                            <Button key={game.name} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">{game.name}</Button>
                           ))}
                        </div>
                     </div>
                   ))}
                </div>
             </div>
-
             <div className="flex-1 relative flex flex-col">
                {activeGame ? (
                  <div className="flex-1 flex flex-col">
                     <div className="h-14 bg-black/60 flex items-center justify-between px-6 border-b border-white/5">
-                       <div className="flex items-center gap-4">
-                          <span className="text-[10px] font-black uppercase text-primary">{user?.pin}</span>
-                          <Swords className="h-4 w-4 text-white/20" />
-                          <span className="text-[10px] font-black uppercase text-emerald-500">{opponent?.pin}</span>
-                       </div>
-                       <div className="flex gap-2">
-                          <Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button>
-                          <Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button>
-                       </div>
+                       <div className="flex items-center gap-4"><span className="text-[10px] font-black uppercase text-primary">{user?.pin}</span><Swords className="h-4 w-4 text-white/20" /><span className="text-[10px] font-black uppercase text-emerald-500">{opponent?.pin}</span></div>
+                       <div className="flex gap-2"><Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button><Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button></div>
                     </div>
                     <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
                  </div>
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                    {searchingOpponent ? (
-                      <div className="space-y-6 animate-pulse">
-                         <Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" />
-                         <h3 className="text-2xl font-black uppercase italic text-emerald-500">Enviando Alerta de Combate...</h3>
-                         <p className="text-[10px] font-bold uppercase opacity-40">Seus oponentes receberão o sinal em 3, 2, 1...</p>
-                      </div>
-                    ) : (
-                      <div className="max-w-md space-y-8">
-                         <Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-4" />
-                         <h3 className="text-4xl font-black uppercase italic tracking-tighter leading-none">Arena dos Melhores</h3>
-                         <p className="text-xs font-bold uppercase opacity-40 leading-relaxed">Escolha um jogo para iniciar. O sistema enviará um alerta para todos os jogadores ativos!</p>
-                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
-                               <p className="text-2xl font-black text-emerald-500">{gameRankings.length}</p>
-                               <p className="text-[8px] font-black uppercase opacity-40">Players Ativos</p>
-                            </div>
-                            <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
-                               <p className="text-2xl font-black text-primary">{user?.gamePoints || 0}</p>
-                               <p className="text-[8px] font-black uppercase opacity-40">Seus Pontos</p>
-                            </div>
-                         </div>
-                      </div>
-                    )}
+                    {searchingOpponent ? <div className="space-y-6 animate-pulse"><Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" /><h3 className="text-2xl font-black uppercase italic text-emerald-500">Buscando Guerreiros Online...</h3></div> : <div className="max-w-md space-y-8"><Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-4" /><h3 className="text-4xl font-black uppercase italic tracking-tighter">Arena dos Melhores</h3><p className="text-xs font-bold uppercase opacity-40">Escolha um jogo para iniciar. O sistema enviará um alerta para todos os jogadores ativos!</p></div>}
                  </div>
                )}
             </div>
@@ -428,7 +326,7 @@ export default function HomeContent() {
           <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Arena</div>
           <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGamesPassword()} autoFocus />
-          <Button onClick={verifyGamesPassword} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">ACESSAR ARENA</Button>
+          <Button onClick={verifyGamesPassword} disabled={loading} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">{loading ? <Loader2 className="animate-spin" /> : 'ACESSAR ARENA'}</Button>
         </DialogContent>
       </Dialog>
 
@@ -452,7 +350,7 @@ export default function HomeContent() {
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries)} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
+                      <Button key={ep.id} variant="outline" onClick={() => { const episodes = selectedSeries.episodes!.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - EP ${e.number}`, id: e.id})); setActiveVideo({ items: episodes, index: selectedSeries.episodes!.indexOf(ep) }); }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
                     ))}
                   </div>
                 ) : selectedSeries.seasons?.map(season => (
@@ -460,7 +358,7 @@ export default function HomeContent() {
                     <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                     <div className="flex flex-col gap-2">
                       {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(ep, selectedSeries)} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
+                        <Button key={ep.id} variant="outline" onClick={() => { const eps = season.episodes.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${e.number}`, id: e.id})); setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
                       ))}
                     </div>
                   </div>

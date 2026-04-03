@@ -39,16 +39,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          iframe[src*="redecanaistv"], 
-          iframe[src*="xvideos"], 
-          iframe[src*="pornhub"] {
-            pointer-events: auto !important;
-          }
-          .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad {
+          iframe { border: none !important; }
+          .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
+          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             opacity: 0 !important;
+            pointer-events: none !important;
           }
         `}} />
       </head>
@@ -73,8 +71,8 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
+        // Bloqueio de Mouse e Atalhos Master
         document.addEventListener('contextmenu', e => e.preventDefault());
-
         document.addEventListener('keydown', e => {
           if (
             e.key === 'F12' || 
@@ -86,7 +84,6 @@ function SecurityBlocker() {
             return false;
           }
         });
-
         document.onselectstart = () => false;
       })();
     `}} />

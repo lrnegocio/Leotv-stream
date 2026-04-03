@@ -2,8 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertTriangle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface VideoPlayerProps {
   url: string
@@ -16,7 +15,6 @@ interface VideoPlayerProps {
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
@@ -24,14 +22,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // DETECTOR DE PLAYERS EXTERNOS (REDE CANAIS, ETC)
-    if (urlStr.includes('redecanaistv') || urlStr.includes('player3/ch.php')) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
-    }
-
+    // EMBEDS OFICIAIS (Não passam pelo proxy para evitar tela branca)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
+    }
+
+    if (urlStr.includes('dailymotion.com')) {
+      const vidId = urlStr.split('/video/')[1]?.split('?')[0] || urlStr.split('/embed/video/')[1]?.split('?')[0];
+      return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
     if (urlStr.includes('pornhub.com')) {
@@ -46,7 +45,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // ESCUDO MASTER: Qualquer link m3u8 ou mp4 externo passa pelo Túnel Blindado
+    // REDECANAIS PLAYER DIRETO
+    if (urlStr.includes('redecanaistv') || urlStr.includes('ch.php')) {
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
+    }
+
+    // SINAIS M3U8 E MP4 (Passam pelo Túnel Master)
     const isHls = urlStr.includes('.m3u8') || urlStr.includes('wurl.tv');
     const isVideoFile = urlStr.includes('.mp4') || urlStr.includes('.ts');
 
@@ -74,27 +78,37 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     let hls: any = null;
     const init = async () => {
-      setLoading(true); setError(false);
+      setLoading(true);
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             xhrSetup: (xhr: any, rUrl: string) => {
+              // Garante que cada chunk (.ts) também passe pelo proxy
               if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8'))) {
                 xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
             },
-            enableWorker: true,
-            lowLatencyMode: true
+            enableWorker: true
           });
-          hls.loadSource(processedUrl); hls.attachMedia(video);
-          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => video.muted = true); setLoading(false); });
-          hls.on((window as any).Hls.Events.ERROR, (_: any, d: any) => { if (d.fatal) hls.startLoad(); });
+          hls.loadSource(processedUrl);
+          hls.attachMedia(video);
+          hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(() => video.muted = true);
+            setLoading(false);
+          });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = processedUrl; video.play().catch(() => {}); setLoading(false);
+          video.src = processedUrl;
+          video.play().catch(() => {});
+          setLoading(false);
         }
       } else {
-        video.src = processedUrl!; video.load();
-        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; video.play(); setLoading(false); });
+        video.src = processedUrl!;
+        video.load();
+        video.play().then(() => setLoading(false)).catch(() => {
+          video.muted = true;
+          video.play();
+          setLoading(false);
+        });
       }
     };
     init();
@@ -116,13 +130,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media" 
           onLoad={() => setLoading(false)}
-          /* SANDBOX AD-BLOCK: Bloqueia popups e scripts de propaganda */
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms allow-popups"
         />
       ) : (
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={false} />
       )}
-      {!loading && !error && (
+      {!loading && (
         <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn"><ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" /></button>
           <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn"><ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" /></button>
