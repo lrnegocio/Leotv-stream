@@ -32,7 +32,7 @@ export default function SettingsPage() {
   }, [])
 
   const handleSaveSettings = async () => {
-    if (parentalPin.length < 4) {
+    if (!parentalPin || parentalPin.length < 4) {
       toast({ variant: "destructive", title: "Senha Parental curta", description: "Mestre, use no mínimo 4 dígitos." })
       return
     }
@@ -42,7 +42,7 @@ export default function SettingsPage() {
       if (success) {
         toast({ title: "SENHA E AVISO ATUALIZADOS!" })
       } else {
-        toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+        toast({ variant: "destructive", title: "ERRO AO SALVAR CONFIGS" })
       }
     } catch (e) {
       toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
@@ -86,8 +86,8 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-2xl"><Lock className="h-6 w-6 text-primary" /></div>
               <div>
-                <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Trava obrigatória para categorias restritas.</CardDescription>
+                <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global (Adulto e Games)</CardTitle>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Trava única obrigatória para categorias restritas e Arena.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
                 disabled={saving}
                 className="h-16 px-10 font-black uppercase bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
               >
-                {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Save className="h-5 w-5 mr-2" /> SALVAR CONFIGS</>}
+                {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Save className="h-5 w-5 mr-2" /> SALVAR SENHA</>}
               </button>
             </div>
           </CardContent>

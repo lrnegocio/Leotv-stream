@@ -62,13 +62,12 @@ export default function HomeContent() {
   const [loading, setLoading] = React.useState(true)
   const [selectedCat, setSelectedCat] = React.useState<string | null>(null)
   const [isPinOpen, setIsPinOpen] = React.useState(false)
-  const [isGamesPinOpen, setIsGamesPinOpen] = React.useState(false)
   const [pinInput, setPinInput] = React.useState("")
-  const [gamesPinInput, setGamesPinInput] = React.useState("")
   const [parentalPin, setParentalPin] = React.useState("1234")
   const [announcement, setAnnouncement] = React.useState("")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
+  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
   
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<{name: string, url: string} | null>(null)
@@ -145,34 +144,38 @@ export default function HomeContent() {
         toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Fale com o Mestre Léo para liberar a Arena." });
         return;
       }
-      setIsGamesPinOpen(true);
+      setUnlockTarget('GAMES');
+      setIsPinOpen(true);
       return;
     }
-    if (cat.restricted && !user?.isAdultEnabled) { setIsPinOpen(true); } else setSelectedCat(cat.id);
+    if (cat.restricted && !user?.isAdultEnabled) { 
+      toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Canais restritos desativados para este PIN." });
+      return;
+    }
+    if (cat.restricted) {
+      setUnlockTarget('ADULT');
+      setIsPinOpen(true);
+    } else {
+      setSelectedCat(cat.id);
+    }
   };
 
-  const verifyGamesPassword = async () => {
-    if (!user) return;
+  const verifyGlobalPassword = async () => {
     setLoading(true);
-    // SINCRONIZAÇÃO EM TEMPO REAL: Busca a senha direto no banco agora
-    const fresh = await validateDeviceLogin(user.pin, "password_check");
+    const settings = await getGlobalSettings();
     setLoading(false);
-
-    if (fresh.user) {
-      const correctPass = (fresh.user.gamesPassword || "").trim();
-      const inputPass = gamesPinInput.trim();
-      
-      if (inputPass === correctPass || (correctPass === "" && inputPass === "0000")) {
-        setIsGamesPinOpen(false);
+    
+    if (pinInput === settings.parentalPin) {
+      if (unlockTarget === 'ADULT') {
+        setSelectedCat('ADULT');
+      } else if (unlockTarget === 'GAMES') {
         setGamesMenuOpen(true);
-        setGamesPinInput("");
-        setUser(fresh.user);
-        localStorage.setItem("user_session", JSON.stringify(fresh.user));
-      } else {
-        toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso à Arena foi recusado." });
       }
+      setIsPinOpen(false);
+      setPinInput("");
+      setUnlockTarget(null);
     } else {
-      toast({ variant: "destructive", title: "ERRO DE CONEXÃO", description: "Não foi possível validar o PIN." });
+      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso foi recusado pelo sistema." });
     }
   }
 
@@ -212,7 +215,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4600.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4700.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -321,20 +324,23 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isGamesPinOpen} onOpenChange={setIsGamesPinOpen}>
-        <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
-          <Gamepad2 className="h-16 w-16 text-emerald-500 mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic text-emerald-500 mb-6">Senha Exclusiva Arena</div>
-          <input type="password" title="Games PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-emerald-500 mb-6" value={gamesPinInput} onChange={e => setGamesPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGamesPassword()} autoFocus />
-          <Button onClick={verifyGamesPassword} disabled={loading} className="w-full h-16 bg-emerald-600 text-lg font-black uppercase rounded-3xl shadow-xl shadow-emerald-500/20">{loading ? <Loader2 className="animate-spin" /> : 'ACESSAR ARENA'}</Button>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
-          <Lock className="h-16 w-16 text-primary mx-auto mb-6" /><div className="text-2xl font-black uppercase italic text-primary mb-6">Trava Parental Master</div>
-          <input type="password" title="PIN" maxLength={4} className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && (pinInput === parentalPin ? (setIsPinOpen(false), setSelectedCat('ADULT')) : toast({ variant: "destructive", title: "PIN INVÁLIDO" }))} autoFocus />
-          <Button onClick={() => pinInput === parentalPin ? (setIsPinOpen(false), setSelectedCat('ADULT')) : toast({ variant: "destructive", title: "PIN INVÁLIDO" })} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20">DESBLOQUEAR ACESSO</Button>
+          <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
+          <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava de Segurança Master</div>
+          <input 
+            type="password" 
+            title="PIN" 
+            maxLength={4} 
+            className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
+            value={pinInput} 
+            onChange={e => setPinInput(e.target.value)} 
+            onKeyDown={e => e.key === 'Enter' && verifyGlobalPassword()} 
+            autoFocus 
+          />
+          <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20">
+            {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR ACESSO'}
+          </Button>
         </DialogContent>
       </Dialog>
 

@@ -46,7 +46,6 @@ export interface User {
   isBlocked: boolean;
   isAdultEnabled: boolean; 
   isGamesEnabled: boolean;
-  gamesPassword?: string;
   resellerId?: string | null; 
   activatedAt?: string | null;
   individualMessage?: string;
@@ -158,13 +157,33 @@ export async function removeContent(id: string) {
 }
 
 export async function getGlobalSettings() {
-  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return data?.value || { parentalPin: "1234", announcement: "" };
+  try {
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    if (data && data.value) {
+      return {
+        parentalPin: data.value.parentalPin || "1234",
+        announcement: data.value.announcement || ""
+      };
+    }
+    return { parentalPin: "1234", announcement: "" };
+  } catch (e) {
+    return { parentalPin: "1234", announcement: "" };
+  }
 }
 
 export async function updateGlobalSettings(value: any) {
-  const { error } = await supabase.from('settings').upsert({ key: 'global', value });
-  return !error;
+  try {
+    const { error } = await supabase.from('settings').upsert({ 
+      key: 'global', 
+      value: {
+        parentalPin: String(value.parentalPin || "1234"),
+        announcement: String(value.announcement || "")
+      }
+    });
+    return !error;
+  } catch (e) {
+    return false;
+  }
 }
 
 export async function getRemoteUsers() {
@@ -185,7 +204,6 @@ export async function saveUser(user: User) {
       isBlocked: !!user.isBlocked,
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
-      gamesPassword: (user.gamesPassword || "").trim(),
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       individualMessage: (user.individualMessage || "").trim(),
@@ -202,7 +220,7 @@ export async function saveUser(user: User) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamesPassword: "admin", gamePoints: 9999 } };
+  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamePoints: 9999 } };
   const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
   if (!user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
@@ -246,3 +264,5 @@ export async function generateM3UPlaylist(pin: string) {
 
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();
 export const cleanName = (n: string) => n.toUpperCase().trim();
+export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `*LÉO TV & STREAM* 📺\n\nSeu acesso Master foi liberado!\n\n🔑 *PIN:* ${pin}\n👤 *Telas:* ${screens}\n📅 *Plano:* ${tier.toUpperCase()}\n\n🔗 *Acesse agora:* ${url}\n\n_Bom divertimento!_`;
+export const getExpiryMessage = (pin: string, days: number) => `*AVISO LÉO TV* ⚠️\n\nO sinal do seu PIN *${pin}* vence em *${days} dia(s)*.\n\nFale com seu revendedor para renovar e não perder o acesso!`;

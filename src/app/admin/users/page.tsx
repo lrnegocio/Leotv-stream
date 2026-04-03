@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Send, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2 } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -30,7 +30,6 @@ export default function UserManagementPage() {
     screens: "1",
     isAdultEnabled: false,
     isGamesEnabled: false,
-    gamesPassword: "",
     individualMessage: ""
   })
 
@@ -82,7 +81,6 @@ export default function UserManagementPage() {
       isBlocked: existingUser?.isBlocked || false,
       isAdultEnabled: !!newUser.isAdultEnabled,
       isGamesEnabled: !!newUser.isGamesEnabled,
-      gamesPassword: newUser.gamesPassword || "",
       activatedAt: existingUser?.activatedAt || null,
       individualMessage: newUser.individualMessage.trim(),
       gamePoints: existingUser?.gamePoints || 0,
@@ -98,7 +96,7 @@ export default function UserManagementPage() {
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE", description: "Verifique se as colunas existem no Supabase." });
+      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE" });
     }
     setIsSaving(false);
   }
@@ -116,7 +114,6 @@ export default function UserManagementPage() {
       screens: user.maxScreens.toString(), 
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
-      gamesPassword: user.gamesPassword || "",
       individualMessage: user.individualMessage || ""
     });
     setIsDialogOpen(true);
@@ -125,17 +122,13 @@ export default function UserManagementPage() {
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
-    const matchesSearch = pinStr.includes(searchStr);
-    
-    if (searchStr.length > 0) return matchesSearch;
-
-    let matchesFilter = true;
+    if (searchStr && pinStr.includes(searchStr)) return true;
+    if (searchStr) return false;
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
-      matchesFilter = days !== null && days >= 0 && days <= 3;
+      return days !== null && days >= 0 && days <= 3;
     }
-    
-    return matchesSearch && matchesFilter;
+    return true;
   });
 
   return (
@@ -143,13 +136,13 @@ export default function UserManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle Soberano de PINs</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Games Ala Carte.</p>
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Acessos VIP.</p>
         </div>
         <div className="flex gap-2">
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
-           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, gamesPassword: "", individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
@@ -257,13 +250,6 @@ export default function UserManagementPage() {
                 <Switch checked={newUser.isGamesEnabled} onCheckedChange={v => setNewUser({...newUser, isGamesEnabled: v})} />
               </div>
             </div>
-
-            {newUser.isGamesEnabled && (
-              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black text-emerald-500">Senha Exclusiva Arena (Diferente do Adulto)</Label>
-                <Input value={newUser.gamesPassword} onChange={e => setNewUser({...newUser, gamesPassword: e.target.value})} placeholder="EX: 9988" className="bg-black/40 border-white/5 h-12 font-black text-center tracking-[0.5em]" />
-              </div>
-            )}
 
             <div className="space-y-2">
                <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP (Bloco de Notas)</Label>
