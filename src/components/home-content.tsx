@@ -28,13 +28,14 @@ const CATEGORIES = [
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
-const CONSOLES = [
+export const CONSOLES_LIBRARY = [
   { name: "PLAYSTATION (PS1/PSX)", icon: "🎮", games: [
     { name: "Resident Evil 3 Nemesis", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
     { name: "GTA 1 Original", url: "https://www.retrogames.cc/embed/41727-grand-theft-auto-usa.html" },
     { name: "Metal Gear Solid", url: "https://www.retrogames.cc/embed/41618-metal-gear-solid-usa.html" },
     { name: "Crash Bandicoot 3", url: "https://www.retrogames.cc/embed/41618-crash-bandicoot-3-warped-usa.html" },
-    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" }
+    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" },
+    { name: "Xena: Warrior Princess", url: "https://www.retrogames.cc/embed/41727-xena-warrior-princess-usa.html" }
   ]},
   { name: "SUPER NINTENDO (SNES)", icon: "🔴", games: [
     { name: "Donkey Kong Country 1", url: "https://www.retrogames.cc/embed/18852-donkey-kong-country-usa.html" },
@@ -47,31 +48,49 @@ const CONSOLES = [
     { name: "Contra 3", url: "https://www.retrogames.cc/embed/16896-contra-iii-the-alien-wars-usa.html" },
     { name: "Mortal Kombat Ultimate", url: "https://www.retrogames.cc/embed/17462-ultimate-mortal-kombat-3-usa.html" },
     { name: "Mortal Kombat Trilogy", url: "https://www.retrogames.cc/embed/17462-mortal-kombat-trilogy-usa.html" },
+    { name: "Metal Warriors", url: "https://www.retrogames.cc/embed/17161-metal-warriors-usa.html" },
+    { name: "Sonic Wings", url: "https://www.retrogames.cc/embed/17336-sonic-wings-japan.html" },
     { name: "Aladdin", url: "https://www.retrogames.cc/embed/16801-aladdin-usa.html" },
-    { name: "Mario All Stars", url: "https://www.retrogames.cc/embed/17348-super-mario-all-stars-usa.html" }
+    { name: "Mario All Stars", url: "https://www.retrogames.cc/embed/17348-super-mario-all-stars-usa.html" },
+    { name: "Mega Man X", url: "https://www.retrogames.cc/embed/17161-mega-man-x-usa.html" }
   ]},
-  { name: "MEGA DRIVE / SEGA CD", icon: "🌀", games: [
+  { name: "MEGA DRIVE / SEGA CD / 32X", icon: "🌀", games: [
     { name: "Sonic The Hedgehog 2", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-2-world.html" },
     { name: "Double Dragon", url: "https://www.retrogames.cc/embed/29165-double-dragon-world.html" },
     { name: "Street of Rage 2", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-2-usa.html" },
-    { name: "Sonic CD", url: "https://www.retrogames.cc/embed/29161-sonic-cd-usa.html" }
+    { name: "Sonic CD", url: "https://www.retrogames.cc/embed/29161-sonic-cd-usa.html" },
+    { name: "Knuckles Chaotix (32X)", url: "https://www.retrogames.cc/embed/29161-knuckles-chaotix-usa.html" }
   ]},
-  { name: "ARCADE / MAME / LUTAS", icon: "🥊", games: [
+  { name: "ARCADE / MAME / NEOGEO", icon: "🥊", games: [
     { name: "The King of Fighters 2002", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-2002-magic-plus-ii-bootleg.html" },
     { name: "The King of Fighters 98", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-98-the-slugfest.html" },
     { name: "Marvel vs Capcom", url: "https://www.retrogames.cc/embed/9264-marvel-vs-capcom-clash-of-super-heroes-usa-980123.html" },
     { name: "Marvel vs SNK", url: "https://www.retrogames.cc/embed/42615-snk-vs-capcom-svc-chaos-plus-bootleg.html" },
     { name: "X-Men vs Street Fighter", url: "https://www.retrogames.cc/embed/10142-x-men-vs-street-fighter-euro-961004.html" },
-    { name: "Crazy Taxi", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" }
+    { name: "Crazy Taxi Arcade", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
+    { name: "Metal Slug 5", url: "https://www.retrogames.cc/embed/42615-metal-slug-5-mvs.html" }
   ]},
-  { name: "PC / STEAM / TIRO", icon: "🎯", games: [
+  { name: "NINTENDO 64 / DS / GBA", icon: "🎮", games: [
+    { name: "GoldenEye 007", url: "https://www.retrogames.cc/embed/32112-goldeneye-007-usa.html" },
+    { name: "Mario Kart 64", url: "https://www.retrogames.cc/embed/32112-mario-kart-64-usa.html" },
+    { name: "Pokemon FireRed (GBA)", url: "https://www.retrogames.cc/embed/32112-pokemon-fire-red-version-usa.html" },
+    { name: "Mario Kart DS", url: "https://www.retrogames.cc/embed/32112-mario-kart-ds-usa.html" }
+  ]},
+  { name: "ATARI / 3DO / SATURN", icon: "📀", games: [
+    { name: "Atari 2600 Classics", url: "https://www.retrogames.onl/p/play-atari-2600-games-online.html" },
+    { name: "Atari 7800 Games", url: "https://www.retrogames.onl/p/play-atari-7800-games-online.html" },
+    { name: "Atari Jaguar Games", url: "https://www.retrogames.onl/p/play-atari-jaguar-games-online.html" },
+    { name: "Panasonic 3DO", url: "https://www.retrogames.onl/p/play-3do-games-online.html" },
+    { name: "SEGA Saturn Games", url: "https://www.retrogames.onl/p/play-sega-saturn-games-online.html" }
+  ]},
+  { name: "PC / TIRO / STEAM", icon: "🎯", games: [
     { name: "Counter-Strike Web", url: "https://play-cs.com/pt/servers" },
-    { name: "GoldenEye 007 (N64)", url: "https://www.retrogames.cc/embed/32112-goldeneye-007-usa.html" },
-    { name: "Call of Duty Web", url: "https://www.google.com/search?q=play+call+of+duty+online+web" },
-    { name: "Sunset Riders", url: "https://www.retrogames.cc/embed/17336-sunset-riders-usa.html" },
-    { name: "Wild Guns", url: "https://www.retrogames.cc/embed/17336-wild-guns-usa.html" }
+    { name: "GTA Online Web", url: "https://play-cs.com/pt/servers" },
+    { name: "Call of Duty Web", url: "https://games.atribuna.com.br/jogos/cod-online/" },
+    { name: "Wild Guns", url: "https://www.retrogames.cc/embed/17336-wild-guns-usa.html" },
+    { name: "Sunset Riders", url: "https://www.retrogames.cc/embed/17336-sunset-riders-usa.html" }
   ]},
-  { name: "CLÁSSICOS & IA", icon: "♟️", games: [
+  { name: "CLÁSSICOS & IA (ARENA)", icon: "♟️", games: [
     { name: "Damas Brasileira (IA 1-20)", url: "https://www.playok.com/pt/damas/" },
     { name: "Xadrez Master", url: "https://www.sparkchess.com/play-chess-online.html" },
     { name: "Sinuca 8 Ball", url: "https://games.atribuna.com.br/jogos/8ballpool/" },
@@ -80,12 +99,13 @@ const CONSOLES = [
     { name: "Snake Retro", url: "https://www.google.com/search?q=play+snake" },
     { name: "Jogo da Memória", url: "https://matchthememory.com/play" }
   ]},
-  { name: "OUTROS CONSOLES (3DO/ATARI/MSX)", icon: "📀", games: [
-    { name: "Atari 2600 Classics", url: "https://www.retrogames.onl/p/play-atari-2600-games-online.html" },
-    { name: "Panasonic 3DO Games", url: "https://www.retrogames.onl/p/play-3do-games-online.html" },
+  { name: "OUTROS (MSX/AMIGA/SHARP)", icon: "⌨️", games: [
+    { name: "Amiga A1200 Games", url: "https://www.retrogames.onl/p/play-amiga-games-online.html" },
     { name: "MSX / MSX2 Computer", url: "https://www.retrogames.onl/p/play-msx-games-online.html" },
-    { name: "Sega Saturn / Master", url: "https://www.retrogames.onl/p/play-sega-saturn-games-online.html" },
-    { name: "Nintendo 64 / DS / GBA", url: "https://www.retrogames.onl/p/play-n64-games-online.html" }
+    { name: "Sharp X68000", url: "https://www.retrogames.onl/p/play-sharp-x68000-games-online.html" },
+    { name: "NEC PC-FX", url: "https://www.retrogames.onl/p/play-nec-pc-fx-games-online.html" },
+    { name: "Amstrad CPC", url: "https://www.retrogames.onl/p/play-amstrad-games-online.html" },
+    { name: "OpenBOR Engine", url: "https://www.retrogames.onl/p/play-openbor-games-online.html" }
   ]}
 ]
 
@@ -239,7 +259,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4000.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4100.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -308,7 +328,7 @@ export default function HomeContent() {
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4000</h2>
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4100</h2>
             </div>
             <div className="flex items-center gap-6">
                <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
@@ -328,7 +348,7 @@ export default function HomeContent() {
                      <p className="text-[8px] font-black text-center text-emerald-500/60 uppercase">Nível Atual: {iaLevel} / 20</p>
                   </div>
 
-                  {CONSOLES.map(console => (
+                  {CONSOLES_LIBRARY.map(console => (
                     <div key={console.name} className="space-y-3">
                        <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40"><span>{console.icon}</span> {console.name}</div>
                        <div className="grid gap-2">

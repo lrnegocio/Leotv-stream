@@ -2,24 +2,18 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Users, Play, ShieldCheck, Loader2, Star, Trash2 } from "lucide-react"
+import { Gamepad2, Trophy, Users, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getGameRankings, GameRanking } from "@/lib/store"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-
-const ADMIN_GAMES = [
-  { name: "Super Mario World", console: "SNES", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html" },
-  { name: "Counter-Strike Web", console: "PC", url: "https://play-cs.com/pt/servers" },
-  { name: "Mortal Kombat 3", console: "SNES", url: "https://www.retrogames.cc/embed/17161-mortal-kombat-3-usa.html" },
-  { name: "Resident Evil 3", console: "PS1", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
-  { name: "Crazy Taxi Arcade", console: "ARCADE", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" }
-]
+import { CONSOLES_LIBRARY } from "@/components/home-content"
 
 export default function AdminGamesPage() {
   const [rankings, setRankings] = React.useState<GameRanking[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [testGame, setTestGame] = React.useState<string | null>(null)
+  const [testGame, setTestGame] = React.useState<{name: string, url: string} | null>(null)
+  const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     const load = async () => {
@@ -37,12 +31,12 @@ export default function AdminGamesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Ranking e Teste de Emuladores.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Ranking e Teste de Sinais Gaming.</p>
         </div>
         <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-2xl">
            <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-emerald-500" />
-              <span className="text-xs font-black uppercase italic text-emerald-500 tracking-tighter">Ranking Blindado</span>
+              <span className="text-xs font-black uppercase italic text-emerald-500 tracking-tighter">Sinal de Game Blindado</span>
            </div>
         </div>
       </div>
@@ -82,19 +76,35 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-white/5 border-b border-white/5 p-6">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Play className="h-4 w-4 text-emerald-500" /> Teste de Jogos
+                <Play className="h-4 w-4 text-emerald-500" /> Teste de Biblioteca Master
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid gap-3">
-                {ADMIN_GAMES.map(game => (
-                  <Button key={game.name} variant="outline" onClick={() => setTestGame(game.url)} className="justify-between h-14 bg-white/5 border-white/5 hover:border-emerald-500 group rounded-2xl px-6">
-                    <div className="text-left">
-                      <p className="text-[10px] font-black uppercase italic group-hover:text-emerald-500">{game.name}</p>
-                      <p className="text-[8px] font-bold opacity-40 uppercase">{game.console}</p>
-                    </div>
-                    <Play className="h-4 w-4 opacity-20 group-hover:opacity-100" />
-                  </Button>
+              <div className="grid gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
+                {CONSOLES_LIBRARY.map(console => (
+                  <div key={console.name} className="space-y-2">
+                    <button 
+                      onClick={() => setExpandedConsole(expandedConsole === console.name ? null : console.name)}
+                      className="w-full flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-emerald-500/10 transition-all border border-white/5 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{console.icon}</span>
+                        <span className="text-[10px] font-black uppercase italic group-hover:text-emerald-500">{console.name}</span>
+                      </div>
+                      {expandedConsole === console.name ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                    
+                    {expandedConsole === console.name && (
+                      <div className="grid gap-2 pl-4 animate-in slide-in-from-top-2 duration-300">
+                        {console.games.map(game => (
+                          <Button key={game.name} variant="outline" onClick={() => setTestGame(game)} className="justify-between h-12 bg-black/20 border-white/5 hover:border-emerald-500 group rounded-xl px-4">
+                            <span className="text-[9px] font-bold uppercase truncate">{game.name}</span>
+                            <Play className="h-3 w-3 opacity-20 group-hover:opacity-100" />
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </CardContent>
@@ -105,7 +115,7 @@ export default function AdminGamesPage() {
                 <Star className="h-8 w-8 text-emerald-500 animate-pulse" />
                 <div>
                    <h4 className="font-black uppercase text-xs">Mestre Léo (Admin)</h4>
-                   <p className="text-[10px] opacity-60">Status: Poder Supremo. Pode desafiar qualquer um no ranking.</p>
+                   <p className="text-[10px] opacity-60">Status: Poder Supremo. Testando sinais de todos os consoles.</p>
                 </div>
              </div>
           </Card>
@@ -113,8 +123,11 @@ export default function AdminGamesPage() {
       </div>
 
       <Dialog open={!!testGame} onOpenChange={() => setTestGame(null)}>
-        <DialogContent className="max-w-5xl h-[80vh] bg-black p-0 border-white/10 rounded-[3rem] overflow-hidden">
-          {testGame && <iframe src={testGame} className="w-full h-full border-0" allowFullScreen />}
+        <DialogContent className="max-w-5xl h-[80vh] bg-black p-0 border-white/10 rounded-[3rem] overflow-hidden outline-none">
+          <div className="absolute top-4 left-4 z-50 bg-black/60 px-4 py-2 rounded-full border border-white/10">
+            <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO: {testGame?.name}</span>
+          </div>
+          {testGame && <iframe src={testGame.url} className="w-full h-full border-0" allowFullScreen />}
         </DialogContent>
       </Dialog>
     </div>
