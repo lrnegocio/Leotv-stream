@@ -6,18 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, Zap, Trash, MessageSquare } from "lucide-react"
-import { getGlobalSettings, updateGlobalSettings, processM3UImport, clearAllM3UContent } from "@/lib/store"
+import { Lock, Save, Loader2, MessageSquare, ShieldCheck } from "lucide-react"
+import { getGlobalSettings, updateGlobalSettings } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const [parentalPin, setParentalPin] = React.useState("")
   const [announcement, setAnnouncement] = React.useState("")
-  const [m3uContent, setM3uContent] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
-  const [importing, setImporting] = React.useState(false)
-  const [importMsg, setImportingMsg] = React.useState("")
 
   React.useEffect(() => {
     const load = async () => {
@@ -54,40 +51,13 @@ export default function SettingsPage() {
     }
   }
 
-  const handleImportM3U = async () => {
-    if (!m3uContent) {
-      toast({ variant: "destructive", title: "Cole sua lista M3U." });
-      return;
-    }
-    setImporting(true);
-    try {
-      const result = await processM3UImport(m3uContent, (msg) => setImportingMsg(msg));
-      toast({ title: "M3U IMPORTADO!", description: `${result.success} sinais processados.` });
-      setM3uContent("");
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erro no M3U" });
-    } finally {
-      setImporting(false);
-      setImportingMsg("");
-    }
-  }
-
-  const handleClearAll = async () => {
-    if (confirm("Mestre, deseja apagar TODOS os sinais da rede agora?")) {
-      const success = await clearAllM3UContent()
-      if (success) {
-        toast({ title: "BANCO MASTER RESETADO" })
-      }
-    }
-  }
-
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="space-y-1">
         <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Mural Master</h1>
-        <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Master de Rede e Comunicação.</p>
+        <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão de Rede e Comunicação Blindada.</p>
       </div>
 
       <div className="grid gap-8">
@@ -117,7 +87,7 @@ export default function SettingsPage() {
               <div className="p-3 bg-primary/10 rounded-2xl"><Lock className="h-6 w-6 text-primary" /></div>
               <div>
                 <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Trava obrigatória para categorias restritas (Adultos, Reels, etc).</CardDescription>
+                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Trava obrigatória para categorias restritas.</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -142,37 +112,14 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/10 rounded-2xl"><Zap className="h-6 w-6 text-emerald-500" /></div>
+        <Card className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
+           <div className="flex items-center gap-4">
+              <ShieldCheck className="h-10 w-10 text-emerald-500" />
               <div>
-                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Sincronizador M3U Master</CardTitle>
-                <CardDescription className="text-[10px] uppercase font-bold opacity-60">Importe listas gigantes para o banco.</CardDescription>
+                 <h4 className="font-black uppercase text-sm">Escudo Master Ativo</h4>
+                 <p className="text-[10px] opacity-60 uppercase font-bold">Proteção anti-propaganda e bloqueio de inspeção de código (F12) habilitados.</p>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-8 space-y-6">
-            <Textarea 
-              value={m3uContent}
-              onChange={e => setM3uContent(e.target.value)}
-              placeholder="#EXTM3U..."
-              className="h-48 bg-black/40 border-white/5 font-mono text-[9px] rounded-xl shadow-inner"
-            />
-            {importing && <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center"><p className="text-xs font-black uppercase text-emerald-500">{importMsg}</p></div>}
-            <div className="flex gap-4">
-              <button 
-                onClick={handleImportM3U} 
-                disabled={importing} 
-                className="flex-1 h-16 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-black uppercase rounded-2xl transition-all shadow-xl shadow-emerald-500/20"
-              >
-                {importing ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : "INICIAR IMPORTAÇÃO M3U"}
-              </button>
-              <Button onClick={handleClearAll} variant="outline" className="border-destructive/20 text-destructive h-16 px-8 rounded-2xl hover:bg-destructive hover:text-white transition-all">
-                <Trash className="h-6 w-6" />
-              </Button>
-            </div>
-          </CardContent>
+           </div>
         </Card>
       </div>
     </div>

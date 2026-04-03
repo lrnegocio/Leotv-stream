@@ -29,9 +29,8 @@ const CATEGORIES = [
 ]
 
 export const CONSOLES_LIBRARY = [
-  { name: "PLAYSTATION (PS1/PSX)", icon: "🎮", games: [
+  { name: "PLAYSTATION (PS1/PSX/PS2)", icon: "🎮", games: [
     { name: "Resident Evil 3 Nemesis", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
-    { name: "GTA 1 Original", url: "https://www.retrogames.cc/embed/41727-grand-theft-auto-usa.html" },
     { name: "Metal Gear Solid", url: "https://www.retrogames.cc/embed/41618-metal-gear-solid-usa.html" },
     { name: "Crash Bandicoot 3", url: "https://www.retrogames.cc/embed/41618-crash-bandicoot-3-warped-usa.html" },
     { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" },
@@ -47,12 +46,15 @@ export const CONSOLES_LIBRARY = [
     { name: "Top Gear 3000", url: "https://www.retrogames.cc/embed/17443-top-gear-3000-usa.html" },
     { name: "Contra 3", url: "https://www.retrogames.cc/embed/16896-contra-iii-the-alien-wars-usa.html" },
     { name: "Mortal Kombat Ultimate", url: "https://www.retrogames.cc/embed/17462-ultimate-mortal-kombat-3-usa.html" },
-    { name: "Mortal Kombat Trilogy", url: "https://www.retrogames.cc/embed/17462-mortal-kombat-trilogy-usa.html" },
     { name: "Metal Warriors", url: "https://www.retrogames.cc/embed/17161-metal-warriors-usa.html" },
     { name: "Sonic Wings", url: "https://www.retrogames.cc/embed/17336-sonic-wings-japan.html" },
     { name: "Aladdin", url: "https://www.retrogames.cc/embed/16801-aladdin-usa.html" },
     { name: "Mario All Stars", url: "https://www.retrogames.cc/embed/17348-super-mario-all-stars-usa.html" },
     { name: "Mega Man X", url: "https://www.retrogames.cc/embed/17161-mega-man-x-usa.html" }
+  ]},
+  { name: "NINTENDO 64 (N64)", icon: "🕹️", games: [
+    { name: "GoldenEye 007", url: "https://www.retrogames.cc/embed/32112-goldeneye-007-usa.html" },
+    { name: "Mario Kart 64", url: "https://www.retrogames.cc/embed/32112-mario-kart-64-usa.html" }
   ]},
   { name: "MEGA DRIVE / SEGA CD / 32X", icon: "🌀", games: [
     { name: "Sonic The Hedgehog 2", url: "https://www.retrogames.cc/embed/29161-sonic-the-hedgehog-2-world.html" },
@@ -60,6 +62,10 @@ export const CONSOLES_LIBRARY = [
     { name: "Street of Rage 2", url: "https://www.retrogames.cc/embed/29165-streets-of-rage-2-usa.html" },
     { name: "Sonic CD", url: "https://www.retrogames.cc/embed/29161-sonic-cd-usa.html" },
     { name: "Knuckles Chaotix (32X)", url: "https://www.retrogames.cc/embed/29161-knuckles-chaotix-usa.html" }
+  ]},
+  { name: "ATARI (2600/7800/JAGUAR)", icon: "🕹️", games: [
+    { name: "Pac-Man (2600)", url: "https://www.retrogames.cc/embed/19022-pac-man-usa.html" },
+    { name: "River Raid (2600)", url: "https://www.retrogames.cc/embed/19022-river-raid-usa.html" }
   ]},
   { name: "ARCADE / MAME / NEOGEO", icon: "🥊", games: [
     { name: "The King of Fighters 2002", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-2002-magic-plus-ii-bootleg.html" },
@@ -70,11 +76,17 @@ export const CONSOLES_LIBRARY = [
     { name: "Crazy Taxi Arcade", url: "https://www.retrogames.cc/embed/22456-crazy-taxi-usa.html" },
     { name: "Metal Slug 5", url: "https://www.retrogames.cc/embed/42615-metal-slug-5-mvs.html" }
   ]},
-  { name: "NINTENDO 64 / DS / GBA", icon: "🎮", games: [
-    { name: "GoldenEye 007", url: "https://www.retrogames.cc/embed/32112-goldeneye-007-usa.html" },
-    { name: "Mario Kart 64", url: "https://www.retrogames.cc/embed/32112-mario-kart-64-usa.html" },
+  { name: "NINTENDO DS / GBC / GBA", icon: "📱", games: [
     { name: "Pokemon FireRed (GBA)", url: "https://www.retrogames.cc/embed/32112-pokemon-fire-red-version-usa.html" },
     { name: "Mario Kart DS", url: "https://www.retrogames.cc/embed/32112-mario-kart-ds-usa.html" }
+  ]},
+  { name: "3DO / AMIGA / TURBOGRAFX", icon: "💿", games: [
+    { name: "Gex (3DO)", url: "https://www.retrogames.cc/embed/41727-gex-usa.html" },
+    { name: "Bonk's Adventure", url: "https://www.retrogames.cc/embed/17336-bonks-adventure-usa.html" }
+  ]},
+  { name: "MS-DOS / MSX / SHARP / NEC", icon: "💻", games: [
+    { name: "Doom 1", url: "https://www.retrogames.cc/embed/41727-doom-usa.html" },
+    { name: "Prince of Persia", url: "https://www.retrogames.cc/embed/17336-prince-of-persia-usa.html" }
   ]},
   { name: "PC / TIRO / STEAM", icon: "🎯", games: [
     { name: "Counter-Strike Web", url: "https://play-cs.com/pt/servers" },
@@ -129,7 +141,6 @@ export default function HomeContent() {
       if (!session) { router.push("/login"); return; }
       const currentUser = JSON.parse(session);
       
-      // REVALIDAÇÃO SNIPER: Busca dados frescos do banco para evitar senha antiga em cache
       const fresh = await validateDeviceLogin(currentUser.pin, currentUser.deviceId || "web");
       if (!fresh.error && fresh.user) {
         setUser(fresh.user);
@@ -194,9 +205,8 @@ export default function HomeContent() {
         toast({ variant: "destructive", title: "ALA CARTE BLOQUEADO", description: "Fale com o Mestre Léo para liberar seu Painel de Arena Games." });
         return;
       }
-      // Re-valida PIN antes de pedir senha para garantir que pegamos a senha mais nova do Admin
       if (user) {
-        const fresh = await validateDeviceLogin(user.pin, "revalidate");
+        const fresh = await validateDeviceLogin(user.pin, "revalidate_pass");
         if (fresh.user) {
           setUser(fresh.user);
           localStorage.setItem("user_session", JSON.stringify(fresh.user));
@@ -208,6 +218,18 @@ export default function HomeContent() {
     if (cat.restricted && !user?.isAdultEnabled) { setIsPinOpen(true); } else setSelectedCat(cat.id);
   };
 
+  const verifyGamesPassword = () => {
+    const input = gamesPinInput.trim();
+    const correct = (user?.gamesPassword || "").trim();
+    if (input === correct || (correct === "" && input === "0000")) {
+      setIsGamesPinOpen(false);
+      setGamesMenuOpen(true);
+      setGamesPinInput("");
+    } else {
+      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso à Arena foi recusado." });
+    }
+  }
+
   const startMatch = async (game: {name: string, url: string}) => {
     setSearchingOpponent(true);
     setOpponent(null);
@@ -216,7 +238,6 @@ export default function HomeContent() {
     setTimeout(async () => {
       const waiting = await getWaitingPlayers();
       const possible = waiting.filter(w => w.pin !== user?.pin);
-      
       if (possible.length > 0) {
         const sel = possible[0];
         setOpponent({ pin: sel.pin, rank: gameRankings.findIndex(r => r.pin === sel.pin) + 1 || 99 });
@@ -241,19 +262,6 @@ export default function HomeContent() {
     setOpponent(null);
   };
 
-  const verifyGamesPassword = () => {
-    const input = gamesPinInput.trim();
-    const correct = user?.gamesPassword?.trim();
-    
-    if (input === correct || (correct === "" && input === "0000")) {
-      setIsGamesPinOpen(false);
-      setGamesMenuOpen(true);
-      setGamesPinInput("");
-    } else {
-      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "A senha da Arena não confere." });
-    }
-  }
-
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
 
   return (
@@ -263,7 +271,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4200.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v4500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -332,7 +340,7 @@ export default function HomeContent() {
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4200</h2>
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v4500</h2>
             </div>
             <div className="flex items-center gap-6">
                <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">

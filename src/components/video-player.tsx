@@ -24,14 +24,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
+    // DETECTOR DE PLAYERS EXTERNOS (REDE CANAIS, ETC)
+    if (urlStr.includes('redecanaistv') || urlStr.includes('player3/ch.php')) {
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
+    }
+
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
-    }
-
-    if (urlStr.includes('dailymotion.com')) {
-      const vidId = urlStr.split('/video/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
     if (urlStr.includes('pornhub.com')) {
@@ -40,23 +40,21 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' }
     }
 
-    if (urlStr.includes('xvideos.com') || urlStr.includes('brazzers.com') || urlStr.includes('bangbros.com')) {
+    if (urlStr.includes('xvideos.com')) {
       const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
       const vidId = match ? match[1] : null;
-      if (vidId && urlStr.includes('xvideos')) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'iframe' }
+      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // SNIPER 206: Qualquer link m3u8 ou mp4 externo passa pelo Túnel de Camuflagem
-    const isHls = urlStr.includes('.m3u8') || urlStr.includes('chunklist') || urlStr.includes('playlist.m3u8');
-    const isVideoFile = urlStr.includes('.mp4') || urlStr.includes('.mkv') || urlStr.includes('.avi') || urlStr.includes('.ts');
-    const isProblematic = urlStr.includes('blinder.space') || urlStr.includes('jmvstream') || urlStr.includes('redecanais') || urlStr.startsWith('http://');
+    // ESCUDO MASTER: Qualquer link m3u8 ou mp4 externo passa pelo Túnel Blindado
+    const isHls = urlStr.includes('.m3u8') || urlStr.includes('wurl.tv');
+    const isVideoFile = urlStr.includes('.mp4') || urlStr.includes('.ts');
 
-    if (isHls || isVideoFile || isProblematic) {
+    if (isHls || isVideoFile) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHls ? 'hls' : 'video' }
     }
 
-    return { processedUrl: urlStr, type: urlStr.includes('.mp4') ? 'video' : 'iframe' }
+    return { processedUrl: urlStr, type: 'iframe' }
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -80,15 +78,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
-            // SINTONIZADOR SNIPER: Força cada pedaço do m3u8 (.ts) a passar pelo proxy
             xhrSetup: (xhr: any, rUrl: string) => {
               if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8'))) {
                 xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
             },
             enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 90
+            lowLatencyMode: true
           });
           hls.loadSource(processedUrl); hls.attachMedia(video);
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => video.muted = true); setLoading(false); });
@@ -113,15 +109,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Master Léo TV...</p>
         </div>
       )}
-      {error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/95 p-10 text-center">
-          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-white font-black uppercase italic text-xl">Sinal Offline</h3>
-          <Button onClick={() => window.location.reload()} className="bg-primary uppercase font-black text-[10px] rounded-xl h-12 px-8 mt-6"><RefreshCw className="mr-2 h-4 w-4" /> Recarregar</Button>
-        </div>
-      )}
       {type === 'iframe' ? (
-        <iframe src={processedUrl!} className="w-full h-full border-0" allowFullScreen allow="autoplay; encrypted-media" onLoad={() => setLoading(false)} />
+        <iframe 
+          src={processedUrl!} 
+          className="w-full h-full border-0" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media" 
+          onLoad={() => setLoading(false)}
+          /* SANDBOX AD-BLOCK: Bloqueia popups e scripts de propaganda */
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+        />
       ) : (
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls={false} />
       )}

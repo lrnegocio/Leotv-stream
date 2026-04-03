@@ -157,32 +157,6 @@ export async function removeContent(id: string) {
   return !error;
 }
 
-export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
-}
-
-export async function clearAllM3UContent() {
-  const { data: items } = await supabase.from('content').select('id');
-  if (!items || items.length === 0) return true;
-  const { error } = await supabase.from('content').delete().in('id', items.map(i => i.id));
-  return !error;
-}
-
-export async function processM3UImport(m3u: string, onProgress: (m: string) => void) {
-  const lines = m3u.split('\n'); let count = 0; let curr: any = {};
-  for (const line of lines) {
-    if (line.startsWith('#EXTINF:')) {
-      const parts = line.split(',');
-      curr = { title: parts[parts.length - 1]?.trim(), type: 'channel', genre: 'LÉO TV AO VIVO', isRestricted: false };
-    } else if (line.startsWith('http')) {
-      if (curr.title) { await saveContent({ ...curr, streamUrl: line.trim() }); count++; if (count % 10 === 0) onProgress(`Sintonizando: ${count}...`); }
-      curr = {};
-    }
-  }
-  return { success: count };
-}
-
 export async function getGlobalSettings() {
   const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
   return data?.value || { parentalPin: "1234", announcement: "" };
@@ -211,7 +185,7 @@ export async function saveUser(user: User) {
       isBlocked: !!user.isBlocked,
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
-      gamesPassword: user.gamesPassword || "",
+      gamesPassword: (user.gamesPassword || "").trim(),
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       individualMessage: (user.individualMessage || "").trim(),
@@ -221,20 +195,10 @@ export async function saveUser(user: User) {
     };
 
     const { error } = await supabase.from('users').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase SaveUser Detalhado:", JSON.stringify(error, null, 2));
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) {
-    console.error("Erro Fatal SaveUser:", e);
     return false;
   }
-}
-
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -262,11 +226,6 @@ export async function saveReseller(res: any) {
   return !error;
 }
 
-export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
 export async function getCategoryCount(genre: string) {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
   return count || 0;
@@ -283,14 +242,6 @@ export async function generateM3UPlaylist(pin: string) {
   let m3u = "#EXTM3U\n";
   content.forEach(i => { if (i.streamUrl) m3u += `#EXTINF:-1 tvg-logo="${i.imageUrl || ''}" group-title="${i.genre.toUpperCase()}",${(i.title || "").toUpperCase()}\n${baseUrl}/live/${pin}/pass/${i.id}.ts\n`; });
   return m3u;
-}
-
-export function getBeautifulMessage(pin: string, tier: string, url: string, screens: number) {
-  return `🚀 *LÉO TV - ACESSO LIBERADO* 🚀\n\n🔑 *PIN:* ${pin}\n📺 *TELAS:* ${screens}\n🌐 *LINK:* ${url}\n\n*Bom entretenimento!*`;
-}
-
-export function getExpiryMessage(pin: string, days: number) {
-  return `⚠️ *ALERTA LÉO TV* ⚠️\n\nSeu sinal *${pin}* expira em *${days} dia(s)*!\n\nRenove agora!`;
 }
 
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();

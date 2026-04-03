@@ -7,15 +7,12 @@ import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Léo Tv & Stream',
-  description: 'Plataforma de streaming P2P Master de alta performance',
+  description: 'Plataforma de streaming Master de alta performance',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Léo Tv',
-  },
-  formatDetection: {
-    telephone: false,
   },
 };
 
@@ -41,8 +38,21 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
+        <style dangerouslySetInnerHTML={{ __html: `
+          iframe[src*="redecanaistv"], 
+          iframe[src*="xvideos"], 
+          iframe[src*="pornhub"] {
+            pointer-events: auto !important;
+          }
+          .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            opacity: 0 !important;
+          }
+        `}} />
       </head>
-      <body className="font-body antialiased bg-background text-foreground select-none">
+      <body className="font-body antialiased bg-background text-foreground select-none overflow-x-hidden">
         <SecurityBlocker />
         {children}
         <Toaster />
@@ -64,12 +74,13 @@ function SecurityBlocker() {
         if (isLocal) return;
 
         document.addEventListener('contextmenu', e => e.preventDefault());
+
         document.addEventListener('keydown', e => {
           if (
-            e.keyCode === 123 || 
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
-            (e.ctrlKey && e.keyCode === 85) ||
-            (e.ctrlKey && e.shiftKey && e.keyCode === 67)
+            e.key === 'F12' || 
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+            (e.ctrlKey && e.key === 'u') ||
+            (e.metaKey && e.altKey && e.key === 'i')
           ) {
             e.preventDefault();
             return false;
