@@ -39,9 +39,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          iframe { border: none !important; }
+          /* ESCUDO AD-BLOCK MASTER: Injeção de CSS para matar propagandas externas */
+          iframe[src*="redecanaistv"], 
+          iframe[src*="xvideos"], 
+          iframe[src*="pornhub"] {
+            pointer-events: auto !important;
+          }
+          /* Esconde banners de propaganda conhecidos que tentam aparecer via script */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
-          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
+          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, #pop-under {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
@@ -71,8 +77,10 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
-        // Bloqueio de Mouse e Atalhos Master
+        // BLOQUEIO TOTAL DE BOTÃO DIREITO
         document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // BLOQUEIO DE F12 E ATALHOS DE INSPEÇÃO (SUPREMACIA TOTAL)
         document.addEventListener('keydown', e => {
           if (
             e.key === 'F12' || 
@@ -84,6 +92,8 @@ function SecurityBlocker() {
             return false;
           }
         });
+
+        // DESATIVA SELEÇÃO DE TEXTO
         document.onselectstart = () => false;
       })();
     `}} />

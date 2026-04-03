@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER v4.0 (RESTAURAÇÃO TOTAL)
- * Motor de bypass limpo para m3u8, mp4 e canais ao vivo.
- * Suporte a Range (206) e injeção de Referer inteligente.
+ * TÚNEL DE SINAL MASTER v5.0 (RESTAURAÇÃO TOTAL)
+ * Motor de bypass camaleão para m3u8, mp4 e redirecionamentos complexos.
+ * Resolve o problema de links HTTP em sites HTTPS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,13 +20,13 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade camaleão Smart TV
+    // Identidade de Smart TV Premium para enganar bloqueios
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/6.2 Chrome/110.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
-    // Bypass de Referer dinâmico
+    // Injeção de Referer inteligente baseada no destino
     const urlObj = new URL(targetUrl);
-    if (targetUrl.includes('redecanais')) {
+    if (targetUrl.includes('redecanais') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
     } else if (targetUrl.includes('wurl.tv')) {
@@ -38,21 +38,28 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow'
+      redirect: 'follow' // Segue o link de manifest/redirecionamento automaticamente
     });
 
     const responseHeaders = new Headers();
     
-    // Copia apenas cabeçalhos essenciais para não quebrar a decodificação
-    const safeHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
-    safeHeaders.forEach(h => {
+    // Copia cabeçalhos vitais para streaming e range
+    const headersToCopy = [
+      'content-type', 
+      'content-length', 
+      'content-range', 
+      'accept-ranges', 
+      'cache-control'
+    ];
+
+    headersToCopy.forEach(h => {
       const v = res.headers.get(h);
       if (v) responseHeaders.set(h, v);
     });
 
-    // Liberação total de CORS
+    // Liberação total de CORS para o navegador do cliente
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
     if (!res.body) return new NextResponse("Sinal Vazio", { status: 502 });
 
@@ -63,7 +70,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Erro no Túnel Master:", error.message);
+    console.error("Erro no Túnel Master v5.0:", error.message);
     return new NextResponse("Falha no Túnel de Sinal", { status: 500 });
   }
 }

@@ -201,6 +201,7 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
+    // BLINDAGEM MESTRE: Garante que datas vazias sejam enviadas como NULL
     const payload: any = {
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
