@@ -113,7 +113,21 @@ export default function HomeContent() {
 
       const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
       const data = await getRemoteContent(false, queryStr, targetGenre);
-      setContent(data.filter(i => !!i.streamUrl || (i.type === 'series' && i.episodes?.length) || (i.type === 'multi-season' && i.seasons?.length)));
+      
+      const filtered = data.filter(i => !!i.streamUrl || (i.type === 'series' && i.episodes?.length) || (i.type === 'multi-season' && i.seasons?.length));
+      setContent(filtered);
+
+      // AUTO-PLAY VIA URL SNIPER
+      if (channelId) {
+        const foundIdx = filtered.findIndex(i => i.id === channelId);
+        if (foundIdx !== -1) {
+          if (filtered[foundIdx].type === 'series' || filtered[foundIdx].type === 'multi-season') {
+            setSelectedSeries(filtered[foundIdx]);
+          } else {
+            setActiveVideo({ items: filtered, index: foundIdx });
+          }
+        }
+      }
 
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
@@ -127,7 +141,7 @@ export default function HomeContent() {
       setWaitingPlayers(waiting);
 
     } catch (err) { } finally { setLoading(false); }
-  }, [router]);
+  }, [router, channelId]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
@@ -144,6 +158,12 @@ export default function HomeContent() {
 
   const handleItemClick = (idx: number) => {
     const item = content[idx];
+    
+    // ATUALIZA URL SNIPER
+    const params = new URLSearchParams(window.location.search);
+    params.set('id', item.id);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+
     if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
     else setActiveVideo({ items: content, index: idx });
   };
@@ -209,7 +229,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v3500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v3900.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -278,7 +298,7 @@ export default function HomeContent() {
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Gamepad2 className="h-8 w-8 text-emerald-500" />
-              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v3500</h2>
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer v3900</h2>
             </div>
             <div className="flex items-center gap-6">
                <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5">
@@ -409,7 +429,7 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!activeVideo} onOpenChange={(val) => { if(!val) setActiveVideo(null); }}>
+      <Dialog open={!!activeVideo} onOpenChange={(val) => { if(!val) { setActiveVideo(null); const p = new URLSearchParams(window.location.search); p.delete('id'); window.history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); } }}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={() => setActiveVideo({...activeVideo, index: (activeVideo.index + 1) % activeVideo.items.length})} onPrev={() => setActiveVideo({...activeVideo, index: (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length})} />}
         </DialogContent>

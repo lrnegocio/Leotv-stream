@@ -200,11 +200,13 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
+    // BLINDAGEM MESTRE: Garante que apenas campos que existem no banco sejam enviados
+    // e que valores vazios sejam tratados como null ou padrão.
     const payload: any = {
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
-      role: user.role,
-      subscriptionTier: user.subscriptionTier,
+      role: user.role || 'user',
+      subscriptionTier: user.subscriptionTier || 'monthly',
       expiryDate: user.expiryDate || null,
       maxScreens: user.maxScreens || 1,
       activeDevices: user.activeDevices || [],
@@ -222,7 +224,7 @@ export async function saveUser(user: User) {
 
     const { error } = await supabase.from('users').upsert(payload);
     if (error) {
-      console.error("Erro Supabase SaveUser:", error);
+      console.error("Erro Supabase SaveUser Detalhado:", JSON.stringify(error, null, 2));
       return false;
     }
     return true;
