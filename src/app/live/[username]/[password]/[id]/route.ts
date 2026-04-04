@@ -23,7 +23,7 @@ export async function GET(
     let streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
 
-    // SINTONIZADOR MASTER v3700.0: Suporte total para YouTube, Dailymotion, Pornhub e Adultos
+    // SINTONIZADOR EMBED MASTER v17.0
     if (streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')) {
       const vidId = streamUrl.includes('v=') ? streamUrl.split('v=')[1]?.split('&')[0] : streamUrl.split('youtu.be/')[1]?.split('?')[0];
       return NextResponse.redirect(`https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1`);
@@ -41,7 +41,8 @@ export async function GET(
     }
 
     if (streamUrl.includes('xvideos.com')) {
-      const vidId = streamUrl.match(/video\.([a-z0-9]+)/i)?.[1] || streamUrl.match(/\/video([a-z0-9]+)/i)?.[1];
+      const vidIdMatch = streamUrl.match(/video\.?([a-z0-9]+)/i) || streamUrl.match(/\/video([0-9]+)/);
+      const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return NextResponse.redirect(`https://www.xvideos.com/embedframe/${vidId}`);
     }
 

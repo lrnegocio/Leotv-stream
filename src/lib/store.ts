@@ -73,9 +73,7 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * EXPORTAÇÃO DE FUNÇÕES DE EXCLUSÃO (FIX PARA ERRO DE BUILD)
- */
+// EXPORTAÇÕES OBRIGATÓRIAS v17.0
 export async function removeUser(id: string) {
   const { error } = await supabase.from('users').delete().eq('id', id);
   return !error;
@@ -96,9 +94,6 @@ export async function removeContent(id: string) {
   return !error;
 }
 
-/**
- * GESTÃO DE CONTEÚDO
- */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
@@ -138,9 +133,6 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   return data;
 }
 
-/**
- * ARENA GAMES
- */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
     const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
@@ -177,9 +169,6 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-/**
- * CONFIGURAÇÕES GLOBAIS
- */
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
@@ -198,9 +187,6 @@ export async function updateGlobalSettings(value: any) {
   } catch (e) { return false; }
 }
 
-/**
- * USUÁRIOS
- */
 export async function getRemoteUsers() {
   const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
   return data || [];
@@ -222,9 +208,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   return { user };
 }
 
-/**
- * REVENDEDORES
- */
 export async function validateResellerLogin(username: string, pass: string) {
   const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
   if (!res || res.isBlocked) return { error: "NEGADO" };
@@ -241,9 +224,6 @@ export async function saveReseller(res: any) {
   return !error;
 }
 
-/**
- * UTILITÁRIOS
- */
 export async function getCategoryCount(genre: string) {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
   return count || 0;

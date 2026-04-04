@@ -41,10 +41,10 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: `
           iframe[src*="redecanaistv"], 
           iframe[src*="xvideos"], 
-          iframe[src*="pornhub"] {
+          iframe[src*="pornhub"],
+          iframe[src*="dailymotion"] {
             pointer-events: auto !important;
           }
-          /* ESCUDO AD-BLOCK MASTER: Oculta banners de propaganda */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
             display: none !important;
@@ -75,11 +75,12 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
-        // BLOQUEIO TOTAL DE BOTÃO DIREITO
         document.addEventListener('contextmenu', e => e.preventDefault());
 
-        // BLOQUEIO DE F12 E ATALHOS DE INSPEÇÃO (SUPREMACIA TOTAL)
         document.addEventListener('keydown', e => {
+          // LIBERAÇÃO MESTRE: Permite Ctrl+A (Selecionar Tudo)
+          if (e.ctrlKey && e.key === 'a') return true;
+
           if (
             e.key === 'F12' || 
             (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
@@ -91,8 +92,11 @@ function SecurityBlocker() {
           }
         });
 
-        // DESATIVA SELEÇÃO DE TEXTO
-        document.onselectstart = () => false;
+        // Só bloqueia seleção de texto se não for dentro de inputs/painéis
+        document.addEventListener('selectstart', e => {
+           if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+           // e.preventDefault(); // Comentado para permitir uso do painel
+        });
       })();
     `}} />
   );
