@@ -73,7 +73,10 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// EXPORTAÇÕES OBRIGATÓRIAS v19.0 - CORREÇÃO DE BUILD
+// ==========================================
+// FUNÇÕES DE EXCLUSÃO (CORREÇÃO DE BUILD)
+// ==========================================
+
 export async function removeUser(id: string) {
   const { error } = await supabase.from('users').delete().eq('id', id);
   return !error;
@@ -84,15 +87,19 @@ export async function removeReseller(id: string) {
   return !error;
 }
 
+export async function removeContent(id: string) {
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
+}
+
 export async function bulkRemoveContent(ids: string[]) {
   const { error } = await supabase.from('content').delete().in('id', ids);
   return !error;
 }
 
-export async function removeContent(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
+// ==========================================
+// FUNÇÕES DE CONTEÚDO
+// ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
@@ -133,41 +140,9 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   return data;
 }
 
-export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
-  try {
-    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
-    let pts = user?.gamePoints || 0;
-    if (result === 'win') pts += 10;
-    else if (result === 'draw') pts += 3;
-    else if (result === 'loss') pts = Math.max(0, pts - 5);
-    const { error } = await supabase.from('users').update({ gamePoints: pts, isSearchingMatch: false }).eq('pin', pin.toUpperCase());
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function setUserSearchingMatch(pin: string, isSearching: boolean) {
-  try {
-    const { error } = await supabase.from('users').update({ 
-      isSearchingMatch: isSearching, 
-      searchingMatchAt: isSearching ? new Date().toISOString() : null 
-    }).eq('pin', pin.toUpperCase());
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getWaitingPlayers(): Promise<User[]> {
-  try {
-    const { data } = await supabase.from('users').select('*').eq('isSearchingMatch', true).order('searchingMatchAt', { ascending: false });
-    return data || [];
-  } catch (e) { return []; }
-}
-
-export async function getGameRankings(): Promise<GameRanking[]> {
-  try {
-    const { data } = await supabase.from('users').select('pin, gamePoints').gt('gamePoints', 0).order('gamePoints', { ascending: false }).limit(50);
-    return (data || []).map(u => ({ pin: u.pin, points: u.gamePoints || 0 }));
-  } catch (e) { return []; }
-}
+// ==========================================
+// FUNÇÕES DE USUÁRIOS E ADMIN
+// ==========================================
 
 export async function getGlobalSettings() {
   try {
@@ -232,6 +207,46 @@ export async function getCategoryCount(genre: string) {
 export async function getTotalContentCount() {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
   return count || 0;
+}
+
+// ==========================================
+// FUNÇÕES DE GAMES E RANKING
+// ==========================================
+
+export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
+  try {
+    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
+    let pts = user?.gamePoints || 0;
+    if (result === 'win') pts += 10;
+    else if (result === 'draw') pts += 3;
+    else if (result === 'loss') pts = Math.max(0, pts - 5);
+    const { error } = await supabase.from('users').update({ gamePoints: pts, isSearchingMatch: false }).eq('pin', pin.toUpperCase());
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function setUserSearchingMatch(pin: string, isSearching: boolean) {
+  try {
+    const { error } = await supabase.from('users').update({ 
+      isSearchingMatch: isSearching, 
+      searchingMatchAt: isSearching ? new Date().toISOString() : null 
+    }).eq('pin', pin.toUpperCase());
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function getWaitingPlayers(): Promise<User[]> {
+  try {
+    const { data } = await supabase.from('users').select('*').eq('isSearchingMatch', true).order('searchingMatchAt', { ascending: false });
+    return data || [];
+  } catch (e) { return []; }
+}
+
+export async function getGameRankings(): Promise<GameRanking[]> {
+  try {
+    const { data } = await supabase.from('users').select('pin, gamePoints').gt('gamePoints', 0).order('gamePoints', { ascending: false }).limit(50);
+    return (data || []).map(u => ({ pin: u.pin, points: u.gamePoints || 0 }));
+  } catch (e) { return []; }
 }
 
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();

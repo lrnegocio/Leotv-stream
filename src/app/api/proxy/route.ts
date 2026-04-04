@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v19.0 - PROTOCOLO DE SUPREMACIA TOTAL
- * Bypass de Cloudflare, Identidade Mutante e Suporte Blinder Sniper.
+ * TÚNEL MASTER v20.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * Bypass de Cloudflare 520, Identidade Mutante e Filtro Anti-HTML.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,18 +18,18 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // IDENTIDADE SOBERANA: Simula Smart TV para evitar bloqueios iniciais
+    // IDENTIDADE SOBERANA: Simula Smart TV original
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/122.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA v19.0 (BLINDER SNIPER)
-    if (targetUrl.includes('redecanaistv') || targetUrl.includes('fontedecanais')) {
+    // REGRAS DE CAMUFLAGEM DINÂMICA v20.0 (SNIPER)
+    if (targetUrl.includes('redecanaistv') || targetUrl.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
     } else if (targetUrl.includes('blinder.space')) {
-      // SNIPER BLINDER: Injeta o referer que o servidor deles exige
       requestHeaders.set('Referer', 'http://blinder.space/');
       requestHeaders.set('Origin', 'http://blinder.space');
     } else if (targetUrl.includes('contfree.shop')) {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', `${urlObj.protocol}//${urlObj.host}/`);
     }
 
-    // LIMPEZA DE CABEÇALHOS QUE ENTREGAM O PROXY
+    // LIMPEZA DE CABEÇALHOS DE PROXY
     const forbidden = ['host', 'connection', 'x-forwarded-for', 'via', 'proxy-connection', 'forwarded', 'cookie', 'te', 'trailer'];
     forbidden.forEach(h => requestHeaders.delete(h));
 
@@ -48,18 +48,19 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // GIRO DE IDENTIDADE: Se falhar (520, 403), tenta como PC Windows
+    // XEQUE-MATE NO CLOUDFLARE 520: Giro de Identidade se falhar
     if (res.status === 520 || res.status === 403 || res.status === 502) {
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      requestHeaders.delete('Referer');
       res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
     }
 
-    // FILTRO ANTI-HTML: Evita que erros do servidor original (HTML) cheguem ao player de vídeo
+    // FILTRO ANTI-HTML (A CURA DO NOTSUPPORTEDERROR)
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-       // Se for um link que deveria ser m3u8 ou mp4 mas voltou HTML, é erro do servidor original
+       // Se o sinal deveria ser vídeo mas o servidor mandou HTML (erro), interrompemos para não travar o player
        if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
-         return new NextResponse("O servidor original negou o acesso ou está em manutenção.", { status: 503 });
+         return new NextResponse("O servidor original negou o acesso (Sinal Indisponível).", { status: 503 });
        }
     }
 
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // CORREÇÃO DE MIME TYPE PARA HLS (Obrigatório para m3u8 funcionar)
+    // CORREÇÃO DE MIME TYPE PARA HLS
     if (targetUrl.includes('.m3u8') && !responseHeaders.get('content-type')?.includes('mpegurl')) {
       responseHeaders.set('content-type', 'application/vnd.apple.mpegurl');
     }

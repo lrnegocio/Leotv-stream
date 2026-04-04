@@ -38,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SINTONIZADOR EMBED MASTER v19.0 (PORNHUB/XVIDEOS/DAILYMOTION)
+    // CONVERSOR EMBED MASTER (PORNHUB/XVIDEOS/DAILYMOTION)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -64,7 +64,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isM3U8 = urlStr.toLowerCase().includes('.m3u8');
     const isPHP = urlStr.toLowerCase().includes('.php');
 
-    // BLINDAGEM MESTRE: Força proxy para links HTTP (como Blinder) ou m3u8 para evitar NotSupportedError
+    // BLINDAGEM MESTRE: Força proxy para links HTTP, m3u8 ou blinder
     const needsProxy = urlStr.startsWith('http://') || urlStr.includes('blinder.space') || isM3U8 || isPHP;
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
@@ -108,14 +108,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que cada fragmento (.ts) também passe pelo túnel
+            // Garante que cada fragmento (.ts) também passe pelo túnel invisível
             if (!rUrl.includes('/api/proxy')) {
               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          onErrorFatalRetry: true
+          onErrorFatalRetry: true,
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
@@ -129,7 +130,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            hls.startLoad();
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+            else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+            else { cleanupPlayer(); setError("Erro Fatal no Sinal. Tente novamente."); }
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -137,7 +140,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.play().catch(() => {});
         setLoading(false);
       } else {
-        setError("Formato m3u8 não suportado neste navegador.");
+        setError("Navegador não suporta sinal m3u8.");
         setLoading(false);
       }
     } else if (type === 'video') {
@@ -184,7 +187,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       ) : (
         <video 
-          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player
+          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player do zero
           ref={videoRef} 
           className="w-full h-full object-contain relative z-10" 
           autoPlay 
