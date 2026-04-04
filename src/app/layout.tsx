@@ -94,8 +94,10 @@ function SecurityBlocker() {
 
         // Só bloqueia seleção de texto se não for dentro de inputs/painéis
         document.addEventListener('selectstart', e => {
-           if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
-           // e.preventDefault(); // Comentado para permitir uso do painel
+           const isInput = e.target.tagName === 'INPUT' || 
+                           e.target.tagName === 'TEXTAREA' || 
+                           e.target.isContentEditable;
+           if (isInput) return true;
         });
       })();
     `}} />

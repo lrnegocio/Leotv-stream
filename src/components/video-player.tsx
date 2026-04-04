@@ -20,6 +20,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [showControls, setShowControls] = React.useState(true)
   const hlsRef = React.useRef<any>(null)
   const [hlsLoaded, setHlsLoaded] = React.useState(false)
+  const [retryCount, setRetryCount] = React.useState(0)
 
   // MONITOR DE MOTOR HLS
   React.useEffect(() => {
@@ -86,7 +87,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       video.pause();
       video.removeAttribute('src');
       video.load();
-      // Remove handlers para evitar erro NotSupportedError em canais novos
       video.onloadeddata = null;
       video.onerror = null;
       video.oncanplay = null;
@@ -113,7 +113,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          onErrorFatalRetry: true
+          onErrorFatalRetry: true,
+          manifestLoadingRetryDelay: 500,
+          levelLoadingRetryDelay: 500
         });
 
         hls.loadSource(processedUrl);
@@ -123,13 +125,18 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
           setLoading(false);
+          setRetryCount(0);
         });
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-            else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-            else { cleanupPlayer(); setError("Sinal instável. Tente novamente."); }
+            if (retryCount < 5) {
+              setRetryCount(prev => prev + 1);
+              hls.startLoad();
+            } else {
+              cleanupPlayer();
+              setError("Sinal instável. Tente novamente ou verifique seu Wi-Fi.");
+            }
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -146,16 +153,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         setLoading(false);
       };
       video.onerror = () => {
-        // Só dispara erro se ainda estiver no sinal de vídeo
         if (type === 'video') {
-          setError("Falha ao carregar arquivo de vídeo.");
+          setError("Falha ao carregar arquivo de vídeo. Verifique sua conexão.");
           setLoading(false);
         }
       };
     } else {
       setLoading(type === 'iframe');
     }
-  }, [processedUrl, type, hlsLoaded, cleanupPlayer]);
+  }, [processedUrl, type, hlsLoaded, cleanupPlayer, retryCount]);
 
   React.useEffect(() => {
     initPlayer();
@@ -175,7 +181,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white text-xs font-black uppercase mb-6">{error}</p>
-          <Button onClick={() => initPlayer()} variant="outline" className="h-12 border-primary text-primary hover:bg-primary hover:text-white rounded-xl px-8 font-black uppercase text-[10px]">
+          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-12 border-primary text-primary hover:bg-primary hover:text-white rounded-xl px-8 font-black uppercase text-[10px]">
             <RefreshCcw className="h-4 w-4 mr-2" /> Tentar Re-Sincronizar
           </Button>
         </div>
