@@ -45,7 +45,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // LINKS QUE EXIGEM TÚNEL MASTER (HTTP, m3u8, mp4, players PHP)
+    // LINKS QUE EXIGEM TÚNEL MASTER
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
@@ -56,7 +56,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      // Se for player PHP (como RedeCanais), abrimos como Iframe via Túnel
       if (urlStr.includes('.php') || urlStr.includes('player')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
@@ -88,7 +87,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
             xhrSetup: (xhr: any, rUrl: string) => {
-              // GARANTE QUE CADA PEDAÇO DO VÍDEO PASSE PELA BLINDAGEM
               if (!rUrl.includes('/api/proxy') && (rUrl.includes('.ts') || rUrl.includes('.m3u8') || rUrl.includes('.m4s'))) {
                 xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
               }
@@ -102,21 +100,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => video.muted = true);
             setLoading(false);
-          });
-          hls.on((window as any).Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) {
-              switch (data.type) {
-                case (window as any).Hls.ErrorTypes.NETWORK_ERROR:
-                  hls.startLoad();
-                  break;
-                case (window as any).Hls.ErrorTypes.MEDIA_ERROR:
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  init();
-                  break;
-              }
-            }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = processedUrl;
@@ -153,7 +136,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
-          /* ESCUDO AD-BLOCK: Permite controles e scripts, mas bloqueia popups e novas abas */
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       ) : (
@@ -162,11 +144,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full object-contain" 
           autoPlay 
           playsInline 
-          controls={true} // ATIVADO: Pausa e Fullscreen restaurados
+          controls={true} 
         />
       )}
 
-      {/* Navegação Rápida Master (Sobreposição) */}
       <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
           <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
