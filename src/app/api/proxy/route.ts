@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v20.0 - PROTOCOLO DE SUPREMACIA TOTAL
- * Bypass de Cloudflare 520, Identidade Mutante e Filtro Anti-HTML.
+ * TÚNEL MASTER v21.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * Bypass de Cloudflare 520, Identidade Mutante e Filtro Anti-Lixo.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA v20.0 (SNIPER)
+    // REGRAS DE CAMUFLAGEM DINÂMICA v21.0
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
@@ -52,15 +52,16 @@ export async function GET(req: NextRequest) {
     if (res.status === 520 || res.status === 403 || res.status === 502) {
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
       requestHeaders.delete('Referer');
+      requestHeaders.delete('Origin');
       res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
     }
 
-    // FILTRO ANTI-HTML (A CURA DO NOTSUPPORTEDERROR)
+    // FILTRO ANTI-LIXO (A CURA DO NOTSUPPORTEDERROR)
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-       // Se o sinal deveria ser vídeo mas o servidor mandou HTML (erro), interrompemos para não travar o player
+       // Se o servidor devolveu HTML (erro) em vez de vídeo, interrompemos para não travar o player
        if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
-         return new NextResponse("O servidor original negou o acesso (Sinal Indisponível).", { status: 503 });
+         return new NextResponse("Erro no Servidor Original", { status: 503 });
        }
     }
 

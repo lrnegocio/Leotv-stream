@@ -18,7 +18,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [showControls, setShowControls] = React.useState(true)
-  const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
   const [hlsLoaded, setHlsLoaded] = React.useState(false)
 
@@ -38,7 +37,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // CONVERSOR EMBED MASTER (PORNHUB/XVIDEOS/DAILYMOTION)
+    // CONVERSOR EMBED MASTER
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -76,13 +75,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
 
-  const handleUserInteraction = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 4000);
-  };
-
-  const cleanupPlayer = () => {
+  const cleanupPlayer = React.useCallback(() => {
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -92,7 +85,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       videoRef.current.removeAttribute('src');
       videoRef.current.load();
     }
-  };
+  }, []);
 
   const initPlayer = React.useCallback(async () => {
     const video = videoRef.current;
@@ -108,15 +101,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que cada fragmento (.ts) também passe pelo túnel invisível
             if (!rUrl.includes('/api/proxy')) {
               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          onErrorFatalRetry: true,
-          enableWorker: true
+          onErrorFatalRetry: true
         });
 
         hls.loadSource(processedUrl);
@@ -132,32 +123,38 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           if (data.fatal) {
             if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
             else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-            else { cleanupPlayer(); setError("Erro Fatal no Sinal. Tente novamente."); }
+            else { cleanupPlayer(); setError("Sinal instável. Tente novamente."); }
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = processedUrl;
-        video.play().catch(() => {});
         setLoading(false);
       } else {
-        setError("Navegador não suporta sinal m3u8.");
+        setError("Navegador não suporta m3u8.");
         setLoading(false);
       }
     } else if (type === 'video') {
       video.src = processedUrl;
-      video.play().catch(() => { video.muted = true; video.play(); }).finally(() => setLoading(false));
+      video.onloadeddata = () => {
+        video.play().catch(() => { video.muted = true; video.play(); });
+        setLoading(false);
+      };
+      video.onerror = () => {
+        setError("Falha ao carregar arquivo de vídeo.");
+        setLoading(false);
+      };
     } else {
       setLoading(type === 'iframe');
     }
-  }, [processedUrl, type, hlsLoaded]);
+  }, [processedUrl, type, hlsLoaded, cleanupPlayer]);
 
   React.useEffect(() => {
     initPlayer();
     return () => cleanupPlayer();
-  }, [initPlayer]);
+  }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div onMouseMove={handleUserInteraction} onTouchStart={handleUserInteraction} className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl">
+    <div className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl">
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -187,14 +184,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       ) : (
         <video 
-          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player do zero
+          key={processedUrl}
           ref={videoRef} 
           className="w-full h-full object-contain relative z-10" 
           autoPlay 
           playsInline 
           controls={true}
           crossOrigin="anonymous"
-          onLoadedData={() => setLoading(false)}
         />
       )}
 

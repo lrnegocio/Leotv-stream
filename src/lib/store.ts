@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (CORREÇÃO DE BUILD)
+// FUNÇÕES DE EXCLUSÃO (EXPORTAÇÃO GARANTIDA)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -208,10 +208,6 @@ export async function getTotalContentCount() {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
   return count || 0;
 }
-
-// ==========================================
-// FUNÇÕES DE GAMES E RANKING
-// ==========================================
 
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
