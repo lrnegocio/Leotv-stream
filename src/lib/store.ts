@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (EXPORTAÇÃO MASTER)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -95,6 +95,56 @@ export async function removeContent(id: string) {
 export async function bulkRemoveContent(ids: string[]) {
   const { error } = await supabase.from('content').delete().in('id', ids);
   return !error;
+}
+
+// ==========================================
+// FUNÇÕES DE PLAYLIST M3U (IPTV)
+// ==========================================
+
+export async function generateM3UPlaylist(pin: string): Promise<string> {
+  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
+  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
+
+  const { data: items } = await supabase.from('content').select('*').order('title', { ascending: true });
+  if (!items) return "#EXTM3U\n";
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
+  
+  let m3u = "#EXTM3U\n";
+  
+  items.forEach(item => {
+    // Filtro de Adulto
+    if (item.isRestricted && !user.isAdultEnabled) return;
+
+    const group = item.genre.toUpperCase();
+    const logo = item.imageUrl || "";
+    
+    if (item.type === 'channel') {
+      const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
+      m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${logo}" group-title="${group}",${item.title.toUpperCase()}\n${streamUrl}\n`;
+    } else if (item.type === 'movie') {
+      const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
+      m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${logo}" group-title="FILMES - ${group}",${item.title.toUpperCase()}\n${streamUrl}\n`;
+    } else if (item.type === 'series' || item.type === 'multi-season') {
+      // Séries na playlist M3U costumam ser listadas por episódio em grupos específicos
+      if (item.episodes) {
+        item.episodes.forEach((ep: Episode) => {
+          const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+          m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${item.title} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${item.title.toUpperCase()}",${item.title.toUpperCase()} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+        });
+      }
+      if (item.seasons) {
+        item.seasons.forEach((s: Season) => {
+          s.episodes.forEach((ep: Episode) => {
+            const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+            m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${item.title} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${item.title.toUpperCase()} T${s.number}",${item.title.toUpperCase()} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+          });
+        });
+      }
+    }
+  });
+
+  return m3u;
 }
 
 // ==========================================
@@ -247,5 +297,25 @@ export async function getGameRankings(): Promise<GameRanking[]> {
 
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();
 export const cleanName = (n: string) => n.toUpperCase().trim();
-export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `*LÉO TV* 📺\n\n🔑 *PIN:* ${pin}\n📅 *Plano:* ${tier.toUpperCase()}\n\n🔗 *Acesse:* ${url}`;
+
+export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
+  const appUrl = url;
+  const playlistUrl = `${appUrl}/api/playlist?pin=${pin}`;
+  
+  return `*LÉO TV & STREAM* 📺\n\n` +
+         `Seu acesso Master está liberado!\n\n` +
+         `🔑 *SEU PIN:* ${pin}\n` +
+         `📅 *PLANO:* ${tier.toUpperCase()}\n` +
+         `🖥️ *TELAS:* ${screens}\n\n` +
+         `🌐 *ASSISTIR NO NAVEGADOR (WEB/TV):*\n` +
+         `${appUrl}\n\n` +
+         `🛰️ *DADOS PARA IPTV (SMARTERS/XCIPTV):*\n` +
+         `👤 *Usuário:* ${pin}\n` +
+         `🔑 *Senha:* ${pin}\n` +
+         `🔗 *URL do Servidor:* ${appUrl.replace('https://', '').replace('http://', '')}\n\n` +
+         `📄 *LISTA M3U DIRECTA:*\n` +
+         `${playlistUrl}\n\n` +
+         `*Bom divertimento!* 🍿`;
+};
+
 export const getExpiryMessage = (pin: string, days: number) => `*AVISO LÉO TV* ⚠️\n\nSeu PIN *${pin}* vence em *${days} dia(s)*!`;

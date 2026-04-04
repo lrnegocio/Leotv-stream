@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2 } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -119,6 +119,11 @@ export default function UserManagementPage() {
     setIsDialogOpen(true);
   }
 
+  const handleSendWhatsApp = (u: User) => {
+    const msg = getBeautifulMessage(u.pin, u.subscriptionTier, window.location.origin, u.maxScreens);
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
   const filteredUsers = users.filter(u => {
     const pinStr = (u.pin || "").toLowerCase().trim();
     const searchStr = searchTerm.toLowerCase().trim();
@@ -202,6 +207,9 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleSendWhatsApp(u)} className="text-emerald-500 hover:bg-emerald-500/10" title="Enviar acesso via WhatsApp">
+                          <Send className="h-5 w-5" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
                         <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXTERMINAR PIN?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
