@@ -19,13 +19,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [error, setError] = React.useState<string | null>(null)
   const [showControls, setShowControls] = React.useState(true)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-  const retryCountRef = React.useRef(0)
+  const hlsRef = React.useRef<any>(null)
 
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // 1. FILTRO DE PLAYERS OFICIAIS (DIRETO)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -36,20 +35,17 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    // 2. FILTRO DE TÚNEL MASTER (BYPASS CORS & CLOUDFLARE)
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
                        urlStr.includes('.php') || 
                        urlStr.includes('redecanais') || 
                        urlStr.includes('blinder') || 
-                       urlStr.includes('contfree') ||
                        urlStr.includes('wurl.tv');
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      // Se for um player em PHP (como RedeCanais), abre como iframe através do proxy
-      if (urlStr.includes('.php') || urlStr.includes('player3')) return { processedUrl: proxied, type: 'iframe' };
+      if (urlStr.includes('.php')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
 
@@ -64,31 +60,34 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 4000);
   };
 
+  const cleanupPlayer = () => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.removeAttribute('src');
+      videoRef.current.load();
+    }
+  };
+
   const initPlayer = React.useCallback(async () => {
     const video = videoRef.current;
-    if (!processedUrl || type === 'iframe' || !video) {
-      setLoading(type === 'iframe');
-      return;
-    }
+    if (!processedUrl || !video) return;
 
+    cleanupPlayer();
     setError(null);
     setLoading(true);
-    
-    let hls: any = null;
 
     if (type === 'hls' && (window as any).Hls) {
       if ((window as any).Hls.isSupported()) {
-        hls = new (window as any).Hls({
+        const hls = new (window as any).Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // INTERCEPTOR MESTRE: Força cada micro-pedaço do vídeo a passar pela blindagem
             if (!rUrl.includes('/api/proxy')) {
               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90,
-          maxBufferLength: 30,
           autoStartLoad: true,
           retryDelay: 1000,
           onErrorFatalRetry: true
@@ -96,55 +95,40 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
+        hlsRef.current = hls;
         
         hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
           setLoading(false);
-          retryCountRef.current = 0;
         });
 
         hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            console.error("Erro HLS Fatal:", data.type);
-            if (retryCountRef.current < 3) {
-              retryCountRef.current++;
-              hls.startLoad();
-            } else {
-              setError("Sinal instável. Tente novamente em instantes.");
-              setLoading(false);
-            }
+            setError("Sinal instável ou bloqueado. Tente novamente.");
+            setLoading(false);
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Suporte nativo para Safari/iOS
         video.src = processedUrl;
         video.play().catch(() => {});
         setLoading(false);
       }
     } else if (type === 'video') {
       video.src = processedUrl;
-      video.load();
       video.play()
-        .then(() => { setLoading(false); retryCountRef.current = 0; })
+        .then(() => setLoading(false))
         .catch(() => {
           video.muted = true;
           video.play().finally(() => setLoading(false));
         });
+    } else {
+      setLoading(type === 'iframe');
     }
-
-    return () => {
-      if (hls) hls.destroy();
-      if (video) {
-        video.pause();
-        video.src = "";
-        video.load();
-      }
-    };
   }, [processedUrl, type]);
 
   React.useEffect(() => {
-    const cleanup = initPlayer();
-    return () => { cleanup.then(cb => cb?.()); };
+    initPlayer();
+    return () => cleanupPlayer();
   }, [initPlayer]);
 
   return (
@@ -175,7 +159,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
-          // Sandbox de Elite: Permite o vídeo rodar mas MATA propagandas e pop-ups
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       ) : (
@@ -184,15 +167,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full object-contain" 
           autoPlay 
           playsInline 
-          controls={true} 
+          controls={true}
           onLoadedData={() => setLoading(false)}
           onError={() => {
-            if (!loading) setError("O formato deste vídeo não é suportado pelo seu dispositivo.");
+            if (!loading && !error) setError("O sinal original não está respondendo. Verifique a fonte.");
           }}
         />
       )}
 
-      {/* CONTROLES LATERAIS (PRÓXIMO / ANTERIOR) */}
       <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100 shadow-2xl">
           <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
@@ -202,7 +184,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         </button>
       </div>
 
-      {/* TÍTULO DO SINAL */}
       <div className={`absolute top-0 left-0 right-0 p-8 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary italic">Sintonizado: {title}</h2>
       </div>
