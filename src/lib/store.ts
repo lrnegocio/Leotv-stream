@@ -161,6 +161,11 @@ export async function bulkRemoveContent(ids: string[]) {
   return !error;
 }
 
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
+}
+
 export async function getGlobalSettings() {
   try {
     const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
@@ -256,6 +261,11 @@ export async function getRemoteResellers() {
 
 export async function saveReseller(res: any) {
   const { error } = await supabase.from('resellers').upsert(res);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
   return !error;
 }
 

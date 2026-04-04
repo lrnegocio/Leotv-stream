@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v9.0
+ * TÚNEL MASTER v10.0
  * Suporte total a m3u8, mp4 e redirecionamentos.
  * Injeção de Referer dinâmica para RedeCanais, Samsung e Blinder.
  */

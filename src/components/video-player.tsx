@@ -87,7 +87,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
-            // HLS MASTER INTERCEPTOR: Passa cada fragmento pelo túnel
             xhrSetup: (xhr: any, rUrl: string) => {
               if (!rUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(rUrl)}`;
