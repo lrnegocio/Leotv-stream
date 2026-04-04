@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 /**
- * FUNÇÕES DE EXCLUSÃO - EXPORTAÇÃO PRIORITÁRIA
+ * EXPORTAÇÃO DE FUNÇÕES DE EXCLUSÃO (FIX PARA ERRO DE BUILD)
  */
 export async function removeUser(id: string) {
   const { error } = await supabase.from('users').delete().eq('id', id);

@@ -20,6 +20,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [showControls, setShowControls] = React.useState(true)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
+  const [hlsLoaded, setHlsLoaded] = React.useState(false)
+
+  // MONITOR DE BIBLIOTECA: Garante que o Hls.js esteja pronto antes de sintonizar
+  React.useEffect(() => {
+    const checkHls = () => {
+      if ((window as any).Hls) {
+        setHlsLoaded(true);
+      } else {
+        setTimeout(checkHls, 200);
+      }
+    };
+    checkHls();
+  }, []);
 
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
@@ -30,20 +43,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    const needsProxy = urlStr.startsWith('http://') || 
-                       urlStr.includes('.m3u8') || 
-                       urlStr.includes('.mp4') || 
-                       urlStr.includes('.php') || 
-                       urlStr.includes('redecanais') || 
-                       urlStr.includes('wurl.tv');
+    const isM3U8 = urlStr.toLowerCase().includes('.m3u8');
+    const isMP4 = urlStr.toLowerCase().includes('.mp4');
+    const isPHP = urlStr.toLowerCase().includes('.php');
 
-    if (needsProxy) {
-      const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      if (urlStr.includes('.php')) return { processedUrl: proxied, type: 'iframe' };
-      return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
-    }
+    // TÚNEL MASTER: Todo link externo passa pela nossa blindagem
+    const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    return { processedUrl: urlStr, type: 'iframe' }
+    if (isPHP) return { processedUrl: proxied, type: 'iframe' };
+    if (isM3U8) return { processedUrl: proxied, type: 'hls' };
+    if (isMP4) return { processedUrl: proxied, type: 'video' };
+
+    // Fallback para outros tipos ou links diretos
+    return { processedUrl: urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -61,7 +73,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
     if (videoRef.current) {
       videoRef.current.pause();
-      videoRef.current.src = "";
+      videoRef.current.removeAttribute('src'); // LIMPEZA TOTAL PARA EVITAR NOTSUPPORTEDERROR
+      videoRef.current.load();
     }
   };
 
@@ -69,41 +82,67 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const video = videoRef.current;
     if (!processedUrl || !video) return;
 
+    // Se for HLS mas a biblioteca ainda não carregou, espera
+    if (type === 'hls' && !hlsLoaded) return;
+
     cleanupPlayer();
     setError(null);
     setLoading(true);
 
-    if (type === 'hls' && (window as any).Hls) {
-      if ((window as any).Hls.isSupported()) {
-        const hls = new (window as any).Hls({
+    if (type === 'hls') {
+      const Hls = (window as any).Hls;
+      if (Hls && Hls.isSupported()) {
+        const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // PROXY REVERSO EM CADEIA: Garante que cada segmento (.ts) passe pelo túnel
             if (!rUrl.includes('/api/proxy')) {
               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          onErrorFatalRetry: true
+          onErrorFatalRetry: true,
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
         hls.attachMedia(video);
         hlsRef.current = hls;
         
-        hls.on((window as any).Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => { 
+            video.muted = true; 
+            video.play().catch(e => console.error("Auto-play blocked", e)); 
+          });
           setLoading(false);
         });
 
-        hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            setError("Sinal instável. Recalibrando...");
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setError("Falha de Rede. O servidor do canal está instável.");
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                setError("Erro de Mídia. Tentando recuperar sinal...");
+                hls.recoverMediaError();
+                break;
+              default:
+                setError("Sinal Indisponível no Momento.");
+                cleanupPlayer();
+                break;
+            }
             setLoading(false);
           }
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Suporte Nativo (Safari/iOS)
         video.src = processedUrl;
         video.play().catch(() => {});
+        setLoading(false);
+      } else {
+        setError("Seu navegador não suporta este formato de vídeo.");
         setLoading(false);
       }
     } else if (type === 'video') {
@@ -112,12 +151,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         .then(() => setLoading(false))
         .catch(() => {
           video.muted = true;
-          video.play().finally(() => setLoading(false));
+          video.play().catch(() => {}).finally(() => setLoading(false));
         });
     } else {
+      // Iframe loading é tratado pelo onLoad do próprio iframe
       setLoading(type === 'iframe');
     }
-  }, [processedUrl, type]);
+  }, [processedUrl, type, hlsLoaded]);
 
   React.useEffect(() => {
     initPlayer();
@@ -156,7 +196,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       ) : (
         <video 
-          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player
+          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força destruição do elemento antigo
           ref={videoRef} 
           className="w-full h-full object-contain relative z-10" 
           autoPlay 
@@ -164,8 +204,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           controls={true}
           crossOrigin="anonymous"
           onLoadedData={() => setLoading(false)}
-          onError={() => {
-            if (!loading && !error) setError("O servidor original não enviou dados de vídeo.");
+          onError={(e) => {
+            if (!loading && !error) {
+              console.error("Video Error:", e);
+              setError("O servidor não enviou dados de vídeo compatíveis.");
+            }
           }}
         />
       )}
