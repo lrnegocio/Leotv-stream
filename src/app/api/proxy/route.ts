@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER v5.0
- * Motor de bypass transparente para m3u8, mp4 e players PHP.
- * Resolve bloqueios de Referer, Origin e Mixed Content (HTTP/HTTPS).
+ * TÚNEL DE SINAL MASTER v6.0
+ * Suporte total a Range (Pausa/Fullscreen), m3u8 e mp4.
+ * Resolve bloqueios de Referer e CORS em tempo real.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,11 +20,12 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade de Smart TV Premium para evitar bloqueios de segurança
+    // Identidade de Smart TV de Última Geração
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/6.2 Chrome/110.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Connection', 'keep-alive');
     
-    // INJEÇÃO DE REFERER INTELIGENTE (O SEGREDO DO SINAL)
+    // CAMUFLAGEM DE ORIGEM (BYPASS DE REFERER)
     const urlObj = new URL(targetUrl);
     if (targetUrl.includes('redecanais') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
@@ -40,18 +41,20 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow'
+      redirect: 'follow' // Segue redirecionamentos do contfree.shop automaticamente
     });
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais para streaming fluido e suporte a Range (avanço de vídeo)
+    // Copia cabeçalhos essenciais para o player (Range, Content-Type, Length)
     const headersToCopy = [
       'content-type', 
       'content-length', 
       'content-range', 
       'accept-ranges', 
-      'cache-control'
+      'cache-control',
+      'etag',
+      'last-modified'
     ];
 
     headersToCopy.forEach(h => {
@@ -59,9 +62,10 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // Liberação total de CORS e remoção de travas de Iframe (X-Frame-Options)
+    // LIBERAÇÃO TOTAL DE CORS E REMOÇÃO DE BLOQUEIOS DE IFRAME
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    responseHeaders.set('Access-Control-Expose-Headers', '*');
     responseHeaders.delete('x-frame-options');
     responseHeaders.delete('content-security-policy');
 
@@ -74,7 +78,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Erro no Túnel Master v5.0:", error.message);
+    console.error("Erro no Túnel Master v6.0:", error.message);
     return new NextResponse("Falha no Túnel de Sinal", { status: 500 });
   }
 }
