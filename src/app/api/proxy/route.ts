@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v18.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * TÚNEL MASTER v19.0 - PROTOCOLO DE SUPREMACIA TOTAL
  * Bypass de Cloudflare, Identidade Mutante e Suporte Blinder Sniper.
  */
 export async function GET(req: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA v18.0
+    // REGRAS DE CAMUFLAGEM DINÂMICA v19.0 (BLINDER SNIPER)
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
@@ -48,17 +48,18 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // GIRO DE IDENTIDADE: Se falhar, tenta como PC Windows
+    // GIRO DE IDENTIDADE: Se falhar (520, 403), tenta como PC Windows
     if (res.status === 520 || res.status === 403 || res.status === 502) {
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
       res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
     }
 
-    // FILTRO ANTI-HTML: Evita que erros do servidor original cheguem ao player
+    // FILTRO ANTI-HTML: Evita que erros do servidor original (HTML) cheguem ao player de vídeo
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
+       // Se for um link que deveria ser m3u8 ou mp4 mas voltou HTML, é erro do servidor original
        if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
-         return new NextResponse("O servidor original negou o acesso ao vídeo.", { status: 503 });
+         return new NextResponse("O servidor original negou o acesso ou está em manutenção.", { status: 503 });
        }
     }
 
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // CORREÇÃO DE MIME TYPE PARA HLS
+    // CORREÇÃO DE MIME TYPE PARA HLS (Obrigatório para m3u8 funcionar)
     if (targetUrl.includes('.m3u8') && !responseHeaders.get('content-type')?.includes('mpegurl')) {
       responseHeaders.set('content-type', 'application/vnd.apple.mpegurl');
     }

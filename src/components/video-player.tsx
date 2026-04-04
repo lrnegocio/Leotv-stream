@@ -22,6 +22,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const hlsRef = React.useRef<any>(null)
   const [hlsLoaded, setHlsLoaded] = React.useState(false)
 
+  // MONITOR DE MOTOR HLS
   React.useEffect(() => {
     const checkHls = () => {
       if ((window as any).Hls) {
@@ -37,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SINTONIZADOR EMBED MASTER v18.0
+    // SINTONIZADOR EMBED MASTER v19.0 (PORNHUB/XVIDEOS/DAILYMOTION)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -61,10 +62,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     const isM3U8 = urlStr.toLowerCase().includes('.m3u8');
-    const isMP4 = urlStr.toLowerCase().includes('.mp4');
     const isPHP = urlStr.toLowerCase().includes('.php');
 
-    // BLINDAGEM MESTRE: Força proxy para links HTTP ou Blinder para evitar tela preta
+    // BLINDAGEM MESTRE: Força proxy para links HTTP (como Blinder) ou m3u8 para evitar NotSupportedError
     const needsProxy = urlStr.startsWith('http://') || urlStr.includes('blinder.space') || isM3U8 || isPHP;
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
@@ -108,6 +108,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que cada fragmento (.ts) também passe pelo túnel
             if (!rUrl.includes('/api/proxy')) {
               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -136,7 +137,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.play().catch(() => {});
         setLoading(false);
       } else {
-        setError("Formato não suportado.");
+        setError("Formato m3u8 não suportado neste navegador.");
         setLoading(false);
       }
     } else if (type === 'video') {
@@ -157,13 +158,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Canal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
+          <p className="text-white text-xs font-black uppercase mb-6">{error}</p>
           <Button onClick={() => initPlayer()} variant="outline" className="h-12 border-primary text-primary hover:bg-primary hover:text-white rounded-xl px-8 font-black uppercase text-[10px]">
             <RefreshCcw className="h-4 w-4 mr-2" /> Tentar Re-Sincronizar
           </Button>
@@ -182,7 +184,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       ) : (
         <video 
-          key={processedUrl}
+          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player
           ref={videoRef} 
           className="w-full h-full object-contain relative z-10" 
           autoPlay 

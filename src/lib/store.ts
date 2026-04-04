@@ -73,7 +73,7 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// EXPORTAÇÕES OBRIGATÓRIAS v17.0
+// EXPORTAÇÕES OBRIGATÓRIAS v19.0 - CORREÇÃO DE BUILD
 export async function removeUser(id: string) {
   const { error } = await supabase.from('users').delete().eq('id', id);
   return !error;
