@@ -36,35 +36,36 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
+    const lowerUrl = urlStr.toLowerCase()
 
-    // CONVERSOR EMBED MASTER
-    if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
+    // CONVERSOR EMBED MASTER (Youtube, Dailymotion, Pornhub, XVideos)
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    if (urlStr.includes('dailymotion.com')) {
+    if (lowerUrl.includes('dailymotion.com')) {
       const vidId = urlStr.split('/video/')[1]?.split('?')[0];
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    if (urlStr.includes('pornhub.com')) {
+    if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' };
     }
 
-    if (urlStr.includes('xvideos.com')) {
+    if (lowerUrl.includes('xvideos.com')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
-    const isM3U8 = urlStr.toLowerCase().includes('.m3u8');
-    const isPHP = urlStr.toLowerCase().includes('.php');
+    const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
+    const isPHP = lowerUrl.includes('.php');
 
     // BLINDAGEM MESTRE: Força proxy para links HTTP, m3u8 ou blinder
-    const needsProxy = urlStr.startsWith('http://') || urlStr.includes('blinder.space') || isM3U8 || isPHP;
+    const needsProxy = urlStr.startsWith('http://') || lowerUrl.includes('blinder.space') || isM3U8 || isPHP;
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isPHP) return { processedUrl: proxied, type: 'iframe' };
@@ -80,10 +81,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.removeAttribute('src');
-      videoRef.current.load();
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      // Remove handlers para evitar erro NotSupportedError em canais novos
+      video.onloadeddata = null;
+      video.onerror = null;
+      video.oncanplay = null;
     }
   }, []);
 
@@ -115,7 +121,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         hlsRef.current = hls;
         
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { video.muted = true; video.play(); });
+          video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
           setLoading(false);
         });
 
@@ -130,18 +136,21 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.src = processedUrl;
         setLoading(false);
       } else {
-        setError("Navegador não suporta m3u8.");
+        setError("Navegador não suporta streaming.");
         setLoading(false);
       }
     } else if (type === 'video') {
       video.src = processedUrl;
       video.onloadeddata = () => {
-        video.play().catch(() => { video.muted = true; video.play(); });
+        video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
         setLoading(false);
       };
       video.onerror = () => {
-        setError("Falha ao carregar arquivo de vídeo.");
-        setLoading(false);
+        // Só dispara erro se ainda estiver no sinal de vídeo
+        if (type === 'video') {
+          setError("Falha ao carregar arquivo de vídeo.");
+          setLoading(false);
+        }
       };
     } else {
       setLoading(type === 'iframe');

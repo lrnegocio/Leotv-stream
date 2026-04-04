@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v21.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * TÚNEL MASTER v22.0 - PROTOCOLO DE SUPREMACIA TOTAL
  * Bypass de Cloudflare 520, Identidade Mutante e Filtro Anti-Lixo.
  */
 export async function GET(req: NextRequest) {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA v21.0
+    // REGRAS DE CAMUFLAGEM DINÂMICA v22.0
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', `${urlObj.protocol}//${urlObj.host}/`);
     }
 
-    // LIMPEZA DE CABEÇALHOS DE PROXY
+    // LIMPEZA DE CABEÇALHOS DE PROXY QUE O CLOUDFLARE DETECTA
     const forbidden = ['host', 'connection', 'x-forwarded-for', 'via', 'proxy-connection', 'forwarded', 'cookie', 'te', 'trailer'];
     forbidden.forEach(h => requestHeaders.delete(h));
 
@@ -48,18 +48,18 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // XEQUE-MATE NO CLOUDFLARE 520: Giro de Identidade se falhar
+    // XEQUE-MATE NO CLOUDFLARE 520: Giro de Identidade Instantâneo para PC Windows
     if (res.status === 520 || res.status === 403 || res.status === 502) {
-      requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-      requestHeaders.delete('Referer');
-      requestHeaders.delete('Origin');
-      res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
+      const retryHeaders = new Headers();
+      retryHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      retryHeaders.set('Accept', '*/*');
+      res = await fetch(targetUrl, { headers: retryHeaders, cache: 'no-store', redirect: 'follow' });
     }
 
     // FILTRO ANTI-LIXO (A CURA DO NOTSUPPORTEDERROR)
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-       // Se o servidor devolveu HTML (erro) em vez de vídeo, interrompemos para não travar o player
+       // Se o servidor original devolver erro em HTML em vez de vídeo, bloqueamos o sinal lixo
        if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
          return new NextResponse("Erro no Servidor Original", { status: 503 });
        }
@@ -72,8 +72,8 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // CORREÇÃO DE MIME TYPE PARA HLS
-    if (targetUrl.includes('.m3u8') && !responseHeaders.get('content-type')?.includes('mpegurl')) {
+    // CORREÇÃO DE MIME TYPE PARA HLS (Obrigatório para navegadores PC)
+    if (targetUrl.includes('.m3u8') || targetUrl.includes('mpegurl')) {
       responseHeaders.set('content-type', 'application/vnd.apple.mpegurl');
     }
 

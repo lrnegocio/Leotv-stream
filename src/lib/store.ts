@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (EXPORTAÇÃO GARANTIDA)
+// FUNÇÕES DE EXCLUSÃO (EXPORTAÇÃO BLINDADA)
 // ==========================================
 
 export async function removeUser(id: string) {
