@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v23.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * TÚNEL MASTER v24.0 - PROTOCOLO DE SUPREMACIA TOTAL
  * Bypass de Cloudflare 520, Identidade Mutante e Cache de Resiliência.
  */
 export async function GET(req: NextRequest) {
@@ -18,14 +18,14 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // IDENTIDADE SOBERANA: Simula Smart TV ou PC Windows conforme o sinal
+    // IDENTIDADE SOBERANA: Simula PC Windows conforme o sinal
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA v23.0
+    // REGRAS DE CAMUFLAGEM DINÂMICA v24.0
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
@@ -44,13 +44,13 @@ export async function GET(req: NextRequest) {
       headers: requestHeaders,
       cache: 'no-store',
       redirect: 'follow',
-      signal: AbortSignal.timeout(10000) // Timeout de 10s para redes lentas
+      signal: AbortSignal.timeout(10000)
     });
 
-    // XEQUE-MATE NO CLOUDFLARE 520
+    // XEQUE-MATE NO CLOUDFLARE 520 / 502 / 403
     if (res.status === 520 || res.status === 403 || res.status === 502) {
       const retryHeaders = new Headers();
-      retryHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/122.0.0.0 TV Safari/537.36');
+      retryHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
       retryHeaders.set('Accept', '*/*');
       res = await fetch(targetUrl, { headers: retryHeaders, cache: 'no-store', redirect: 'follow' });
     }

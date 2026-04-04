@@ -113,7 +113,6 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
   let m3u = "#EXTM3U\n";
   
   items.forEach(item => {
-    // Filtro de Adulto
     if (item.isRestricted && !user.isAdultEnabled) return;
 
     const group = item.genre.toUpperCase();
@@ -126,7 +125,6 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
       const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
       m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${logo}" group-title="FILMES - ${group}",${item.title.toUpperCase()}\n${streamUrl}\n`;
     } else if (item.type === 'series' || item.type === 'multi-season') {
-      // Séries na playlist M3U costumam ser listadas por episódio em grupos específicos
       if (item.episodes) {
         item.episodes.forEach((ep: Episode) => {
           const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
