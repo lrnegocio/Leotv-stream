@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v16.0 - PROTOCOLO DE SUPREMACIA TOTAL
- * Bypass de Cloudflare, Identidade Mutante e Filtro Anti-HTML.
+ * TÚNEL MASTER v18.0 - PROTOCOLO DE SUPREMACIA TOTAL
+ * Bypass de Cloudflare, Identidade Mutante e Suporte Blinder Sniper.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,19 +24,21 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
     
-    // REGRAS DE CAMUFLAGEM DINÂMICA
+    // REGRAS DE CAMUFLAGEM DINÂMICA v18.0
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
     } else if (targetUrl.includes('blinder.space')) {
+      // SNIPER BLINDER: Injeta o referer que o servidor deles exige
       requestHeaders.set('Referer', 'http://blinder.space/');
+      requestHeaders.set('Origin', 'http://blinder.space');
     } else if (targetUrl.includes('contfree.shop')) {
       requestHeaders.set('Referer', 'http://contfree.shop/');
     } else {
       requestHeaders.set('Referer', `${urlObj.protocol}//${urlObj.host}/`);
     }
 
-    // LIMPEZA DE CABEÇALHOS SUSPEITOS QUE ENTREGAM O PROXY
+    // LIMPEZA DE CABEÇALHOS QUE ENTREGAM O PROXY
     const forbidden = ['host', 'connection', 'x-forwarded-for', 'via', 'proxy-connection', 'forwarded', 'cookie', 'te', 'trailer'];
     forbidden.forEach(h => requestHeaders.delete(h));
 
@@ -46,30 +48,28 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // GIRO DE IDENTIDADE: Se falhar com Smart TV, tenta como PC Windows
+    // GIRO DE IDENTIDADE: Se falhar, tenta como PC Windows
     if (res.status === 520 || res.status === 403 || res.status === 502) {
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
       res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
     }
 
-    // FILTRO ANTI-NOTSUPPORTEDERROR: Se o servidor mandar HTML (página de erro), o túnel corta.
+    // FILTRO ANTI-HTML: Evita que erros do servidor original cheguem ao player
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-       // Se for um .m3u8 ou .ts e retornar HTML, é erro do servidor original
        if (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4')) {
          return new NextResponse("O servidor original negou o acesso ao vídeo.", { status: 503 });
        }
     }
 
     const responseHeaders = new Headers();
-    // COPIA CABEÇALHOS ESSENCIAIS PARA O PLAYER
     const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
     headersToCopy.forEach(h => {
       const v = res.headers.get(h);
       if (v) responseHeaders.set(h, v);
     });
 
-    // CORREÇÃO DE MIME TYPE PARA HLS SE NECESSÁRIO
+    // CORREÇÃO DE MIME TYPE PARA HLS
     if (targetUrl.includes('.m3u8') && !responseHeaders.get('content-type')?.includes('mpegurl')) {
       responseHeaders.set('content-type', 'application/vnd.apple.mpegurl');
     }

@@ -137,9 +137,7 @@ export default function HomeContent() {
   };
 
   const handleCategoryClick = async (cat: any) => {
-    // SENHA VOLÁTIL: Sempre limpa o campo antes de pedir a senha
     setPinInput("");
-    
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
         toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Fale com o Mestre Léo para liberar a Arena." });
@@ -149,7 +147,6 @@ export default function HomeContent() {
       setIsPinOpen(true);
       return;
     }
-    
     if (cat.restricted) {
       if (!user?.isAdultEnabled) {
         toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Canais restritos desativados para este PIN." });
@@ -166,21 +163,38 @@ export default function HomeContent() {
     setLoading(true);
     const settings = await getGlobalSettings();
     setLoading(false);
-    
     if (pinInput === settings.parentalPin) {
-      if (unlockTarget === 'ADULT') {
-        setSelectedCat('ADULT');
-      } else if (unlockTarget === 'GAMES') {
-        setGamesMenuOpen(true);
-      }
+      if (unlockTarget === 'ADULT') setSelectedCat('ADULT');
+      else if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
       setIsPinOpen(false);
-      setPinInput(""); // LIMPA APÓS SUCESSO
+      setPinInput("");
       setUnlockTarget(null);
     } else {
       toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso foi recusado pelo sistema." });
-      setPinInput(""); // LIMPA APÓS ERRO
+      setPinInput("");
     }
-  }
+  };
+
+  const navigateVideo = (direction: 'next' | 'prev') => {
+    if (!activeVideo) return;
+    const len = activeVideo.items.length;
+    const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
+    const nextItem = activeVideo.items[nextIdx];
+
+    // BLINDAGEM MESTRE: Se o próximo for série, fecha o player e abre a grade
+    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
+      setActiveVideo(null);
+      setSelectedSeries(nextItem);
+      const params = new URLSearchParams(window.location.search);
+      params.set('id', nextItem.id);
+      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    } else {
+      setActiveVideo({ ...activeVideo, index: nextIdx });
+      const params = new URLSearchParams(window.location.search);
+      params.set('id', nextItem.id);
+      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    }
+  };
 
   const startMatch = async (game: {name: string, url: string}) => {
     setSearchingOpponent(true);
@@ -218,7 +232,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v5500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v6500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -335,7 +349,7 @@ export default function HomeContent() {
             type="password" 
             title="PIN" 
             maxLength={4} 
-            autoComplete="new-password" // Bloqueia auto-preenchimento
+            autoComplete="new-password"
             className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
             value={pinInput} 
             onChange={e => setPinInput(e.target.value)} 
@@ -368,7 +382,7 @@ export default function HomeContent() {
                     <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                     <div className="flex flex-col gap-2">
                       {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => { const eps = season.episodes.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${e.number}`, id: e.id})); setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
+                        <Button key={ep.id} variant="outline" onClick={() => { const eps = season.episodes.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, id: e.id})); setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
                       ))}
                     </div>
                   </div>
@@ -381,7 +395,15 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={(val) => { if(!val) { setActiveVideo(null); const p = new URLSearchParams(window.location.search); p.delete('id'); window.history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); } }}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-          {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={() => setActiveVideo({...activeVideo, index: (activeVideo.index + 1) % activeVideo.items.length})} onPrev={() => setActiveVideo({...activeVideo, index: (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length})} />}
+          {activeVideo && (
+            <VideoPlayer 
+              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
+              title={activeVideo.items[activeVideo.index].title} 
+              id={activeVideo.items[activeVideo.index].id} 
+              onNext={() => navigateVideo('next')} 
+              onPrev={() => navigateVideo('prev')} 
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

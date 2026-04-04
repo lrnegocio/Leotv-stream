@@ -37,7 +37,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // SINTONIZADOR EMBED MASTER v17.0
+    // SINTONIZADOR EMBED MASTER v18.0
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -55,7 +55,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     if (urlStr.includes('xvideos.com')) {
-      // Extrai o ID do XVideos (ex: video.kabopuh3e7b ou /video6086353)
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
@@ -65,13 +64,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isMP4 = urlStr.toLowerCase().includes('.mp4');
     const isPHP = urlStr.toLowerCase().includes('.php');
 
+    // BLINDAGEM MESTRE: Força proxy para links HTTP ou Blinder para evitar tela preta
+    const needsProxy = urlStr.startsWith('http://') || urlStr.includes('blinder.space') || isM3U8 || isPHP;
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isPHP) return { processedUrl: proxied, type: 'iframe' };
     if (isM3U8) return { processedUrl: proxied, type: 'hls' };
-    if (isMP4) return { processedUrl: proxied, type: 'video' };
-
-    return { processedUrl: urlStr, type: 'video' };
+    
+    return { processedUrl: needsProxy ? proxied : urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -128,7 +128,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            setError("Sinal instável. Tentando reconectar...");
             hls.startLoad();
           }
         });
@@ -137,7 +136,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.play().catch(() => {});
         setLoading(false);
       } else {
-        setError("Formato não suportado pelo navegador.");
+        setError("Formato não suportado.");
         setLoading(false);
       }
     } else if (type === 'video') {
