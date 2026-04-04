@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 /**
- * FUNÇÕES DE EXCLUSÃO (BLINDAGEM CONTRA ERRO DE BUILD)
+ * FUNÇÕES DE EXCLUSÃO - EXPORTAÇÃO PRIORITÁRIA
  */
 export async function removeUser(id: string) {
   const { error } = await supabase.from('users').delete().eq('id', id);
@@ -97,7 +97,7 @@ export async function removeContent(id: string) {
 }
 
 /**
- * GESTÃO DE CONTEÚDO E AUDIÊNCIA
+ * GESTÃO DE CONTEÚDO
  */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
@@ -139,7 +139,7 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
 }
 
 /**
- * GESTÃO DE ARENA GAMES
+ * ARENA GAMES
  */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
@@ -165,10 +165,7 @@ export async function setUserSearchingMatch(pin: string, isSearching: boolean) {
 
 export async function getWaitingPlayers(): Promise<User[]> {
   try {
-    const { data } = await supabase.from('users')
-      .select('*')
-      .eq('isSearchingMatch', true)
-      .order('searchingMatchAt', { ascending: false });
+    const { data } = await supabase.from('users').select('*').eq('isSearchingMatch', true).order('searchingMatchAt', { ascending: false });
     return data || [];
   } catch (e) { return []; }
 }
@@ -185,38 +182,24 @@ export async function getGameRankings(): Promise<GameRanking[]> {
  */
 export async function getGlobalSettings() {
   try {
-    const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    if (error) throw error;
-    if (data && data.value) {
-      return {
-        parentalPin: String(data.value.parentalPin || "1234"),
-        announcement: String(data.value.announcement || "")
-      };
-    }
-    return { parentalPin: "1234", announcement: "" };
-  } catch (e) {
-    return { parentalPin: "1234", announcement: "" };
-  }
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    return {
+      parentalPin: data?.value?.parentalPin || "1234",
+      announcement: data?.value?.announcement || ""
+    };
+  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
 }
 
 export async function updateGlobalSettings(value: any) {
   try {
-    const payload = {
-      key: 'global',
-      value: {
-        parentalPin: String(value.parentalPin || "1234"),
-        announcement: String(value.announcement || "")
-      }
-    };
+    const payload = { key: 'global', value: { parentalPin: String(value.parentalPin), announcement: String(value.announcement) } };
     const { error } = await supabase.from('settings').upsert(payload);
     return !error;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 /**
- * GESTÃO DE USUÁRIOS E PINs
+ * USUÁRIOS
  */
 export async function getRemoteUsers() {
   const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
@@ -225,50 +208,26 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    const payload: any = {
-      id: user.id,
-      pin: user.pin.toUpperCase().trim(),
-      role: user.role || 'user',
-      subscriptionTier: user.subscriptionTier || 'monthly',
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens || 1,
-      activeDevices: user.activeDevices || [],
-      isBlocked: !!user.isBlocked,
-      isAdultEnabled: !!user.isAdultEnabled,
-      isGamesEnabled: !!user.isGamesEnabled,
-      resellerId: user.resellerId || null,
-      activatedAt: user.activatedAt || null,
-      individualMessage: (user.individualMessage || "").trim(),
-      gamePoints: user.gamePoints || 0,
-      isSearchingMatch: !!user.isSearchingMatch,
-      searchingMatchAt: user.searchingMatchAt || null
-    };
-
-    const { error } = await supabase.from('users').upsert(payload);
+    const { error } = await supabase.from('users').upsert(user);
     return !error;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamePoints: 9999 } };
-  
-  const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
-  
-  if (error || !user) return { error: "PIN NÃO LOCALIZADO" };
-  if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
-  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
-  
+  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
+  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
+  if (!user) return { error: "PIN INVÁLIDO" };
+  if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
+  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
   return { user };
 }
 
 /**
- * GESTÃO DE REVENDEDORES
+ * REVENDEDORES
  */
 export async function validateResellerLogin(username: string, pass: string) {
   const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
-  if (!res || res.isBlocked) return { error: "ACESSO NEGADO" };
+  if (!res || res.isBlocked) return { error: "NEGADO" };
   return { reseller: res };
 }
 
@@ -283,7 +242,7 @@ export async function saveReseller(res: any) {
 }
 
 /**
- * UTILITÁRIOS E ESTATÍSTICAS
+ * UTILITÁRIOS
  */
 export async function getCategoryCount(genre: string) {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
@@ -295,15 +254,7 @@ export async function getTotalContentCount() {
   return count || 0;
 }
 
-export async function generateM3UPlaylist(pin: string) {
-  const content = await getRemoteContent(true);
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  let m3u = "#EXTM3U\n";
-  content.forEach(i => { if (i.streamUrl) m3u += `#EXTINF:-1 tvg-logo="${i.imageUrl || ''}" group-title="${i.genre.toUpperCase()}",${(i.title || "").toUpperCase()}\n${baseUrl}/live/${pin}/pass/${i.id}.ts\n`; });
-  return m3u;
-}
-
 export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();
 export const cleanName = (n: string) => n.toUpperCase().trim();
-export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `*LÉO TV & STREAM* 📺\n\nSeu acesso Master foi liberado!\n\n🔑 *PIN:* ${pin}\n👤 *Telas:* ${screens}\n📅 *Plano:* ${tier.toUpperCase()}\n\n🔗 *Acesse agora:* ${url}\n\n_Bom divertimento!_`;
-export const getExpiryMessage = (pin: string, days: number) => `*AVISO LÉO TV* ⚠️\n\nO sinal do seu PIN *${pin}* vence em *${days} dia(s)*.\n\nFale com seu revendedor para renovar e não perder o acesso!`;
+export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `*LÉO TV* 📺\n\n🔑 *PIN:* ${pin}\n📅 *Plano:* ${tier.toUpperCase()}\n\n🔗 *Acesse:* ${url}`;
+export const getExpiryMessage = (pin: string, days: number) => `*AVISO LÉO TV* ⚠️\n\nSeu PIN *${pin}* vence em *${days} dia(s)*!`;

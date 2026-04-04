@@ -30,17 +30,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    if (urlStr.includes('dailymotion.com')) {
-      const vidId = urlStr.split('/video/')[1]?.split('?')[0] || urlStr.split('/embed/video/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
-    }
-
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
                        urlStr.includes('.php') || 
                        urlStr.includes('redecanais') || 
-                       urlStr.includes('blinder') || 
                        urlStr.includes('wurl.tv');
 
     if (needsProxy) {
@@ -67,8 +61,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
     if (videoRef.current) {
       videoRef.current.pause();
-      videoRef.current.removeAttribute('src');
-      videoRef.current.load();
+      videoRef.current.src = "";
     }
   };
 
@@ -104,7 +97,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on((window as any).Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            setError("Sinal instável ou bloqueado. Tente novamente.");
+            setError("Sinal instável. Recalibrando...");
             setLoading(false);
           }
         });
@@ -134,19 +127,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   return (
     <div onMouseMove={handleUserInteraction} onTouchStart={handleUserInteraction} className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl">
       {loading && !error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
+        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Canal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-10 text-center">
+        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <h3 className="text-xl font-black uppercase italic text-white mb-2">Falha na Sintonização</h3>
           <p className="text-[10px] font-bold uppercase opacity-60 mb-8 max-w-xs">{error}</p>
           <Button onClick={() => initPlayer()} variant="outline" className="h-12 border-primary text-primary hover:bg-primary hover:text-white rounded-xl px-8 font-black uppercase text-[10px]">
-            <RefreshCcw className="h-4 w-4 mr-2" /> Tentar Recalibrar
+            <RefreshCcw className="h-4 w-4 mr-2" /> Tentar Novamente
           </Button>
         </div>
       )}
@@ -155,7 +148,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         <iframe 
           key={processedUrl}
           src={processedUrl!} 
-          className="w-full h-full border-0" 
+          className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
@@ -163,19 +156,21 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       ) : (
         <video 
+          key={processedUrl} // XEQUE-MATE NO NOTSUPPORTEDERROR: Força reset do player
           ref={videoRef} 
-          className="w-full h-full object-contain" 
+          className="w-full h-full object-contain relative z-10" 
           autoPlay 
           playsInline 
           controls={true}
+          crossOrigin="anonymous"
           onLoadedData={() => setLoading(false)}
           onError={() => {
-            if (!loading && !error) setError("O sinal original não está respondendo. Verifique a fonte.");
+            if (!loading && !error) setError("O servidor original não enviou dados de vídeo.");
           }}
         />
       )}
 
-      <div className={`absolute inset-0 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100 shadow-2xl">
           <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
         </button>
@@ -184,8 +179,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         </button>
       </div>
 
-      <div className={`absolute top-0 left-0 right-0 p-8 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary italic">Sintonizado: {title}</h2>
+      <div className={`absolute top-0 left-0 right-0 z-20 p-8 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary italic">Sinal Master: {title}</h2>
       </div>
     </div>
   )
