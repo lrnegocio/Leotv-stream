@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER v8.0
- * Suporte total a m3u8, mp4 e redirecionamentos complexos.
- * Camuflagem dinâmica de Referer e Origin.
+ * TÚNEL MASTER v9.0
+ * Suporte total a m3u8, mp4 e redirecionamentos.
+ * Injeção de Referer dinâmica para RedeCanais, Samsung e Blinder.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,12 +20,11 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade Master: Simula Smart TV de última geração
+    // Identidade: Simula Smart TV de 2024
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/6.2 Chrome/110.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     
-    // CAMUFLAGEM DINÂMICA POR DOMÍNIO
+    // CAMUFLAGEM DE ORIGEM
     const urlObj = new URL(targetUrl);
     if (targetUrl.includes('redecanaistv') || targetUrl.includes('fontedecanais') || targetUrl.includes('contfree')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
@@ -42,19 +41,18 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow' // Crucial para links que mudam de endereço
+      redirect: 'follow'
     });
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais para o streaming
+    // Copia cabeçalhos vitais para fluidez do vídeo
     const headersToCopy = [
       'content-type', 
       'content-length', 
       'content-range', 
       'accept-ranges',
-      'last-modified',
-      'cache-control'
+      'last-modified'
     ];
 
     headersToCopy.forEach(h => {

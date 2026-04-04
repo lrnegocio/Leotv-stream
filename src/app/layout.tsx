@@ -39,21 +39,18 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* ESCUDO ANTI-PROPAGANDA MASTER (ESTILO BRAVE) */
           iframe[src*="redecanaistv"], 
           iframe[src*="xvideos"], 
           iframe[src*="pornhub"] {
             pointer-events: auto !important;
           }
-          /* Esconde banners de propaganda conhecidos */
+          /* ESCUDO AD-BLOCK MASTER: Oculta banners de propaganda */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
-          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, #pop-under,
-          .mgid-ads, .taboola-ads, .outbrain-ads {
+          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             opacity: 0 !important;
-            pointer-events: none !important;
           }
         `}} />
       </head>
@@ -90,7 +87,6 @@ function SecurityBlocker() {
             (e.metaKey && e.altKey && e.key === 'i')
           ) {
             e.preventDefault();
-            e.stopPropagation();
             return false;
           }
         });

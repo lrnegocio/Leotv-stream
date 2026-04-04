@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // DETECTOR DE PLATAFORMAS EXTERNAS
+    // PLATAFORMAS EXTERNAS
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -45,7 +45,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
     }
 
-    // LINKS QUE EXIGEM TÚNEL MASTER (m3u8, mp4, php)
+    // TÚNEL MASTER OBRIGATÓRIO (m3u8, mp4, php)
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
@@ -57,8 +57,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      // Se for player PHP da RedeCanais, abre como Iframe Blindado
-      if (urlStr.includes('.php') || urlStr.includes('player')) return { processedUrl: proxied, type: 'iframe' };
+      if (urlStr.includes('.php')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
 
@@ -88,7 +87,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
-            // HLS SNIPER INTERCEPTOR: Passa cada pedaço (.ts) pelo túnel
+            // HLS MASTER INTERCEPTOR: Passa cada fragmento pelo túnel
             xhrSetup: (xhr: any, rUrl: string) => {
               if (!rUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(rUrl)}`;
@@ -98,9 +97,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 90,
-            maxBufferLength: 30,
-            manifestLoadingMaxRetry: 10,
-            levelLoadingMaxRetry: 10
+            maxBufferLength: 30
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
@@ -111,15 +108,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           hls.on((window as any).Hls.Events.ERROR, (event: any, data: any) => {
             if (data.fatal) {
               switch (data.type) {
-                case (window as any).Hls.ErrorTypes.NETWORK_ERROR:
-                  hls.startLoad();
-                  break;
-                case (window as any).Hls.ErrorTypes.MEDIA_ERROR:
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  setLoading(false);
-                  break;
+                case (window as any).Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case (window as any).Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: setLoading(false); break;
               }
             }
           });
@@ -158,7 +149,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
-          // Sandbox Master: Bloqueia propagandas, mas permite o vídeo
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       ) : (

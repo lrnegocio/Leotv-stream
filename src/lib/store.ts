@@ -156,6 +156,11 @@ export async function removeContent(id: string) {
   return !error;
 }
 
+export async function bulkRemoveContent(ids: string[]) {
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
+}
+
 export async function getGlobalSettings() {
   try {
     const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
