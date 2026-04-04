@@ -39,14 +39,16 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* ESCUDO AD-BLOCK MASTER */
+          /* ESCUDO ANTI-PROPAGANDA MASTER (ESTILO BRAVE) */
           iframe[src*="redecanaistv"], 
           iframe[src*="xvideos"], 
           iframe[src*="pornhub"] {
             pointer-events: auto !important;
           }
+          /* Esconde banners de propaganda conhecidos */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
-          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, #pop-under {
+          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, #pop-under,
+          .mgid-ads, .taboola-ads, .outbrain-ads {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
@@ -95,16 +97,6 @@ function SecurityBlocker() {
 
         // DESATIVA SELEÇÃO DE TEXTO
         document.onselectstart = () => false;
-
-        // DETECTOR DE DEVTOOLS (SE ABRIR, RECARREGA OU MATA O PROCESSO)
-        let checkStatus = false;
-        const element = new Image();
-        Object.defineProperty(element, 'id', {
-          get: function() {
-            window.location.reload();
-          }
-        });
-        console.log(element);
       })();
     `}} />
   );

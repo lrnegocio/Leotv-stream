@@ -137,7 +137,8 @@ export default function HomeContent() {
   };
 
   const handleCategoryClick = async (cat: any) => {
-    setPinInput(""); // GARANTE QUE O CAMPO ESTEJA SEMPRE VAZIO AO CLICAR
+    // SENHA VOLÁTIL: Sempre limpa o campo antes de pedir a senha
+    setPinInput("");
     
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
@@ -217,7 +218,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v5400.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v5500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -334,7 +335,7 @@ export default function HomeContent() {
             type="password" 
             title="PIN" 
             maxLength={4} 
-            autoComplete="new-password"
+            autoComplete="new-password" // Bloqueia auto-preenchimento
             className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
             value={pinInput} 
             onChange={e => setPinInput(e.target.value)} 
