@@ -225,13 +225,8 @@ export async function saveUser(user: User) {
     };
 
     const { error } = await supabase.from('users').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase SaveUser:", error);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) {
-    console.error("Erro Fatal SaveUser:", e);
     return false;
   }
 }

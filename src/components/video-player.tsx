@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // PLATAFORMAS EXTERNAS
+    // PLATAFORMAS EXTERNAS (DIRETO)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -33,19 +33,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    if (urlStr.includes('pornhub.com')) {
-      const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
-      const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
-      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' }
-    }
-
-    if (urlStr.includes('xvideos.com')) {
-      const match = urlStr.match(/video\.([a-z0-9]+)/i) || urlStr.match(/\/video([a-z0-9]+)/i);
-      const vidId = match ? match[1] : null;
-      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' }
-    }
-
-    // TÚNEL MASTER OBRIGATÓRIO (m3u8, mp4, php)
+    // TÚNEL MASTER OBRIGATÓRIO (m3u8, mp4, php, samsung, redecanais)
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
@@ -57,7 +45,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      if (urlStr.includes('.php')) return { processedUrl: proxied, type: 'iframe' };
+      // Se for player PHP (como RedeCanais), usamos Iframe via Proxy
+      if (urlStr.includes('.php') || urlStr.includes('player3')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
 
@@ -87,6 +76,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
+            // HLS SNIPER v3.0: Força todo o tráfego a passar pelo túnel para evitar bloqueios 520
             xhrSetup: (xhr: any, rUrl: string) => {
               if (!rUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(rUrl)}`;
@@ -96,7 +86,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 90,
-            maxBufferLength: 30
+            maxBufferLength: 30,
+            fragLoadingMaxRetry: 5,
+            levelLoadingMaxRetry: 5
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
@@ -148,6 +140,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
+          // ESCUDO AD-BLOCK MASTER: Bloqueia popups e abas mas permite o vídeo
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       ) : (
