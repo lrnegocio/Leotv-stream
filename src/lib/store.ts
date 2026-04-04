@@ -73,6 +73,32 @@ export interface Reseller {
   birthDate?: string;
 }
 
+/**
+ * FUNÇÕES DE EXCLUSÃO (BLINDAGEM CONTRA ERRO DE BUILD)
+ */
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
+}
+
+export async function bulkRemoveContent(ids: string[]) {
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
+}
+
+export async function removeContent(id: string) {
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
+}
+
+/**
+ * GESTÃO DE CONTEÚDO E AUDIÊNCIA
+ */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
@@ -80,6 +106,41 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   } catch (e) { return []; }
 }
 
+export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
+  try {
+    let query = supabase.from('content').select('*');
+    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
+    const { data } = await query.order('title', { ascending: true });
+    return (data || []).map(i => ({ ...i, isRestricted: !!i.isRestricted, title: (i.title || "").toUpperCase() }));
+  } catch (e) { return []; }
+}
+
+export async function saveContent(item: Partial<ContentItem>) {
+  try {
+    const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
+    const payload = {
+      id, title: (item.title || "NOVO SINAL").toUpperCase().trim(),
+      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
+      type: item.type || 'channel', description: item.description || "",
+      imageUrl: item.imageUrl || "", isRestricted: !!item.isRestricted,
+      streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : (item.streamUrl || ""),
+      episodes: (item.type === 'series') ? (item.episodes || []) : null,
+      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
+    };
+    const { error } = await supabase.from('content').upsert(payload);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function getContentById(id: string): Promise<ContentItem | null> {
+  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+  return data;
+}
+
+/**
+ * GESTÃO DE ARENA GAMES
+ */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
     const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
@@ -119,53 +180,9 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
-  try {
-    let query = supabase.from('content').select('*');
-    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
-    if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
-    const { data } = await query.order('title', { ascending: true });
-    return (data || []).map(i => ({ ...i, isRestricted: !!i.isRestricted, title: (i.title || "").toUpperCase() }));
-  } catch (e) { return []; }
-}
-
-export async function saveContent(item: Partial<ContentItem>) {
-  try {
-    const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    const payload = {
-      id, title: (item.title || "NOVO SINAL").toUpperCase().trim(),
-      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase(),
-      type: item.type || 'channel', description: item.description || "",
-      imageUrl: item.imageUrl || "", isRestricted: !!item.isRestricted,
-      streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : (item.streamUrl || ""),
-      episodes: (item.type === 'series') ? (item.episodes || []) : null,
-      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
-    };
-    const { error } = await supabase.from('content').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getContentById(id: string): Promise<ContentItem | null> {
-  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-  return data;
-}
-
-export async function removeContent(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
-
-export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
-}
-
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
-}
-
+/**
+ * CONFIGURAÇÕES GLOBAIS
+ */
 export async function getGlobalSettings() {
   try {
     const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
@@ -198,6 +215,9 @@ export async function updateGlobalSettings(value: any) {
   }
 }
 
+/**
+ * GESTÃO DE USUÁRIOS E PINs
+ */
 export async function getRemoteUsers() {
   const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
   return data || [];
@@ -243,6 +263,9 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   return { user };
 }
 
+/**
+ * GESTÃO DE REVENDEDORES
+ */
 export async function validateResellerLogin(username: string, pass: string) {
   const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
   if (!res || res.isBlocked) return { error: "ACESSO NEGADO" };
@@ -259,11 +282,9 @@ export async function saveReseller(res: any) {
   return !error;
 }
 
-export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
+/**
+ * UTILITÁRIOS E ESTATÍSTICAS
+ */
 export async function getCategoryCount(genre: string) {
   const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
   return count || 0;

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v12.0 - EDIÇÃO BYPASS CLOUDFLARE 520 & INVISIBILIDADE TOTAL
+ * TÚNEL MASTER v13.0 - EDIÇÃO BYPASS CLOUDFLARE 520 & INVISIBILIDADE TOTAL
  * Injeção de identidade Smart TV e limpeza agressiva de cabeçalhos.
  */
 export async function GET(req: NextRequest) {
@@ -50,6 +50,12 @@ export async function GET(req: NextRequest) {
       requestHeaders.delete('Referer');
       requestHeaders.delete('Origin');
       res = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store', redirect: 'follow' });
+    }
+
+    // Se o servidor retornar algo que não é vídeo (como uma página de erro HTML), aborta para evitar NotSupportedError
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/html') && !targetUrl.includes('.php')) {
+       return new NextResponse("Erro no Servidor Original", { status: 502 });
     }
 
     const responseHeaders = new Headers();
