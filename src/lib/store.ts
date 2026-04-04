@@ -168,7 +168,6 @@ export async function getGlobalSettings() {
     }
     return { parentalPin: "1234", announcement: "" };
   } catch (e) {
-    console.error("Erro ao ler settings:", e);
     return { parentalPin: "1234", announcement: "" };
   }
 }
@@ -183,13 +182,8 @@ export async function updateGlobalSettings(value: any) {
       }
     };
     const { error } = await supabase.from('settings').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase updateGlobalSettings:", error);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) {
-    console.error("Erro Fatal updateGlobalSettings:", e);
     return false;
   }
 }
@@ -201,7 +195,6 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: User) {
   try {
-    // BLINDAGEM MESTRE: Garante que datas vazias sejam enviadas como NULL
     const payload: any = {
       id: user.id,
       pin: user.pin.toUpperCase().trim(),
@@ -235,10 +228,13 @@ export async function saveUser(user: User) {
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, gamePoints: 9999 } };
-  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
-  if (!user) return { error: "PIN NÃO LOCALIZADO" };
+  
+  const { data: user, error } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
+  
+  if (error || !user) return { error: "PIN NÃO LOCALIZADO" };
   if (user.isBlocked) return { error: "SINAL BLOQUEADO PELO MESTRE" };
   if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO. RENOVE AGORA!" };
+  
   return { user };
 }
 

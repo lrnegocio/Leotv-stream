@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL DE SINAL MASTER v6.0
- * Suporte total a Range (Pausa/Fullscreen), m3u8 e mp4.
- * Resolve bloqueios de Referer e CORS em tempo real.
+ * TÚNEL DE SINAL MASTER v7.0
+ * Suporte total a Range, m3u8 e mp4.
+ * Camuflagem de Referer para RedeCanais e Samsung.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,17 +20,16 @@ export async function GET(req: NextRequest) {
     
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade de Smart TV de Última Geração
+    // Simula Smart TV de 2024
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/6.2 Chrome/110.0.0.0 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Connection', 'keep-alive');
     
-    // CAMUFLAGEM DE ORIGEM (BYPASS DE REFERER)
+    // CAMUFLAGEM DE ORIGEM
     const urlObj = new URL(targetUrl);
-    if (targetUrl.includes('redecanais') || targetUrl.includes('fontedecanais')) {
+    if (targetUrl.includes('redecanaistv') || targetUrl.includes('fontedecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
       requestHeaders.set('Origin', 'https://redecanaistv.cafe');
-    } else if (targetUrl.includes('blinder.space')) {
+    } else if (targetUrl.includes('blinder')) {
       requestHeaders.set('Referer', 'http://blinder.space/');
     } else if (targetUrl.includes('wurl.tv')) {
       requestHeaders.set('Referer', 'https://www.samsung.com/');
@@ -41,19 +40,17 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow' // Segue redirecionamentos do contfree.shop automaticamente
+      redirect: 'follow'
     });
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos essenciais para o player (Range, Content-Type, Length)
+    // Copia apenas cabeçalhos essenciais (evita compressão que quebra o m3u8)
     const headersToCopy = [
       'content-type', 
       'content-length', 
       'content-range', 
-      'accept-ranges', 
-      'cache-control',
-      'etag',
+      'accept-ranges',
       'last-modified'
     ];
 
@@ -62,12 +59,8 @@ export async function GET(req: NextRequest) {
       if (v) responseHeaders.set(h, v);
     });
 
-    // LIBERAÇÃO TOTAL DE CORS E REMOÇÃO DE BLOQUEIOS DE IFRAME
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('Access-Control-Expose-Headers', '*');
-    responseHeaders.delete('x-frame-options');
-    responseHeaders.delete('content-security-policy');
+    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     if (!res.body) return new NextResponse("Sinal Vazio", { status: 502 });
 
@@ -78,7 +71,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Erro no Túnel Master v6.0:", error.message);
     return new NextResponse("Falha no Túnel de Sinal", { status: 500 });
   }
 }
