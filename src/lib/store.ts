@@ -74,75 +74,87 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v26.0)
 // ==========================================
 
 export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function removeContent(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
+  try {
+    const { error } = await supabase.from('content').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
+  try {
+    const { error } = await supabase.from('content').delete().in('id', ids);
+    return !error;
+  } catch (e) { return false; }
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (IPTV)
+// FUNÇÕES DE PLAYLIST M3U (IPTV SUPREMACY)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string): Promise<string> {
-  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
-  if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
+  try {
+    const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
+    if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
-  const { data: items } = await supabase.from('content').select('*').order('title', { ascending: true });
-  if (!items) return "#EXTM3U\n";
+    const { data: items } = await supabase.from('content').select('*').order('title', { ascending: true });
+    if (!items) return "#EXTM3U\n";
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
-  
-  let m3u = "#EXTM3U\n";
-  
-  items.forEach(item => {
-    if (item.isRestricted && !user.isAdultEnabled) return;
-
-    const group = item.genre.toUpperCase();
-    const logo = item.imageUrl || "";
+    const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
+    let m3u = "#EXTM3U\n";
     
-    if (item.type === 'channel') {
-      const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
-      m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${logo}" group-title="${group}",${item.title.toUpperCase()}\n${streamUrl}\n`;
-    } else if (item.type === 'movie') {
-      const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
-      m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${item.title}" tvg-logo="${logo}" group-title="FILMES - ${group}",${item.title.toUpperCase()}\n${streamUrl}\n`;
-    } else if (item.type === 'series' || item.type === 'multi-season') {
-      if (item.episodes) {
-        item.episodes.forEach((ep: Episode) => {
-          const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
-          m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${item.title} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${item.title.toUpperCase()}",${item.title.toUpperCase()} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
-        });
-      }
-      if (item.seasons) {
-        item.seasons.forEach((s: Season) => {
-          s.episodes.forEach((ep: Episode) => {
-            const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
-            m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${item.title} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${item.title.toUpperCase()} T${s.number}",${item.title.toUpperCase()} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
-          });
-        });
-      }
-    }
-  });
+    items.forEach(item => {
+      if (item.isRestricted && !user.isAdultEnabled) return;
 
-  return m3u;
+      const group = (item.genre || "GERAL").toUpperCase();
+      const logo = item.imageUrl || "";
+      const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
+      
+      if (item.type === 'channel') {
+        const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
+        m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
+      } else if (item.type === 'movie') {
+        const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
+        m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
+      } else if (item.type === 'series' || item.type === 'multi-season') {
+        if (item.episodes) {
+          item.episodes.forEach((ep: Episode) => {
+            const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+            m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+          });
+        }
+        if (item.seasons) {
+          item.seasons.forEach((s: Season) => {
+            s.episodes.forEach((ep: Episode) => {
+              const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+              m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+            });
+          });
+        }
+      }
+    });
+
+    return m3u;
+  } catch (e) {
+    return "#EXTM3U\n#EXTINF:-1,ERRO AO GERAR LISTA\n";
+  }
 }
 
 // ==========================================
@@ -184,8 +196,10 @@ export async function saveContent(item: Partial<ContentItem>) {
 }
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
-  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-  return data;
+  try {
+    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    return data;
+  } catch (e) { return null; }
 }
 
 // ==========================================
@@ -211,8 +225,10 @@ export async function updateGlobalSettings(value: any) {
 }
 
 export async function getRemoteUsers() {
-  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-  return data || [];
+  try {
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveUser(user: User) {
@@ -223,38 +239,50 @@ export async function saveUser(user: User) {
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
-  const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
-  if (!user) return { error: "PIN INVÁLIDO" };
-  if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
-  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
-  return { user };
+  try {
+    if (pin === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
+    const { data: user } = await supabase.from('users').select('*').eq('pin', pin.trim().toUpperCase()).maybeSingle();
+    if (!user) return { error: "PIN INVÁLIDO" };
+    if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
+    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
+    return { user };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function validateResellerLogin(username: string, pass: string) {
-  const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
-  if (!res || res.isBlocked) return { error: "NEGADO" };
-  return { reseller: res };
+  try {
+    const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
+    if (!res || res.isBlocked) return { error: "NEGADO" };
+    return { reseller: res };
+  } catch (e) { return { error: "ERRO NO BANCO" }; }
 }
 
 export async function getRemoteResellers() {
-  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-  return data || [];
+  try {
+    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveReseller(res: any) {
-  const { error } = await supabase.from('resellers').upsert(res);
-  return !error;
+  try {
+    const { error } = await supabase.from('resellers').upsert(res);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function getCategoryCount(genre: string) {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
-  return count || 0;
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function getTotalContentCount() {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
-  return count || 0;
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {

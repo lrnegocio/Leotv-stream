@@ -35,6 +35,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
+    // SINTONIZADOR DE EMBEDS SNIPER v26
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -57,15 +58,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
+    // SINTONIZADOR DE STREAMING (PROXY) v26
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
-    const isPHP = lowerUrl.includes('.php');
-    const needsProxy = urlStr.startsWith('http://') || lowerUrl.includes('blinder.space') || isM3U8 || isPHP;
+    const isPHP = lowerUrl.includes('.php') && lowerUrl.includes('redecanais');
+    
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isPHP) return { processedUrl: proxied, type: 'iframe' };
+    if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
     if (isM3U8) return { processedUrl: proxied, type: 'hls' };
     
-    return { processedUrl: needsProxy ? proxied : urlStr, type: 'video' };
+    return { processedUrl: urlStr.startsWith('http://') ? proxied : urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -85,7 +87,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const initPlayer = React.useCallback(async () => {
     const video = videoRef.current;
-    if (!processedUrl || !video) return;
+    if (!processedUrl || (!video && type !== 'iframe')) return;
     if (type === 'hls' && !hlsLoaded) return;
 
     cleanupPlayer();
@@ -100,16 +102,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             if (!rUrl.includes('/api/proxy')) xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
           },
           autoStartLoad: true,
-          retryDelay: 1000,
+          retryDelay: 1500,
           onErrorFatalRetry: true
         });
 
         hls.loadSource(processedUrl);
-        hls.attachMedia(video);
+        hls.attachMedia(video!);
         hlsRef.current = hls;
         
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+          video?.play().catch(() => { if(video) { video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         });
 
@@ -122,22 +124,21 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             setLoading(false);
           }
         });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = processedUrl;
         setLoading(false);
       }
     } else if (type === 'video') {
-      video.src = processedUrl;
-      video.onloadeddata = () => {
-        video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
-        setLoading(false);
-      };
-      video.onerror = () => {
-        setError("Falha ao carregar arquivo de vídeo.");
-        setLoading(false);
-      };
+      if (video) {
+        video.src = processedUrl;
+        video.onloadeddata = () => {
+          video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
+          setLoading(false);
+        };
+        video.onerror = () => { setError("Falha ao carregar sinal de vídeo."); setLoading(false); };
+      }
     } else {
-      setLoading(type === 'iframe');
+      setLoading(false);
     }
   }, [processedUrl, type, hlsLoaded, cleanupPlayer, retryCount]);
 
@@ -151,7 +152,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Canal Master...</p>
         </div>
       )}
 
@@ -172,7 +173,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
           onLoad={() => setLoading(false)}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups-to-escape-sandbox"
         />
       ) : (
         <video 
