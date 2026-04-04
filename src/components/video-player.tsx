@@ -22,7 +22,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     const urlStr = u.trim()
 
-    // PLATAFORMAS EXTERNAS (DIRETO)
     if (urlStr.includes('youtube.com') || urlStr.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -33,7 +32,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    // TÚNEL MASTER OBRIGATÓRIO (m3u8, mp4, php, samsung, redecanais)
     const needsProxy = urlStr.startsWith('http://') || 
                        urlStr.includes('.m3u8') || 
                        urlStr.includes('.mp4') || 
@@ -45,7 +43,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (needsProxy) {
       const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-      // Se for player PHP (como RedeCanais), usamos Iframe via Proxy
       if (urlStr.includes('.php') || urlStr.includes('player3')) return { processedUrl: proxied, type: 'iframe' };
       return { processedUrl: proxied, type: urlStr.includes('.m3u8') ? 'hls' : 'video' };
     }
@@ -62,12 +59,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   };
 
   React.useEffect(() => {
+    // REINICIALIZAÇÃO MASTER: Limpa o player antes de trocar de sinal
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }
+
     if (!processedUrl || type === 'iframe') { 
-      setLoading(false); 
+      setLoading(type === 'iframe'); 
       return; 
     }
 
-    const video = videoRef.current;
     if (!video) return;
 
     let hls: any = null;
@@ -76,7 +80,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (type === 'hls' && (window as any).Hls) {
         if ((window as any).Hls.isSupported()) {
           hls = new (window as any).Hls({
-            // HLS SNIPER v3.0: Força todo o tráfego a passar pelo túnel para evitar bloqueios 520
             xhrSetup: (xhr: any, rUrl: string) => {
               if (!rUrl.includes('/api/proxy')) {
                 const proxyUrl = `/api/proxy?url=${encodeURIComponent(rUrl)}`;
@@ -87,8 +90,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
             lowLatencyMode: true,
             backBufferLength: 90,
             maxBufferLength: 30,
-            fragLoadingMaxRetry: 5,
-            levelLoadingMaxRetry: 5
+            autoStartLoad: true
           });
           hls.loadSource(processedUrl);
           hls.attachMedia(video);
@@ -101,7 +103,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               switch (data.type) {
                 case (window as any).Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                 case (window as any).Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                default: setLoading(false); break;
+                default: hls.destroy(); setLoading(false); break;
               }
             }
           });
@@ -110,18 +112,23 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => {});
           setLoading(false);
         }
-      } else {
+      } else if (type === 'video') {
         video.src = processedUrl!;
         video.load();
         video.play().then(() => setLoading(false)).catch(() => {
           video.muted = true;
-          video.play();
-          setLoading(false);
+          video.play().finally(() => setLoading(false));
         });
       }
     };
-    init();
-    return () => { if (hls) hls.destroy(); if (video) { video.pause(); video.src = ""; } };
+    
+    // Pequeno delay para garantir que o DOM limpou o sinal antigo
+    const timer = setTimeout(init, 100);
+    return () => { 
+      clearTimeout(timer);
+      if (hls) hls.destroy(); 
+      if (video) { video.pause(); video.src = ""; video.load(); } 
+    };
   }, [processedUrl, type]);
 
   return (
@@ -135,12 +142,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       
       {type === 'iframe' ? (
         <iframe 
+          key={processedUrl}
           src={processedUrl!} 
           className="w-full h-full border-0" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)}
-          // ESCUDO AD-BLOCK MASTER: Bloqueia popups e abas mas permite o vídeo
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         />
       ) : (
@@ -150,6 +157,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           autoPlay 
           playsInline 
           controls={true} 
+          onLoadedData={() => setLoading(false)}
         />
       )}
 
