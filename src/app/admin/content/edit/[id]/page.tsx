@@ -78,8 +78,8 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
-    // BLINDAGEM: Unifica lógica de gravação para Series ou Canais
     const isSeries = formData.type === 'series' || formData.type === 'multi-season';
+    
     const success = await saveContent({
       ...formData,
       streamUrl: isSeries ? "" : formData.streamUrl,
@@ -100,7 +100,7 @@ export default function EditContentPage() {
 
   if (!formData) return null;
 
-  const isSeries = formData.type === 'series' || formData.type === 'multi-season';
+  const isSeriesMode = formData.type === 'series' || formData.type === 'multi-season';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -163,7 +163,7 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          {!isSeries && (
+          {!isSeriesMode && (
             <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master</h3>

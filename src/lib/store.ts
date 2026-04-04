@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v26.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v28.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -106,10 +106,10 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (IPTV SUPREMACY)
+// FUNÇÕES DE PLAYLIST M3U (AUTO-DETECT v28.0)
 // ==========================================
 
-export async function generateM3UPlaylist(pin: string): Promise<string> {
+export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
@@ -117,7 +117,7 @@ export async function generateM3UPlaylist(pin: string): Promise<string> {
     const { data: items } = await supabase.from('content').select('*').order('title', { ascending: true });
     if (!items) return "#EXTM3U\n";
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || "";
+    const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
     
     items.forEach(item => {
