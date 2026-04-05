@@ -6,7 +6,7 @@ import { getRemoteContent, getRemoteGames } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * XTREAM API MASTER v40.0 - COM CONTROLE PARENTAL & ARENA GAMES
+ * XTREAM API MASTER v42.0 - BANCO UNIFICADO & ARENA GAMES
  */
 export async function GET(req: NextRequest) {
   const headers = { 
@@ -49,7 +49,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0, status: "Acesso Negado" } }, { headers });
     }
 
-    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v40)
+    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v42)
+    // Filtramos para não mostrar itens que são jogos no meio dos canais
     const content = await getRemoteContent(true);
 
     if (!action) {

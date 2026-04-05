@@ -85,7 +85,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v41.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v43.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -116,34 +116,55 @@ export async function bulkRemoveContent(ids: string[]) {
   } catch (e) { return false; }
 }
 
-export async function removeGame(id: string) {
-  try {
-    const { error } = await supabase.from('games').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
-}
-
 // ==========================================
-// FUNÇÕES DE JOGOS (ARENA RETRO v41.0)
+// FUNÇÕES DE JOGOS (NÚCLEO UNIFICADO v43.0)
 // ==========================================
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
-    const { data } = await supabase.from('games').select('*').order('title', { ascending: true });
-    return data || [];
+    const { data } = await supabase
+      .from('content')
+      .select('*')
+      .ilike('genre', 'ARENA: %')
+      .order('title', { ascending: true });
+    
+    return (data || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      console: item.genre.replace('ARENA: ', ''),
+      type: item.description.includes('GAME_TYPE:embed') ? 'embed' : 'direct',
+      url: item.streamUrl,
+      emulatorUrl: item.directStreamUrl,
+      imageUrl: item.imageUrl
+    }));
   } catch (e) { return []; }
 }
 
 export async function saveGame(game: Partial<GameItem>) {
   try {
     const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
-    const { error } = await supabase.from('games').upsert({ ...game, id });
+    const payload = {
+      id,
+      title: (game.title || "NOVO JOGO").toUpperCase().trim(),
+      type: 'channel', 
+      genre: `ARENA: ${game.console || 'OUTROS'}`,
+      streamUrl: game.url || "",
+      directStreamUrl: game.emulatorUrl || "",
+      description: `GAME_TYPE:${game.type || 'embed'}`,
+      imageUrl: game.imageUrl || "",
+      isRestricted: true 
+    };
+    const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
 }
 
+export async function removeGame(id: string) {
+  return removeContent(id);
+}
+
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v41.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v43.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -152,13 +173,12 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
-    const { data: allGames } = await supabase.from('games').select('*').order('title', { ascending: true });
-    
     const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
     
     if (allItems) {
       allItems.forEach(item => {
+        if (item.genre.startsWith('ARENA: ')) return;
         if (item.isRestricted && !user.isAdultEnabled) return;
         if (!item.directStreamUrl) return; 
 
@@ -191,13 +211,13 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
           }
         }
       });
-    }
 
-    if (allGames && user.isGamesEnabled) {
-      allGames.forEach(game => {
-        const gameUrl = `${origin}/user/home?id=game_${game.id}`;
-        m3u += `#EXTINF:-1 tvg-id="game_${game.id}" tvg-name="${game.title.toUpperCase()}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",${game.title.toUpperCase()}\n${gameUrl}\n`;
-      });
+      if (user.isGamesEnabled) {
+        allItems.filter(i => i.genre.startsWith('ARENA: ')).forEach(game => {
+          const gameUrl = `${origin}/user/home?id=${game.id}`;
+          m3u += `#EXTINF:-1 tvg-id="${game.id}" tvg-name="${game.title}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",${game.title}\n${gameUrl}\n`;
+        });
+      }
     }
 
     return m3u;
@@ -207,19 +227,19 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v41.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v43.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
     return (data || []).map(i => ({ ...i, views: i.views || 0 }));
   } catch (e) { return []; }
 }
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    let query = supabase.from('content').select('*');
+    let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
     const { data } = await query.order('title', { ascending: true });
@@ -347,7 +367,7 @@ export async function getCategoryCount(genre: string) {
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
     return count || 0;
   } catch (e) { return 0; }
 }

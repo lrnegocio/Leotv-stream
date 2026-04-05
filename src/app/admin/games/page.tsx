@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2 } from "lucide-react"
+import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2, RefreshCcw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,13 +46,14 @@ export default function AdminGamesPage() {
       return
     }
     setIsSaving(true)
+    // Chamamos a função blindada que usa a tabela 'content'
     const success = await saveGame(gameData)
     if (success) {
       toast({ title: gameData.id ? "JOGO ATUALIZADO!" : "JOGO ADICIONADO À ARENA!" })
       setIsDialogOpen(false)
       loadData()
     } else {
-      toast({ variant: "destructive", title: "Erro ao Salvar no Banco" })
+      toast({ variant: "destructive", title: "Erro de Permissão no Banco" })
     }
     setIsSaving(false)
   }
@@ -103,11 +104,11 @@ export default function AdminGamesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Biblioteca e Lógica Client-Side.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={injectDefaults} className="border-emerald-500/20 text-emerald-500 h-12 rounded-xl font-black uppercase text-[9px]">
-            <UploadCloud className="mr-2 h-4 w-4" /> Injetar Clássicos
+            <RefreshCcw className="mr-2 h-4 w-4" /> Restaurar Clássicos
           </Button>
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
             <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
@@ -120,7 +121,7 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-8">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2 text-emerald-500">
-                <Trophy className="h-5 w-5" /> Top 50 Guerreiros Léo TV
+                <Trophy className="h-5 w-5" /> Ranking Guerreiros Léo TV
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -150,7 +151,7 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-white/5 border-b border-white/5 p-6">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Gamepad2 className="h-4 w-4 text-emerald-500" /> Biblioteca Atual ({games.length})
+                <Gamepad2 className="h-4 w-4 text-emerald-500" /> Biblioteca de Jogos ({games.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
@@ -190,8 +191,8 @@ export default function AdminGamesPage() {
              <div className="flex items-center gap-4">
                 <ShieldCheck className="h-8 w-8 text-emerald-500" />
                 <div>
-                   <h4 className="font-black uppercase text-xs">Protocolo Client-Side</h4>
-                   <p className="text-[10px] opacity-60">Os jogos são baixados diretamente no aparelho do cliente, economizando seu banco de dados.</p>
+                   <h4 className="font-black uppercase text-xs">Banco de Dados Unificado</h4>
+                   <p className="text-[10px] opacity-60">Os jogos agora são salvos na tabela principal, garantindo 100% de compatibilidade com o seu servidor.</p>
                 </div>
              </div>
           </Card>
@@ -199,7 +200,7 @@ export default function AdminGamesPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8">
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
           <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">{gameData.id ? 'Editar Jogo Arena' : 'Novo Jogo na Arena'}</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
@@ -216,9 +217,9 @@ export default function AdminGamesPage() {
                     <SelectItem value="PLAYSTATION (PS1/PSX/PS2)">PLAYSTATION</SelectItem>
                     <SelectItem value="SUPER NINTENDO (SNES)">SUPER NINTENDO</SelectItem>
                     <SelectItem value="ARCADE / MAME">ARCADE / MAME</SelectItem>
-                    <SelectItem value="CLÁSSICOS & IA (ARENA)">CLÁSSICOS & IA</SelectItem>
                     <SelectItem value="MEGA DRIVE">MEGA DRIVE</SelectItem>
                     <SelectItem value="NINTENDO 64">NINTENDO 64</SelectItem>
+                    <SelectItem value="OUTROS">OUTROS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -254,8 +255,8 @@ export default function AdminGamesPage() {
               <Input value={gameData.imageUrl} onChange={e => setGameData({...gameData, imageUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
             </div>
 
-            <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4">
-              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR JOGO' : 'INJETAR JOGO NA REDE'}
+            <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4 shadow-xl shadow-emerald-500/20 rounded-2xl">
+              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR DADOS' : 'INJETAR JOGO NA REDE'}
             </Button>
           </div>
         </DialogContent>
@@ -272,8 +273,8 @@ export default function AdminGamesPage() {
             <div className="w-full h-full flex items-center justify-center bg-black/90 p-10 text-center">
                <div className="space-y-6">
                   <UploadCloud className="h-20 w-20 text-emerald-500 mx-auto animate-bounce" />
-                  <h3 className="text-2xl font-black uppercase italic">Simulador de Download</h3>
-                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">Nesta modalidade, o jogo seria baixado para o cache local do seu aparelho agora. O link fornecido é: {testGame?.url}</p>
+                  <h3 className="text-2xl font-black uppercase italic">Download no Cliente</h3>
+                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">O jogo será baixado diretamente para o cache do seu aparelho. Espaço usado: {testGame?.url}</p>
                   <Button variant="outline" className="border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px]" onClick={() => window.open(testGame?.url, '_blank')}>BAIXAR MANUALMENTE</Button>
                </div>
             </div>

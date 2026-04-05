@@ -14,13 +14,13 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v41.0 - SUPORTE AGRESSIVO M3U8 & BLINDER
+ * SINTONIZADOR SNIPER v43.0 - SUPORTE AGRESSIVO M3U8, TS & BLINDER
+ * Corrigido para evitar Erro 500 no processamento de sinal.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [showControls, setShowControls] = React.useState(true)
   const hlsRef = React.useRef<any>(null)
   const [hlsLoaded, setHlsLoaded] = React.useState(false)
   const [retryCount, setRetryCount] = React.useState(0)
@@ -38,7 +38,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // DETECÇÃO DE SITES ADULTOS (SNIPER)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -59,7 +58,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidIdMatch) return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR DE STREAMING PROFISSIONAL
     const isBlinder = lowerUrl.includes('blinder.space');
     const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
     const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('hls-') || lowerUrl.includes('.ts?');
@@ -68,7 +66,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isWebPlayer = lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
-    // TÚNEL XUI OBRIGATÓRIO PARA LINKS BLOQUEADOS OU HTTP
+    // Túnel XUI obrigatório para links protegidos
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isRedeCanais && lowerUrl.includes('.php')) {
@@ -114,14 +112,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Se o pedaço do vídeo (.ts) for bloqueado, passamos pelo proxy
             if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder') || rUrl.includes('xvideos-cdn'))) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          maxMaxBufferLength: 30,
-          enableWorker: true
+          maxMaxBufferLength: 30
         });
 
         hls.loadSource(processedUrl);
@@ -139,7 +137,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal M3U8 instável. Tente re-sintonizar.");
+              setError("Sinal instável. Tente re-sincronizar.");
               setLoading(false);
             }
           }
@@ -207,11 +205,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      <div className={`absolute inset-0 z-20 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
+      <div className="absolute inset-0 z-20 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100">
+        <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
           <ChevronLeft className="h-6 w-6 text-white" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
+        <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
           <ChevronRight className="h-6 w-6 text-white" />
         </button>
       </div>
