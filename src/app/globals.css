@@ -1,30 +1,51 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 303 70% 50%;
+    --background: 260 40% 97%;
+    --foreground: 264 64% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 264 64% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 264 64% 15%;
+    --primary: 264 64% 49%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 15%;
+    --secondary: 238 100% 66%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 303 70% 50%;
+    --muted: 260 20% 92%;
+    --muted-foreground: 264 20% 45%;
+    --accent: 238 100% 66%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 15%;
-    --input: 240 5% 15%;
-    --ring: 303 70% 50%;
-    --radius: 0.5rem;
+    --border: 264 20% 90%;
+    --input: 264 20% 90%;
+    --ring: 264 64% 49%;
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 264 64% 10%;
+    --foreground: 0 0% 98%;
+    --card: 264 60% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 264 64% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 264 64% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 238 100% 70%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 264 30% 20%;
+    --muted-foreground: 264 20% 70%;
+    --accent: 238 100% 70%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 264 30% 20%;
+    --input: 264 30% 20%;
+    --ring: 264 64% 60%;
   }
 }
 
@@ -48,7 +69,7 @@
   }
   
   .scrollbar-visible::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.05) !important;
   }
   
   .scrollbar-visible::-webkit-scrollbar-thumb {
@@ -56,16 +77,16 @@
     border-radius: 10px !important;
   }
 
-  .bg-xui {
-    background: linear-gradient(180deg, #0a0a0c 0%, #050506 100%);
+  .bg-glass {
+    @apply bg-card/60 backdrop-blur-xl border border-white/10;
   }
 
-  .glass-panel {
-    @apply bg-card/80 backdrop-blur-md border border-white/5 shadow-2xl;
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
 }
 
 .font-headline {
   font-family: 'Inter', sans-serif;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }

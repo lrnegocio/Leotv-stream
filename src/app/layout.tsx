@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -6,25 +5,25 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Léo Tv & Stream',
-  description: 'Plataforma de streaming Master de alta performance',
+  title: 'StreamSight - Plataforma de Streaming Inteligente',
+  description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming.',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: 'https://picsum.photos/seed/leo/32/32', sizes: '32x32' },
-      { url: 'https://picsum.photos/seed/leo/192/192', sizes: '192x192' }
+      { url: 'https://picsum.photos/seed/streamsight/32/32', sizes: '32x32' },
+      { url: 'https://picsum.photos/seed/streamsight/192/192', sizes: '192x192' }
     ],
-    apple: 'https://picsum.photos/seed/leo/192/192',
+    apple: 'https://picsum.photos/seed/streamsight/192/192',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Léo Tv',
+    title: 'StreamSight',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1E161D',
+  themeColor: '#6D2DCC',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -38,17 +37,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" className="light">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          iframe[src*="redecanaistv"], 
-          iframe[src*="xvideos"], 
-          iframe[src*="reidoscanais"],
-          iframe[src*="rdcanais"] {
+          iframe {
             pointer-events: auto !important;
           }
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
@@ -71,10 +67,6 @@ export default function RootLayout({
   );
 }
 
-/**
- * BLOQUEADOR DE SEGURANÇA MESTRE v67
- * Desativa botão direito, F12, Ctrl+Shift+I e qualquer inspeção de código.
- */
 function SecurityBlocker() {
   return (
     <script dangerouslySetInnerHTML={{ __html: `
@@ -84,10 +76,7 @@ function SecurityBlocker() {
         
         if (isLocal) return;
 
-        // Bloqueia Botão Direito (Context Menu)
         document.addEventListener('contextmenu', e => e.preventDefault());
-
-        // Bloqueia Atalhos de Inspeção
         document.addEventListener('keydown', e => {
           if (
             e.key === 'F12' || 
@@ -98,20 +87,6 @@ function SecurityBlocker() {
             e.preventDefault();
             return false;
           }
-        });
-
-        // Impede seleção de texto total
-        document.addEventListener('selectstart', e => {
-           const isInput = e.target.tagName === 'INPUT' || 
-                           e.target.tagName === 'TEXTAREA' || 
-                           e.target.isContentEditable;
-           if (isInput) return true;
-           e.preventDefault();
-        });
-
-        // Anti-Drag de Imagens
-        document.addEventListener('dragstart', e => {
-          if (e.target.tagName === 'IMG') e.preventDefault();
         });
       })();
     `}} />

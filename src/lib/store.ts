@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -84,15 +83,10 @@ export interface GameRanking {
   points: number;
 }
 
-/**
- * GESTÃO DE CONTEÚDO UNIFICADA v66 - SUPREMACIA PWA
- * Pesquisa inteligente por Canal e Categoria simultaneamente.
- */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
-    // PESQUISA MESTRA: Busca no Título E na Categoria (Gênero)
     if (searchQuery) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     }
@@ -107,15 +101,15 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
+    const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     const finalUrl = item.streamUrl || "";
     
     const payload: any = {
       id, 
-      title: (item.title || "NOVO SINAL").toUpperCase().trim(),
-      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
+      title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
+      genre: (item.genre || "CANAIS").toUpperCase().trim(),
       type: item.type || 'channel', 
-      description: item.description || "Sinal Master Léo Tv",
+      description: item.description || "Transmissão StreamSight",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: finalUrl,
@@ -356,15 +350,16 @@ export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Mat
 export const cleanName = (name: string) => name.replace(/[^\w\s]/gi, '').toUpperCase().trim();
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
-  return `*LÉO TV & STREAM* 📺\n\n` +
-         `🔑 *SEU CÓDIGO:* ${pin}\n` +
-         `📅 *PLANO:* ${tier.toUpperCase()}\n\n` +
-         `🌐 *ACESSE AGORA:* ${url}\n\n` +
-         `🍿 *Instale o App no navegador para uma experiência completa!*`;
+  return `*STREAMSIGHT - ACESSO LIBERADO* 📺\n\n` +
+         `🔑 *CÓDIGO PIN:* ${pin}\n` +
+         `📅 *PLANO:* ${tier.toUpperCase()}\n` +
+         `📱 *LIMITE DE TELAS:* ${screens}\n\n` +
+         `🌐 *ASSISTA AQUI:* ${url}\n\n` +
+         `🍿 *Instale o Web App para uma experiência nativa em seu aparelho!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
-  return `*LÉO TV - AVISO DE VENCIMENTO* ⚠️\n\n` +
+  return `*STREAMSIGHT - AVISO DE RENOVAÇÃO* ⚠️\n\n` +
          `Olá! Seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\n` +
-         `Renove agora para não perder o sinal! 🍿`;
+         `Renove agora para manter sua programação ativa sem interrupções! 🍿`;
 };

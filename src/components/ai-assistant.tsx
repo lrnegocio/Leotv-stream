@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -22,12 +21,11 @@ export function AiAssistant() {
   const router = useRouter()
 
   React.useEffect(() => {
-    // Carrega mensagem inicial baseada no usuário
     const session = localStorage.getItem("user_session");
     const user = session ? JSON.parse(session) : null;
     const initialText = user?.role === 'admin' 
-      ? 'Mestre Léo, App Prototyper ativo. Como posso ajudar na gestão da rede hoje?' 
-      : 'Olá! Sou seu assistente Léo TV. O que você gostaria de assistir hoje? Pode falar o nome do canal ou filme!';
+      ? 'Olá Administrador StreamSight. Sistema de IA ativo. Como posso auxiliar na gestão da rede hoje?' 
+      : 'Olá! Sou seu assistente StreamSight. O que você gostaria de assistir hoje? Pode falar o nome do canal ou filme!';
     
     setMessages([{ role: 'model', text: initialText }]);
   }, []);
@@ -59,7 +57,6 @@ export function AiAssistant() {
     try {
       const lower = text.toLowerCase()
       
-      // Busca Inteligente Master via Voz (Liberado para Clientes)
       if (lower.includes("assistir") || lower.includes("buscar") || lower.includes("canal") || lower.includes("abrir") || lower.includes("procurar") || lower.length < 20) {
         try {
           const searchRes = await voiceSearchContent({ query: text })
@@ -67,7 +64,7 @@ export function AiAssistant() {
           urlParams.set('q', searchRes.searchTerm);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Comando recebido. Buscando por: ${searchRes.searchTerm} na biblioteca.`
+          const msg = `Entendido. Iniciando busca por: ${searchRes.searchTerm} na biblioteca.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -77,7 +74,7 @@ export function AiAssistant() {
           urlParams.set('q', text);
           router.replace(`${window.location.pathname}?${urlParams.toString()}`, { scroll: false });
           
-          const msg = `Iniciando busca por ${text}.`
+          const msg = `Buscando por ${text}.`
           setMessages(prev => [...prev, { role: 'model', text: msg }])
           speak(msg)
           setLoading(false)
@@ -95,19 +92,20 @@ export function AiAssistant() {
       speak(result.response)
 
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: "Houve um pequeno erro na conexão. Pode repetir?" }])
+      setMessages(prev => [...prev, { role: 'model', text: "Houve um erro na conexão com a inteligência artificial. Pode repetir?" }])
     } finally {
       setLoading(false)
     }
   }
 
   const startListening = () => {
-    if (!('webkitSpeechRecognition' in window)) {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
       toast({ variant: "destructive", title: "Não suportado", description: "Use o Google Chrome para comandos de voz." })
       return
     }
 
-    const recognition = new (window as any).webkitSpeechRecognition()
+    const recognition = new SpeechRecognition();
     recognition.lang = 'pt-BR'
     recognition.continuous = false
     recognition.onstart = () => setIsListening(true)
@@ -123,40 +121,39 @@ export function AiAssistant() {
   return (
     <div className="fixed bottom-8 right-8 z-[100]">
       {!isOpen ? (
-        <Button onClick={() => setIsOpen(true)} className="h-16 w-16 rounded-full bg-primary shadow-[0_0_30px_rgba(var(--primary),0.4)] hover:scale-110 transition-transform border-4 border-background overflow-hidden relative group">
-          <div className="absolute inset-0 bg-primary animate-pulse opacity-20" />
-          <Cpu className="h-8 w-8 text-white relative z-10" />
+        <Button onClick={() => setIsOpen(true)} className="h-16 w-16 rounded-3xl bg-primary shadow-xl shadow-primary/20 hover:scale-110 transition-transform border-4 border-background overflow-hidden relative group">
+          <Sparkles className="h-8 w-8 text-white relative z-10" />
         </Button>
       ) : (
-        <Card className="w-[380px] h-[550px] flex flex-col bg-card/95 backdrop-blur-3xl border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-[2rem] animate-in zoom-in-95 duration-300">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-6">
+        <Card className="w-[380px] h-[550px] flex flex-col bg-card border-border shadow-2xl rounded-[2.5rem] animate-in zoom-in-95 duration-300 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-6 pt-8 px-6">
             <div className="flex items-center gap-4">
-              <div className="bg-primary p-2.5 rounded-2xl shadow-xl shadow-primary/20"><Cpu className="h-5 w-5 text-white" /></div>
+              <div className="bg-primary/10 p-2.5 rounded-2xl"><Cpu className="h-5 w-5 text-primary" /></div>
               <div>
-                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tighter">Léo TV IA</CardTitle>
+                <CardTitle className="text-sm font-black uppercase italic text-primary tracking-tight">StreamSight IA</CardTitle>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Sinal Online</span>
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">IA Conectada</span>
                 </div>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/5" onClick={() => { setIsOpen(false); window.speechSynthesis?.cancel(); }}>
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted" onClick={() => { setIsOpen(false); window.speechSynthesis?.cancel(); }}>
               <X className="h-5 w-5" />
             </Button>
           </CardHeader>
-          <CardContent className="flex-1 p-0 overflow-hidden">
+          <CardContent className="flex-1 p-0 overflow-hidden bg-muted/30">
             <ScrollArea className="h-full px-5 pt-5" ref={scrollRef}>
               <div className="space-y-5 pb-5">
                 {messages.map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-4 rounded-3xl text-[12px] font-bold leading-relaxed shadow-lg ${
-                      m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white/5 border border-white/5 text-foreground rounded-tl-none'
+                    <div className={`max-w-[85%] p-4 rounded-3xl text-[12px] font-medium leading-relaxed shadow-sm ${
+                      m.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-card border border-border text-foreground rounded-tl-none'
                     }`}>{m.text}</div>
                   </div>
                 ))}
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="bg-white/5 p-4 rounded-3xl border border-white/5 flex gap-2 items-center">
+                    <div className="bg-card p-4 rounded-3xl border border-border flex gap-2 items-center">
                       <div className="flex gap-1.5">
                         <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
                         <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
@@ -168,14 +165,14 @@ export function AiAssistant() {
               </div>
             </ScrollArea>
           </CardContent>
-          <CardFooter className="p-5 border-t border-white/5 gap-3">
-            <Button size="icon" variant={isListening ? "destructive" : "secondary"} className={`rounded-2xl h-12 w-12 transition-all shadow-xl ${isListening ? 'animate-pulse scale-110 shadow-destructive/30' : 'hover:bg-primary/10'}`} onClick={startListening}>
+          <CardFooter className="p-5 border-t border-border gap-3 bg-card">
+            <Button size="icon" variant={isListening ? "destructive" : "secondary"} className={`rounded-2xl h-12 w-12 transition-all ${isListening ? 'animate-pulse scale-110' : 'hover:bg-primary/10'}`} onClick={startListening}>
               <Mic className={`h-6 w-6 ${isListening ? 'text-white' : 'text-primary'}`} />
             </Button>
             <div className="relative flex-1">
-              <Input placeholder="Qual canal deseja ver?" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-black/40 border-white/5 rounded-2xl pr-12 h-12 text-xs font-bold" />
+              <Input placeholder="Qual canal deseja ver?" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="bg-muted border-border rounded-2xl pr-12 h-12 text-xs font-bold" />
               <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 text-primary hover:bg-transparent" onClick={() => handleSend()}>
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </Button>
             </div>
           </CardFooter>
