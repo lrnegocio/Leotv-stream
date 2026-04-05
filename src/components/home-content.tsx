@@ -16,16 +16,16 @@ import Image from "next/image"
 const CATEGORIES = [
   { id: 'LIVE', name: 'LÉO TV AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'LÉO TV FILMES', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
-  { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SERIES' },
-  { id: 'CLIPES', name: 'LÉO TV VIDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VIDEO CLIPES' },
-  { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Laugh, color: 'bg-yellow-400', genre: 'LÉO TV PIADAS' },
-  { id: 'REELS', name: 'LÉO TV REELS', icon: Play, color: 'bg-pink-500', genre: 'LÉO TV REELS', restricted: true },
-  { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, color: 'bg-pink-400', genre: 'LÉO TV DORAMAS' },
-  { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, color: 'bg-yellow-500', genre: 'LÉO TV DESENHOS' },
-  { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
-  { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, color: 'bg-orange-500', genre: 'LÉO TV NOVELAS' },
-  { id: 'GAMES', name: 'ARENA GAMES RETRO', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
-  { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
+  { id: 'SERIES', name: 'LÉO TV SERIES', icon: Layers, iconColor: 'text-purple-500', genre: 'LÉO TV SERIES' },
+  { id: 'CLIPES', name: 'LÉO TV VIDEO CLIPES', icon: Music, iconColor: 'text-pink-500', genre: 'LÉO TV VIDEO CLIPES' },
+  { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Laugh, iconColor: 'text-yellow-400', genre: 'LÉO TV PIADAS' },
+  { id: 'REELS', name: 'LÉO TV REELS', icon: Play, iconColor: 'text-pink-500', genre: 'LÉO TV REELS', restricted: true },
+  { id: 'DORAMAS', name: 'LÉO TV DORAMAS', icon: Sparkles, iconColor: 'text-pink-400', genre: 'LÉO TV DORAMAS' },
+  { id: 'KIDS', name: 'LÉO TV DESENHOS', icon: Baby, iconColor: 'text-yellow-500', genre: 'LÉO TV DESENHOS' },
+  { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, iconColor: 'text-orange-400', genre: 'LÉO TV RÁDIOS' },
+  { id: 'NOVELAS', name: 'LÉO TV NOVELAS', icon: Heart, iconColor: 'text-orange-500', genre: 'LÉO TV NOVELAS' },
+  { id: 'GAMES', name: 'ARENA GAMES RETRO', icon: Gamepad2, iconColor: 'text-emerald-600', special: 'games' },
+  { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, iconColor: 'text-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
 export default function HomeContent() {
@@ -46,9 +46,9 @@ export default function HomeContent() {
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [gameRankings, setGameRankings] = React.useState<GameRanking[]>([])
   const [waitingPlayers, setWaitingPlayers] = React.useState<User[]>([])
-  const [iaLevel, setIaLevel] = React.useState(5)
   const [searchingOpponent, setSearchingOpponent] = React.useState(false)
   const [opponent, setOpponent] = React.useState<{pin: string, rank: number} | null>(null)
+  const [lastClickTime, setLastClickTime] = React.useState(0)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -77,7 +77,6 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      // SINCERIDADE DE CARREGAMENTO v48
       if (channelId && !activeVideo) {
         const item = data.find(i => i.id === channelId);
         if (item) {
@@ -110,12 +109,21 @@ export default function HomeContent() {
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
   const handleItemClick = (idx: number) => {
+    // TRAVA DE CLIQUES FANTASMAS v53
+    const now = Date.now();
+    if (now - lastClickTime < 800) return;
+    setLastClickTime(now);
+    
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', item.id);
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-    if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-    else setActiveVideo({ items: content, index: idx });
+    
+    if (item.type === 'series' || item.type === 'multi-season') {
+      setSelectedSeries(item);
+    } else {
+      setActiveVideo({ items: content, index: idx });
+    }
   };
 
   const navigateVideo = (direction: 'next' | 'prev') => {
@@ -123,7 +131,6 @@ export default function HomeContent() {
     const len = activeVideo.items.length;
     const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
     
-    // NAVEGAÇÃO FLUIDA v48: Atualiza index sem fechar player
     setActiveVideo({ ...activeVideo, index: nextIdx });
     
     const nextItem = activeVideo.items[nextIdx];
@@ -180,7 +187,7 @@ export default function HomeContent() {
       if (possible.length > 0) {
         setOpponent({ pin: possible[0].pin, rank: gameRankings.findIndex(r => r.pin === possible[0].pin) + 1 || 99 });
       } else {
-        setOpponent({ pin: `IA LÉO TV (NÍVEL ${iaLevel})`, rank: 1 });
+        setOpponent({ pin: `IA LÉO TV (NÍVEL 5)`, rank: 1 });
       }
       setActiveGame(game);
       setSearchingOpponent(false);
@@ -209,7 +216,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v9500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10000.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -241,9 +248,9 @@ export default function HomeContent() {
             {CATEGORIES.map(c => {
               const count = catCounts[c.id] || 0;
               return (
-                <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color} bg-opacity-20`}>
+                <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color || 'bg-card'} bg-opacity-20`}>
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-                    <div className={`p-4 rounded-3xl ${c.color} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
+                    <div className={`p-4 rounded-3xl ${c.color || 'bg-primary'} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center"><span className="text-lg font-black uppercase italic text-white block">{c.name}</span>{count > 0 && <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">{count.toLocaleString()} SINAIS</span>}</div>
                   </div>
                 </button>
@@ -346,15 +353,15 @@ export default function HomeContent() {
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
                       <Button key={ep.id} variant="outline" onClick={() => { 
-                        const episodes = selectedSeries.episodes!.map(e => ({
+                        const eps = selectedSeries.episodes!.map(e => ({
                           ...selectedSeries, 
                           streamUrl: e.streamUrl, 
                           title: `${selectedSeries.title} - EP ${e.number}`, 
                           id: e.id,
                           type: 'movie'
                         }));
-                        setActiveVideo({ items: episodes, index: selectedSeries.episodes!.indexOf(ep) }); 
-                        setSelectedSeries(null); // Fecha menu ao dar play
+                        setActiveVideo({ items: eps, index: selectedSeries.episodes!.indexOf(ep) }); 
+                        setSelectedSeries(null);
                       }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
                     ))}
                   </div>
@@ -372,7 +379,7 @@ export default function HomeContent() {
                             type: 'movie'
                           }));
                           setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); 
-                          setSelectedSeries(null); // Fecha menu ao dar play
+                          setSelectedSeries(null);
                         }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
                       ))}
                     </div>
@@ -388,6 +395,7 @@ export default function HomeContent() {
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
           {activeVideo && (
             <VideoPlayer 
+              key={`player-${activeVideo.items[activeVideo.index].id}`}
               url={activeVideo.items[activeVideo.index].streamUrl || ""} 
               title={activeVideo.items[activeVideo.index].title} 
               id={activeVideo.items[activeVideo.index].id} 
