@@ -84,9 +84,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-/**
- * REMOÇÃO DE DADOS MASTER
- */
 export async function removeUser(id: string) {
   try {
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -115,9 +112,6 @@ export async function bulkRemoveContent(ids: string[]) {
   } catch (e) { return false; }
 }
 
-/**
- * ARENA GAMES RETRO - GESTÃO DINÂMICA
- */
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
     const { data } = await supabase
@@ -161,12 +155,12 @@ export async function removeGame(id: string) {
   return removeContent(id);
 }
 
-/**
- * PLAYLIST M3U - EXPORTAÇÃO BLINDADA
- */
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
   try {
-    const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
+    const cleanPin = pin.trim().toUpperCase();
+    const { data: users } = await supabase.from('users').select('*').ilike('pin', `${cleanPin}%`);
+    const user = users?.[0];
+
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
@@ -177,8 +171,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
       allItems.forEach(item => {
         if (item.genre.startsWith('ARENA: ')) return;
         if (item.isRestricted && !user.isAdultEnabled) return;
-        
-        // NO IPTV: Só exportamos itens que têm o Link Direto (Secundário)
         if (!item.directStreamUrl && item.type !== 'series' && item.type !== 'multi-season') return; 
 
         const group = (item.genre || "GERAL").toUpperCase();
@@ -186,16 +178,16 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
         const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
         
         if (item.type === 'channel') {
-          const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
+          const streamUrl = `${origin}/live/${user.pin}/${user.pin}/${item.id}.m3u8`;
           m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
         } else if (item.type === 'movie') {
-          const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
+          const streamUrl = `${origin}/movie/${user.pin}/${user.pin}/${item.id}.mp4`;
           m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
         } else if (item.type === 'series' || item.type === 'multi-season') {
           if (item.episodes) {
             item.episodes.forEach((ep: Episode) => {
               if (!ep.directStreamUrl) return; 
-              const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+              const streamUrl = `${origin}/series/${user.pin}/${user.pin}/${ep.id}.mp4`;
               m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
             });
           }
@@ -203,7 +195,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
             item.seasons.forEach((s: Season) => {
               s.episodes.forEach((ep: Episode) => {
                 if (!ep.directStreamUrl) return;
-                const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+                const streamUrl = `${origin}/series/${user.pin}/${user.pin}/${ep.id}.mp4`;
                 m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
               });
             });
@@ -225,9 +217,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
   }
 }
 
-/**
- * INTELIGÊNCIA DE CONTEÚDO
- */
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
@@ -246,9 +235,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     const { data } = await query.order('title', { ascending: true });
     let items = data || [];
 
-    // RECALIBRAGEM DE FILTRO v45:
-    // PWA (isIptv=false): Mostra apenas o que tem o Link Soberano (Principal)
-    // IPTV (isIptv=true): Mostra apenas o que tem o Link Direto (Secundário)
     return items.filter(i => {
       if (isIptv) {
         if (i.type === 'channel' || i.type === 'movie') return !!i.directStreamUrl;
@@ -289,9 +275,6 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
   } catch (e) { return null; }
 }
 
-/**
- * CONFIGURAÇÕES GLOBAIS
- */
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
@@ -310,9 +293,6 @@ export async function updateGlobalSettings(value: any) {
   } catch (e) { return false; }
 }
 
-/**
- * GESTÃO DE CLIENTES & PINs
- */
 export async function getRemoteUsers() {
   try {
     const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
@@ -329,8 +309,22 @@ export async function saveUser(user: User) {
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
-    if (pin?.toLowerCase() === 'adm77x2p') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
-    const { data: user } = await supabase.from('users').select('*').eq('pin', pin?.trim().toUpperCase()).maybeSingle();
+    const cleanPin = pin?.trim().toUpperCase();
+    if (!cleanPin) return { error: "PIN INVÁLIDO" };
+    
+    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
+    
+    // Suporte para logins numéricos truncados (RP725 / VUSER)
+    let query = supabase.from('users').select('*');
+    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) {
+      query = query.ilike('pin', `${cleanPin}%`);
+    } else {
+      query = query.eq('pin', cleanPin);
+    }
+
+    const { data: users } = await query;
+    const user = users?.[0];
+
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
     if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
@@ -338,9 +332,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
-/**
- * GESTÃO DE REVENDA
- */
 export async function validateResellerLogin(username: string, pass: string) {
   try {
     const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
@@ -363,17 +354,11 @@ export async function saveReseller(res: any) {
   } catch (e) { return false; }
 }
 
-/**
- * CONTADORES DE CATEGORIA MASTER
- */
 export async function getCategoryCount(genre: string) {
   try {
-    // CORREÇÃO MESTRE v45: Conta tudo que tem sinal no PWA (inclui séries e filmes)
     const trimmedGenre = genre.trim().toUpperCase();
     const { data } = await supabase.from('content').select('id, streamUrl, type, episodes, seasons').eq('genre', trimmedGenre);
-    
     if (!data) return 0;
-
     return data.filter(i => {
       if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
       if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
@@ -390,9 +375,6 @@ export async function getTotalContentCount() {
   } catch (e) { return 0; }
 }
 
-/**
- * MULTIPLAYER ARENA LOGIC
- */
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
   try {
     const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
@@ -429,13 +411,21 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-export const generateRandomPin = (l = 11) => Math.random().toString(36).substring(2, 2+l).toUpperCase();
+// PINs agora são 100% numéricos para compatibilidade VUSER e RP725
+export const generateRandomPin = (l = 11) => {
+  return Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
+};
+
 export const cleanName = (n: string) => n.toUpperCase().trim();
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const appUrl = url;
   const playlistUrl = `${appUrl}/api/playlist?pin=${pin}`;
   
+  // Fragmentos para apps numéricos
+  const pin8 = pin.substring(0, 8);
+  const pin9 = pin.substring(0, 9);
+
   return `*LÉO TV & STREAM* 📺\n\n` +
          `Seu acesso Master está liberado!\n\n` +
          `🔑 *SEU PIN:* ${pin}\n` +
@@ -443,17 +433,19 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `🖥️ *TELAS:* ${screens}\n\n` +
          `🌐 *ASSISTIR NO NAVEGADOR (PWA/WEB):*\n` +
          `${appUrl}\n\n` +
-         `🛰️ *DADOS PARA IPTV (APPS EXTERNOS):*\n` +
+         `🛰️ *DADOS PARA IPTV (APPS GERAIS):*\n` +
          `👤 *Usuário:* ${pin}\n` +
          `🔑 *Senha:* ${pin}\n` +
          `🔗 *URL do Servidor:* ${appUrl.replace('https://', '').replace('http://', '')}\n\n` +
+         `📺 *APPS ESPECÍFICOS (ANDROID TV):*\n\n` +
+         `🚀 *VUSER:* \n` +
+         `👤 *User:* ${pin9} / 🔑 *Senha:* ${pin9}\n\n` +
+         `🚀 *RP725:* \n` +
+         `📟 *Cód Acesso:* ${pin8}\n` +
+         `👤 *User:* ${pin9} / 🔑 *Senha:* ${pin9}\n\n` +
          `📄 *LISTA M3U DIRETA:*\n` +
          `${playlistUrl}\n\n` +
-         `🚀 *APPS RECOMENDADOS:*\n` +
-         `• *Android/TV Box:* XCIPTV, IPTV Smarters Pro, OTT Navigator.\n` +
-         `• *iPhone/Apple TV:* IPTV Smarters, CloudStream.\n` +
-         `• *Smart TVs:* SS IPTV, Bay IPTV, Smart IPTV.\n` +
-         `• *PC:* VLC Player ou nosso Web App.\n\n` +
+         `🚀 *OUTROS APPS:* XCIPTV, IPTV Smarters, OTT Navigator.\n\n` +
          `*Bom divertimento!* 🍿`;
 };
 

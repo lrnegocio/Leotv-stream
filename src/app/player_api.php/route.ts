@@ -6,7 +6,7 @@ import { getRemoteContent, getRemoteGames } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * XTREAM API MASTER v42.0 - BANCO UNIFICADO & ARENA GAMES
+ * XTREAM API MASTER v46.0 - COMPATIBILIDADE VUSER & RP725
  */
 export async function GET(req: NextRequest) {
   const headers = { 
@@ -26,16 +26,22 @@ export async function GET(req: NextRequest) {
 
   try {
     let activeUser: any = null;
-    const pin = (username || password).toUpperCase().trim();
+    const inputPin = (username || password).toUpperCase().trim();
     
-    if (pin === 'ADM77X2P') {
+    if (inputPin === 'ADM77X2P') {
       activeUser = { pin: 'ADM77X2P', isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 };
     } else {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('pin', pin)
-        .maybeSingle();
+      // Suporte para logins truncados (RP725 / VUSER)
+      let query = supabase.from('users').select('*');
+      
+      if (/^\d+$/.test(inputPin) && (inputPin.length === 8 || inputPin.length === 9)) {
+        query = query.ilike('pin', `${inputPin}%`);
+      } else {
+        query = query.eq('pin', inputPin);
+      }
+
+      const { data: users } = await query;
+      const data = users?.[0];
 
       if (data && !data.isBlocked) {
         if (data.expiryDate && new Date(data.expiryDate) < new Date()) {
@@ -49,8 +55,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ user_info: { auth: 0, status: "Acesso Negado" } }, { headers });
     }
 
-    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v42)
-    // Filtramos para não mostrar itens que são jogos no meio dos canais
     const content = await getRemoteContent(true);
 
     if (!action) {
