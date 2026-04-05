@@ -8,7 +8,14 @@ import Script from 'next/script';
 export const metadata: Metadata = {
   title: 'Léo Tv & Stream',
   description: 'Plataforma de streaming Master de alta performance',
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: 'https://picsum.photos/seed/leo/32/32', sizes: '32x32' },
+      { url: 'https://picsum.photos/seed/leo/192/192', sizes: '192x192' }
+    ],
+    apple: 'https://picsum.photos/seed/leo/192/192',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -36,7 +43,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-        <link rel="apple-touch-icon" href="https://picsum.photos/seed/leo/192/192" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
           iframe[src*="redecanaistv"], 
@@ -78,7 +84,6 @@ function SecurityBlocker() {
         document.addEventListener('contextmenu', e => e.preventDefault());
 
         document.addEventListener('keydown', e => {
-          // LIBERAÇÃO MESTRE: Permite Ctrl+A (Selecionar Tudo)
           if (e.ctrlKey && e.key === 'a') return true;
 
           if (
@@ -92,7 +97,6 @@ function SecurityBlocker() {
           }
         });
 
-        // Só bloqueia seleção de texto se não for dentro de inputs/painéis
         document.addEventListener('selectstart', e => {
            const isInput = e.target.tagName === 'INPUT' || 
                            e.target.tagName === 'TEXTAREA' || 

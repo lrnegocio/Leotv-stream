@@ -4,6 +4,9 @@ import { validateDeviceLogin, getRemoteContent } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * SINTONIZADOR UNIVERSAL v35.0 - SERIES ISOLAMENTO IPTV
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: { username: string; password: string; id: string } }
@@ -15,23 +18,22 @@ export async function GET(
     const login = await validateDeviceLogin(username, "xtream_api_call");
     if (login.error) return new NextResponse("Acesso Negado", { status: 403 });
 
-    const content = await getRemoteContent();
+    const content = await getRemoteContent(true); // Modo IPTV Ativo
     
-    // BUSCA XUI MASTER v29.0: Prioriza directStreamUrl por episódio
     let streamUrl = "";
     content.forEach(item => {
       if (item.type === 'series' && item.episodes) {
         const ep = item.episodes.find(e => e.id === streamId);
-        if (ep) streamUrl = ep.directStreamUrl || ep.streamUrl;
+        if (ep) streamUrl = ep.directStreamUrl || "";
       } else if (item.type === 'multi-season' && item.seasons) {
         item.seasons.forEach(s => {
           const ep = s.episodes.find(e => e.id === streamId);
-          if (ep) streamUrl = ep.directStreamUrl || ep.streamUrl;
+          if (ep) streamUrl = ep.directStreamUrl || "";
         });
       }
     });
 
-    if (!streamUrl) return new NextResponse("Episódio não encontrado", { status: 404 });
+    if (!streamUrl) return new NextResponse("Episódio não encontrado ou Sem Link Secundário", { status: 404 });
 
     return NextResponse.redirect(streamUrl);
   } catch (error) {

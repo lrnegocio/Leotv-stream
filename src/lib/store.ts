@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v33.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v35.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -106,7 +106,7 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO v33.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v35.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -114,32 +114,31 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
-    // FILTRO MESTRE: No IPTV, só mostramos o que tem directStreamUrl
+    // FILTRO MESTRE v35: No IPTV, só mostramos o que tem directStreamUrl (Link Secundário)
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
     if (!allItems) return "#EXTM3U\n";
-
-    const items = allItems.filter(i => !!i.directStreamUrl || (i.type === 'series' && i.episodes?.some((e:any) => !!e.directStreamUrl)));
 
     const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
     
-    items.forEach(item => {
+    allItems.forEach(item => {
       if (item.isRestricted && !user.isAdultEnabled) return;
 
       const group = (item.genre || "GERAL").toUpperCase();
       const logo = item.imageUrl || "";
       const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
       
-      if (item.type === 'channel') {
+      // ISOLAMENTO TOTAL: No IPTV, só entra se tiver o link secundário (directStreamUrl)
+      if (item.type === 'channel' && !!item.directStreamUrl) {
         const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
         m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
-      } else if (item.type === 'movie') {
+      } else if (item.type === 'movie' && !!item.directStreamUrl) {
         const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
         m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
       } else if (item.type === 'series' || item.type === 'multi-season') {
         if (item.episodes) {
           item.episodes.forEach((ep: Episode) => {
-            if (!ep.directStreamUrl) return; // Só manda para o IPTV se tiver link direto
+            if (!ep.directStreamUrl) return; 
             const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
             m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
           });
@@ -163,7 +162,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO v33.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v35.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -182,14 +181,23 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     
     let items = data || [];
 
-    // FILTRO MESTRE v33.0
+    // ISOLAMENTO TOTAL v35.0
     if (isIptv) {
-      // No IPTV, só canais com directStreamUrl aparecem
-      return items.filter(i => !!i.directStreamUrl || i.type === 'series' || i.type === 'multi-season');
+      // No IPTV, só canais com directStreamUrl (Secundário) aparecem. ZERO FALLBACK.
+      return items.filter(i => {
+        if (i.type === 'channel' || i.type === 'movie') return !!i.directStreamUrl;
+        if (i.type === 'series') return i.episodes?.some((e: any) => !!e.directStreamUrl);
+        if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.directStreamUrl));
+        return false;
+      });
     } else {
-      // No PWA, canais com APENAS directStreamUrl não aparecem (a menos que seja admin)
-      // Se tiver streamUrl, aparece. Se for admin, vê tudo.
-      return items.filter(i => !!i.streamUrl || i.type === 'series' || i.type === 'multi-season');
+      // No PWA (Seu Site), só canais com streamUrl (Principal) aparecem.
+      return items.filter(i => {
+        if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
+        if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
+        if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.streamUrl));
+        return false;
+      });
     }
   } catch (e) { return []; }
 }
@@ -290,8 +298,9 @@ export async function saveReseller(res: any) {
 
 export async function getCategoryCount(genre: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', genre.toUpperCase());
-    return count || 0;
+    // Para contagem no PWA, filtramos quem tem streamUrl (Link Principal)
+    const { data } = await supabase.from('content').select('id, streamUrl').eq('genre', genre.toUpperCase());
+    return data?.filter(i => !!i.streamUrl).length || 0;
   } catch (e) { return 0; }
 }
 

@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         break;
       }
       
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('users')
         .select('*')
         .eq('pin', pin.toUpperCase().trim())
@@ -46,15 +46,13 @@ export async function GET(req: NextRequest) {
 
     if (!activeUser) {
       return NextResponse.json({ 
-        user_info: { 
-          auth: 0, 
-          status: "Acesso Negado", 
-          message: "PIN INVÁLIDO OU EXPIRADO" 
-        } 
+        user_info: { auth: 0, status: "Acesso Negado", message: "PIN INVÁLIDO OU EXPIRADO" } 
       }, { headers });
     }
 
-    // RESPOSTA DE LOGIN XCIPTV / SMARTERS
+    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v34)
+    const content = await getRemoteContent(true);
+
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -76,10 +74,6 @@ export async function GET(req: NextRequest) {
         }
       }, { headers });
     }
-
-    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v33)
-    const allContent = await getRemoteContent(true);
-    const content = allContent.filter(i => !!i.directStreamUrl || i.type === 'series' || i.type === 'multi-season');
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();
@@ -121,11 +115,6 @@ export async function GET(req: NextRequest) {
         category_id: "100", 
         container_extension: "mp4" 
       })), { headers });
-    }
-
-    if (action === 'get_series_categories') {
-      const cats = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre.toUpperCase()))).sort();
-      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 200).toString(), category_name: name, parent_id: "0" })), { headers });
     }
 
     return NextResponse.json([], { headers });

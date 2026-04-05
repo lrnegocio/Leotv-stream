@@ -5,7 +5,7 @@ import { validateDeviceLogin, getRemoteContent } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * SINTONIZADOR UNIVERSAL v31.0 - MOVIES IPTV FIX
+ * SINTONIZADOR UNIVERSAL v35.0 - MOVIES ISOLAMENTO IPTV
  */
 export async function GET(
   req: NextRequest,
@@ -18,18 +18,17 @@ export async function GET(
     const login = await validateDeviceLogin(username, "xtream_api_call");
     if (login.error) return new NextResponse("Acesso Negado", { status: 403 });
 
-    const content = await getRemoteContent();
+    const content = await getRemoteContent(true); // Modo IPTV
     const item = content.find(i => i.id === streamId);
 
-    if (!item) return new NextResponse("Filme não encontrado", { status: 404 });
+    if (!item) return new NextResponse("Filme não encontrado ou Sem Link Secundário", { status: 404 });
 
-    // PRIORIZAÇÃO DUAL-LINK v29.0
-    let streamUrl = item.directStreamUrl || item.streamUrl;
-    if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
+    // ISOLAMENTO TOTAL
+    let streamUrl = item.directStreamUrl;
+    if (!streamUrl) return new NextResponse("Sinal Direto Indisponível", { status: 404 });
 
     const lowerUrl = streamUrl.toLowerCase();
 
-    // Redirecionamento de Adultos/YouTube em Filmes
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = streamUrl.match(/viewkey=([a-z0-9]+)/i);
       const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;

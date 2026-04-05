@@ -5,7 +5,7 @@ import { generateM3UPlaylist } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * API PLAYLIST v28.0 - AUTO-DETECÇÃO DE ORIGEM
+ * API PLAYLIST v35.0 - ISOLAMENTO TOTAL & ANTI-500
  */
 export async function GET(req: NextRequest) {
   try {

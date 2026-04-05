@@ -35,27 +35,24 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR DE EMBEDS SNIPER v33
-    // YouTube
+    // SINTONIZADOR SNIPER v34
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
-    // Dailymotion
     if (lowerUrl.includes('dailymotion.com')) {
       const vidId = urlStr.split('/video/')[1]?.split('?')[0];
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    // Adultos (Pornhub/XVideos)
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' };
     }
 
-    // XVideos Sniper v33 (Suporte a IDs alfanuméricos complexos)
+    // XVideos Sniper v34 (Suporte a IDs complexos como video.kikftvd...)
     if (lowerUrl.includes('xvideos.com')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       const vidId = vidIdMatch ? vidIdMatch[1] : null;
@@ -65,12 +62,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     // SINTONIZADOR DE STREAMING XUI STYLE (PROXY OBRIGATÓRIO PARA .TS, .M3U8 E HTTP)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
-    const isPHP = lowerUrl.includes('.php') || lowerUrl.includes('canal=');
+    const isPHP = lowerUrl.includes('.php') || lowerUrl.includes('canal=') || lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isPHP || lowerUrl.includes('webplayer.one')) return { processedUrl: proxied, type: 'iframe' }; 
+    if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
     if (isM3U8 || isTS || isHTTP) return { processedUrl: proxied, type: 'hls' };
     
     return { processedUrl: urlStr, type: 'video' };
