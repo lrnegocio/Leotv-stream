@@ -7,7 +7,6 @@ export interface Episode {
   title: string; 
   number: number; 
   streamUrl: string; 
-  directStreamUrl?: string;
 }
 
 export interface Season { 
@@ -24,7 +23,6 @@ export interface ContentItem {
   genre: string;
   isRestricted: boolean; 
   streamUrl: string; 
-  directStreamUrl?: string;
   imageUrl?: string;
   seasons?: Season[] | null; 
   episodes?: Episode[] | null; 
@@ -86,54 +84,27 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v56 - SOBERANIA TOTAL
- * Sincronizado com o esquema SQL Master.
+ * GESTÃO DE CONTEÚDO UNIFICADA v58 - SOBERANIA TOTAL
+ * Sincronizado com o esquema SQL Master - REMOVIDO directStreamUrl (inexistente no banco)
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
-    
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
-    
     const { data } = await query.order('title', { ascending: true });
-    if (!data) return [];
-
-    return data.map(item => {
-      // UNIFICAÇÃO NO CARREGAMENTO: Garante que o link esteja em ambos os campos para o player
-      const mainLink = item.streamUrl || item.directStreamUrl || "";
-      
-      if (item.episodes) {
-        item.episodes = item.episodes.map((ep: any) => {
-          const epLink = ep.streamUrl || ep.directStreamUrl || "";
-          return { ...ep, streamUrl: epLink, directStreamUrl: epLink };
-        });
-      }
-      
-      if (item.seasons) {
-        item.seasons = item.seasons.map((s: any) => ({
-          ...s,
-          episodes: s.episodes.map((ep: any) => {
-            const epLink = ep.streamUrl || ep.directStreamUrl || "";
-            return { ...ep, streamUrl: epLink, directStreamUrl: epLink };
-          })
-        }));
-      }
-
-      return { ...item, streamUrl: mainLink, directStreamUrl: mainLink };
-    });
+    return data || [];
   } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    // UNIFICAÇÃO NO SALVAMENTO: Espelha o link único em todos os campos do banco
-    const finalUrl = item.streamUrl || item.directStreamUrl || "";
+    const finalUrl = item.streamUrl || "";
     
-    const payload = {
+    // PAYLOAD LIMPO: Apenas colunas que existem no seu script SQL
+    const payload: any = {
       id, 
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
@@ -142,11 +113,10 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
-      directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       episodes: (item.type === 'series') ? (item.episodes || []) : (item.seasons ? null : []),
-      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null,
-      views: item.views || 0
+      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
+    
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
@@ -202,7 +172,7 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
       .from('content')
       .select('*')
       .not('genre', 'ilike', 'ARENA: %')
-      .order('views', { ascending: false })
+      .order('id', { ascending: false }) // Fallback since views might be missing
       .limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -256,8 +226,8 @@ export async function getRemoteGames(): Promise<GameItem[]> {
       title: item.title,
       console: item.genre.replace('ARENA: ', ''),
       type: item.description?.includes('GAME_TYPE:embed') ? 'embed' : 'direct',
-      url: item.streamUrl || item.directStreamUrl || "",
-      emulatorUrl: item.directStreamUrl || "",
+      url: item.streamUrl || "",
+      emulatorUrl: item.streamUrl || "",
       imageUrl: item.imageUrl,
       genre: item.genre
     }));
@@ -274,7 +244,6 @@ export async function saveGame(game: Partial<GameItem>) {
       type: 'channel', 
       genre: `ARENA: ${game.console || 'OUTROS'}`,
       streamUrl: url,
-      directStreamUrl: game.emulatorUrl || url,
       description: `GAME_TYPE:${game.type || 'embed'}`,
       imageUrl: game.imageUrl || "",
       isRestricted: true 
@@ -309,7 +278,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
     let query = supabase.from('users').select('*');
-    // Suporte para logins curtos (RP725 / VUSER)
     if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) {
       query = query.ilike('pin', `${cleanPin}%`);
     } else {
@@ -382,7 +350,6 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-// PINs agora são 100% numéricos para compatibilidade total com TV Android
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const cleanName = (name: string) => name.replace(/[^\w\s]/gi, '').toUpperCase().trim();

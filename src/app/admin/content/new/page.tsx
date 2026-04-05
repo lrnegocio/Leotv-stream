@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -63,6 +62,7 @@ export default function NewContentPage() {
     
     const isSeries = formData.type === 'series' || formData.type === 'multi-season'
     
+    // CORREÇÃO: Removido directStreamUrl que causava erro de coluna inexistente no banco
     const success = await saveContent({
       title: cleanName(formData.title),
       type: formData.type,
@@ -70,7 +70,6 @@ export default function NewContentPage() {
       description: formData.description,
       isRestricted: !!formData.isRestricted,
       streamUrl: isSeries ? "" : formData.streamUrl,
-      directStreamUrl: isSeries ? "" : formData.streamUrl, // Link Único Unificado
       imageUrl: formData.imageUrl,
       episodes: formData.type === 'series' ? episodes : null,
       seasons: formData.type === 'multi-season' ? seasons : null,
@@ -81,7 +80,7 @@ export default function NewContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique a conexão com o banco ou campos obrigatórios." })
     }
   }
 

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -33,14 +32,9 @@ export default function EditContentPage() {
       try {
         const item = await getContentById(id)
         if (item) {
-          // UNIFICAÇÃO NO CARREGAMENTO
-          const mainUrl = item.streamUrl || item.directStreamUrl || "";
-          setFormData({ ...item, streamUrl: mainUrl, directStreamUrl: mainUrl })
-          setEpisodes(item.episodes?.map(e => ({ ...e, streamUrl: e.streamUrl || (e as any).directStreamUrl || "" })) || [])
-          setSeasons(item.seasons?.map(s => ({
-            ...s,
-            episodes: s.episodes.map(e => ({ ...e, streamUrl: e.streamUrl || (e as any).directStreamUrl || "" }))
-          })) || [])
+          setFormData(item)
+          setEpisodes(item.episodes || [])
+          setSeasons(item.seasons || [])
         } else {
           toast({ variant: "destructive", title: "Sinal não localizado." })
           router.push("/admin/content")
@@ -83,13 +77,9 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
-    const isSeries = formData.type === 'series' || formData.type === 'multi-season';
-    const finalUrl = formData.streamUrl || formData.directStreamUrl || "";
-
+    // CORREÇÃO: Removido directStreamUrl que causava erro no banco
     const success = await saveContent({
       ...formData,
-      streamUrl: isSeries ? "" : finalUrl,
-      directStreamUrl: isSeries ? "" : finalUrl, // Link Único Unificado
       episodes: (formData.type === 'series') ? episodes : null,
       seasons: (formData.type === 'multi-season') ? seasons : null,
     })
@@ -99,7 +89,7 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O Banco de Dados recusou a atualização. Verifique as colunas." })
     }
   }
 

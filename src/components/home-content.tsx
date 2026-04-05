@@ -112,8 +112,8 @@ export default function HomeContent() {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     
     const now = Date.now();
-    // TRAVA DE CLIQUES FANTASMAS v57: Impede abrir se acabou de fechar ou se clicou rápido demais
-    if (now - lastCloseTime.current < 1000) return;
+    // BLOQUEIO DE CLIQUES FANTASMAS v58: Ignora cliques por 1.2s após fechar algo
+    if (now - lastCloseTime.current < 1200) return;
     if (now - lastClickTime.current < 800) return;
     lastClickTime.current = now;
     
@@ -144,6 +144,9 @@ export default function HomeContent() {
 
   const handleCategoryClick = async (cat: any, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
+    const now = Date.now();
+    if (now - lastCloseTime.current < 1200) return;
+
     setPinInput("");
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) { toast({ variant: "destructive", title: "ARENA BLOQUEADA" }); return; }
@@ -214,7 +217,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10400.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
