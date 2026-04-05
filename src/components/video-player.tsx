@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v57.0 - MOTOR DE PURIFICAÇÃO RADICAL
- * Suporte imbatível: MP4, M3U8, HLS, TS, YouTube, Dailymotion e XVideos.
+ * SINTONIZADOR SNIPER v59.0 - MOTOR DE PURIFICAÇÃO RADICAL
+ * Estabilização de sinais IPTV (.m3u8, .ts) e bypass total de segurança.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -37,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS SNIPER (Suporte video.kxxxx)
+    // EXTRATOR XVIDEOS SNIPER
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
@@ -57,13 +58,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
-    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.endsWith('.mp4');
     
-    // Forçamos o Proxy Master para TODOS os links de stream para evitar CORS e Erro 500
-    const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
-
-    if (isM3U8 || isTS || isMP4 || urlStr.startsWith('http://')) {
-       return { processedUrl: proxied, type: isM3U8 || isTS ? 'hls' : 'video' };
+    // Forçamos o Proxy Master para sinais de IPTV (.m3u8, .ts) para evitar bloqueios de CORS
+    if (isM3U8 || isTS || urlStr.startsWith('http://')) {
+       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
     
     return { processedUrl: urlStr, type: isM3U8 ? 'hls' : 'video' };
@@ -98,17 +96,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
-          // SEGURANÇA MESTRE: Força o proxy para cada segmento .ts do vídeo
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Força o proxy em cada segmento do sinal para evitar bloqueios do servidor de origem
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          maxMaxBufferLength: 60,
-          enableWorker: true,
-          lowLatencyMode: true
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
@@ -121,14 +117,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         });
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal) {
-            if (retryCount < 5) {
-              setRetryCount(prev => prev + 1);
-              hls.startLoad();
-            } else {
-              setError("Sinal instável na fonte. Tentando reconectar...");
-              setLoading(false);
-            }
+          if (data.fatal && retryCount < 3) {
+            setRetryCount(prev => prev + 1);
+            hls.startLoad();
+          } else if (data.fatal) {
+            setError("Sinal instável. Tente novamente em instantes.");
+            setLoading(false);
           }
         });
       } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
@@ -143,7 +137,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao abrir arquivo MP4."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao abrir arquivo de vídeo."); setLoading(false); };
       }
     } else {
       setLoading(false);
@@ -160,7 +154,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando Rede Master v57...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando Canal v59...</p>
         </div>
       )}
 
@@ -169,7 +163,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <AlertCircle className="h-12 w-12 text-destructive mb-4 opacity-50" />
           <p className="text-white text-[10px] font-black uppercase mb-6 opacity-60">{error}</p>
           <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/20 text-primary hover:bg-primary hover:text-white rounded-md px-6 font-black uppercase text-[9px]">
-            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR AGORA
+            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR
           </Button>
         </div>
       )}

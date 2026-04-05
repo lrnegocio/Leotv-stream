@@ -6,7 +6,8 @@ import { getRemoteContent, getRemoteGames } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * XTREAM API MASTER v46.0 - COMPATIBILIDADE VUSER & RP725
+ * XTREAM API MASTER v59.0 - SUPORTE COMPLETO A SÉRIES, FILMES E CANAIS
+ * Blindagem total para VUSER, RP725 e Smarters.
  */
 export async function GET(req: NextRequest) {
   const headers = { 
@@ -28,35 +29,30 @@ export async function GET(req: NextRequest) {
     let activeUser: any = null;
     const inputPin = (username || password).toUpperCase().trim();
     
+    // Suporte para logins Master e Truncados (RP725 / VUSER)
     if (inputPin === 'ADM77X2P') {
       activeUser = { pin: 'ADM77X2P', isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 };
     } else {
-      // Suporte para logins truncados (RP725 / VUSER)
       let query = supabase.from('users').select('*');
-      
       if (/^\d+$/.test(inputPin) && (inputPin.length === 8 || inputPin.length === 9)) {
         query = query.ilike('pin', `${inputPin}%`);
       } else {
         query = query.eq('pin', inputPin);
       }
-
       const { data: users } = await query;
-      const data = users?.[0];
-
-      if (data && !data.isBlocked) {
-        if (data.expiryDate && new Date(data.expiryDate) < new Date()) {
-           return NextResponse.json({ user_info: { auth: 0, status: "Expired" } }, { headers });
-        }
-        activeUser = data;
-      }
+      activeUser = users?.[0];
     }
 
-    if (!activeUser) {
+    if (!activeUser || activeUser.isBlocked) {
       return NextResponse.json({ user_info: { auth: 0, status: "Acesso Negado" } }, { headers });
     }
 
     const content = await getRemoteContent(true);
+    const host = req.nextUrl.host;
+    const protocol = req.headers.get('x-forwarded-proto') || "https";
+    const baseUrl = `${protocol}://${host}`;
 
+    // INFO DO PAINEL
     if (!action) {
       return NextResponse.json({
         user_info: {
@@ -68,24 +64,17 @@ export async function GET(req: NextRequest) {
           max_connections: activeUser.maxScreens?.toString() || "1",
           allowed_output_formats: ["m3u8", "ts", "mp4"]
         },
-        server_info: { 
-          url: req.nextUrl.host, 
-          port: "443", 
-          https_port: "443", 
-          server_protocol: "https", 
-          mac_device_id: null,
-          timestamp: Math.floor(Date.now()/1000) 
-        }
+        server_info: { url: host, port: "443", https_port: "443", server_protocol: "https", timestamp: Math.floor(Date.now()/1000) }
       }, { headers });
     }
 
+    // LIVE (CANAIS)
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();
       return NextResponse.json(cats.map((name, idx) => ({ 
         category_id: (idx + 1).toString(), 
         category_name: name, 
-        parent_id: "0",
-        parental_control: name.includes('ADULTO') || name.includes('XXX') ? "1" : "0" 
+        parent_id: "0" 
       })), { headers });
     }
 
@@ -99,60 +88,85 @@ export async function GET(req: NextRequest) {
         if (targetGenre) items = items.filter(i => i.genre.toUpperCase() === targetGenre);
       }
       return NextResponse.json(items.map(i => ({ 
-        num: i.id, 
-        name: i.title.toUpperCase(), 
-        stream_id: i.id, 
-        stream_icon: i.imageUrl || "", 
-        category_id: catId || "1", 
-        stream_type: "live" 
+        num: i.id, name: i.title.toUpperCase(), stream_id: i.id, stream_icon: i.imageUrl || "", category_id: catId || "1", stream_type: "live" 
       })), { headers });
     }
 
+    // VOD (FILMES)
     if (action === 'get_vod_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
-      const response = cats.map((name, idx) => ({ 
+      return NextResponse.json(cats.map((name, idx) => ({ 
         category_id: (idx + 100).toString(), 
         category_name: name, 
-        parent_id: "0",
-        parental_control: name.includes('ADULTO') || name.includes('XXX') ? "1" : "0"
-      }));
-      
-      if (activeUser.isGamesEnabled) {
-        response.push({ category_id: "999", category_name: "🎮 ARENA GAMES LÉO TV", parent_id: "0", parental_control: "1" });
-      }
-      
-      return NextResponse.json(response, { headers });
+        parent_id: "0" 
+      })), { headers });
     }
 
     if (action === 'get_vod_streams') {
-      const catId = searchParams.get('category_id');
-      if (catId === '999' && activeUser.isGamesEnabled) {
-        const games = await getRemoteGames();
-        return NextResponse.json(games.map(g => ({
-          num: g.id,
-          name: `🎮 ${g.title.toUpperCase()}`,
-          stream_id: g.id,
-          stream_icon: g.imageUrl || "",
-          category_id: "999",
-          container_extension: "mp4"
-        })), { headers });
-      }
-
       let items = content.filter(i => i.type === 'movie');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      const catId = searchParams.get('category_id');
       if (catId) {
         const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
         const targetGenre = cats[parseInt(catId) - 100];
         if (targetGenre) items = items.filter(i => i.genre.toUpperCase() === targetGenre);
       }
       return NextResponse.json(items.map(i => ({ 
-        num: i.id, 
-        name: i.title.toUpperCase(), 
-        stream_id: i.id, 
-        stream_icon: i.imageUrl || "", 
-        category_id: catId || "100", 
-        container_extension: "mp4" 
+        num: i.id, name: i.title.toUpperCase(), stream_id: i.id, stream_icon: i.imageUrl || "", category_id: catId || "100", container_extension: "mp4" 
       })), { headers });
+    }
+
+    // SERIES (EPISÓDIOS E TEMPORADAS)
+    if (action === 'get_series_categories') {
+      const cats = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre.toUpperCase()))).sort();
+      return NextResponse.json(cats.map((name, idx) => ({ 
+        category_id: (idx + 500).toString(), 
+        category_name: name, 
+        parent_id: "0" 
+      })), { headers });
+    }
+
+    if (action === 'get_series') {
+      let items = content.filter(i => i.type === 'series' || i.type === 'multi-season');
+      if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      const catId = searchParams.get('category_id');
+      if (catId) {
+        const cats = Array.from(new Set(content.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre.toUpperCase()))).sort();
+        const targetGenre = cats[parseInt(catId) - 500];
+        if (targetGenre) items = items.filter(i => i.genre.toUpperCase() === targetGenre);
+      }
+      return NextResponse.json(items.map(i => ({ 
+        num: i.id, name: i.title.toUpperCase(), series_id: i.id, cover: i.imageUrl || "", category_id: catId || "500", releaseDate: "", plot: i.description, rating: "10"
+      })), { headers });
+    }
+
+    if (action === 'get_series_info') {
+      const seriesId = searchParams.get('series_id');
+      const item = content.find(i => i.id === seriesId);
+      if (!item) return NextResponse.json({}, { headers });
+
+      const seasons: any = {};
+      const episodes: any = {};
+
+      if (item.type === 'series' && item.episodes) {
+        seasons["1"] = { season_number: 1, name: "Temporada 1", episode_count: item.episodes.length };
+        episodes["1"] = item.episodes.map(ep => ({
+          id: ep.id, episode_num: ep.number, title: ep.title, container_extension: "mp4", info: { duration: "00:00" }
+        }));
+      } else if (item.type === 'multi-season' && item.seasons) {
+        item.seasons.forEach(s => {
+          seasons[s.number.toString()] = { season_number: s.number, name: `Temporada ${s.number}`, episode_count: s.episodes.length };
+          episodes[s.number.toString()] = s.episodes.map(ep => ({
+            id: ep.id, episode_num: ep.number, title: ep.title, container_extension: "mp4", info: { duration: "00:00" }
+          }));
+        });
+      }
+
+      return NextResponse.json({
+        info: { name: item.title, cover: item.imageUrl, plot: item.description, genre: item.genre },
+        seasons: Object.values(seasons),
+        episodes: episodes
+      }, { headers });
     }
 
     return NextResponse.json([], { headers });
