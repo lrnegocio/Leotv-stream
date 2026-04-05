@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v56.0 - MOTOR UNIFICADO PARA DEPLOY
- * Suporte: MP4, M3U8, HLS, TS, MPEG, YouTube, Dailymotion.
+ * SINTONIZADOR SNIPER v57.0 - MOTOR DE PURIFICAÇÃO RADICAL
+ * Suporte imbatível: MP4, M3U8, HLS, TS, YouTube, Dailymotion e XVideos.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -37,7 +37,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS
+    // EXTRATOR XVIDEOS SNIPER (Suporte video.kxxxx)
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
@@ -55,23 +55,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
-    if (lowerUrl.includes('pornhub.com')) {
-      const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
-      if (viewKeyMatch) return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
-    }
-
-    const isBlinder = lowerUrl.includes('blinder.space');
-    const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
-    const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?') || lowerUrl.includes('hls-') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.endsWith('.mp4');
     
+    // Forçamos o Proxy Master para TODOS os links de stream para evitar CORS e Erro 500
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isBlinder || isRedeCanais || isTS || isM3U8 || urlStr.startsWith('http://')) {
-       if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
-       if (isMP4) return { processedUrl: proxied, type: 'video' };
-       return { processedUrl: proxied, type: 'iframe' };
+    if (isM3U8 || isTS || isMP4 || urlStr.startsWith('http://')) {
+       return { processedUrl: proxied, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
     
     return { processedUrl: urlStr, type: isM3U8 ? 'hls' : 'video' };
@@ -106,17 +98,17 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
+          // SEGURANÇA MESTRE: Força o proxy para cada segmento .ts do vídeo
           xhrSetup: (xhr: any, rUrl: string) => {
-            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && processedUrl.includes('/api/proxy')) {
+            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
-          retryDelay: 500,
-          maxMaxBufferLength: 30,
+          retryDelay: 1000,
+          maxMaxBufferLength: 60,
           enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90
+          lowLatencyMode: true
         });
 
         hls.loadSource(processedUrl);
@@ -130,11 +122,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (retryCount < 3) {
+            if (retryCount < 5) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente novamente.");
+              setError("Sinal instável na fonte. Tentando reconectar...");
               setLoading(false);
             }
           }
@@ -151,7 +143,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar arquivo de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao abrir arquivo MP4."); setLoading(false); };
       }
     } else {
       setLoading(false);
@@ -164,11 +156,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div key={id || processedUrl} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-lg">
+    <div key={id || url} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-lg">
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60 text-center px-4">Sintonizando Rede Master v56...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando Rede Master v57...</p>
         </div>
       )}
 
@@ -177,14 +169,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <AlertCircle className="h-12 w-12 text-destructive mb-4 opacity-50" />
           <p className="text-white text-[10px] font-black uppercase mb-6 opacity-60">{error}</p>
           <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/20 text-primary hover:bg-primary hover:text-white rounded-md px-6 font-black uppercase text-[9px]">
-            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR SINAL
+            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR AGORA
           </Button>
         </div>
       )}
       
       {type === 'iframe' ? (
         <iframe 
-          key={`frame-${id || processedUrl}`}
+          key={`frame-${id || url}`}
           src={processedUrl!} 
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 

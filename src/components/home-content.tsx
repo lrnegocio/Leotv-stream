@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -10,7 +9,6 @@ import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
-import { Slider } from "@/components/ui/slider"
 import Image from "next/image"
 
 const CATEGORIES = [
@@ -48,7 +46,9 @@ export default function HomeContent() {
   const [waitingPlayers, setWaitingPlayers] = React.useState<User[]>([])
   const [searchingOpponent, setSearchingOpponent] = React.useState(false)
   const [opponent, setOpponent] = React.useState<{pin: string, rank: number} | null>(null)
-  const [lastClickTime, setLastClickTime] = React.useState(0)
+  
+  const lastCloseTime = React.useRef(0)
+  const lastClickTime = React.useRef(0)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -108,11 +108,14 @@ export default function HomeContent() {
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
-  const handleItemClick = (idx: number) => {
-    // TRAVA DE CLIQUES FANTASMAS v53
+  const handleItemClick = (idx: number, e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    
     const now = Date.now();
-    if (now - lastClickTime < 800) return;
-    setLastClickTime(now);
+    // TRAVA DE CLIQUES FANTASMAS v57: Impede abrir se acabou de fechar ou se clicou rápido demais
+    if (now - lastCloseTime.current < 1000) return;
+    if (now - lastClickTime.current < 800) return;
+    lastClickTime.current = now;
     
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
@@ -131,30 +134,25 @@ export default function HomeContent() {
     const len = activeVideo.items.length;
     const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
     
+    const nextItem = activeVideo.items[nextIdx];
     setActiveVideo({ ...activeVideo, index: nextIdx });
     
-    const nextItem = activeVideo.items[nextIdx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', nextItem.id);
     window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
   };
 
-  const handleCategoryClick = async (cat: any) => {
+  const handleCategoryClick = async (cat: any, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
     setPinInput("");
     if (cat.special === 'games') {
-      if (!user?.isGamesEnabled) {
-        toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
-        return;
-      }
+      if (!user?.isGamesEnabled) { toast({ variant: "destructive", title: "ARENA BLOQUEADA" }); return; }
       setUnlockTarget('GAMES');
       setIsPinOpen(true);
       return;
     }
     if (cat.restricted) {
-      if (!user?.isAdultEnabled) {
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO" });
-        return;
-      }
+      if (!user?.isAdultEnabled) { toast({ variant: "destructive", title: "ACESSO BLOQUEADO" }); return; }
       setUnlockTarget('ADULT');
       setIsPinOpen(true);
     } else {
@@ -216,7 +214,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10000.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10400.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -224,31 +222,13 @@ export default function HomeContent() {
         </div>
       </header>
 
-      <div className="max-w-[1800px] mx-auto px-8 mt-6 space-y-4">
-        {waitingPlayers.length > 0 && user && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center justify-between gap-4 animate-pulse">
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-500 p-2 rounded-xl"><Swords className="h-5 w-5 text-white" /></div>
-              <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">ARENA ALERTA: {waitingPlayers.length} GUERREIROS ESPERANDO!</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => handleCategoryClick({ special: 'games' })} className="text-emerald-500 font-black uppercase text-[10px]">ACEITAR DESAFIO</Button>
-          </div>
-        )}
-        {announcement && !selectedCat && !q && (
-          <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4">
-            <div className="bg-primary p-2 rounded-xl"><MessageSquare className="h-5 w-5 text-white" /></div>
-            <p className="text-[11px] font-black uppercase text-primary tracking-widest italic">{announcement}</p>
-          </div>
-        )}
-      </div>
-
       <main className="p-8 max-w-[1800px] mx-auto">
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-500">
             {CATEGORIES.map(c => {
               const count = catCounts[c.id] || 0;
               return (
-                <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color || 'bg-card'} bg-opacity-20`}>
+                <button key={c.id} onClick={(e) => handleCategoryClick(c, e)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color || 'bg-card'} bg-opacity-20`}>
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
                     <div className={`p-4 rounded-3xl ${c.color || 'bg-primary'} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
                     <div className="text-center"><span className="text-lg font-black uppercase italic text-white block">{c.name}</span>{count > 0 && <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">{count.toLocaleString()} SINAIS</span>}</div>
@@ -262,7 +242,7 @@ export default function HomeContent() {
             <div className="flex items-center justify-between border-b border-white/5 pb-6"><h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">{q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2></div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (
-                <div key={item.id} onClick={() => handleItemClick(idx)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
+                <div key={item.id} onClick={(e) => handleItemClick(idx, e)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
                   {item.imageUrl ? <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-primary/10"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end"><h3 className="font-black text-[12px] uppercase italic truncate text-white group-hover:text-primary leading-tight">{item.title}</h3></div>
                 </div>
@@ -272,7 +252,83 @@ export default function HomeContent() {
         )}
       </main>
 
-      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); } }}>
+      <Dialog open={!!activeVideo} onOpenChange={(val) => { 
+        if(!val) { 
+          lastCloseTime.current = Date.now();
+          setActiveVideo(null); 
+          const p = new URLSearchParams(window.location.search); 
+          p.delete('id'); 
+          window.history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); 
+        } 
+      }}>
+        <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+          {activeVideo && (
+            <VideoPlayer 
+              key={`player-${activeVideo.items[activeVideo.index].id}`}
+              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
+              title={activeVideo.items[activeVideo.index].title} 
+              id={activeVideo.items[activeVideo.index].id} 
+              onNext={() => navigateVideo('next')} 
+              onPrev={() => navigateVideo('prev')} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedSeries} onOpenChange={(val) => { if(!val) { lastCloseTime.current = Date.now(); setSelectedSeries(null); } }}>
+        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
+          {selectedSeries && (
+            <div className="flex flex-col h-[85vh]">
+              <div className="relative h-64 shrink-0">
+                {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end"><div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div></div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
+                {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
+                      <Button key={ep.id} variant="outline" onClick={(e) => { 
+                        e.stopPropagation();
+                        const eps = selectedSeries.episodes!.map(itemEp => ({
+                          ...selectedSeries, 
+                          streamUrl: itemEp.streamUrl, 
+                          title: `${selectedSeries.title} - EP ${itemEp.number}`, 
+                          id: itemEp.id,
+                          type: 'movie' as any
+                        }));
+                        setActiveVideo({ items: eps, index: selectedSeries.episodes!.indexOf(ep) }); 
+                        setSelectedSeries(null);
+                      }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
+                    ))}
+                  </div>
+                ) : selectedSeries.seasons?.map(season => (
+                  <div key={season.id} className="space-y-3 mb-8 last:mb-0">
+                    <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
+                    <div className="flex flex-col gap-2">
+                      {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                        <Button key={ep.id} variant="outline" onClick={(e) => { 
+                          e.stopPropagation();
+                          const eps = season.episodes.map(itemEp => ({
+                            ...selectedSeries, 
+                            streamUrl: itemEp.streamUrl, 
+                            title: `${selectedSeries.title} - T${season.number} EP ${itemEp.number}`, 
+                            id: itemEp.id,
+                            type: 'movie' as any
+                          }));
+                          setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); 
+                          setSelectedSeries(null);
+                        }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { lastCloseTime.current = Date.now(); setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); } }}>
         <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-500" /><h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer</h2></div>
@@ -320,7 +376,7 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPinOpen} onOpenChange={(val) => { setIsPinOpen(val); if(!val) setPinInput(""); }}>
+      <Dialog open={isPinOpen} onOpenChange={(val) => { if(!val) { lastCloseTime.current = Date.now(); setIsPinOpen(false); setPinInput(""); } }}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-primary mb-6">Segurança Master</div>
@@ -337,72 +393,6 @@ export default function HomeContent() {
           <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl">
             {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR ACESSO'}
           </Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!selectedSeries} onOpenChange={(val) => { if(!val) setSelectedSeries(null); }}>
-        <DialogContent className="max-w-3xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none">
-          {selectedSeries && (
-            <div className="flex flex-col h-[85vh]">
-              <div className="relative h-64 shrink-0">
-                {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end"><div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div></div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
-                {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
-                  <div className="flex flex-col gap-2">
-                    {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => { 
-                        const eps = selectedSeries.episodes!.map(e => ({
-                          ...selectedSeries, 
-                          streamUrl: e.streamUrl, 
-                          title: `${selectedSeries.title} - EP ${e.number}`, 
-                          id: e.id,
-                          type: 'movie'
-                        }));
-                        setActiveVideo({ items: eps, index: selectedSeries.episodes!.indexOf(ep) }); 
-                        setSelectedSeries(null);
-                      }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
-                    ))}
-                  </div>
-                ) : selectedSeries.seasons?.map(season => (
-                  <div key={season.id} className="space-y-3 mb-8 last:mb-0">
-                    <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
-                    <div className="flex flex-col gap-2">
-                      {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => { 
-                          const eps = season.episodes.map(e => ({
-                            ...selectedSeries, 
-                            streamUrl: e.streamUrl, 
-                            title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, 
-                            id: e.id,
-                            type: 'movie'
-                          }));
-                          setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); 
-                          setSelectedSeries(null);
-                        }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!activeVideo} onOpenChange={(val) => { if(!val) { setActiveVideo(null); const p = new URLSearchParams(window.location.search); p.delete('id'); window.history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); } }}>
-        <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-          {activeVideo && (
-            <VideoPlayer 
-              key={`player-${activeVideo.items[activeVideo.index].id}`}
-              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
-              title={activeVideo.items[activeVideo.index].title} 
-              id={activeVideo.items[activeVideo.index].id} 
-              onNext={() => navigateVideo('next')} 
-              onPrev={() => navigateVideo('prev')} 
-            />
-          )}
         </DialogContent>
       </Dialog>
     </div>

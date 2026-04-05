@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v56.0 - PURIFICAÇÃO TOTAL PARA DEPLOY
- * Blindagem contra Erro 500 no Next.js 15.
+ * TÚNEL XUI MASTER v57.0 - PURIFICAÇÃO TOTAL E BYPASS DE REDIRECTS
+ * Blindagem contra Erro 500 e bloqueios de CORS para M3U8 e MP4.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,8 +17,10 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
+    // Identidade de Navegador Master
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Origin', new URL(targetUrl).origin);
     
     const lowerTarget = targetUrl.toLowerCase();
     if (lowerTarget.includes('redecanais')) {
@@ -32,16 +34,13 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow',
+      redirect: 'follow', // Segue o sinal onde quer que ele vá
     });
     
     const responseHeaders = new Headers();
     
-    /**
-     * LAVAGEM CEREBRAL DE HEADERS v56
-     * O Next.js 15 crasha se tentarmos passar o content-length.
-     * Forçamos o fechamento de conexão para tratar como Stream Puro.
-     */
+    // LAVAGEM CEREBRAL DE HEADERS v57
+    // Removemos tudo o que faz o NextJS 15 crashar
     const skipHeaders = [
       'transfer-encoding', 
       'content-encoding', 
@@ -53,7 +52,7 @@ export async function GET(req: NextRequest) {
       'upgrade',
       'proxy-authenticate',
       'proxy-authorization',
-      'content-length',
+      'content-length', // Culpado do Erro 500
       'set-cookie',
       'x-frame-options',
       'content-security-policy'
@@ -65,6 +64,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    // Forçamos a liberação total para o navegador
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
