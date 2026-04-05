@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -42,8 +43,8 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
+  const isClosingRef = React.useRef(false)
   const lastCloseTime = React.useRef(0)
-  const lastClickTime = React.useRef(0)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -69,11 +70,12 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      if (channelId && !activeVideo) {
+      // BLOQUEIO MESTRE: Não abre o player se estivermos em processo de fechamento
+      if (channelId && !activeVideo && !selectedSeries && !isClosingRef.current) {
         const item = data.find(i => i.id === channelId);
         if (item) {
           if (item.type === 'series' || item.type === 'multi-season') {
-            if (!selectedSeries) setSelectedSeries(item);
+            setSelectedSeries(item);
           } else {
             setActiveVideo({ items: data, index: data.indexOf(item) });
           }
@@ -92,7 +94,7 @@ export default function HomeContent() {
       }
 
     } catch (err) { } finally { setLoading(false); }
-  }, [router, channelId, activeVideo, selectedSeries, games.length]);
+  }, [router, activeVideo, selectedSeries, games.length, channelId]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
@@ -101,9 +103,8 @@ export default function HomeContent() {
     
     const now = Date.now();
     if (now - lastCloseTime.current < 1200) return;
-    if (now - lastClickTime.current < 800) return;
-    lastClickTime.current = now;
     
+    isClosingRef.current = false;
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', item.id);
@@ -172,6 +173,20 @@ export default function HomeContent() {
       toast({ variant: "destructive", title: "SENHA INCORRETA", description: "A senha parental informada é inválida." });
       setPinInput("");
     }
+  };
+
+  const closePlayer = () => {
+    isClosingRef.current = true;
+    lastCloseTime.current = Date.now();
+    setActiveVideo(null);
+    setSelectedSeries(null);
+    
+    const p = new URLSearchParams(window.location.search);
+    p.delete('id');
+    const newUrl = p.toString() ? `${window.location.pathname}?${p.toString()}` : window.location.pathname;
+    router.replace(newUrl, { scroll: false });
+    
+    setTimeout(() => { isClosingRef.current = false; }, 1500);
   };
 
   const closeRestrictedArea = () => {
@@ -293,15 +308,7 @@ export default function HomeContent() {
         )}
       </main>
 
-      <Dialog open={!!activeVideo} onOpenChange={(val) => { 
-        if(!val) { 
-          lastCloseTime.current = Date.now();
-          setActiveVideo(null); 
-          const p = new URLSearchParams(window.location.search); 
-          p.delete('id'); 
-          router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false }); 
-        } 
-      }}>
+      <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(val) => { if(!val) closePlayer(); }}>
         <DialogContent className="max-w-5xl bg-black border-border p-0 overflow-hidden rounded-3xl shadow-2xl">
           {activeVideo && (
             <VideoPlayer 
@@ -312,6 +319,30 @@ export default function HomeContent() {
               onNext={handleNext}
               onPrev={handlePrev}
             />
+          )}
+          {selectedSeries && (
+            <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
+               <h3 className="text-xl font-black uppercase text-primary italic mb-6">Episódios: {selectedSeries.title}</h3>
+               <div className="grid gap-2">
+                  {selectedSeries.episodes?.map(ep => (
+                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}` }], index: 0 })} className="h-14 justify-start bg-muted rounded-xl border-border hover:border-primary px-6">
+                       <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
+                       <Play className="ml-auto h-4 w-4 text-primary" />
+                    </Button>
+                  ))}
+                  {selectedSeries.seasons?.map(season => (
+                    <div key={season.id} className="space-y-2 mb-4">
+                      <p className="text-[10px] font-black text-primary uppercase pl-2 border-l-2 border-primary ml-2">Temporada {season.number}</p>
+                      {season.episodes.map(ep => (
+                        <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}` }], index: 0 })} className="w-full h-12 justify-start bg-muted border-border hover:border-primary px-6 rounded-xl">
+                          <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
+                          <Play className="ml-auto h-3 w-3 text-primary" />
+                        </Button>
+                      ))}
+                    </div>
+                  ))}
+               </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

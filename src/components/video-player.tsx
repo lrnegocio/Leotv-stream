@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -49,7 +50,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Caso seja um código de iframe inteiro, extrai o SRC
+    // Extração Master de iframes
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -57,18 +58,17 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
+    // SINTONIZADOR INTELIGENTE LÉO TV - RECALIBRAGEM ADULTA
     const iframeProviders = [
       'rdcanais.com', 
       'redecanais', 
       'reidoscanais', 
-      'reidoscanais.ooo',
       'embed', 
       'player', 
       'streamad', 
       'voodrew', 
       'youtube.com',
       'youtu.be',
-      'dailymotion.com',
       'xvideos.com',
       'brazzers.com',
       'bangbros.com',
@@ -85,21 +85,21 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         finalUrl = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`;
       }
 
-      // Calibragem XVideos (converte link de site para link de embed)
+      // Calibragem XVideos Master
       if (lowerUrl.includes('xvideos.com') && !lowerUrl.includes('embedframe')) {
         const vidMatch = urlStr.match(/video(\d+)/);
         if (vidMatch && vidMatch[1]) {
            finalUrl = `https://www.xvideos.com/embedframe/${vidMatch[1]}`;
         }
       }
-
+      
       return { processedUrl: finalUrl, type: 'iframe' };
     }
 
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     
-    // Se for link direto de stream, passa pelo Túnel Master para evitar CORS e bloqueio
+    // TÚNEL MASTER: Envia via proxy para burlar bloqueios geográficos e de CORS
     if (isM3U8 || isTS || urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
@@ -137,7 +137,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que cada fragmento de vídeo também passe pelo túnel para não ser bloqueado
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -163,7 +162,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal de transmissão indisponível ou bloqueado na origem.");
+              setError("Sinal de transmissão indisponível no momento.");
               setLoading(false);
             }
           }
@@ -180,13 +179,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar o arquivo de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao carregar arquivo de mídia."); setLoading(false); };
       }
     } else {
-      // Para iFrames, o loading é removido pelo onLoad do próprio frame
       if (type !== 'iframe') setLoading(false);
     }
-  }, [processedUrl, type, hlsLoaded, cleanupPlayer, retryCount]);
+  }, [processedUrl, type, cleanupPlayer, retryCount]);
 
   React.useEffect(() => {
     initPlayer();
@@ -198,7 +196,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Sintonizando sinal...</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Carregando Sinal Master...</p>
         </div>
       )}
 
@@ -207,7 +205,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <AlertCircle className="h-10 w-10 text-destructive mb-4 opacity-50" />
           <p className="text-white text-[10px] font-bold uppercase mb-6 opacity-60">{error}</p>
           <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/40 text-primary hover:bg-primary hover:text-white rounded-xl px-6 font-black uppercase text-[10px]">
-            <RefreshCcw className="h-4 w-4 mr-2" /> RECONECTAR SINAL
+            <RefreshCcw className="h-4 w-4 mr-2" /> TENTAR RECONEXÃO
           </Button>
         </div>
       )}
