@@ -8,7 +8,6 @@ export interface Episode {
   title: string; 
   number: number; 
   streamUrl: string; 
-  directStreamUrl?: string;
 }
 
 export interface Season { 
@@ -86,7 +85,7 @@ export interface GameRanking {
   points: number;
 }
 
-// GESTÃO DE CONTEÚDO UNIFICADA v50
+// GESTÃO DE CONTEÚDO UNIFICADA v51 - LINK ÚNICO MASTER
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -98,11 +97,10 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     const { data } = await query.order('title', { ascending: true });
     if (!data) return [];
 
-    // NORMALIZAÇÃO DE LINKS: Se não tem link principal mas tem secundário, promove para o principal
+    // UNIFICAÇÃO DE RETORNO: Garante que o sinal apareça se houver link em qualquer campo
     return data.map(item => {
-      let mainUrl = item.streamUrl || item.directStreamUrl || "";
+      const mainLink = item.streamUrl || item.directStreamUrl || "";
       
-      // Se for série, normaliza os episódios também
       if (item.episodes) {
         item.episodes = item.episodes.map((ep: any) => ({
           ...ep,
@@ -120,9 +118,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
         }));
       }
 
-      return { ...item, streamUrl: mainUrl, directStreamUrl: mainUrl };
+      return { ...item, streamUrl: mainLink, directStreamUrl: mainLink };
     }).filter(i => {
-      // Exibe se tiver qualquer link
       if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
       if (i.type === 'series') return i.episodes && i.episodes.length > 0;
       if (i.type === 'multi-season') return i.seasons && i.seasons.length > 0;
@@ -134,14 +131,17 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    // UNIFICAÇÃO NO SALVAMENTO: Garante que o link principal receba o valor
+    // UNIFICAÇÃO NO SALVAMENTO: Grava o mesmo link nos dois campos para compatibilidade total
     const finalUrl = item.streamUrl || item.directStreamUrl || "";
     
     const payload = {
-      id, title: (item.title || "NOVO SINAL").toUpperCase().trim(),
+      id, 
+      title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
-      type: item.type || 'channel', description: item.description || "",
-      imageUrl: item.imageUrl || "", isRestricted: !!item.isRestricted,
+      type: item.type || 'channel', 
+      description: item.description || "",
+      imageUrl: item.imageUrl || "", 
+      isRestricted: !!item.isRestricted,
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
@@ -158,7 +158,6 @@ export async function getCategoryCount(genre: string) {
     const { data } = await supabase.from('content').select('*').eq('genre', trimmedGenre);
     if (!data) return 0;
     
-    // Conta qualquer item que tenha pelo menos um link configurado (direto ou indireto)
     return data.filter(i => {
       const hasLink = i.streamUrl || i.directStreamUrl;
       if (i.type === 'channel' || i.type === 'movie') return !!hasLink;
@@ -169,7 +168,6 @@ export async function getCategoryCount(genre: string) {
   } catch (e) { return 0; }
 }
 
-// Funções de apoio restauradas para evitar erro de build
 export async function validateResellerLogin(username: string, password: string) {
   try {
     const { data, error } = await supabase

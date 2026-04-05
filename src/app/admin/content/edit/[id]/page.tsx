@@ -33,9 +33,14 @@ export default function EditContentPage() {
       try {
         const item = await getContentById(id)
         if (item) {
-          setFormData(item)
-          setEpisodes(item.episodes || [])
-          setSeasons(item.seasons || [])
+          // UNIFICAÇÃO NO CARREGAMENTO
+          const mainUrl = item.streamUrl || item.directStreamUrl || "";
+          setFormData({ ...item, streamUrl: mainUrl, directStreamUrl: mainUrl })
+          setEpisodes(item.episodes?.map(e => ({ ...e, streamUrl: e.streamUrl || (e as any).directStreamUrl || "" })) || [])
+          setSeasons(item.seasons?.map(s => ({
+            ...s,
+            episodes: s.episodes.map(e => ({ ...e, streamUrl: e.streamUrl || (e as any).directStreamUrl || "" }))
+          })) || [])
         } else {
           toast({ variant: "destructive", title: "Sinal não localizado." })
           router.push("/admin/content")
@@ -50,7 +55,7 @@ export default function EditContentPage() {
   }, [id, router])
 
   const addEpisode = () => {
-    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '', directStreamUrl: '' }
+    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
     setEpisodes([...episodes, newEp])
   }
 
@@ -66,7 +71,7 @@ export default function EditContentPage() {
   const addEpisodeToSeason = (sid: string) => {
     setSeasons(seasons.map(s => {
       if (s.id === sid) {
-        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '', directStreamUrl: '' }
+        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '' }
         return { ...s, episodes: [...s.episodes, newEp] }
       }
       return s
@@ -79,17 +84,18 @@ export default function EditContentPage() {
     setLoading(true)
     
     const isSeries = formData.type === 'series' || formData.type === 'multi-season';
-    
+    const finalUrl = formData.streamUrl || formData.directStreamUrl || "";
+
     const success = await saveContent({
       ...formData,
-      streamUrl: isSeries ? "" : formData.streamUrl,
-      directStreamUrl: isSeries ? "" : formData.directStreamUrl,
+      streamUrl: isSeries ? "" : finalUrl,
+      directStreamUrl: isSeries ? "" : finalUrl, // Link Único Unificado
       episodes: (formData.type === 'series') ? episodes : null,
       seasons: (formData.type === 'multi-season') ? seasons : null,
     })
     
     if (success) {
-      toast({ title: "SINAL RECALIBRADO" })
+      toast({ title: "SINAL ATUALIZADO" })
       router.push("/admin/content")
     } else {
       setLoading(false)
@@ -167,12 +173,9 @@ export default function EditContentPage() {
           {!isSeriesMode && (
             <div className="grid gap-6 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Soberano (Web App)</h3>
-                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link blindado para Web" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (IPTV / TV Box)</h3>
-                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-emerald-500/20 font-mono text-[10px]" placeholder="Link direto para Smart TVs" />
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Link Master Soberano</h3>
+                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
+                <p className="text-[8px] font-bold opacity-40 uppercase">Este link único alimenta automaticamente o seu Site e todos os apps de IPTV.</p>
               </div>
             </div>
           )}
@@ -205,17 +208,13 @@ export default function EditContentPage() {
                       </div>
                       <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                       <Input value={ep.streamUrl} placeholder="Link Web" onChange={e => {
+                    <div className="space-y-2">
+                       <Label className="text-[8px] font-black uppercase opacity-40">Link Master do Episódio</Label>
+                       <Input value={ep.streamUrl} placeholder="Link Único do Episódio" onChange={e => {
                           const newEps = [...episodes]
                           newEps[idx].streamUrl = e.target.value
                           setEpisodes(newEps)
                         }} className="h-8 bg-black/40 font-mono text-[9px]" />
-                       <Input value={ep.directStreamUrl} placeholder="Link IPTV" onChange={e => {
-                          const newEps = [...episodes]
-                          newEps[idx].directStreamUrl = e.target.value
-                          setEpisodes(newEps)
-                        }} className="h-8 bg-emerald-500/5 border-emerald-500/10 font-mono text-[9px]" />
                     </div>
                   </div>
                 ))}
@@ -266,17 +265,12 @@ export default function EditContentPage() {
                                 setSeasons(newSeasons)
                               }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
                            </div>
-                           <div className="grid grid-cols-2 gap-2">
-                              <Input value={ep.streamUrl} placeholder="Link Web" onChange={e => {
+                           <div className="space-y-1">
+                              <Input value={ep.streamUrl} placeholder="Link Master do Episódio" onChange={e => {
                                  const newSeasons = [...seasons]
                                  newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
                                  setSeasons(newSeasons)
                               }} className="h-7 bg-black/40 text-[9px] font-mono" />
-                              <Input value={ep.directStreamUrl} placeholder="Link IPTV" onChange={e => {
-                                 const newSeasons = [...seasons]
-                                 newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value
-                                 setSeasons(newSeasons)
-                              }} className="h-7 bg-emerald-500/5 border-emerald-500/10 text-[9px] font-mono" />
                            </div>
                         </div>
                       ))}
