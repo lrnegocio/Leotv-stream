@@ -49,6 +49,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
+    // Caso seja um código de iframe inteiro, extrai o SRC
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -68,15 +69,28 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       'youtube.com',
       'youtu.be',
       'dailymotion.com',
-      'xvideos.com'
+      'xvideos.com',
+      'brazzers.com',
+      'bangbros.com',
+      'xhamster.com',
+      'pornhub.com'
     ];
 
     if (iframeProviders.some(p => lowerUrl.includes(p))) {
       let finalUrl = urlStr;
       
+      // Calibragem YouTube
       if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
         const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
         finalUrl = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`;
+      }
+
+      // Calibragem XVideos (converte link de site para link de embed)
+      if (lowerUrl.includes('xvideos.com') && !lowerUrl.includes('embedframe')) {
+        const vidMatch = urlStr.match(/video(\d+)/);
+        if (vidMatch && vidMatch[1]) {
+           finalUrl = `https://www.xvideos.com/embedframe/${vidMatch[1]}`;
+        }
       }
 
       return { processedUrl: finalUrl, type: 'iframe' };
@@ -85,6 +99,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     
+    // Se for link direto de stream, passa pelo Túnel Master para evitar CORS e bloqueio
     if (isM3U8 || isTS || urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
@@ -122,6 +137,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que cada fragmento de vídeo também passe pelo túnel para não ser bloqueado
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -147,7 +163,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal de transmissão indisponível no momento.");
+              setError("Sinal de transmissão indisponível ou bloqueado na origem.");
               setLoading(false);
             }
           }
@@ -167,7 +183,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.onerror = () => { setError("Falha ao carregar o arquivo de vídeo."); setLoading(false); };
       }
     } else {
-      setLoading(false);
+      // Para iFrames, o loading é removido pelo onLoad do próprio frame
+      if (type !== 'iframe') setLoading(false);
     }
   }, [processedUrl, type, hlsLoaded, cleanupPlayer, retryCount]);
 
@@ -203,6 +220,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           onLoad={() => setLoading(false)}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          referrerPolicy="no-referrer"
         />
       ) : (
         <video 

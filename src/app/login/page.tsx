@@ -70,8 +70,8 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-primary/20 border border-white/10">
             <Tv className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-4xl font-black text-primary font-headline uppercase tracking-tight">StreamSight</CardTitle>
-          <CardDescription className="text-xs uppercase tracking-widest font-bold opacity-60 mt-2">Tecnologia em Transmissão</CardDescription>
+          <CardTitle className="text-4xl font-black text-primary font-headline uppercase tracking-tight">Léo TV Stream</CardTitle>
+          <CardDescription className="text-xs uppercase tracking-widest font-bold opacity-60 mt-2">Tecnologia Master em Transmissão</CardDescription>
         </CardHeader>
 
         <CardContent className="px-8">
@@ -143,7 +143,7 @@ export default function LoginPage() {
            <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-primary">
              <ShieldCheck className="h-3 w-3" /> Acesso Seguro
            </div>
-           <span className="text-[9px] font-bold uppercase italic">StreamSight v2.5</span>
+           <span className="text-[9px] font-bold uppercase italic">Léo TV v2.5</span>
         </CardFooter>
       </Card>
     </div>

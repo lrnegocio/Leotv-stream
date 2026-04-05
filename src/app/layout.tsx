@@ -5,20 +5,20 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'StreamSight - Plataforma de Streaming Inteligente',
-  description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming.',
+  title: 'Léo TV Stream - O Sinal Master',
+  description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming do Mestre Léo.',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: 'https://picsum.photos/seed/streamsight/32/32', sizes: '32x32' },
-      { url: 'https://picsum.photos/seed/streamsight/192/192', sizes: '192x192' }
+      { url: 'https://picsum.photos/seed/leotv/32/32', sizes: '32x32' },
+      { url: 'https://picsum.photos/seed/leotv/192/192', sizes: '192x192' }
     ],
-    apple: 'https://picsum.photos/seed/streamsight/192/192',
+    apple: 'https://picsum.photos/seed/leotv/192/192',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'StreamSight',
+    title: 'Léo TV Stream',
   },
 };
 

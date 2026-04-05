@@ -107,7 +107,7 @@ export default function HomeContent() {
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', item.id);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     
     if (item.type === 'series' || item.type === 'multi-season') {
       setSelectedSeries(item);
@@ -122,7 +122,7 @@ export default function HomeContent() {
     const nextItem = activeVideo.items[nextIdx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', nextItem.id);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     setActiveVideo({ ...activeVideo, index: nextIdx });
   };
 
@@ -132,7 +132,7 @@ export default function HomeContent() {
     const prevItem = activeVideo.items[prevIdx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', prevItem.id);
-    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     setActiveVideo({ ...activeVideo, index: prevIdx });
   };
 
@@ -190,7 +190,7 @@ export default function HomeContent() {
   if (loading && content.length === 0) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
       <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Conectando ao StreamSight...</p>
+      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Léo TV Stream...</p>
     </div>
   );
 
@@ -210,8 +210,8 @@ export default function HomeContent() {
             </div>
           )}
           <div className="hidden lg:block">
-            <span className="text-xl font-black text-primary uppercase italic tracking-tight block leading-none">StreamSight</span>
-            <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest">Premium Streaming</span>
+            <span className="text-xl font-black text-primary uppercase italic tracking-tight block leading-none">Léo TV Stream</span>
+            <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest">Premium Streaming Master</span>
           </div>
         </div>
         
@@ -245,7 +245,7 @@ export default function HomeContent() {
                       <span className="text-base font-black uppercase tracking-tight text-foreground block">{c.name}</span>
                       {count > 0 && (
                         <span className="bg-muted px-3 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground uppercase mt-2 inline-block">
-                          {count.toLocaleString()} Títulos
+                          {count.toLocaleString()} Canais
                         </span>
                       )}
                     </div>
@@ -258,13 +258,13 @@ export default function HomeContent() {
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-300">
             <div className="flex items-center justify-between border-b border-border pb-6">
               <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">
-                {q ? `Resultado: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
+                {q ? `Busca Master: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
               </h2>
             </div>
             {content.length === 0 ? (
               <div className="py-20 text-center space-y-4 opacity-20">
                 <Tv className="h-20 w-20 mx-auto" />
-                <p className="font-black uppercase text-lg">Nenhum conteúdo localizado.</p>
+                <p className="font-black uppercase text-lg">Sinal não localizado na rede Léo TV.</p>
               </div>
             ) : (
               <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -299,7 +299,7 @@ export default function HomeContent() {
           setActiveVideo(null); 
           const p = new URLSearchParams(window.location.search); 
           p.delete('id'); 
-          window.history.replaceState(null, '', `${window.location.pathname}?${p.toString()}`); 
+          router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false }); 
         } 
       }}>
         <DialogContent className="max-w-5xl bg-black border-border p-0 overflow-hidden rounded-3xl shadow-2xl">
@@ -319,8 +319,8 @@ export default function HomeContent() {
       <Dialog open={isPinOpen} onOpenChange={(val) => { if(!val) { setIsPinOpen(false); setPinInput(""); setUnlockTarget(null); } }}>
         <DialogContent className="sm:max-w-md bg-card border-border rounded-3xl p-10 text-center">
           <Lock className="h-12 w-12 text-primary mx-auto mb-6" />
-          <div className="text-xl font-black uppercase italic text-foreground mb-4">Acesso Protegido</div>
-          <p className="text-xs font-medium text-muted-foreground mb-6">Insira a senha parental para continuar.</p>
+          <div className="text-xl font-black uppercase italic text-foreground mb-4">Área Restrita Master</div>
+          <p className="text-xs font-medium text-muted-foreground mb-6">Insira a senha parental do Mestre Léo para continuar.</p>
           <input 
             type="password" 
             title="Senha Parental" 
@@ -342,7 +342,7 @@ export default function HomeContent() {
           <div className="h-16 bg-emerald-600/10 border-b border-border px-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Gamepad2 className="h-6 w-6 text-emerald-600" />
-              <h2 className="text-lg font-black uppercase italic text-emerald-600">Arena Retro</h2>
+              <h2 className="text-lg font-black uppercase italic text-emerald-600">Léo Games Arena</h2>
             </div>
             <button onClick={closeRestrictedArea} className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground flex items-center justify-center transition-colors">
               <X className="h-5 w-5" />
@@ -368,15 +368,15 @@ export default function HomeContent() {
                  <div className="flex-1 flex flex-col">
                     <div className="h-12 bg-card border-b border-border flex items-center justify-between px-6">
                        <span className="text-[10px] font-black uppercase text-emerald-600">{activeGame.title}</span>
-                       <Button size="sm" variant="ghost" onClick={() => setActiveGame(null)} className="h-8 text-[9px] font-black uppercase">Fechar Jogo</Button>
+                       <Button size="sm" variant="ghost" onClick={() => setActiveGame(null)} className="h-8 text-[9px] font-black uppercase">Fechar Arena</Button>
                     </div>
                     {activeGame.type === 'embed' ? (
                       <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                          <Download className="h-16 w-16 text-emerald-600 mb-6" />
-                         <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download Necessário</h3>
-                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Este jogo requer download manual para ser executado no seu dispositivo.</p>
+                         <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download Master</h3>
+                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download manual para rodar no seu aparelho.</p>
                          <Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR ROM</Button>
                       </div>
                     )}
@@ -384,7 +384,7 @@ export default function HomeContent() {
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center opacity-40">
                     <Trophy className="h-16 w-16 text-emerald-600 mx-auto mb-6" />
-                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Retro StreamSight</h3>
+                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Master Léo</h3>
                     <p className="text-[10px] font-bold uppercase mt-2">Selecione um clássico no menu lateral.</p>
                  </div>
                )}

@@ -30,75 +30,75 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               <div className="bg-primary p-2 rounded-xl group-hover:scale-110 transition-transform shadow-lg shadow-primary/20">
                 <Tv className="h-6 w-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-primary font-headline uppercase tracking-tight italic">AdminSight</span>
+              <span className="text-xl font-bold text-primary font-headline uppercase tracking-tight italic">Léo TV Stream</span>
             </Link>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu className="px-4 py-2 space-y-1">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin">
+                  <Link href="/admin">
                     <LayoutDashboard className="h-5 w-5 text-primary" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Painel Geral</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/content">
+                  <Link href="/admin/content">
                     <Film className="h-5 w-5 text-secondary" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Canais & Filmes</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/games">
+                  <Link href="/admin/games">
                     <Gamepad2 className="h-5 w-5 text-emerald-500" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Arena Games</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/stats">
+                  <Link href="/admin/stats">
                     <BarChart3 className="h-5 w-5 text-amber-500" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Estatísticas</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/users">
+                  <Link href="/admin/users">
                     <Users className="h-5 w-5 text-blue-500" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Clientes & PINs</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/resellers">
+                  <Link href="/admin/resellers">
                     <Briefcase className="h-5 w-5 text-emerald-400" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Revendedores</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <a href="/admin/settings">
+                  <Link href="/admin/settings">
                     <Settings className="h-5 w-5 text-orange-400" />
                     <span className="font-bold uppercase text-[10px] tracking-widest">Segurança</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-border">
             <SidebarMenuButton asChild className="text-destructive hover:bg-destructive/10 h-10 rounded-xl transition-all">
-              <a href="/login">
+              <Link href="/login">
                 <LogOut className="h-5 w-5" />
                 <span className="font-bold uppercase text-[10px] tracking-widest">Sair</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarFooter>
         </Sidebar>
@@ -113,8 +113,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 bg-muted px-4 py-1.5 rounded-full border border-border shadow-sm">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-white shadow-md">A</div>
-                <span className="text-[10px] font-bold uppercase tracking-widest">Administrador</span>
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-white shadow-md">L</div>
+                <span className="text-[10px] font-bold uppercase tracking-widest">Mestre Léo</span>
               </div>
             </div>
           </header>

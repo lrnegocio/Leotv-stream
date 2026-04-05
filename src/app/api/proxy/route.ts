@@ -1,12 +1,10 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v68.0 - PURIFICAÇÃO ATÔMICA
- * Resolve definitivamente o "Internal Server Error" no Next.js 15.
- * Otimizado para Streaming de Vídeo profissional e fragmentos .ts
+ * TÚNEL MASTER v72.0 - PURIFICAÇÃO TOTAL E CAMUFLAGEM
+ * Otimizado para Streaming Adulto (XVideos/Brazzers) e IPTV.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,15 +15,19 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range - VITAL para vídeos e navegação
+    // Suporte a Range - VITAL para vídeos e navegação no tempo
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade Sniper para burlar bloqueios de User-Agent
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+    // Camuflagem de Navegador de Alta Fidelidade
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Origin', new URL(targetUrl).origin);
-    requestHeaders.set('Referer', new URL(targetUrl).origin + '/');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
+    
+    // Define a origem e o referer dinamicamente baseados no alvo para burlar hotlink
+    const targetOrigin = new URL(targetUrl).origin;
+    requestHeaders.set('Origin', targetOrigin);
+    requestHeaders.set('Referer', targetOrigin + '/');
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -36,8 +38,8 @@ export async function GET(req: NextRequest) {
     const responseHeaders = new Headers();
     
     /**
-     * BLACKLIST DE CABEÇALHOS - O FIM DO ERRO 500
-     * Removendo tudo o que conflita com a Vercel e o Next.js 15
+     * BLACKLIST DE CABEÇALHOS
+     * Removemos itens que a Vercel/NextJS injetam ou que causam erro 500 no proxy de stream.
      */
     const blacklistedHeaders = [
       'content-length',    
@@ -55,9 +57,7 @@ export async function GET(req: NextRequest) {
       'strict-transport-security',
       'server',
       'x-powered-by',
-      'access-control-allow-origin',
-      'access-control-allow-methods',
-      'access-control-allow-headers'
+      'access-control-allow-origin'
     ];
     
     res.headers.forEach((v, k) => {
@@ -67,17 +67,17 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Força CORS Total e Limpeza de Cache para o Player
+    // Força CORS Total e Limpeza de Cache para o Player fluir
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     responseHeaders.set('Pragma', 'no-cache');
 
-    if (!res.body) return new Response(null, { status: 200, headers: responseHeaders });
+    if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
-    // Retorna o fluxo de vídeo (Stream) de forma contínua
+    // Retorna o fluxo de vídeo (Stream)
     return new Response(res.body, {
-      status: res.status === 206 ? 206 : 200,
+      status: res.status === 206 ? 206 : (res.status === 200 ? 200 : res.status),
       headers: responseHeaders,
     });
 
