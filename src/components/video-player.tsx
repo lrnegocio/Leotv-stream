@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v43.0 - SUPORTE AGRESSIVO M3U8, TS & BLINDER
- * Corrigido para evitar Erro 500 no processamento de sinal.
+ * SINTONIZADOR SNIPER v44.0 - SUPORTE AGRESSIVO XVIDEOS, M3U8, TS & BLINDER
+ * Corrigido para novos padrões de links XVideos e estabilidade total no PWA.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -38,6 +38,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
+    // EXTRATOR XVIDEOS ATÔMICO v44.0 (Pega video.xxxxx)
+    if (lowerUrl.includes('xvideos.com')) {
+      const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
+      if (vidIdMatch) {
+        return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
+      }
+    }
+
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -53,11 +61,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (viewKeyMatch) return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
     }
 
-    if (lowerUrl.includes('xvideos.com')) {
-      const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
-      if (vidIdMatch) return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
-    }
-
     const isBlinder = lowerUrl.includes('blinder.space');
     const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
     const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('hls-') || lowerUrl.includes('.ts?');
@@ -66,13 +69,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isWebPlayer = lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
-    // Túnel XUI obrigatório para links protegidos
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isRedeCanais && lowerUrl.includes('.php')) {
       return { processedUrl: proxied, type: 'iframe' }; 
     }
     
+    // FORÇAR PROXY PARA M3U8 E LINKS BLOQUEADOS
     if (isBlinder || isRedeCanais || isWebPlayer || isHTTP || isTS || isM3U8) {
        if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
        if (isMP4) return { processedUrl: proxied, type: 'video' };
@@ -112,14 +115,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Se o pedaço do vídeo (.ts) for bloqueado, passamos pelo proxy
+            // PROXY AGRESSIVO PARA SEGMENTOS TS BLOQUEADOS
             if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder') || rUrl.includes('xvideos-cdn'))) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          maxMaxBufferLength: 30
+          maxMaxBufferLength: 30,
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
@@ -137,7 +141,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente re-sincronizar.");
+              setError("Sinal M3U8 instável. Tente re-sincronizar.");
               setLoading(false);
             }
           }

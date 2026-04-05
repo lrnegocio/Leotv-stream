@@ -84,10 +84,6 @@ export interface Reseller {
   birthDate?: string;
 }
 
-// ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v43.0)
-// ==========================================
-
 export async function removeUser(id: string) {
   try {
     const { error } = await supabase.from('users').delete().eq('id', id);
@@ -115,10 +111,6 @@ export async function bulkRemoveContent(ids: string[]) {
     return !error;
   } catch (e) { return false; }
 }
-
-// ==========================================
-// FUNÇÕES DE JOGOS (NÚCLEO UNIFICADO v43.0)
-// ==========================================
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
@@ -162,10 +154,6 @@ export async function saveGame(game: Partial<GameItem>) {
 export async function removeGame(id: string) {
   return removeContent(id);
 }
-
-// ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v43.0)
-// ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
   try {
@@ -215,7 +203,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
       if (user.isGamesEnabled) {
         allItems.filter(i => i.genre.startsWith('ARENA: ')).forEach(game => {
           const gameUrl = `${origin}/user/home?id=${game.id}`;
-          m3u += `#EXTINF:-1 tvg-id="${game.id}" tvg-name="${game.title}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",${game.title}\n${gameUrl}\n`;
+          m3u += `#EXTINF:-1 tvg-id="${game.id}" tvg-name="🎮 ${game.title}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",🎮 ${game.title}\n${gameUrl}\n`;
         });
       }
     }
@@ -225,10 +213,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     return "#EXTM3U\n#EXTINF:-1,ERRO AO GERAR LISTA\n";
   }
 }
-
-// ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v43.0)
-// ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
@@ -288,10 +272,6 @@ export async function getContentById(id: string): Promise<ContentItem | null> {
     return data;
   } catch (e) { return null; }
 }
-
-// ==========================================
-// FUNÇÕES DE USUÁRIOS E ADMIN
-// ==========================================
 
 export async function getGlobalSettings() {
   try {
@@ -360,6 +340,7 @@ export async function saveReseller(res: any) {
 
 export async function getCategoryCount(genre: string) {
   try {
+    // CORREÇÃO MESTRE: Conta apenas o que o PWA exibe (itens com streamUrl)
     const { data } = await supabase.from('content').select('id, streamUrl').eq('genre', genre.toUpperCase());
     return data?.filter(i => !!i.streamUrl).length || 0;
   } catch (e) { return 0; }
