@@ -84,8 +84,7 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v58 - SOBERANIA TOTAL
- * Sincronizado com o esquema SQL Master - REMOVIDO directStreamUrl (inexistente no banco)
+ * GESTÃO DE CONTEÚDO UNIFICADA v62 - SOBERANIA PWA
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -103,7 +102,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     const finalUrl = item.streamUrl || "";
     
-    // PAYLOAD LIMPO: Apenas colunas que existem no seu script SQL
     const payload: any = {
       id, 
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -112,7 +110,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Sinal Master Léo Tv",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
-      streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
+      streamUrl: finalUrl,
       episodes: (item.type === 'series') ? (item.episodes || []) : (item.seasons ? null : []),
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
@@ -172,7 +170,7 @@ export async function getTopContent(limit = 10): Promise<ContentItem[]> {
       .from('content')
       .select('*')
       .not('genre', 'ilike', 'ARENA: %')
-      .order('id', { ascending: false }) // Fallback since views might be missing
+      .order('id', { ascending: false }) 
       .limit(limit);
     return data || [];
   } catch (e) { return []; }
@@ -277,20 +275,15 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (!cleanPin) return { error: "PIN INVÁLIDO" };
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
-    let query = supabase.from('users').select('*');
-    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) {
-      query = query.ilike('pin', `${cleanPin}%`);
-    } else {
-      query = query.eq('pin', cleanPin);
-    }
-
+    let query = supabase.from('users').select('*').eq('pin', cleanPin);
     const { data: users } = await query;
     const user = users?.[0];
+    
     if (!user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
+    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
     
     const now = new Date();
-    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "SINAL EXPIRADO" };
+    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
     
     return { user };
   } catch (e) { return { error: "ERRO DE REDE" }; }
@@ -355,44 +348,15 @@ export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Mat
 export const cleanName = (name: string) => name.replace(/[^\w\s]/gi, '').toUpperCase().trim();
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
-  const pin8 = pin.substring(0, 8);
-  const pin9 = pin.substring(0, 9);
   return `*LÉO TV & STREAM* 📺\n\n` +
-         `🔑 *SEU PIN:* ${pin}\n` +
-         `📅 *PLANO:* ${tier.toUpperCase()}\n` +
-         `🖥️ *TELAS:* ${screens}\n\n` +
-         `🌐 *WEB APP (PC/CELULAR):* ${url}\n\n` +
-         `🚀 *RP725:* Cód: ${pin8} / User: ${pin9}\n` +
-         `🚀 *VUSER:* User: ${pin9} / Senha: ${pin9}\n\n` +
-         `🍿 *Bom divertimento!*`;
+         `🔑 *SEU CÓDIGO:* ${pin}\n` +
+         `📅 *PLANO:* ${tier.toUpperCase()}\n\n` +
+         `🌐 *ACESSE AGORA:* ${url}\n\n` +
+         `🍿 *Instale o App no navegador para uma experiência completa!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
   return `*LÉO TV - AVISO DE VENCIMENTO* ⚠️\n\n` +
-         `Olá! Identificamos que seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\n` +
-         `Para não ficar sem o sinal Master, realize a renovação agora mesmo! 🍿`;
+         `Olá! Seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\n` +
+         `Renove agora para não perder o sinal! 🍿`;
 };
-
-export async function generateM3UPlaylist(pin: string, origin: string): Promise<string> {
-  const login = await validateDeviceLogin(pin, "m3u_export");
-  if (login.error) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO\n";
-
-  const content = await getRemoteContent();
-  const games = await getRemoteGames();
-  
-  let m3u = "#EXTM3U\n";
-  
-  content.forEach(item => {
-    const url = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
-    m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${url}\n`;
-  });
-
-  if (login.user?.isGamesEnabled) {
-    games.forEach(game => {
-      const url = `${origin}/user/home?id=${game.id}`;
-      m3u += `#EXTINF:-1 tvg-logo="${game.imageUrl || ''}" group-title="ARENA GAMES RETRO",🎮 ${game.title.toUpperCase()}\n${url}\n`;
-    });
-  }
-
-  return m3u;
-}
