@@ -31,7 +31,7 @@ export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [games, setGames] = React.useState<GameItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
-  const [activeVideo, setActiveVideo] = React.useState<{ items: ContentItem[], index: number } | null>(null)
+  const [activeVideo, setActiveVideo] = React.useState<{ items: any[], index: number } | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [selectedCat, setSelectedCat] = React.useState<string | null>(null)
   const [isPinOpen, setIsPinOpen] = React.useState(false)
@@ -39,11 +39,11 @@ export default function HomeContent() {
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
+  const [isUnlocked, setIsUnlocked] = React.useState(false)
   
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
-  // TRAVA DE SEGURANÇA CONTRA PLAYER DUPLO
   const isClosingRef = React.useRef(false)
   const lastOpenedIdRef = React.useRef<string | null>(null)
   
@@ -101,23 +101,28 @@ export default function HomeContent() {
     router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const handleEpisodeClick = (series: ContentItem, ep: any, allEps: any[]) => {
+    // Criamos uma lista de reprodução virtual para o player saber navegar entre os episódios
+    const playList = allEps.map(item => ({
+      ...series,
+      id: `${series.id}_ep_${item.number}`,
+      title: `${series.title} - EP ${item.number}`,
+      streamUrl: item.streamUrl
+    }));
+    
+    const idx = allEps.indexOf(ep);
+    setActiveVideo({ items: playList, index: idx });
+  };
+
   const handleNext = () => {
     if (!activeVideo) return;
     const nextIdx = (activeVideo.index + 1) % activeVideo.items.length;
-    const nextItem = activeVideo.items[nextIdx];
-    const params = new URLSearchParams(window.location.search);
-    params.set('id', nextItem.id);
-    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     setActiveVideo({ ...activeVideo, index: nextIdx });
   };
 
   const handlePrev = () => {
     if (!activeVideo) return;
     const prevIdx = (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length;
-    const prevItem = activeVideo.items[prevIdx];
-    const params = new URLSearchParams(window.location.search);
-    params.set('id', prevItem.id);
-    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     setActiveVideo({ ...activeVideo, index: prevIdx });
   };
 
@@ -134,8 +139,14 @@ export default function HomeContent() {
         toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "Habilite Adultos no Painel de Controle." }); 
         return; 
       }
-      setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
-      setIsPinOpen(true);
+      
+      if (!isUnlocked) {
+        setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
+        setIsPinOpen(true);
+      } else {
+        if (cat.special === 'games') setGamesMenuOpen(true);
+        else setSelectedCat(cat.id);
+      }
     } else {
       setSelectedCat(cat.id);
     }
@@ -147,6 +158,7 @@ export default function HomeContent() {
     setLoading(false);
     
     if (pinInput === settings.parentalPin) {
+      setIsUnlocked(true);
       if (unlockTarget === 'ADULT') setSelectedCat('ADULT');
       else if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
       setIsPinOpen(false);
@@ -167,7 +179,6 @@ export default function HomeContent() {
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
     
-    // Trava de 2 segundos para evitar reabertura fantasma
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -178,6 +189,7 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
+    setIsUnlocked(false); // TRANCA TUDO AO SAIR
     
     const p = new URLSearchParams(window.location.search);
     p.delete('q');
@@ -309,17 +321,17 @@ export default function HomeContent() {
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary italic mb-6">Episódios: {selectedSeries.title}</h3>
                <div className="grid gap-2">
-                  {selectedSeries.episodes?.map(ep => (
-                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - EP ${ep.number}` }], index: 0 })} className="h-14 justify-start bg-muted rounded-xl border-border hover:border-primary px-6">
+                  {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
+                    <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, selectedSeries.episodes!)} className="h-14 justify-start bg-muted rounded-xl border-border hover:border-primary px-6">
                        <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                        <Play className="ml-auto h-4 w-4 text-primary" />
                     </Button>
                   ))}
-                  {selectedSeries.seasons?.map(season => (
+                  {selectedSeries.seasons?.sort((a,b) => a.number - b.number).map(season => (
                     <div key={season.id} className="space-y-2 mb-4">
                       <p className="text-[10px] font-black text-primary uppercase pl-2 border-l-2 border-primary ml-2">Temporada {season.number}</p>
-                      {season.episodes.map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: [{ ...selectedSeries, streamUrl: ep.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}` }], index: 0 })} className="w-full h-12 justify-start bg-muted border-border hover:border-primary px-6 rounded-xl">
+                      {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, season.episodes)} className="w-full h-12 justify-start bg-muted border-border hover:border-primary px-6 rounded-xl">
                           <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
                           <Play className="ml-auto h-3 w-3 text-primary" />
                         </Button>

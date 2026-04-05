@@ -49,14 +49,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR YOUTUBE SOBERANO
+    // SINTONIZADOR YOUTUBE SOBERANO (REFINADO)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
       const match = urlStr.match(regExp);
-      if (match && match[2].length === 11) {
-        ytId = match[2];
-      }
+      if (match && match[2].length === 11) ytId = match[2];
       
       if (ytId) {
         return { 
@@ -66,8 +64,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // SINTONIZADOR ADULTO (XVIDEOS/BRAZZERS/BANG)
+    // SINTONIZADOR ADULTO MASTER (EXTRAÇÃO DE ID COMPLETA)
     if (lowerUrl.includes('xvideos.com')) {
+      // Pega IDs como kabopuh3e7b ou similares
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]+)/i);
       if (vidMatch && vidMatch[1]) {
         return { 
@@ -77,12 +76,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
+    // Provedores de iFrame conhecidos
     const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com'];
     if (iframeProviders.some(p => lowerUrl.includes(p)) && !lowerUrl.includes('.m3u8')) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
 
-    // SINTONIZADOR HLS / M3U8 / TS
+    // SINTONIZADOR HLS / M3U8 / TS (TÚNEL MASTER)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
     
@@ -127,7 +127,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Se não for o proxy e for um link externo, passa pelo túnel
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -148,7 +147,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            console.error("HLS Fatal Error:", data);
             if (retryCount < 3) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
@@ -159,7 +157,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           }
         });
       } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
-        // Nativo (Safari/iOS)
         video.src = processedUrl;
         video.addEventListener('loadedmetadata', () => {
           video.play().catch(() => {});
