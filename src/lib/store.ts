@@ -8,6 +8,7 @@ export interface Episode {
   title: string; 
   number: number; 
   streamUrl: string; 
+  directStreamUrl?: string;
 }
 
 export interface Season { 
@@ -86,8 +87,8 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v54 - SOBERANIA TOTAL
- * Habilita TODOS os canais para PWA e IPTV simultaneamente.
+ * GESTÃO DE CONTEÚDO UNIFICADA v55 - SOBERANIA TOTAL
+ * Sincronizado com o esquema SQL: veilblctswnnyzidirrf
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -101,9 +102,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     const { data } = await query.order('title', { ascending: true });
     if (!data) return [];
 
-    // UNIFICAÇÃO RADICAL: Garante que o sinal apareça se houver link em QUALQUER campo
     return data.map(item => {
-      // Prioriza streamUrl, mas se estiver vazio e directStreamUrl tiver algo, promove o secundário a primário
+      // SINALIZAÇÃO INTELIGENTE: Se um dos campos está vazio, o outro assume.
       const mainLink = item.streamUrl || item.directStreamUrl || "";
       
       if (item.episodes) {
@@ -125,7 +125,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
       return { ...item, streamUrl: mainLink, directStreamUrl: mainLink };
     }).filter(i => {
-      // Regra de Ouro: Se tem link, ele existe na plataforma.
       if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
       if (i.type === 'series') return i.episodes && i.episodes.length > 0;
       if (i.type === 'multi-season') return i.seasons && i.seasons.length > 0;
@@ -137,7 +136,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    // UNIFICAÇÃO NO SALVAMENTO: Grava o mesmo link nos dois campos para compatibilidade total
+    // UNIFICAÇÃO NO SALVAMENTO: Espelha o link nos dois campos do banco
     const finalUrl = item.streamUrl || item.directStreamUrl || "";
     
     const payload = {
@@ -145,14 +144,14 @@ export async function saveContent(item: Partial<ContentItem>) {
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
-      description: item.description || "",
+      description: item.description || "Sinal Master Léo Tv",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
-      // Mirroring para garantir que IPTV e PWA vejam o mesmo link
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
-      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
+      seasons: (item.type === 'multi-season') ? (item.seasons || []) : null,
+      views: item.views || 0
     };
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
@@ -162,11 +161,10 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getCategoryCount(genre: string) {
   try {
     const trimmedGenre = genre.trim().toUpperCase();
-    const { data } = await supabase.from('content').select('*').eq('genre', trimmedGenre);
+    const { data } = await supabase.from('content').select('streamUrl, directStreamUrl, type, episodes, seasons').eq('genre', trimmedGenre);
     if (!data) return 0;
     
-    // Conta tudo o que tem link válido, unificado.
-    return data.filter(i => {
+    return data.filter((i: any) => {
       const hasLink = i.streamUrl || i.directStreamUrl;
       if (i.type === 'channel' || i.type === 'movie') return !!hasLink;
       if (i.type === 'series') return i.episodes && i.episodes.length > 0;
@@ -325,7 +323,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
     let query = supabase.from('users').select('*');
-    // Suporte para logins RP725 / VUSER
     if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) query = query.ilike('pin', `${cleanPin}%`);
     else query = query.eq('pin', cleanPin);
 
@@ -333,7 +330,10 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const user = users?.[0];
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
-    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
+    
+    const now = new Date();
+    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "SINAL EXPIRADO" };
+    
     return { user };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
@@ -406,7 +406,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `🌐 *WEB APP (PC/CELULAR):* ${url}\n\n` +
          `🚀 *RP725:* Cód: ${pin8} / User: ${pin9}\n` +
          `🚀 *VUSER:* User: ${pin9} / Senha: ${pin9}\n\n` +
-         `🍿 *Bom divertimento!*`;
+         ` popcorn *Bom divertimento!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
@@ -425,6 +425,7 @@ export async function generateM3UPlaylist(pin: string, origin: string): Promise<
   let m3u = "#EXTM3U\n";
   
   content.forEach(item => {
+    // No IPTV usamos o Link Direto (Secundário) que espelhamos no salvamento
     const url = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
     m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${url}\n`;
   });
