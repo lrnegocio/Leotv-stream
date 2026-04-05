@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v53.0 - MOTOR DE IGNIÇÃO REFORÇADO
- * Focado em abrir o canal de primeira e evitar erros de buffer.
+ * SINTONIZADOR SNIPER v54.0 - MOTOR DE IGNIÇÃO UNIFICADO
+ * Processamento agressivo para garantir que o link funcione no PWA.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -38,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS ATÔMICO
+    // EXTRATOR XVIDEOS ATÔMICO (Suporte a múltiplos padrões)
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
@@ -61,14 +61,17 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (viewKeyMatch) return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
     }
 
+    // FORMATOS PROFISSIONAIS E BYPASS DE CORS
     const isBlinder = lowerUrl.includes('blinder.space');
     const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
     const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?') || lowerUrl.includes('hls-') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.endsWith('.mp4');
     
+    // Força o uso do Proxy Master para maior estabilidade no PWA
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
+    // Qualquer link HTTP ou de origem restrita deve passar pelo Proxy
     if (isBlinder || isRedeCanais || isTS || isM3U8 || urlStr.startsWith('http://')) {
        if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
        if (isMP4) return { processedUrl: proxied, type: 'video' };
@@ -108,6 +111,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que segmentos (.ts) também passem pelo proxy se o m3u8 principal for proxied
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && processedUrl.includes('/api/proxy')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -116,7 +120,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           retryDelay: 500,
           maxMaxBufferLength: 30,
           enableWorker: true,
-          lowLatencyMode: true
+          lowLatencyMode: true,
+          backBufferLength: 90
         });
 
         hls.loadSource(processedUrl);
@@ -134,7 +139,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente re-sincronizar.");
+              setError("Sinal instável. Verifique o link no painel.");
               setLoading(false);
             }
           }
@@ -151,7 +156,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha no arquivo de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao carregar arquivo de vídeo."); setLoading(false); };
       }
     } else {
       setLoading(false);
@@ -168,7 +173,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60 text-center px-4">Sintonizando Sinal Master v53...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60 text-center px-4">Sintonizando Rede Master v54...</p>
         </div>
       )}
 
@@ -177,7 +182,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           <AlertCircle className="h-12 w-12 text-destructive mb-4 opacity-50" />
           <p className="text-white text-[10px] font-black uppercase mb-6 opacity-60">{error}</p>
           <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/20 text-primary hover:bg-primary hover:text-white rounded-md px-6 font-black uppercase text-[9px]">
-            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR
+            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR SINAL
           </Button>
         </div>
       )}

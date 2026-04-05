@@ -85,10 +85,14 @@ export interface GameRanking {
   points: number;
 }
 
-// GESTÃO DE CONTEÚDO UNIFICADA v51 - LINK ÚNICO MASTER
+/**
+ * GESTÃO DE CONTEÚDO UNIFICADA v54 - SOBERANIA TOTAL
+ * Habilita TODOS os canais para PWA e IPTV simultaneamente.
+ */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
+    
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     
     const trimmedGenre = categoryGenre.trim().toUpperCase();
@@ -97,29 +101,31 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     const { data } = await query.order('title', { ascending: true });
     if (!data) return [];
 
-    // UNIFICAÇÃO DE RETORNO: Garante que o sinal apareça se houver link em qualquer campo
+    // UNIFICAÇÃO RADICAL: Garante que o sinal apareça se houver link em QUALQUER campo
     return data.map(item => {
+      // Prioriza streamUrl, mas se estiver vazio e directStreamUrl tiver algo, promove o secundário a primário
       const mainLink = item.streamUrl || item.directStreamUrl || "";
       
       if (item.episodes) {
-        item.episodes = item.episodes.map((ep: any) => ({
-          ...ep,
-          streamUrl: ep.streamUrl || ep.directStreamUrl || ""
-        }));
+        item.episodes = item.episodes.map((ep: any) => {
+          const epLink = ep.streamUrl || ep.directStreamUrl || "";
+          return { ...ep, streamUrl: epLink, directStreamUrl: epLink };
+        });
       }
       
       if (item.seasons) {
         item.seasons = item.seasons.map((s: any) => ({
           ...s,
-          episodes: s.episodes.map((ep: any) => ({
-            ...ep,
-            streamUrl: ep.streamUrl || ep.directStreamUrl || ""
-          }))
+          episodes: s.episodes.map((ep: any) => {
+            const epLink = ep.streamUrl || ep.directStreamUrl || "";
+            return { ...ep, streamUrl: epLink, directStreamUrl: epLink };
+          })
         }));
       }
 
       return { ...item, streamUrl: mainLink, directStreamUrl: mainLink };
     }).filter(i => {
+      // Regra de Ouro: Se tem link, ele existe na plataforma.
       if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
       if (i.type === 'series') return i.episodes && i.episodes.length > 0;
       if (i.type === 'multi-season') return i.seasons && i.seasons.length > 0;
@@ -142,6 +148,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
+      // Mirroring para garantir que IPTV e PWA vejam o mesmo link
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
@@ -158,6 +165,7 @@ export async function getCategoryCount(genre: string) {
     const { data } = await supabase.from('content').select('*').eq('genre', trimmedGenre);
     if (!data) return 0;
     
+    // Conta tudo o que tem link válido, unificado.
     return data.filter(i => {
       const hasLink = i.streamUrl || i.directStreamUrl;
       if (i.type === 'channel' || i.type === 'movie') return !!hasLink;
@@ -317,6 +325,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
     let query = supabase.from('users').select('*');
+    // Suporte para logins RP725 / VUSER
     if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) query = query.ilike('pin', `${cleanPin}%`);
     else query = query.eq('pin', cleanPin);
 
