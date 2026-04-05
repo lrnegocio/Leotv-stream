@@ -14,7 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v60.0 - MOTOR DE EXTRAÇÃO E PURIFICAÇÃO
+ * SINTONIZADOR SNIPER v61.0 - LIBERAÇÃO TOTAL DE IFRAMES
+ * Removido o atributo sandbox para permitir que players do Rei dos Canais funcionem sem bloqueios.
  * Suporte a Tags Iframe, links brutos, M3U8, TS e redirecionadores.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
@@ -52,6 +53,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       'rdcanais.com', 
       'redecanais', 
       'reidoscanais', 
+      'reidoscanais.ooo',
       'embed', 
       'player', 
       'streamad', 
@@ -203,8 +205,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
           onLoad={() => setLoading(false)}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups-to-escape-sandbox"
-          allow="autoplay; encrypted-media; picture-in-picture"
+          // REMOVIDO SANDBOX v61 PARA EVITAR BLOQUEIO DE SINAL PROFISSIONAL (RD CANAIS / REI DOS CANAIS)
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         />
       ) : (
         <video 
