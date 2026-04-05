@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v67.0 - PURIFICAÇÃO ATÔMICA
+ * TÚNEL MASTER v68.0 - PURIFICAÇÃO ATÔMICA
  * Resolve definitivamente o "Internal Server Error" no Next.js 15.
- * Remove todos os cabeçalhos que conflitam com a infraestrutura da Vercel.
+ * Otimizado para Streaming de Vídeo profissional e fragmentos .ts
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
     // Identidade Sniper para burlar bloqueios de User-Agent
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Origin', new URL(targetUrl).origin);
+    requestHeaders.set('Referer', new URL(targetUrl).origin + '/');
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -35,12 +37,12 @@ export async function GET(req: NextRequest) {
     
     /**
      * BLACKLIST DE CABEÇALHOS - O FIM DO ERRO 500
-     * Removemos tudo o que faz o servidor crashar ou ser bloqueado pelo Brave/Surfshark.
+     * Removendo tudo o que conflita com a Vercel e o Next.js 15
      */
     const blacklistedHeaders = [
-      'content-length',    // PROIBIDO EM STREAMS
-      'transfer-encoding', // CAUSA CONFLITO DE CHUNK
-      'connection',        // GERENCIADO PELA VERCEL
+      'content-length',    
+      'transfer-encoding', 
+      'connection',        
       'keep-alive',
       'content-encoding',
       'host',
@@ -53,7 +55,9 @@ export async function GET(req: NextRequest) {
       'strict-transport-security',
       'server',
       'x-powered-by',
-      'access-control-allow-origin'
+      'access-control-allow-origin',
+      'access-control-allow-methods',
+      'access-control-allow-headers'
     ];
     
     res.headers.forEach((v, k) => {
@@ -63,7 +67,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Força CORS Total e Limpeza de Cache
+    // Força CORS Total e Limpeza de Cache para o Player
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -71,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     if (!res.body) return new Response(null, { status: 200, headers: responseHeaders });
 
-    // Retorna o corpo como um fluxo puro (Stream)
+    // Retorna o fluxo de vídeo (Stream) de forma contínua
     return new Response(res.body, {
       status: res.status === 206 ? 206 : 200,
       headers: responseHeaders,

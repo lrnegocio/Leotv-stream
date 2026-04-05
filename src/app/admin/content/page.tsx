@@ -18,14 +18,13 @@ export default function ContentManagementPage() {
   const [items, setItems] = React.useState<ContentItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [previewItem, setPreviewItem] = React.useState<ContentItem | null>(null)
-  const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string} | null>(null)
+  const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string, id: string} | null>(null)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
-      // SORENARÍA ALFABÉTICA v38: O store.ts já retorna ordenado de A-Z
       const data = await getRemoteContent(false, query)
       setItems(data)
     } catch (error) {
@@ -132,7 +131,7 @@ export default function ContentManagementPage() {
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/20" onClick={() => {
                       if (isSeries) setPreviewItem(item);
-                      else setActiveEpisode({ url: item.directStreamUrl || item.streamUrl || "", title: item.title });
+                      else setActiveEpisode({ url: item.streamUrl || "", title: item.title, id: item.id });
                     }}><PlayCircle className="h-3 w-3" /></Button>
                     <Button variant="ghost" size="icon" asChild className="h-7 w-7"><Link href={`/admin/content/edit/${item.id}`}><Edit2 className="h-3 w-3" /></Link></Button>
                   </div>
@@ -149,7 +148,7 @@ export default function ContentManagementPage() {
           <DialogHeader><DialogTitle className="uppercase font-black text-primary italic text-xl">Episódios: {previewItem?.title}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
             {previewItem?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.directStreamUrl || ep.streamUrl || "", title: `${previewItem.title} - EP ${ep.number}` })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
+              <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || "", title: `${previewItem.title} - EP ${ep.number}`, id: ep.id })} className="h-12 justify-start bg-white/5 rounded-xl border-white/5 hover:border-primary px-6">
                 <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                 <PlayCircle className="ml-auto h-4 w-4 text-primary" />
               </Button>
@@ -158,7 +157,7 @@ export default function ContentManagementPage() {
               <div key={season.id} className="space-y-2 mb-4">
                 <p className="text-[10px] font-black text-primary uppercase pl-2 border-l-2 border-primary ml-2">Temporada {season.number}</p>
                 {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                  <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.directStreamUrl || ep.streamUrl || "", title: `${previewItem.title} - T${season.number} EP ${ep.number}` })} className="w-full h-10 justify-start bg-white/5 border-white/5 hover:border-primary px-6 rounded-lg">
+                  <Button key={ep.id} variant="outline" onClick={() => setActiveEpisode({ url: ep.streamUrl || "", title: `${previewItem.title} - T${season.number} EP ${ep.number}`, id: ep.id })} className="w-full h-10 justify-start bg-white/5 border-white/5 hover:border-primary px-6 rounded-lg">
                     <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
                     <PlayCircle className="ml-auto h-3 w-3 text-primary" />
                   </Button>
@@ -171,7 +170,7 @@ export default function ContentManagementPage() {
 
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
         <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
-          {activeEpisode && <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} />}
+          {activeEpisode && <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} id={activeEpisode.id} />}
         </DialogContent>
       </Dialog>
     </div>

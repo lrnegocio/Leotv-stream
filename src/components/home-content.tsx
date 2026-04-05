@@ -117,6 +117,26 @@ export default function HomeContent() {
     }
   };
 
+  const handleNext = () => {
+    if (!activeVideo) return;
+    const nextIdx = (activeVideo.index + 1) % activeVideo.items.length;
+    const nextItem = activeVideo.items[nextIdx];
+    const params = new URLSearchParams(window.location.search);
+    params.set('id', nextItem.id);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    setActiveVideo({ ...activeVideo, index: nextIdx });
+  };
+
+  const handlePrev = () => {
+    if (!activeVideo) return;
+    const prevIdx = (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length;
+    const prevItem = activeVideo.items[prevIdx];
+    const params = new URLSearchParams(window.location.search);
+    params.set('id', prevItem.id);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+    setActiveVideo({ ...activeVideo, index: prevIdx });
+  };
+
   const handleCategoryClick = async (cat: any, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     const now = Date.now();
@@ -192,7 +212,7 @@ export default function HomeContent() {
           )}
           <div className="hidden lg:block">
             <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
-            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Unificado v11500.0</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinal Unificado v11600.0</span>
           </div>
         </div>
         
@@ -290,6 +310,8 @@ export default function HomeContent() {
               url={activeVideo.items[activeVideo.index].streamUrl || ""} 
               title={activeVideo.items[activeVideo.index].title} 
               id={activeVideo.items[activeVideo.index].id} 
+              onNext={handleNext}
+              onPrev={handlePrev}
             />
           )}
         </DialogContent>
