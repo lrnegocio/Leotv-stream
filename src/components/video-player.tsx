@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR DE EMBEDS SNIPER v26
+    // SINTONIZADOR DE EMBEDS SNIPER v32
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -58,14 +58,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR DE STREAMING (PROXY) v26
+    // SINTONIZADOR DE STREAMING XUI STYLE (PROXY OBRIGATÓRIO PARA .TS E .M3U8)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
     const isPHP = lowerUrl.includes('.php') && lowerUrl.includes('redecanais');
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
-    if (isM3U8) return { processedUrl: proxied, type: 'hls' };
+    if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
     
     return { processedUrl: urlStr.startsWith('http://') ? proxied : urlStr, type: 'video' };
   }, [])
@@ -103,7 +104,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           },
           autoStartLoad: true,
           retryDelay: 1500,
-          onErrorFatalRetry: true
+          onErrorFatalRetry: true,
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
@@ -148,20 +150,20 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div className="relative aspect-video w-full bg-black rounded-[2.5rem] overflow-hidden border border-white/5 group shadow-2xl">
+    <div key={processedUrl} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-lg">
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Sintonizando Canal Master...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando sinal master...</p>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
-          <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white text-xs font-black uppercase mb-6">{error}</p>
-          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-12 border-primary text-primary hover:bg-primary hover:text-white rounded-xl px-8 font-black uppercase text-[10px]">
-            <RefreshCcw className="h-4 w-4 mr-2" /> Tentar Re-Sincronizar
+        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/95 p-10 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mb-4 opacity-50" />
+          <p className="text-white text-[10px] font-black uppercase mb-6 opacity-60">{error}</p>
+          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/20 text-primary hover:bg-primary hover:text-white rounded-md px-6 font-black uppercase text-[9px]">
+            <RefreshCcw className="h-3 w-3 mr-2" /> RE-SINCRONIZAR SINAL
           </Button>
         </div>
       )}
@@ -187,12 +189,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      <div className={`absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100 shadow-2xl">
-          <ChevronLeft className="h-8 w-8 text-white group-hover/btn:scale-110" />
+      <div className={`absolute inset-0 z-20 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+        <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
+          <ChevronLeft className="h-6 w-6 text-white group-hover/btn:scale-110" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100 shadow-2xl">
-          <ChevronRight className="h-8 w-8 text-white group-hover/btn:scale-110" />
+        <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
+          <ChevronRight className="h-6 w-6 text-white group-hover/btn:scale-110" />
         </button>
       </div>
     </div>

@@ -5,32 +5,32 @@
 
 @layer base {
   :root {
-    --background: 308 14% 10%;
+    --background: 240 10% 4%;
     --foreground: 0 0% 98%;
-    --card: 308 14% 12%;
+    --card: 240 10% 6%;
     --card-foreground: 0 0% 98%;
-    --popover: 308 14% 10%;
+    --popover: 240 10% 4%;
     --popover-foreground: 0 0% 98%;
-    --primary: 303 70% 59%;
+    --primary: 303 70% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 265 100% 70%;
+    --secondary: 240 5% 15%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 308 14% 18%;
-    --muted-foreground: 308 10% 65%;
-    --accent: 265 100% 70%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 303 70% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 308 14% 20%;
-    --input: 308 14% 20%;
-    --ring: 303 70% 59%;
-    --radius: 1.25rem;
+    --border: 240 5% 15%;
+    --input: 240 5% 15%;
+    --ring: 303 70% 50%;
+    --radius: 0.5rem;
   }
 }
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground font-body antialiased; }
+  body { @apply bg-background text-foreground font-body antialiased selection:bg-primary/30; }
 }
 
 #vercel-toolbar-root, .vercel-toolbar { display: none !important; }
@@ -43,27 +43,29 @@
   }
   
   .scrollbar-visible::-webkit-scrollbar {
-    width: 8px !important;
+    width: 6px !important;
     display: block !important;
   }
   
   .scrollbar-visible::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-radius: 10px !important;
+    background: rgba(0, 0, 0, 0.2) !important;
   }
   
   .scrollbar-visible::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary)) !important;
+    background: hsl(var(--primary) / 0.5) !important;
     border-radius: 10px !important;
-    box-shadow: 0 0 10px hsl(var(--primary)) !important;
   }
 
-  .bg-cinematic {
-    background: radial-gradient(circle at center, #2a1d29 0%, #1e161d 100%);
+  .bg-xui {
+    background: linear-gradient(180deg, #0a0a0c 0%, #050506 100%);
+  }
+
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-white/5 shadow-2xl;
   }
 }
 
 .font-headline {
   font-family: 'Inter', sans-serif;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
