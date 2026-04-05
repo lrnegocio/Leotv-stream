@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v40.0 - SUPORTE TS & BLINDER MASTER
+ * SINTONIZADOR SNIPER v41.0 - SUPORTE AGRESSIVO M3U8 & BLINDER
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -63,8 +63,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isBlinder = lowerUrl.includes('blinder.space');
     const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
     const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('hls-') || lowerUrl.includes('.ts?');
-    const isM3U8 = lowerUrl.includes('.m3u8');
-    const isMP4 = lowerUrl.includes('.mp4');
+    const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
+    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.endsWith('.mp4');
     const isWebPlayer = lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
@@ -75,8 +75,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: proxied, type: 'iframe' }; 
     }
     
-    if (isBlinder || isRedeCanais || isWebPlayer || isHTTP || isTS) {
-       if (isM3U8 || isTS || lowerUrl.includes('m3u8')) return { processedUrl: proxied, type: 'hls' };
+    if (isBlinder || isRedeCanais || isWebPlayer || isHTTP || isTS || isM3U8) {
+       if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
        if (isMP4) return { processedUrl: proxied, type: 'video' };
        return { processedUrl: proxied, type: 'iframe' };
     }
@@ -114,14 +114,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Bypass de fragmentos .ts para Blinder/MPEG-TS
             if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder') || rUrl.includes('xvideos-cdn'))) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          maxMaxBufferLength: 30
+          maxMaxBufferLength: 30,
+          enableWorker: true
         });
 
         hls.loadSource(processedUrl);
@@ -139,7 +139,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente re-sintonizar.");
+              setError("Sinal M3U8 instável. Tente re-sintonizar.");
               setLoading(false);
             }
           }

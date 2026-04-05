@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe } from "lucide-react"
+import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,10 +19,11 @@ export default function AdminGamesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [testGame, setTestGame] = React.useState<GameItem | null>(null)
   const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
+  const [isSaving, setIsSaving] = React.useState(false)
   
-  const [newGame, setNewUser] = React.useState<Partial<GameItem>>({
+  const [gameData, setGameData] = React.useState<Partial<GameItem>>({
     title: "",
-    console: "PLAYSTATION (PS1/PSX/PS2)",
+    console: "SUPER NINTENDO (SNES)",
     type: "embed",
     url: "",
     emulatorUrl: "",
@@ -40,16 +41,20 @@ export default function AdminGamesPage() {
   React.useEffect(() => { loadData() }, [loadData])
 
   const handleSaveGame = async () => {
-    if (!newGame.title || !newGame.url) {
+    if (!gameData.title || !gameData.url) {
       toast({ variant: "destructive", title: "Campos Obrigatórios" })
       return
     }
-    const success = await saveGame(newGame)
+    setIsSaving(true)
+    const success = await saveGame(gameData)
     if (success) {
-      toast({ title: "JOGO ADICIONADO À ARENA!" })
+      toast({ title: gameData.id ? "JOGO ATUALIZADO!" : "JOGO ADICIONADO À ARENA!" })
       setIsDialogOpen(false)
       loadData()
+    } else {
+      toast({ variant: "destructive", title: "Erro ao Salvar no Banco" })
     }
+    setIsSaving(false)
   }
 
   const handleDeleteGame = async (id: string) => {
@@ -57,6 +62,36 @@ export default function AdminGamesPage() {
       await removeGame(id)
       loadData()
     }
+  }
+
+  const handleEditGame = (game: GameItem) => {
+    setGameData(game)
+    setIsDialogOpen(true)
+  }
+
+  const handleNewGame = () => {
+    setGameData({
+      title: "",
+      console: "SUPER NINTENDO (SNES)",
+      type: "embed",
+      url: "",
+      emulatorUrl: "",
+      imageUrl: ""
+    })
+    setIsDialogOpen(true)
+  }
+
+  const injectDefaults = async () => {
+    const defaults = [
+      { title: "SUPER MARIO WORLD", console: "SUPER NINTENDO (SNES)", type: "embed", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html", imageUrl: "https://picsum.photos/seed/mario/200/300" },
+      { title: "MORTAL KOMBAT 3", console: "MEGA DRIVE", type: "embed", url: "https://www.retrogames.cc/embed/18314-mortal-kombat-3-usa.html", imageUrl: "https://picsum.photos/seed/mk3/200/300" },
+      { title: "METAL SLUG X", console: "ARCADE / MAME", type: "embed", url: "https://www.retrogames.cc/embed/10042-metal-slug-x-super-vehicle-001.html", imageUrl: "https://picsum.photos/seed/slug/200/300" },
+      { title: "TEKKEN 3", console: "PLAYSTATION (PS1/PSX/PS2)", type: "embed", url: "https://www.retrogames.cc/embed/40238-tekken-3.html", imageUrl: "https://picsum.photos/seed/tekken/200/300" }
+    ]
+    setLoading(true)
+    for (const g of defaults) { await saveGame(g as any); }
+    loadData()
+    toast({ title: "CLÁSSICOS INJETADOS COM SUCESSO!" })
   }
 
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>
@@ -70,9 +105,14 @@ export default function AdminGamesPage() {
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
           <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Biblioteca e Lógica Client-Side.</p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
-          <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={injectDefaults} className="border-emerald-500/20 text-emerald-500 h-12 rounded-xl font-black uppercase text-[9px]">
+            <UploadCloud className="mr-2 h-4 w-4" /> Injetar Clássicos
+          </Button>
+          <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
+            <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
+          </Button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -133,6 +173,7 @@ export default function AdminGamesPage() {
                               <span className="text-[9px] font-bold uppercase truncate">{game.title}</span>
                               <Play className="h-3 w-3 opacity-20 group-hover:opacity-100" />
                             </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEditGame(game)} className="h-12 w-12 text-primary hover:bg-primary/10"><Edit2 className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteGame(game.id)} className="h-12 w-12 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         ))}
@@ -159,17 +200,17 @@ export default function AdminGamesPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8">
-          <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">Novo Jogo na Arena</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">{gameData.id ? 'Editar Jogo Arena' : 'Novo Jogo na Arena'}</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Título do Jogo</Label>
-              <Input value={newGame.title} onChange={e => setNewUser({...newGame, title: e.target.value})} className="bg-black/40 border-white/5 h-12 font-bold uppercase" />
+              <Input value={gameData.title} onChange={e => setGameData({...gameData, title: e.target.value})} className="bg-black/40 border-white/5 h-12 font-bold uppercase" />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Console / Sistema</Label>
-                <Select value={newGame.console} onValueChange={v => setNewUser({...newGame, console: v})}>
+                <Select value={gameData.console} onValueChange={v => setGameData({...gameData, console: v})}>
                   <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PLAYSTATION (PS1/PSX/PS2)">PLAYSTATION</SelectItem>
@@ -183,7 +224,7 @@ export default function AdminGamesPage() {
               </div>
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Tipo de Injeção</Label>
-                <Select value={newGame.type} onValueChange={(v: any) => setNewUser({...newGame, type: v})}>
+                <Select value={gameData.type} onValueChange={(v: any) => setGameData({...gameData, type: v})}>
                   <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="embed">Link de Embed (Iframe)</SelectItem>
@@ -195,26 +236,26 @@ export default function AdminGamesPage() {
 
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center gap-2">
-                {newGame.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
-                {newGame.type === 'embed' ? 'URL do Iframe (Ex: RetroGames.cc)' : 'URL da ROM (Download pro Cliente)'}
+                {gameData.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
+                {gameData.type === 'embed' ? 'URL do Iframe (Ex: RetroGames.cc)' : 'URL da ROM (Download pro Cliente)'}
               </Label>
-              <Input value={newGame.url} onChange={e => setNewUser({...newGame, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
+              <Input value={gameData.url} onChange={e => setGameData({...gameData, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
             </div>
 
-            {newGame.type === 'direct' && (
+            {gameData.type === 'direct' && (
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">URL do Emulador Customizado (Opcional)</Label>
-                <Input value={newGame.emulatorUrl} onChange={e => setNewUser({...newGame, emulatorUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="Link do emulador .js..." />
+                <Input value={gameData.emulatorUrl} onChange={e => setGameData({...gameData, emulatorUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="Link do emulador .js..." />
               </div>
             )}
 
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem da Capa</Label>
-              <Input value={newGame.imageUrl} onChange={e => setNewUser({...newGame, imageUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
+              <Input value={gameData.imageUrl} onChange={e => setGameData({...gameData, imageUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
             </div>
 
-            <Button onClick={handleSaveGame} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4">
-              <Save className="mr-2 h-6 w-6" /> INJETAR JOGO NA REDE
+            <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4">
+              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR JOGO' : 'INJETAR JOGO NA REDE'}
             </Button>
           </div>
         </DialogContent>

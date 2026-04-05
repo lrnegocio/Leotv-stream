@@ -85,7 +85,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v39.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v41.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -124,7 +124,7 @@ export async function removeGame(id: string) {
 }
 
 // ==========================================
-// FUNÇÕES DE JOGOS (ARENA RETRO v39.0)
+// FUNÇÕES DE JOGOS (ARENA RETRO v41.0)
 // ==========================================
 
 export async function getRemoteGames(): Promise<GameItem[]> {
@@ -143,7 +143,7 @@ export async function saveGame(game: Partial<GameItem>) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v39.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v41.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -157,7 +157,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
     
-    // Canais e Filmes (Apenas com link secundário para IPTV)
     if (allItems) {
       allItems.forEach(item => {
         if (item.isRestricted && !user.isAdultEnabled) return;
@@ -194,7 +193,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
       });
     }
 
-    // ARENA GAMES NO IPTV
     if (allGames && user.isGamesEnabled) {
       allGames.forEach(game => {
         const gameUrl = `${origin}/user/home?id=game_${game.id}`;
@@ -209,7 +207,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v39.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v41.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -229,7 +227,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     let items = data || [];
 
     if (isIptv) {
-      // No IPTV só aparecem itens com link secundário preenchido
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.directStreamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.directStreamUrl);
@@ -237,7 +234,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
         return false;
       });
     } else {
-      // No PWA só aparecem itens com link soberano preenchido
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
