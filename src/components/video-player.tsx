@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,9 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v63.0 - EXCLUSIVO PWA
- * Especialista em M3U8 com Proxy de Fragmentos Total.
- * Suporta Iframes, MP4, M3U8 e Links Brutos.
+ * SINTONIZADOR SNIPER v66.0 - BYPASS AD-BLOCK & BRAVE
+ * Purificação total de sinal através do Túnel Master.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -37,7 +37,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // EXTRATOR DE TAG IFRAME COMPLETA
     if (urlStr.toLowerCase().startsWith('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -45,7 +44,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // IDENTIFICAÇÃO DE PROVEDORES DE EMBED (IFRAME)
     const iframeProviders = [
       'rdcanais.com', 
       'redecanais', 
@@ -64,13 +62,11 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (iframeProviders.some(p => lowerUrl.includes(p)) || lowerUrl.includes('xvideos.com')) {
       let finalUrl = urlStr;
       
-      // Ajuste XVideos
       if (lowerUrl.includes('xvideos.com')) {
         const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
         if (vidIdMatch) finalUrl = `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`;
       }
       
-      // Ajuste YouTube
       if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
         const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
         finalUrl = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`;
@@ -79,11 +75,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       return { processedUrl: finalUrl, type: 'iframe' };
     }
 
-    // IDENTIFICAÇÃO DE FORMATOS DE STREAMING
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     
-    // Todos os sinais de IPTV (.m3u8, .ts) ou HTTP inseguro passam pelo Túnel Master
     if (isM3U8 || isTS || urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
@@ -120,7 +114,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
-          // CONFIGURAÇÃO SNIPER: Força o proxy em cada segmento (.ts) para bypass de CORS
           xhrSetup: (xhr: any, rUrl: string) => {
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);

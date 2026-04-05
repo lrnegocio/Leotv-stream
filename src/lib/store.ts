@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -84,15 +85,21 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v63 - SUPREMACIA PWA
- * Mantida a compatibilidade com a tabela original do Supabase.
+ * GESTÃO DE CONTEÚDO UNIFICADA v66 - SUPREMACIA PWA
+ * Pesquisa inteligente por Canal e Categoria simultaneamente.
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    
+    // PESQUISA MESTRA: Busca no Título E na Categoria (Gênero)
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
+    
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
+    
     const { data } = await query.order('title', { ascending: true });
     return data || [];
   } catch (e) { return []; }
@@ -103,7 +110,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     const finalUrl = item.streamUrl || "";
     
-    // Payload fiel ao seu script SQL
     const payload: any = {
       id, 
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -113,7 +119,6 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: finalUrl,
-      // Se for série master (temporadas), o campo episodes fica nulo para evitar erro de tipo
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };

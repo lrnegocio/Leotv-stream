@@ -47,8 +47,8 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: `
           iframe[src*="redecanaistv"], 
           iframe[src*="xvideos"], 
-          iframe[src*="pornhub"],
-          iframe[src*="dailymotion"] {
+          iframe[src*="reidoscanais"],
+          iframe[src*="rdcanais"] {
             pointer-events: auto !important;
           }
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
@@ -71,21 +71,24 @@ export default function RootLayout({
   );
 }
 
+/**
+ * BLOQUEADOR DE SEGURANÇA MESTRE v67
+ * Desativa botão direito, F12, Ctrl+Shift+I e qualquer inspeção de código.
+ */
 function SecurityBlocker() {
   return (
     <script dangerouslySetInnerHTML={{ __html: `
       (function() {
         const isLocal = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' || 
-                        window.location.hostname.includes('web-workstation');
+                        window.location.hostname === '127.0.0.1';
         
         if (isLocal) return;
 
+        // Bloqueia Botão Direito (Context Menu)
         document.addEventListener('contextmenu', e => e.preventDefault());
 
+        // Bloqueia Atalhos de Inspeção
         document.addEventListener('keydown', e => {
-          if (e.ctrlKey && e.key === 'a') return true;
-
           if (
             e.key === 'F12' || 
             (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
@@ -97,11 +100,18 @@ function SecurityBlocker() {
           }
         });
 
+        // Impede seleção de texto total
         document.addEventListener('selectstart', e => {
            const isInput = e.target.tagName === 'INPUT' || 
                            e.target.tagName === 'TEXTAREA' || 
                            e.target.isContentEditable;
            if (isInput) return true;
+           e.preventDefault();
+        });
+
+        // Anti-Drag de Imagens
+        document.addEventListener('dragstart', e => {
+          if (e.target.tagName === 'IMG') e.preventDefault();
         });
       })();
     `}} />
