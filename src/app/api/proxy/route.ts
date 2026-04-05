@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v44.0 - PURIFICAÇÃO ABSOLUTA & SUPORTE M3U8/TS
- * Blindado contra Erro 500 no Next.js 15.
+ * TÚNEL XUI MASTER v45.0 - PURIFICAÇÃO ABSOLUTA & ANTI-500
+ * Blindado contra Erro 500 no Next.js 15 e bloqueios de CORS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const responseHeaders = new Headers();
     
     /**
-     * LIMPEZA CIRÚRGICA DE HEADERS (FIM DO ERRO 500 v44)
+     * LIMPEZA CIRÚRGICA DE HEADERS (FIM DO ERRO 500 v45)
      * Removemos cabeçalhos que conflitam com o stream do Next.js 15.
      */
     const forbiddenHeaders = [

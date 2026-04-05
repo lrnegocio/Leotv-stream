@@ -14,8 +14,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v44.0 - SUPORTE AGRESSIVO XVIDEOS, M3U8, TS & BLINDER
+ * SINTONIZADOR SNIPER v45.0 - SUPORTE AGRESSIVO XVIDEOS, M3U8, TS & BLINDER
  * Corrigido para novos padrões de links XVideos e estabilidade total no PWA.
+ * Adicionado Proxy Forçado para segmentos HLS.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -38,8 +39,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS ATÔMICO v44.0 (Pega video.xxxxx)
-    if (lowerUrl.includes('xvideos.com')) {
+    // EXTRATOR XVIDEOS ATÔMICO v45.0
+    if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
         return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
@@ -115,8 +116,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // PROXY AGRESSIVO PARA SEGMENTOS TS BLOQUEADOS
-            if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder') || rUrl.includes('xvideos-cdn'))) {
+            // PROXY AGRESSIVO v45: Se o link não for local, manda pro proxy
+            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
