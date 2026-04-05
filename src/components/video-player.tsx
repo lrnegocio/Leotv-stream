@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw, Maximize, Minimize } from "lucide-center"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -49,7 +50,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Extração Master de iframes
+    // Extração de iFrames brutos
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -57,34 +58,51 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR LÉO TV - REVERSÃO YOUTUBE & RECALIBRAGEM ADULTO
+    // --- RECALIBRAGEM YOUTUBE MASTER (ANTI-ERRO 153) ---
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+      let ytId = "";
+      if (lowerUrl.includes('v=')) {
+        ytId = urlStr.split('v=')[1]?.split('&')[0];
+      } else if (lowerUrl.includes('youtu.be/')) {
+        ytId = urlStr.split('youtu.be/')[1]?.split('?')[0];
+      } else if (lowerUrl.includes('embed/')) {
+        ytId = urlStr.split('embed/')[1]?.split('?')[0];
+      }
+      
+      if (ytId) {
+        return { 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, 
+          type: 'iframe' 
+        };
+      }
+    }
+
+    // --- RECALIBRAGEM XVIDEOS MASTER (EXTRAÇÃO DE ID SOBERANA) ---
+    if (lowerUrl.includes('xvideos.com')) {
+      // Tenta pegar o ID no formato /video.XXXXXXX/ ou /videoXXXXXXX
+      const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]+)/i);
+      if (vidMatch && vidMatch[1]) {
+        return { 
+          processedUrl: `https://www.xvideos.com/embedframe/${vidMatch[1]}`, 
+          type: 'iframe' 
+        };
+      }
+      return { processedUrl: urlStr, type: 'iframe' };
+    }
+
     const iframeProviders = [
-      'youtube.com',
-      'youtu.be',
       'embed', 
       'player', 
       'voodrew',
       'rdcanais',
       'redecanais',
       'reidoscanais',
-      'xvideos.com',
       'brazzers.com',
       'bangbros.com'
     ];
 
     if (iframeProviders.some(p => lowerUrl.includes(p))) {
-      let finalUrl = urlStr;
-      
-      // Calibragem XVideos Master: converte link de página em embedframe
-      if (lowerUrl.includes('xvideos.com') && !lowerUrl.includes('embedframe')) {
-        const vidMatch = urlStr.match(/video(\d+)/);
-        if (vidMatch && vidMatch[1]) {
-           finalUrl = `https://www.xvideos.com/embedframe/${vidMatch[1]}`;
-        }
-      }
-      
-      // YouTube: Deixa como iFrame nativo sem alteração agressiva para evitar erro 153
-      return { processedUrl: finalUrl, type: 'iframe' };
+      return { processedUrl: urlStr, type: 'iframe' };
     }
 
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
