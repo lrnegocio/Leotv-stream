@@ -42,6 +42,7 @@ export interface GameItem {
   emulatorUrl?: string;
   imageUrl?: string;
   created_at?: string;
+  genre: string; // Compatibilidade com VideoPlayer
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -70,30 +71,9 @@ export interface GameRanking {
   points: number;
 }
 
-export interface Reseller {
-  id: string; 
-  name: string; 
-  username: string; 
-  password?: string; 
-  credits: number;
-  totalSold: number; 
-  isBlocked: boolean; 
-  email?: string; 
-  phone?: string; 
-  cpf?: string;
-  birthDate?: string;
-}
-
 export async function removeUser(id: string) {
   try {
     const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function removeReseller(id: string) {
-  try {
-    const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
   } catch (e) { return false; }
 }
@@ -127,7 +107,8 @@ export async function getRemoteGames(): Promise<GameItem[]> {
       type: item.description?.includes('GAME_TYPE:embed') ? 'embed' : 'direct',
       url: item.streamUrl,
       emulatorUrl: item.directStreamUrl,
-      imageUrl: item.imageUrl
+      imageUrl: item.imageUrl,
+      genre: item.genre
     }));
   } catch (e) { return []; }
 }
@@ -151,77 +132,19 @@ export async function saveGame(game: Partial<GameItem>) {
   } catch (e) { return false; }
 }
 
-export async function removeGame(id: string) {
-  return removeContent(id);
-}
-
-export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
+export async function getCategoryCount(genre: string) {
   try {
-    const cleanPin = pin.trim().toUpperCase();
-    const { data: users } = await supabase.from('users').select('*').ilike('pin', `${cleanPin}%`);
-    const user = users?.[0];
-
-    if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
-
-    const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
-    const origin = originUrl || "";
-    let m3u = "#EXTM3U\n";
-    
-    if (allItems) {
-      allItems.forEach(item => {
-        if (item.genre.startsWith('ARENA: ')) return;
-        if (item.isRestricted && !user.isAdultEnabled) return;
-        if (!item.directStreamUrl && item.type !== 'series' && item.type !== 'multi-season') return; 
-
-        const group = (item.genre || "GERAL").toUpperCase();
-        const logo = item.imageUrl || "";
-        const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
-        
-        if (item.type === 'channel') {
-          const streamUrl = `${origin}/live/${user.pin}/${user.pin}/${item.id}.m3u8`;
-          m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
-        } else if (item.type === 'movie') {
-          const streamUrl = `${origin}/movie/${user.pin}/${user.pin}/${item.id}.mp4`;
-          m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
-        } else if (item.type === 'series' || item.type === 'multi-season') {
-          if (item.episodes) {
-            item.episodes.forEach((ep: Episode) => {
-              if (!ep.directStreamUrl) return; 
-              const streamUrl = `${origin}/series/${user.pin}/${user.pin}/${ep.id}.mp4`;
-              m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
-            });
-          }
-          if (item.seasons) {
-            item.seasons.forEach((s: Season) => {
-              s.episodes.forEach((ep: Episode) => {
-                if (!ep.directStreamUrl) return;
-                const streamUrl = `${origin}/series/${user.pin}/${user.pin}/${ep.id}.mp4`;
-                m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
-              });
-            });
-          }
-        }
-      });
-
-      if (user.isGamesEnabled) {
-        allItems.filter(i => i.genre.startsWith('ARENA: ')).forEach(game => {
-          const gameUrl = `${origin}/user/home?id=${game.id}`;
-          m3u += `#EXTINF:-1 tvg-id="${game.id}" tvg-name="🎮 ${game.title}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",🎮 ${game.title}\n${gameUrl}\n`;
-        });
-      }
-    }
-
-    return m3u;
-  } catch (e) {
-    return "#EXTM3U\n#EXTINF:-1,ERRO AO GERAR LISTA\n";
-  }
-}
-
-export async function getTopContent(limit = 10): Promise<ContentItem[]> {
-  try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
-    return (data || []).map(i => ({ ...i, views: i.views || 0 }));
-  } catch (e) { return []; }
+    const trimmedGenre = genre.trim().toUpperCase();
+    const { data } = await supabase.from('content').select('*').eq('genre', trimmedGenre);
+    if (!data) return 0;
+    // CONTAGEM INTELIGENTE v48: Conta tudo que tem link Soberano
+    return data.filter(i => {
+      if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
+      if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl) || i.episodes?.length > 0;
+      if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.streamUrl)) || i.seasons?.length > 0;
+      return false;
+    }).length;
+  } catch (e) { return 0; }
 }
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -242,8 +165,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
         if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.directStreamUrl));
       } else {
         if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
-        if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
-        if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.streamUrl));
+        if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl) || (i.episodes && i.episodes.length > 0);
+        if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.streamUrl)) || (i.seasons && i.seasons.length > 0);
       }
       return false;
     });
@@ -266,13 +189,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
-}
-
-export async function getContentById(id: string): Promise<ContentItem | null> {
-  try {
-    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    return data;
-  } catch (e) { return null; }
 }
 
 export async function getGlobalSettings() {
@@ -311,68 +227,19 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
     if (!cleanPin) return { error: "PIN INVÁLIDO" };
-    
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'adm77x2p', role: 'admin', isAdultEnabled: true, isGamesEnabled: true } };
     
-    // Suporte para logins numéricos truncados (RP725 / VUSER)
     let query = supabase.from('users').select('*');
-    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) {
-      query = query.ilike('pin', `${cleanPin}%`);
-    } else {
-      query = query.eq('pin', cleanPin);
-    }
+    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) query = query.ilike('pin', `${cleanPin}%`);
+    else query = query.eq('pin', cleanPin);
 
     const { data: users } = await query;
     const user = users?.[0];
-
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "SINAL BLOQUEADO" };
     if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "SINAL EXPIRADO" };
     return { user };
   } catch (e) { return { error: "ERRO DE REDE" }; }
-}
-
-export async function validateResellerLogin(username: string, pass: string) {
-  try {
-    const { data: res } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', pass.trim()).maybeSingle();
-    if (!res || res.isBlocked) return { error: "NEGADO" };
-    return { reseller: res };
-  } catch (e) { return { error: "ERRO NO BANCO" }; }
-}
-
-export async function getRemoteResellers() {
-  try {
-    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
-  } catch (e) { return []; }
-}
-
-export async function saveReseller(res: any) {
-  try {
-    const { error } = await supabase.from('resellers').upsert(res);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getCategoryCount(genre: string) {
-  try {
-    const trimmedGenre = genre.trim().toUpperCase();
-    const { data } = await supabase.from('content').select('id, streamUrl, type, episodes, seasons').eq('genre', trimmedGenre);
-    if (!data) return 0;
-    return data.filter(i => {
-      if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
-      if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
-      if (i.type === 'multi-season') return i.seasons?.some((s: any) => s.episodes?.some((e: any) => !!e.streamUrl));
-      return false;
-    }).length;
-  } catch (e) { return 0; }
-}
-
-export async function getTotalContentCount() {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
-    return count || 0;
-  } catch (e) { return 0; }
 }
 
 export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
@@ -411,42 +278,18 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-// PINs agora são 100% numéricos para compatibilidade VUSER e RP725
-export const generateRandomPin = (l = 11) => {
-  return Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
-};
-
-export const cleanName = (n: string) => n.toUpperCase().trim();
+export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const appUrl = url;
-  const playlistUrl = `${appUrl}/api/playlist?pin=${pin}`;
-  
-  // Fragmentos para apps numéricos
   const pin8 = pin.substring(0, 8);
   const pin9 = pin.substring(0, 9);
-
   return `*LÉO TV & STREAM* 📺\n\n` +
-         `Seu acesso Master está liberado!\n\n` +
          `🔑 *SEU PIN:* ${pin}\n` +
          `📅 *PLANO:* ${tier.toUpperCase()}\n` +
          `🖥️ *TELAS:* ${screens}\n\n` +
-         `🌐 *ASSISTIR NO NAVEGADOR (PWA/WEB):*\n` +
-         `${appUrl}\n\n` +
-         `🛰️ *DADOS PARA IPTV (APPS GERAIS):*\n` +
-         `👤 *Usuário:* ${pin}\n` +
-         `🔑 *Senha:* ${pin}\n` +
-         `🔗 *URL do Servidor:* ${appUrl.replace('https://', '').replace('http://', '')}\n\n` +
-         `📺 *APPS ESPECÍFICOS (ANDROID TV):*\n\n` +
-         `🚀 *VUSER:* \n` +
-         `👤 *User:* ${pin9} / 🔑 *Senha:* ${pin9}\n\n` +
-         `🚀 *RP725:* \n` +
-         `📟 *Cód Acesso:* ${pin8}\n` +
-         `👤 *User:* ${pin9} / 🔑 *Senha:* ${pin9}\n\n` +
-         `📄 *LISTA M3U DIRETA:*\n` +
-         `${playlistUrl}\n\n` +
-         `🚀 *OUTROS APPS:* XCIPTV, IPTV Smarters, OTT Navigator.\n\n` +
-         `*Bom divertimento!* 🍿`;
+         `🌐 *WEB APP (PC/CELULAR):* ${appUrl}\n\n` +
+         `🚀 *RP725:* Cód: ${pin8} / User: ${pin9}\n` +
+         `🚀 *VUSER:* User: ${pin9} / Senha: ${pin9}\n\n` +
+         `🍿 *Bom divertimento!*`;
 };
-
-export const getExpiryMessage = (pin: string, days: number) => `*AVISO LÉO TV* ⚠️\n\nSeu PIN *${pin}* vence em *${days} dia(s)*!`;

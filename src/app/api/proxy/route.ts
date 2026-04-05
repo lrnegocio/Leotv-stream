@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v45.0 - PURIFICAÇÃO ABSOLUTA & ANTI-500
- * Blindado contra Erro 500 no Next.js 15 e bloqueios de CORS.
+ * TÚNEL XUI MASTER v48.0 - PURIFICAÇÃO ABSOLUTA & ANTI-500
+ * Blindagem definitiva contra Erro 500 no Next.js 15.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -32,25 +32,19 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); 
-
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
       redirect: 'follow',
-      signal: controller.signal
     });
     
-    clearTimeout(timeoutId);
-
     const responseHeaders = new Headers();
     
     /**
-     * LIMPEZA CIRÚRGICA DE HEADERS (FIM DO ERRO 500 v45)
-     * Removemos cabeçalhos que conflitam com o stream do Next.js 15.
+     * LAVAGEM CEREBRAL DE HEADERS (FIM DO ERRO 500)
+     * Removemos obrigatoriamente os cabeçalhos que fazem o Next.js 15 travar.
      */
-    const forbiddenHeaders = [
+    const skipHeaders = [
       'transfer-encoding', 
       'content-encoding', 
       'connection', 
@@ -61,12 +55,12 @@ export async function GET(req: NextRequest) {
       'upgrade',
       'proxy-authenticate',
       'proxy-authorization',
-      'content-length' // CRÍTICO: Next.js 15 dá erro 500 se o tamanho mudar
+      'content-length',
+      'set-cookie'
     ];
     
     res.headers.forEach((v, k) => {
-      const lowerKey = k.toLowerCase();
-      if (!forbiddenHeaders.includes(lowerKey)) {
+      if (!skipHeaders.includes(k.toLowerCase())) {
         responseHeaders.set(k, v);
       }
     });
@@ -78,7 +72,7 @@ export async function GET(req: NextRequest) {
     if (!res.body) return new NextResponse("Sinal Vazio", { status: 502 });
 
     return new Response(res.body, {
-      status: res.status === 0 ? 200 : res.status,
+      status: res.status,
       headers: responseHeaders,
     });
 

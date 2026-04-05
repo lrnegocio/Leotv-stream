@@ -77,11 +77,15 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      if (channelId) {
+      // SINCERIDADE DE CARREGAMENTO v48
+      if (channelId && !activeVideo) {
         const item = data.find(i => i.id === channelId);
         if (item) {
-          if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-          else setActiveVideo({ items: data, index: data.indexOf(item) });
+          if (item.type === 'series' || item.type === 'multi-season') {
+            if (!selectedSeries) setSelectedSeries(item);
+          } else {
+            setActiveVideo({ items: data, index: data.indexOf(item) });
+          }
         }
       }
 
@@ -101,7 +105,7 @@ export default function HomeContent() {
       setGames(gList);
 
     } catch (err) { } finally { setLoading(false); }
-  }, [router, channelId]);
+  }, [router, channelId, activeVideo, selectedSeries]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
@@ -114,11 +118,25 @@ export default function HomeContent() {
     else setActiveVideo({ items: content, index: idx });
   };
 
+  const navigateVideo = (direction: 'next' | 'prev') => {
+    if (!activeVideo) return;
+    const len = activeVideo.items.length;
+    const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
+    
+    // NAVEGAÇÃO FLUIDA v48: Atualiza index sem fechar player
+    setActiveVideo({ ...activeVideo, index: nextIdx });
+    
+    const nextItem = activeVideo.items[nextIdx];
+    const params = new URLSearchParams(window.location.search);
+    params.set('id', nextItem.id);
+    window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
+  };
+
   const handleCategoryClick = async (cat: any) => {
     setPinInput("");
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
-        toast({ variant: "destructive", title: "ARENA BLOQUEADA", description: "Mestre Léo ainda não autorizou seu PIN para combate." });
+        toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
         return;
       }
       setUnlockTarget('GAMES');
@@ -127,7 +145,7 @@ export default function HomeContent() {
     }
     if (cat.restricted) {
       if (!user?.isAdultEnabled) {
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Canais restritos desativados para este PIN." });
+        toast({ variant: "destructive", title: "ACESSO BLOQUEADO" });
         return;
       }
       setUnlockTarget('ADULT');
@@ -148,28 +166,8 @@ export default function HomeContent() {
       setPinInput("");
       setUnlockTarget(null);
     } else {
-      toast({ variant: "destructive", title: "SENHA INVÁLIDA", description: "O acesso foi recusado pelo sistema." });
+      toast({ variant: "destructive", title: "SENHA INVÁLIDA" });
       setPinInput("");
-    }
-  };
-
-  const navigateVideo = (direction: 'next' | 'prev') => {
-    if (!activeVideo) return;
-    const len = activeVideo.items.length;
-    const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
-    const nextItem = activeVideo.items[nextIdx];
-
-    if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
-      setActiveVideo(null);
-      setSelectedSeries(nextItem);
-      const params = new URLSearchParams(window.location.search);
-      params.set('id', nextItem.id);
-      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
-    } else {
-      setActiveVideo({ ...activeVideo, index: nextIdx });
-      const params = new URLSearchParams(window.location.search);
-      params.set('id', nextItem.id);
-      window.history.replaceState(null, '', `${window.location.pathname}?${params.toString()}`);
     }
   };
 
@@ -211,7 +209,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v8500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v9500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -224,7 +222,7 @@ export default function HomeContent() {
           <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center justify-between gap-4 animate-pulse">
             <div className="flex items-center gap-4">
               <div className="bg-emerald-500 p-2 rounded-xl"><Swords className="h-5 w-5 text-white" /></div>
-              <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">ARENA ALERTA: {waitingPlayers.length} GUERREIRO(S) ESPERANDO COMBATE!</p>
+              <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">ARENA ALERTA: {waitingPlayers.length} GUERREIROS ESPERANDO!</p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => handleCategoryClick({ special: 'games' })} className="text-emerald-500 font-black uppercase text-[10px]">ACEITAR DESAFIO</Button>
           </div>
@@ -233,12 +231,6 @@ export default function HomeContent() {
           <div className="bg-primary/10 border border-primary/30 p-4 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4">
             <div className="bg-primary p-2 rounded-xl"><MessageSquare className="h-5 w-5 text-white" /></div>
             <p className="text-[11px] font-black uppercase text-primary tracking-widest italic">{announcement}</p>
-          </div>
-        )}
-        {user?.individualMessage && !selectedCat && !q && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-3xl flex items-center gap-4">
-            <div className="bg-emerald-500 p-2 rounded-xl"><Bell className="h-5 w-5 text-white" /></div>
-            <p className="text-[11px] font-black uppercase text-emerald-500 tracking-widest italic">NOTIFICAÇÃO VIP: {user.individualMessage}</p>
           </div>
         )}
       </div>
@@ -277,24 +269,17 @@ export default function HomeContent() {
         <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
             <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-500" /><h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer</h2></div>
-            <div className="flex items-center gap-6">
-               <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-white/5"><Trophy className="h-4 w-4 text-yellow-500" /><span className="text-[10px] font-black uppercase text-yellow-500">Rank: #{gameRankings.findIndex(r => r.pin === user?.pin) + 1 || '--'} | {user?.gamePoints || 0} Pts</span></div>
-               <Button variant="ghost" onClick={() => { setActiveGame(null); if(!activeGame) setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
-            </div>
+            <Button variant="ghost" onClick={() => { setActiveGame(null); setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
           </div>
           <div className="flex-1 flex overflow-hidden bg-black/40">
             <div className={`w-80 border-r border-white/5 p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
                <div className="space-y-8">
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-3">
-                     <div className="flex items-center gap-2"><Bot className="h-4 w-4 text-emerald-500" /><span className="text-[10px] font-black uppercase">IA Nível (1-20)</span></div>
-                     <Slider value={[iaLevel]} min={1} max={20} step={1} onValueChange={v => setIaLevel(v[0])} />
-                  </div>
                   {consolesList.map(consoleName => (
                     <div key={consoleName} className="space-y-3">
                        <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40">🎮 {consoleName}</div>
                        <div className="grid gap-2">
                           {games.filter(g => g.console === consoleName).map(game => (
-                            <Button key={game.id} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">{game.title}</Button>
+                            <Button key={game.id} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 rounded-xl font-bold uppercase text-[9px] px-4">{game.title}</Button>
                           ))}
                        </div>
                     </div>
@@ -314,14 +299,13 @@ export default function HomeContent() {
                       <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-black/80">
                          <Download className="h-20 w-20 text-emerald-500 mb-6 animate-bounce" />
                          <h3 className="text-3xl font-black uppercase italic text-emerald-500">Baixando ROM no Aparelho...</h3>
-                         <p className="text-xs font-bold uppercase opacity-40 max-w-sm">O jogo está sendo armazenado no cache local do seu dispositivo para máxima velocidade. O espaço consumido será o do seu aparelho.</p>
-                         <Button className="mt-8 bg-emerald-500 font-black uppercase" onClick={() => window.open(activeGame.url, '_blank')}>INSTALAR AGORA (CLIENT-SIDE)</Button>
+                         <Button className="mt-8 bg-emerald-500 font-black uppercase" onClick={() => window.open(activeGame.url, '_blank')}>INSTALAR AGORA</Button>
                       </div>
                     )}
                  </div>
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                    {searchingOpponent ? <div className="space-y-6 animate-pulse"><Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" /><h3 className="text-2xl font-black uppercase italic text-emerald-500">Buscando Guerreiros Online...</h3></div> : <div className="max-w-md space-y-8"><Trophy className="h-24 w-24 text-yellow-500 mx-auto mb-4" /><h3 className="text-4xl font-black uppercase italic tracking-tighter">Arena dos Melhores</h3><p className="text-xs font-bold uppercase opacity-40">Escolha um jogo para iniciar. O sistema enviará um alerta para todos os jogadores ativos!</p></div>}
+                    {searchingOpponent ? <div className="space-y-6 animate-pulse"><Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" /><h3 className="text-2xl font-black uppercase italic text-emerald-500">Buscando Guerreiros...</h3></div> : <div className="max-w-md space-y-8"><Trophy className="h-24 w-24 text-yellow-500 mx-auto" /><h3 className="text-4xl font-black uppercase italic tracking-tighter">Arena dos Melhores</h3></div>}
                  </div>
                )}
             </div>
@@ -332,19 +316,18 @@ export default function HomeContent() {
       <Dialog open={isPinOpen} onOpenChange={(val) => { setIsPinOpen(val); if(!val) setPinInput(""); }}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic text-primary mb-6">Trava de Segurança Master</div>
+          <div className="text-2xl font-black uppercase italic text-primary mb-6">Segurança Master</div>
           <input 
             type="password" 
             title="PIN" 
             maxLength={4} 
-            autoComplete="new-password"
             className="h-20 w-56 bg-black/40 border-white/10 text-center text-4xl font-black tracking-[0.6em] rounded-3xl outline-none border-2 focus:border-primary mb-6" 
             value={pinInput} 
             onChange={e => setPinInput(e.target.value)} 
             onKeyDown={e => e.key === 'Enter' && verifyGlobalPassword()} 
             autoFocus 
           />
-          <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl shadow-primary/20">
+          <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-16 bg-primary text-lg font-black uppercase rounded-3xl shadow-xl">
             {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR ACESSO'}
           </Button>
         </DialogContent>
@@ -362,7 +345,17 @@ export default function HomeContent() {
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedSeries.episodes.sort((a,b) => a.number - b.number).map((ep) => (
-                      <Button key={ep.id} variant="outline" onClick={() => { const episodes = selectedSeries.episodes!.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - EP ${e.number}`, id: e.id})); setActiveVideo({ items: episodes, index: selectedSeries.episodes!.indexOf(ep) }); }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 group transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
+                      <Button key={ep.id} variant="outline" onClick={() => { 
+                        const episodes = selectedSeries.episodes!.map(e => ({
+                          ...selectedSeries, 
+                          streamUrl: e.streamUrl, 
+                          title: `${selectedSeries.title} - EP ${e.number}`, 
+                          id: e.id,
+                          type: 'movie'
+                        }));
+                        setActiveVideo({ items: episodes, index: selectedSeries.episodes!.indexOf(ep) }); 
+                        setSelectedSeries(null); // Fecha menu ao dar play
+                      }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
                     ))}
                   </div>
                 ) : selectedSeries.seasons?.map(season => (
@@ -370,7 +363,17 @@ export default function HomeContent() {
                     <h4 className="text-xs font-black uppercase text-primary tracking-[0.2em] pl-4 border-l-4 border-primary mb-4">Temporada {season.number}</h4>
                     <div className="flex flex-col gap-2">
                       {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => { const eps = season.episodes.map(e => ({...selectedSeries, streamUrl: e.streamUrl, title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, id: e.id})); setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 group transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
+                        <Button key={ep.id} variant="outline" onClick={() => { 
+                          const eps = season.episodes.map(e => ({
+                            ...selectedSeries, 
+                            streamUrl: e.streamUrl, 
+                            title: `${selectedSeries.title} - T${season.number} EP ${ep.number}`, 
+                            id: e.id,
+                            type: 'movie'
+                          }));
+                          setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); 
+                          setSelectedSeries(null); // Fecha menu ao dar play
+                        }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
                       ))}
                     </div>
                   </div>

@@ -14,9 +14,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v45.0 - SUPORTE AGRESSIVO XVIDEOS, M3U8, TS & BLINDER
- * Corrigido para novos padrões de links XVideos e estabilidade total no PWA.
- * Adicionado Proxy Forçado para segmentos HLS.
+ * SINTONIZADOR SNIPER v48.0 - SUPORTE UNIVERSAL MP4, M3U8, HLS, TS, MPEG, YOUTUBE & DAILYMOTION
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -39,7 +37,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS ATÔMICO v45.0
+    // EXTRATOR XVIDEOS ATÔMICO
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
@@ -47,6 +45,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
+    // YOUTUBE & DAILYMOTION
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -64,20 +63,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const isBlinder = lowerUrl.includes('blinder.space');
     const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
-    const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('hls-') || lowerUrl.includes('.ts?');
+    const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?') || lowerUrl.includes('hls-') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.endsWith('.mp4');
-    const isWebPlayer = lowerUrl.includes('webplayer.one');
-    const isHTTP = urlStr.startsWith('http://');
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isRedeCanais && lowerUrl.includes('.php')) {
-      return { processedUrl: proxied, type: 'iframe' }; 
-    }
+    if (isRedeCanais && lowerUrl.includes('.php')) return { processedUrl: proxied, type: 'iframe' }; 
     
-    // FORÇAR PROXY PARA M3U8 E LINKS BLOQUEADOS
-    if (isBlinder || isRedeCanais || isWebPlayer || isHTTP || isTS || isM3U8) {
+    // FORÇAR PROXY PARA FORMATOS PROFISSIONAIS
+    if (isBlinder || isRedeCanais || isTS || isM3U8 || urlStr.startsWith('http://')) {
        if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
        if (isMP4) return { processedUrl: proxied, type: 'video' };
        return { processedUrl: proxied, type: 'iframe' };
@@ -116,7 +111,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // PROXY AGRESSIVO v45: Se o link não for local, manda pro proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -142,7 +136,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal M3U8 instável. Tente re-sincronizar.");
+              setError("Sinal instável ou bloqueado.");
               setLoading(false);
             }
           }
@@ -158,7 +152,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar sinal de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao carregar arquivo de vídeo."); setLoading(false); };
       }
     } else {
       setLoading(false);
@@ -210,12 +204,19 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      <div className="absolute inset-0 z-20 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100">
-        <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
-          <ChevronLeft className="h-6 w-6 text-white" />
+      {/* CONTROLES DE NAVEGAÇÃO MASTER */}
+      <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
+          className="pointer-events-auto h-16 w-16 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl"
+        >
+          <ChevronLeft className="h-10 w-10 text-white" />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
-          <ChevronRight className="h-6 w-6 text-white" />
+        <button 
+          onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
+          className="pointer-events-auto h-16 w-16 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl"
+        >
+          <ChevronRight className="h-10 w-10 text-white" />
         </button>
       </div>
     </div>
