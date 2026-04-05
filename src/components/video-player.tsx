@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR SNIPER v34
+    // SINTONIZADOR SNIPER v36
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -52,23 +52,30 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' };
     }
 
-    // XVideos Sniper v34 (Suporte a IDs complexos como video.kikftvd...)
     if (lowerUrl.includes('xvideos.com')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR DE STREAMING XUI STYLE (PROXY OBRIGATÓRIO PARA .TS, .M3U8 E HTTP)
-    const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
+    // SINTONIZADOR BLINDER & TS MASTER v36
+    const isBlinder = lowerUrl.includes('blinder.space');
+    const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
+    const isMP4 = lowerUrl.includes('.mp4');
     const isPHP = lowerUrl.includes('.php') || lowerUrl.includes('canal=') || lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
     if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
-    if (isM3U8 || isTS || isHTTP) return { processedUrl: proxied, type: 'hls' };
+    
+    if (isBlinder || isHTTP || isM3U8 || isTS || isMP4) {
+       // Se for Blinder, HTTP ou extensões de stream, usamos o Proxy.
+       if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
+       // Se for MP4 da Blinder, tratamos como vídeo nativo mas através do proxy.
+       return { processedUrl: proxied, type: 'video' };
+    }
     
     return { processedUrl: urlStr, type: 'video' };
   }, [])
@@ -140,7 +147,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar sinal de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao carregar arquivo de vídeo."); setLoading(false); };
       }
     } else {
       setLoading(false);

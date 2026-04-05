@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v35.0 - LIMPEZA BRUTA & ANTI-500
+ * TÚNEL XUI MASTER v36.0 - LIMPEZA BRUTA & ANTI-500
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
-    // Camuflagem Estratégica v35
+    // Camuflagem Estratégica v36 (Bypass Blinder & RedeCanais)
     const lowerTarget = targetUrl.toLowerCase();
     if (lowerTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); 
+    const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     
     clearTimeout(timeoutId);
 
-    // FILTRO ANTI-LIXO: Se o servidor mandar erro em HTML, barramos para não travar o player
+    // FILTRO ANTI-LIXO: Se o servidor mandar erro em HTML em link de vídeo, barramos.
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html') && (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4'))) {
        return new NextResponse("Sinal Offline", { status: 503 });
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // LIMPEZA CIRÚRGICA DE HEADERS v35 - EVITA INTERNAL SERVER ERROR NO NEXT.JS 15
+    // LIMPEZA CIRÚRGICA DE HEADERS v36 - EVITA INTERNAL SERVER ERROR NO NEXT.JS 15
     const forbiddenHeaders = [
       'transfer-encoding', 
       'content-encoding', 
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     });
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('X-Content-Type-Options', nosniff);
+    responseHeaders.set('X-Content-Type-Options', 'nosniff'); // FIX: Aspas adicionadas para evitar Erro 500
 
     if (!res.body) return new NextResponse("Stream Vazia", { status: 502 });
 
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    // Silencia o erro para o servidor não dar 500
+    // Silencia o erro para o servidor não travar
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
