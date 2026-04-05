@@ -5,7 +5,7 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Laugh, Play, Gamepad2, X, Trophy, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, validateDeviceLogin } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -53,6 +53,9 @@ export default function HomeContent() {
   const channelId = searchParams.get('id') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
+    // Se o player estiver fechando, ignora a carga automática para não reabrir
+    if (isClosingRef.current) return;
+    
     setLoading(true);
     try {
       const session = localStorage.getItem("user_session");
@@ -62,7 +65,8 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, CATEGORIES.find(c => c.id === categoryId)?.genre || "");
       setContent(data);
 
-      if (channelId && !isClosingRef.current && lastOpenedIdRef.current !== channelId) {
+      // Sintonização automática via URL
+      if (channelId && lastOpenedIdRef.current !== channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
           lastOpenedIdRef.current = channelId;
@@ -102,15 +106,16 @@ export default function HomeContent() {
   };
 
   const handleEpisodeClick = (series: ContentItem, ep: any, allEps: any[]) => {
-    // Criamos uma lista de reprodução virtual para o player saber navegar entre os episódios
-    const playList = allEps.map(item => ({
+    // Cria uma lista de episódios para navegação do player
+    const sortedEps = [...allEps].sort((a, b) => a.number - b.number);
+    const playList = sortedEps.map(item => ({
       ...series,
       id: `${series.id}_ep_${item.number}`,
       title: `${series.title} - EP ${item.number}`,
       streamUrl: item.streamUrl
     }));
     
-    const idx = allEps.indexOf(ep);
+    const idx = sortedEps.indexOf(ep);
     setActiveVideo({ items: playList, index: idx });
   };
 
@@ -175,10 +180,12 @@ export default function HomeContent() {
     setActiveVideo(null);
     setSelectedSeries(null);
     
+    // Limpa a URL instantaneamente
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
     
+    // Trava de segurança de 2 segundos para evitar o player duplo (sincronia de URL)
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -189,7 +196,7 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
-    setIsUnlocked(false); // TRANCA TUDO AO SAIR
+    setIsUnlocked(false); // TRANCA TUDO AO SAIR (SENHA VOLÁTIL)
     
     const p = new URLSearchParams(window.location.search);
     p.delete('q');
@@ -257,7 +264,7 @@ export default function HomeContent() {
                       <span className="text-base font-black uppercase tracking-tight text-foreground block">{c.name}</span>
                       {count > 0 && (
                         <span className="bg-muted px-3 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground uppercase mt-2 inline-block">
-                          {count.toLocaleString()} Canais
+                          {count.toLocaleString()} Itens
                         </span>
                       )}
                     </div>
@@ -270,13 +277,13 @@ export default function HomeContent() {
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-300">
             <div className="flex items-center justify-between border-b border-border pb-6">
               <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">
-                {q ? `Busca Master: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
+                {q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
               </h2>
             </div>
             {content.length === 0 ? (
               <div className="py-20 text-center space-y-4 opacity-20">
                 <Tv className="h-20 w-20 mx-auto" />
-                <p className="font-black uppercase text-lg">Sinal não localizado na rede Léo TV.</p>
+                <p className="font-black uppercase text-lg">Nenhum sinal localizado.</p>
               </div>
             ) : (
               <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -348,7 +355,7 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card border-border rounded-3xl p-10 text-center">
           <Lock className="h-12 w-12 text-primary mx-auto mb-6" />
           <div className="text-xl font-black uppercase italic text-foreground mb-4">Área Restrita Master</div>
-          <p className="text-xs font-medium text-muted-foreground mb-6">Insira a senha parental do Mestre Léo para continuar.</p>
+          <p className="text-xs font-medium text-muted-foreground mb-6">Insira a senha parental para continuar.</p>
           <input 
             type="password" 
             title="Senha Parental" 
@@ -360,7 +367,7 @@ export default function HomeContent() {
             autoFocus 
           />
           <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-14 bg-primary text-sm font-black uppercase rounded-2xl">
-            {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR AGORA'}
+            {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR'}
           </Button>
         </DialogContent>
       </Dialog>
@@ -403,17 +410,17 @@ export default function HomeContent() {
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                          <Download className="h-16 w-16 text-emerald-600 mb-6" />
-                         <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download Master</h3>
-                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download manual.</p>
-                         <Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR ROM</Button>
+                         <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download ROM</h3>
+                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download para o seu aparelho.</p>
+                         <Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR AGORA</Button>
                       </div>
                     )}
                  </div>
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center opacity-40">
                     <Trophy className="h-16 w-16 text-emerald-600 mx-auto mb-6" />
-                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Master Léo</h3>
-                    <p className="text-[10px] font-bold uppercase mt-2">Selecione um clássico no menu lateral.</p>
+                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Retro Master</h3>
+                    <p className="text-[10px] font-bold uppercase mt-2">Escolha um jogo no menu lateral.</p>
                  </div>
                )}
             </div>

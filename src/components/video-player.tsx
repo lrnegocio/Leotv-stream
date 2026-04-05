@@ -41,7 +41,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Detectar iFrame bruto
+    // Detectar iFrame bruto na string (caso o mestre cole o embed inteiro)
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -49,24 +49,26 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR YOUTUBE SOBERANO (REFINADO)
+    // SINTONIZADOR YOUTUBE SOBERANO (REFINADO PARA EVITAR ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = urlStr.match(regExp);
-      if (match && match[2].length === 11) ytId = match[2];
+      
+      // Captura ID de watch?v=, shorts/, embed/, youtu.be/
+      const match = urlStr.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+      if (match && match[1]) ytId = match[1];
       
       if (ytId) {
+        // Formato limpo que o YouTube aceita em iFrames
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, 
           type: 'iframe' 
         };
       }
     }
 
-    // SINTONIZADOR ADULTO MASTER (EXTRAÇÃO DE ID COMPLETA)
+    // SINTONIZADOR ADULTO MASTER (XVideos, BangBros, Brazzers)
     if (lowerUrl.includes('xvideos.com')) {
-      // Pega IDs como kabopuh3e7b ou similares
+      // Extrai o ID do vídeo (ex: kabopuh3e7b)
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]+)/i);
       if (vidMatch && vidMatch[1]) {
         return { 
@@ -76,20 +78,22 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // Provedores de iFrame conhecidos
+    // Provedores de iFrame conhecidos (Sinal Direto)
     const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com'];
     if (iframeProviders.some(p => lowerUrl.includes(p)) && !lowerUrl.includes('.m3u8')) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
 
-    // SINTONIZADOR HLS / M3U8 / TS (TÚNEL MASTER)
+    // SINTONIZADOR HLS / M3U8 / TS (TÚNEL MASTER PROXY)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
-    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('ts=');
     
     if (isM3U8 || isTS) {
+       // Passa pelo Proxy para evitar bloqueios de CORS e SSL
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
     }
     
+    // Fallback para HTTP comum (Proxy para evitar erro de Mixed Content)
     if (urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
@@ -127,6 +131,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que cada fragmento .ts também passe pelo proxy se necessário
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -141,7 +146,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         hlsRef.current = hls;
         
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video?.play().catch(() => { if(video) { video.muted = true; video.play().catch(() => {}); } });
+          video?.play().catch(() => { 
+            if(video) { 
+              video.muted = true; 
+              video.play().catch(() => {}); 
+            } 
+          });
           setLoading(false);
         });
 
@@ -151,7 +161,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável ou protegido. Tente reconectar.");
+              setError("Sinal instável ou protegido. Tente outro canal.");
               setLoading(false);
             }
           }
@@ -171,11 +181,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           setLoading(false);
         };
         video.onerror = () => {
-          setError("Erro ao carregar vídeo.");
+          setError("Erro ao carregar o vídeo.");
           setLoading(false);
         };
       }
     } else {
+      // Se for iFrame, o carregamento é gerido pelo onLoad do iFrame
       if (type !== 'iframe') setLoading(false);
     }
   }, [processedUrl, type, cleanupPlayer, retryCount]);
@@ -187,7 +198,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   return (
     <div ref={containerRef} key={id || url} className="relative aspect-video w-full bg-black overflow-hidden border border-border group shadow-2xl rounded-2xl">
-      {loading && !error && (
+      {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
           <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Sintonizando Sinal Master...</p>
@@ -225,6 +236,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
+      {/* Controles de Navegação (Avançar/Retroceder) */}
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <button 
           onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
