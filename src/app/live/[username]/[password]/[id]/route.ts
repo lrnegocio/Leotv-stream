@@ -20,6 +20,7 @@ export async function GET(
 
     if (!item) return new NextResponse("Canal não encontrado", { status: 404 });
 
+    // PRIORIZAÇÃO DUAL-LINK v29.0: Links Diretos para IPTV
     let streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
 

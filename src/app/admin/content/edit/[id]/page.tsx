@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2 } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -50,7 +50,7 @@ export default function EditContentPage() {
   }, [id, router])
 
   const addEpisode = () => {
-    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
+    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '', directStreamUrl: '' }
     setEpisodes([...episodes, newEp])
   }
 
@@ -66,7 +66,7 @@ export default function EditContentPage() {
   const addEpisodeToSeason = (sid: string) => {
     setSeasons(seasons.map(s => {
       if (s.id === sid) {
-        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '' }
+        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '', directStreamUrl: '' }
         return { ...s, episodes: [...s.episodes, newEp] }
       }
       return s
@@ -83,6 +83,7 @@ export default function EditContentPage() {
     const success = await saveContent({
       ...formData,
       streamUrl: isSeries ? "" : formData.streamUrl,
+      directStreamUrl: isSeries ? "" : formData.directStreamUrl,
       episodes: (formData.type === 'series') ? episodes : null,
       seasons: (formData.type === 'multi-season') ? seasons : null,
     })
@@ -164,10 +165,14 @@ export default function EditContentPage() {
           </div>
 
           {!isSeriesMode && (
-            <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
+            <div className="grid gap-6 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link do Sinal Master</h3>
-                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link único para Web e IPTV" />
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Globe className="h-4 w-4" /> Link Soberano (Web App)</h3>
+                <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" placeholder="Link blindado para Web" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-emerald-500 tracking-widest"><Zap className="h-4 w-4" /> Link Direto (IPTV / TV Box)</h3>
+                <Input value={formData.directStreamUrl || ""} onChange={e => setFormData({...formData, directStreamUrl: e.target.value})} className="h-12 bg-black/40 border-emerald-500/20 font-mono text-[10px]" placeholder="Link direto para Smart TVs" />
               </div>
             </div>
           )}
@@ -180,32 +185,38 @@ export default function EditContentPage() {
               </div>
               <div className="grid gap-3">
                 {episodes.map((ep, idx) => (
-                  <div key={ep.id} className="p-4 bg-card/50 border border-white/5 rounded-xl flex gap-4 items-end">
-                    <div className="w-12 space-y-2 text-center">
-                      <Label className="text-[8px] font-black uppercase opacity-40">Num</Label>
-                      <Input type="number" value={ep.number} onChange={e => {
-                        const newEps = [...episodes]
-                        newEps[idx].number = parseInt(e.target.value) || 0
-                        setEpisodes(newEps)
-                      }} className="h-10 text-center font-black bg-black/40" />
+                  <div key={ep.id} className="p-4 bg-card/50 border border-white/5 rounded-xl space-y-4">
+                    <div className="flex gap-4 items-end">
+                      <div className="w-12 space-y-2 text-center">
+                        <Label className="text-[8px] font-black uppercase opacity-40">Num</Label>
+                        <Input type="number" value={ep.number} onChange={e => {
+                          const newEps = [...episodes]
+                          newEps[idx].number = parseInt(e.target.value) || 0
+                          setEpisodes(newEps)
+                        }} className="h-10 text-center font-black bg-black/40" />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label className="text-[8px] font-black uppercase opacity-40">Título do Ep</Label>
+                        <Input value={ep.title} onChange={e => {
+                          const newEps = [...episodes]
+                          newEps[idx].title = e.target.value
+                          setEpisodes(newEps)
+                        }} className="h-10 bg-black/40" />
+                      </div>
+                      <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <Label className="text-[8px] font-black uppercase opacity-40">Título do Ep</Label>
-                      <Input value={ep.title} onChange={e => {
-                        const newEps = [...episodes]
-                        newEps[idx].title = e.target.value
-                        setEpisodes(newEps)
-                      }} className="h-10 bg-black/40" />
+                    <div className="grid grid-cols-2 gap-2">
+                       <Input value={ep.streamUrl} placeholder="Link Web" onChange={e => {
+                          const newEps = [...episodes]
+                          newEps[idx].streamUrl = e.target.value
+                          setEpisodes(newEps)
+                        }} className="h-8 bg-black/40 font-mono text-[9px]" />
+                       <Input value={ep.directStreamUrl} placeholder="Link IPTV" onChange={e => {
+                          const newEps = [...episodes]
+                          newEps[idx].directStreamUrl = e.target.value
+                          setEpisodes(newEps)
+                        }} className="h-8 bg-emerald-500/5 border-emerald-500/10 font-mono text-[9px]" />
                     </div>
-                    <div className="flex-[2] space-y-2">
-                      <Label className="text-[8px] font-black uppercase opacity-40">Link do Sinal</Label>
-                      <Input value={ep.streamUrl} onChange={e => {
-                        const newEps = [...episodes]
-                        newEps[idx].streamUrl = e.target.value
-                        setEpisodes(newEps)
-                      }} className="h-10 bg-black/40 font-mono text-[10px]" />
-                    </div>
-                    <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
@@ -235,29 +246,38 @@ export default function EditContentPage() {
                          <Button type="button" variant="destructive" size="icon" onClick={() => removeSeason(season.id)} className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid gap-3">
                       {season.episodes.map((ep, eIdx) => (
-                        <div key={ep.id} className="flex gap-2 items-center bg-black/20 p-2 rounded-lg">
-                           <Input type="number" value={ep.number} onChange={e => {
-                              const newSeasons = [...seasons]
-                              newSeasons[sIdx].episodes[eIdx].number = parseInt(e.target.value) || 0
-                              setSeasons(newSeasons)
-                           }} className="w-12 h-8 bg-black/40 text-[10px] font-black" />
-                           <Input value={ep.title} placeholder="Título do Ep" onChange={e => {
-                              const newSeasons = [...seasons]
-                              newSeasons[sIdx].episodes[eIdx].title = e.target.value
-                              setSeasons(newSeasons)
-                           }} className="flex-1 h-8 bg-black/40 text-[10px]" />
-                           <Input value={ep.streamUrl} placeholder="Link do Sinal" onChange={e => {
-                              const newSeasons = [...seasons]
-                              newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
-                              setSeasons(newSeasons)
-                           }} className="flex-[2] h-8 bg-black/40 text-[10px] font-mono" />
-                           <Button type="button" variant="ghost" size="icon" onClick={() => {
-                             const newSeasons = [...seasons]
-                             newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
-                             setSeasons(newSeasons)
-                           }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                        <div key={ep.id} className="bg-black/20 p-3 rounded-lg space-y-2">
+                           <div className="flex gap-2 items-center">
+                              <Input type="number" value={ep.number} onChange={e => {
+                                 const newSeasons = [...seasons]
+                                 newSeasons[sIdx].episodes[eIdx].number = parseInt(e.target.value) || 0
+                                 setSeasons(newSeasons)
+                              }} className="w-12 h-8 bg-black/40 text-[10px] font-black" />
+                              <Input value={ep.title} placeholder="Título" onChange={e => {
+                                 const newSeasons = [...seasons]
+                                 newSeasons[sIdx].episodes[eIdx].title = e.target.value
+                                 setSeasons(newSeasons)
+                              }} className="flex-1 h-8 bg-black/40 text-[10px]" />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => {
+                                const newSeasons = [...seasons]
+                                newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
+                                setSeasons(newSeasons)
+                              }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                           </div>
+                           <div className="grid grid-cols-2 gap-2">
+                              <Input value={ep.streamUrl} placeholder="Link Web" onChange={e => {
+                                 const newSeasons = [...seasons]
+                                 newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
+                                 setSeasons(newSeasons)
+                              }} className="h-7 bg-black/40 text-[9px] font-mono" />
+                              <Input value={ep.directStreamUrl} placeholder="Link IPTV" onChange={e => {
+                                 const newSeasons = [...seasons]
+                                 newSeasons[sIdx].episodes[eIdx].directStreamUrl = e.target.value
+                                 setSeasons(newSeasons)
+                              }} className="h-7 bg-emerald-500/5 border-emerald-500/10 text-[9px] font-mono" />
+                           </div>
                         </div>
                       ))}
                     </div>

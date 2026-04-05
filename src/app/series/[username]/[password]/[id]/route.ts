@@ -17,7 +17,7 @@ export async function GET(
 
     const content = await getRemoteContent();
     
-    // BUSCA XUI MASTER: Procura nos episódios de todas as séries salvas
+    // BUSCA XUI MASTER v29.0: Prioriza directStreamUrl por episódio
     let streamUrl = "";
     content.forEach(item => {
       if (item.type === 'series' && item.episodes) {

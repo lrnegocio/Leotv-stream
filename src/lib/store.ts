@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v28.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v30.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -106,7 +106,7 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (AUTO-DETECT v28.0)
+// FUNÇÕES DE PLAYLIST M3U (DUAL-LINK v30.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -187,6 +187,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       type: item.type || 'channel', description: item.description || "",
       imageUrl: item.imageUrl || "", isRestricted: !!item.isRestricted,
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : (item.streamUrl || ""),
+      directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : (item.directStreamUrl || ""),
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };

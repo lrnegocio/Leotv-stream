@@ -20,7 +20,7 @@ export async function GET(
 
     if (!item) return new NextResponse("Filme não encontrado", { status: 404 });
 
-    // LIBERAÇÃO DUAL-LINK v3700.0: Prioriza sinais blindados
+    // PRIORIZAÇÃO DUAL-LINK v29.0: Links Diretos para IPTV
     let streamUrl = item.directStreamUrl || item.streamUrl;
     if (!streamUrl) return new NextResponse("Sinal offline", { status: 404 });
 
@@ -31,7 +31,8 @@ export async function GET(
     }
 
     if (streamUrl.includes('xvideos.com')) {
-      const vidId = streamUrl.split('video.')[1]?.split('/')[0];
+      const vidIdMatch = streamUrl.match(/video\.?([a-z0-9]+)/i) || streamUrl.match(/\/video([0-9]+)/);
+      const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return NextResponse.redirect(`https://www.xvideos.com/embedframe/${vidId}`);
     }
 
