@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -87,8 +86,8 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v55 - SOBERANIA TOTAL
- * Sincronizado com o esquema SQL: veilblctswnnyzidirrf
+ * GESTÃO DE CONTEÚDO UNIFICADA v56 - SOBERANIA TOTAL
+ * Sincronizado com o esquema SQL Master.
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -103,7 +102,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     if (!data) return [];
 
     return data.map(item => {
-      // SINALIZAÇÃO INTELIGENTE: Se um dos campos está vazio, o outro assume.
+      // UNIFICAÇÃO NO CARREGAMENTO: Garante que o link esteja em ambos os campos para o player
       const mainLink = item.streamUrl || item.directStreamUrl || "";
       
       if (item.episodes) {
@@ -124,11 +123,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
       }
 
       return { ...item, streamUrl: mainLink, directStreamUrl: mainLink };
-    }).filter(i => {
-      if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
-      if (i.type === 'series') return i.episodes && i.episodes.length > 0;
-      if (i.type === 'multi-season') return i.seasons && i.seasons.length > 0;
-      return false;
     });
   } catch (e) { return []; }
 }
@@ -136,7 +130,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
-    // UNIFICAÇÃO NO SALVAMENTO: Espelha o link nos dois campos do banco
+    // UNIFICAÇÃO NO SALVAMENTO: Espelha o link único em todos os campos do banco
     const finalUrl = item.streamUrl || item.directStreamUrl || "";
     
     const payload = {
@@ -149,7 +143,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       isRestricted: !!item.isRestricted,
       streamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
       directStreamUrl: (item.type === 'series' || item.type === 'multi-season') ? "" : finalUrl,
-      episodes: (item.type === 'series') ? (item.episodes || []) : null,
+      episodes: (item.type === 'series') ? (item.episodes || []) : (item.seasons ? null : []),
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null,
       views: item.views || 0
     };
@@ -161,16 +155,8 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getCategoryCount(genre: string) {
   try {
     const trimmedGenre = genre.trim().toUpperCase();
-    const { data } = await supabase.from('content').select('streamUrl, directStreamUrl, type, episodes, seasons').eq('genre', trimmedGenre);
-    if (!data) return 0;
-    
-    return data.filter((i: any) => {
-      const hasLink = i.streamUrl || i.directStreamUrl;
-      if (i.type === 'channel' || i.type === 'movie') return !!hasLink;
-      if (i.type === 'series') return i.episodes && i.episodes.length > 0;
-      if (i.type === 'multi-season') return i.seasons && i.seasons.length > 0;
-      return false;
-    }).length;
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', trimmedGenre);
+    return count || 0;
   } catch (e) { return 0; }
 }
 
@@ -323,8 +309,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
     let query = supabase.from('users').select('*');
-    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) query = query.ilike('pin', `${cleanPin}%`);
-    else query = query.eq('pin', cleanPin);
+    // Suporte para logins curtos (RP725 / VUSER)
+    if (/^\d+$/.test(cleanPin) && (cleanPin.length === 8 || cleanPin.length === 9)) {
+      query = query.ilike('pin', `${cleanPin}%`);
+    } else {
+      query = query.eq('pin', cleanPin);
+    }
 
     const { data: users } = await query;
     const user = users?.[0];
@@ -392,6 +382,7 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
+// PINs agora são 100% numéricos para compatibilidade total com TV Android
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const cleanName = (name: string) => name.replace(/[^\w\s]/gi, '').toUpperCase().trim();
@@ -406,7 +397,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `🌐 *WEB APP (PC/CELULAR):* ${url}\n\n` +
          `🚀 *RP725:* Cód: ${pin8} / User: ${pin9}\n` +
          `🚀 *VUSER:* User: ${pin9} / Senha: ${pin9}\n\n` +
-         ` popcorn *Bom divertimento!*`;
+         `🍿 *Bom divertimento!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
@@ -419,13 +410,12 @@ export async function generateM3UPlaylist(pin: string, origin: string): Promise<
   const login = await validateDeviceLogin(pin, "m3u_export");
   if (login.error) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO\n";
 
-  const content = await getRemoteContent(true);
+  const content = await getRemoteContent();
   const games = await getRemoteGames();
   
   let m3u = "#EXTM3U\n";
   
   content.forEach(item => {
-    // No IPTV usamos o Link Direto (Secundário) que espelhamos no salvamento
     const url = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
     m3u += `#EXTINF:-1 tvg-logo="${item.imageUrl || ''}" group-title="${item.genre.toUpperCase()}",${item.title.toUpperCase()}\n${url}\n`;
   });

@@ -1,12 +1,10 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v53.0 - PURIFICAÇÃO ATÔMICA & ANTI-500
- * Blindagem extrema contra Erro 500 no Next.js 15.
- * Removemos absolutamente tudo que cause conflito de buffer no servidor.
+ * TÚNEL XUI MASTER v56.0 - PURIFICAÇÃO TOTAL PARA DEPLOY
+ * Blindagem contra Erro 500 no Next.js 15.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -27,8 +25,6 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
     } else if (lowerTarget.includes('blinder.space')) {
       requestHeaders.set('Referer', 'http://blinder.space/');
-    } else if (lowerTarget.includes('webplayer.one')) {
-      requestHeaders.set('Referer', 'http://supremo.webplayer.one/');
     } else if (lowerTarget.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
     }
@@ -42,9 +38,9 @@ export async function GET(req: NextRequest) {
     const responseHeaders = new Headers();
     
     /**
-     * LAVAGEM CEREBRAL DE HEADERS v53
-     * O Next.js 15 crasha se tentarmos passar o content-length ou transfer-encoding
-     * de um sinal de vídeo dinâmico. Forçamos o encerramento de conexão para evitar buffer.
+     * LAVAGEM CEREBRAL DE HEADERS v56
+     * O Next.js 15 crasha se tentarmos passar o content-length.
+     * Forçamos o fechamento de conexão para tratar como Stream Puro.
      */
     const skipHeaders = [
       'transfer-encoding', 
@@ -72,19 +68,17 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
-    responseHeaders.set('Connection', 'close'); // Evita que o NextJS mantenha o socket aberto erradamente
+    responseHeaders.set('Connection', 'close'); 
     responseHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
     if (!res.body) return new NextResponse("Sinal Vazio", { status: 502 });
 
-    // Retornamos um stream puro para o navegador do cliente processar
     return new Response(res.body, {
       status: res.status === 206 ? 206 : 200,
       headers: responseHeaders,
     });
 
   } catch (error: any) {
-    // Fallback silencioso para não quebrar a interface
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
