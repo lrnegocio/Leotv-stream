@@ -14,7 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v48.0 - SUPORTE UNIVERSAL MP4, M3U8, HLS, TS, MPEG, YOUTUBE & DAILYMOTION
+ * SINTONIZADOR SNIPER v50.0 - SUPORTE UNIVERSAL MP4, M3U8, HLS, TS, MPEG, YOUTUBE & DAILYMOTION
+ * Agora com suporte unificado e navegação fluida de episódios.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -37,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // EXTRATOR XVIDEOS ATÔMICO
+    // EXTRATOR XVIDEOS ATÔMICO (Suporte video.kxxxx)
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       if (vidIdMatch) {
@@ -69,9 +70,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isRedeCanais && lowerUrl.includes('.php')) return { processedUrl: proxied, type: 'iframe' }; 
-    
-    // FORÇAR PROXY PARA FORMATOS PROFISSIONAIS
+    // Qualquer link que não seja oficial YouTube/Daily vai via Proxy para garantir CORS
     if (isBlinder || isRedeCanais || isTS || isM3U8 || urlStr.startsWith('http://')) {
        if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
        if (isMP4) return { processedUrl: proxied, type: 'video' };
@@ -111,7 +110,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/')) {
+            // Garante que segmentos .ts também passem pelo proxy se o m3u8 for proxied
+            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && processedUrl.includes('/api/proxy')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
@@ -204,7 +204,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      {/* CONTROLES DE NAVEGAÇÃO MASTER */}
+      {/* CONTROLES DE NAVEGAÇÃO MASTER - Navegação fluida para episódios */}
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 opacity-0 group-hover:opacity-100">
         <button 
           onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
