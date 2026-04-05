@@ -33,6 +33,17 @@ export interface ContentItem {
   views?: number;
 }
 
+export interface GameItem {
+  id: string;
+  title: string;
+  console: string;
+  type: 'embed' | 'direct';
+  url: string;
+  emulatorUrl?: string;
+  imageUrl?: string;
+  created_at?: string;
+}
+
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
 
 export interface User {
@@ -74,7 +85,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v37.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v38.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -105,8 +116,34 @@ export async function bulkRemoveContent(ids: string[]) {
   } catch (e) { return false; }
 }
 
+export async function removeGame(id: string) {
+  try {
+    const { error } = await supabase.from('games').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
+}
+
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v37.0)
+// FUNÇÕES DE JOGOS (ARENA RETRO v38.0)
+// ==========================================
+
+export async function getRemoteGames(): Promise<GameItem[]> {
+  try {
+    const { data } = await supabase.from('games').select('*').order('title', { ascending: true });
+    return data || [];
+  } catch (e) { return []; }
+}
+
+export async function saveGame(game: Partial<GameItem>) {
+  try {
+    const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
+    const { error } = await supabase.from('games').upsert({ ...game, id });
+    return !error;
+  } catch (e) { return false; }
+}
+
+// ==========================================
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v38.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -114,7 +151,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
-    // FILTRO MESTRE v37: No IPTV, só mostramos o que tem directStreamUrl (Link Direto)
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
     if (!allItems) return "#EXTM3U\n";
 
@@ -123,16 +159,16 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     
     allItems.forEach(item => {
       if (item.isRestricted && !user.isAdultEnabled) return;
+      if (!item.directStreamUrl) return; // ISOLAMENTO: Só vai para IPTV se tiver link secundário
 
       const group = (item.genre || "GERAL").toUpperCase();
       const logo = item.imageUrl || "";
       const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
       
-      // ISOLAMENTO TOTAL: No IPTV, só entra se tiver o link secundário (directStreamUrl)
-      if (item.type === 'channel' && !!item.directStreamUrl) {
+      if (item.type === 'channel') {
         const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
         m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
-      } else if (item.type === 'movie' && !!item.directStreamUrl) {
+      } else if (item.type === 'movie') {
         const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
         m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
       } else if (item.type === 'series' || item.type === 'multi-season') {
@@ -162,7 +198,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v37.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v38.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -181,9 +217,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     
     let items = data || [];
 
-    // ISOLAMENTO TOTAL v37.0 - Separação Absoluta de Links
     if (isIptv) {
-      // IPTV: SÓ itens com directStreamUrl (Link Direto)
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.directStreamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.directStreamUrl);
@@ -191,7 +225,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
         return false;
       });
     } else {
-      // PWA: SÓ itens com streamUrl (Link Soberano)
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);
@@ -298,7 +331,6 @@ export async function saveReseller(res: any) {
 
 export async function getCategoryCount(genre: string) {
   try {
-    // Contagem PWA: itens com streamUrl
     const { data } = await supabase.from('content').select('id, streamUrl').eq('genre', genre.toUpperCase());
     return data?.filter(i => !!i.streamUrl).length || 0;
   } catch (e) { return 0; }

@@ -2,43 +2,77 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Users, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp } from "lucide-react"
+import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getGameRankings, GameRanking } from "@/lib/store"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { CONSOLES_LIBRARY } from "@/components/home-content"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getGameRankings, GameRanking, getRemoteGames, saveGame, removeGame, GameItem } from "@/lib/store"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { toast } from "@/hooks/use-toast"
 
 export default function AdminGamesPage() {
-  const [rankings, setRankings] = React.useState<GameRanking[]>([])
+  const [rankings, setGameRankings] = React.useState<GameRanking[]>([])
+  const [games, setGames] = React.useState<GameItem[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [testGame, setTestGame] = React.useState<{name: string, url: string} | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [testGame, setTestGame] = React.useState<GameItem | null>(null)
   const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
+  
+  const [newGame, setNewUser] = React.useState<Partial<GameItem>>({
+    title: "",
+    console: "PLAYSTATION (PS1/PSX/PS2)",
+    type: "embed",
+    url: "",
+    emulatorUrl: "",
+    imageUrl: ""
+  })
 
-  React.useEffect(() => {
-    const load = async () => {
-      const data = await getGameRankings()
-      setRankings(data)
-      setLoading(false)
-    }
-    load()
+  const loadData = React.useCallback(async () => {
+    setLoading(true)
+    const [r, g] = await Promise.all([getGameRankings(), getRemoteGames()])
+    setGameRankings(r)
+    setGames(g)
+    setLoading(false)
   }, [])
 
+  React.useEffect(() => { loadData() }, [loadData])
+
+  const handleSaveGame = async () => {
+    if (!newGame.title || !newGame.url) {
+      toast({ variant: "destructive", title: "Campos Obrigatórios" })
+      return
+    }
+    const success = await saveGame(newGame)
+    if (success) {
+      toast({ title: "JOGO ADICIONADO À ARENA!" })
+      setIsDialogOpen(false)
+      loadData()
+    }
+  }
+
+  const handleDeleteGame = async (id: string) => {
+    if (confirm("Deseja deletar este jogo da arena?")) {
+      await removeGame(id)
+      loadData()
+    }
+  }
+
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>
+
+  const consoles = Array.from(new Set(games.map(g => g.console))).sort()
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Ranking e Teste de Sinais Gaming.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão de Biblioteca e Lógica Client-Side.</p>
         </div>
-        <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-2xl">
-           <div className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-500" />
-              <span className="text-xs font-black uppercase italic text-emerald-500 tracking-tighter">Sinal de Game Blindado</span>
-           </div>
-        </div>
+        <Button onClick={() => setIsDialogOpen(true)} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
+          <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -76,58 +110,133 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-white/5 border-b border-white/5 p-6">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Play className="h-4 w-4 text-emerald-500" /> Teste de Biblioteca Master
+                <Gamepad2 className="h-4 w-4 text-emerald-500" /> Biblioteca Atual ({games.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
-                {CONSOLES_LIBRARY.map(console => (
-                  <div key={console.name} className="space-y-2">
+                {consoles.map(consoleName => (
+                  <div key={consoleName} className="space-y-2">
                     <button 
-                      onClick={() => setExpandedConsole(expandedConsole === console.name ? null : console.name)}
+                      onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)}
                       className="w-full flex items-center justify-between p-4 bg-white/5 rounded-2xl hover:bg-emerald-500/10 transition-all border border-white/5 group"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">{console.icon}</span>
-                        <span className="text-[10px] font-black uppercase italic group-hover:text-emerald-500">{console.name}</span>
-                      </div>
-                      {expandedConsole === console.name ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      <span className="text-[10px] font-black uppercase italic group-hover:text-emerald-500">{consoleName}</span>
+                      {expandedConsole === consoleName ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                     
-                    {expandedConsole === console.name && (
+                    {expandedConsole === consoleName && (
                       <div className="grid gap-2 pl-4 animate-in slide-in-from-top-2 duration-300">
-                        {console.games.map(game => (
-                          <Button key={game.name} variant="outline" onClick={() => setTestGame(game)} className="justify-between h-12 bg-black/20 border-white/5 hover:border-emerald-500 group rounded-xl px-4">
-                            <span className="text-[9px] font-bold uppercase truncate">{game.name}</span>
-                            <Play className="h-3 w-3 opacity-20 group-hover:opacity-100" />
-                          </Button>
+                        {games.filter(g => g.console === consoleName).map(game => (
+                          <div key={game.id} className="flex gap-2">
+                            <Button variant="outline" onClick={() => setTestGame(game)} className="flex-1 justify-between h-12 bg-black/20 border-white/5 hover:border-emerald-500 group rounded-xl px-4">
+                              <span className="text-[9px] font-bold uppercase truncate">{game.title}</span>
+                              <Play className="h-3 w-3 opacity-20 group-hover:opacity-100" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteGame(game.id)} className="h-12 w-12 text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
                         ))}
                       </div>
                     )}
                   </div>
                 ))}
+                {games.length === 0 && <div className="p-10 text-center opacity-20 uppercase font-black text-[10px]">Nenhum jogo cadastrado.</div>}
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-6">
              <div className="flex items-center gap-4">
-                <Star className="h-8 w-8 text-emerald-500 animate-pulse" />
+                <ShieldCheck className="h-8 w-8 text-emerald-500" />
                 <div>
-                   <h4 className="font-black uppercase text-xs">Mestre Léo (Admin)</h4>
-                   <p className="text-[10px] opacity-60">Status: Poder Supremo. Testando sinais de todos os consoles.</p>
+                   <h4 className="font-black uppercase text-xs">Protocolo Client-Side</h4>
+                   <p className="text-[10px] opacity-60">Os jogos são baixados diretamente no aparelho do cliente, economizando seu banco de dados.</p>
                 </div>
              </div>
           </Card>
         </div>
       </div>
 
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8">
+          <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">Novo Jogo na Arena</DialogTitle></DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black opacity-60">Título do Jogo</Label>
+              <Input value={newGame.title} onChange={e => setNewUser({...newGame, title: e.target.value})} className="bg-black/40 border-white/5 h-12 font-bold uppercase" />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black opacity-60">Console / Sistema</Label>
+                <Select value={newGame.console} onValueChange={v => setNewUser({...newGame, console: v})}>
+                  <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PLAYSTATION (PS1/PSX/PS2)">PLAYSTATION</SelectItem>
+                    <SelectItem value="SUPER NINTENDO (SNES)">SUPER NINTENDO</SelectItem>
+                    <SelectItem value="ARCADE / MAME">ARCADE / MAME</SelectItem>
+                    <SelectItem value="CLÁSSICOS & IA (ARENA)">CLÁSSICOS & IA</SelectItem>
+                    <SelectItem value="MEGA DRIVE">MEGA DRIVE</SelectItem>
+                    <SelectItem value="NINTENDO 64">NINTENDO 64</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black opacity-60">Tipo de Injeção</Label>
+                <Select value={newGame.type} onValueChange={(v: any) => setNewUser({...newGame, type: v})}>
+                  <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="embed">Link de Embed (Iframe)</SelectItem>
+                    <SelectItem value="direct">Upload / Link ROM (Client-Side)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center gap-2">
+                {newGame.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
+                {newGame.type === 'embed' ? 'URL do Iframe (Ex: RetroGames.cc)' : 'URL da ROM (Download pro Cliente)'}
+              </Label>
+              <Input value={newGame.url} onChange={e => setNewUser({...newGame, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
+            </div>
+
+            {newGame.type === 'direct' && (
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black opacity-60">URL do Emulador Customizado (Opcional)</Label>
+                <Input value={newGame.emulatorUrl} onChange={e => setNewUser({...newGame, emulatorUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="Link do emulador .js..." />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem da Capa</Label>
+              <Input value={newGame.imageUrl} onChange={e => setNewUser({...newGame, imageUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
+            </div>
+
+            <Button onClick={handleSaveGame} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4">
+              <Save className="mr-2 h-6 w-6" /> INJETAR JOGO NA REDE
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!testGame} onOpenChange={() => setTestGame(null)}>
         <DialogContent className="max-w-5xl h-[80vh] bg-black p-0 border-white/10 rounded-[3rem] overflow-hidden outline-none">
           <div className="absolute top-4 left-4 z-50 bg-black/60 px-4 py-2 rounded-full border border-white/10">
-            <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO: {testGame?.name}</span>
+            <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO: {testGame?.title}</span>
           </div>
-          {testGame && <iframe src={testGame.url} className="w-full h-full border-0" allowFullScreen />}
+          {testGame?.type === 'embed' ? (
+            <iframe src={testGame.url} className="w-full h-full border-0" allowFullScreen />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-black/90 p-10 text-center">
+               <div className="space-y-6">
+                  <UploadCloud className="h-20 w-20 text-emerald-500 mx-auto animate-bounce" />
+                  <h3 className="text-2xl font-black uppercase italic">Simulador de Download</h3>
+                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">Nesta modalidade, o jogo seria baixado para o cache local do seu aparelho agora. O link fornecido é: {testGame?.url}</p>
+                  <Button variant="outline" className="border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px]" onClick={() => window.open(testGame?.url, '_blank')}>BAIXAR MANUALMENTE</Button>
+               </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -3,9 +3,9 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Swords, Bot } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, MessageSquare, Laugh, Play, Bell, Gamepad2, X, Trophy, Swords, Bot, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore, getWaitingPlayers, setUserSearchingMatch, validateDeviceLogin } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, Episode, getGameRankings, GameRanking, updateGameScore, getWaitingPlayers, setUserSearchingMatch, validateDeviceLogin, getRemoteGames, GameItem } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -28,35 +28,9 @@ const CATEGORIES = [
   { id: 'ADULT', name: 'LÉO TV ADULTOS', icon: Lock, color: 'bg-red-600', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
-export const CONSOLES_LIBRARY = [
-  { name: "PLAYSTATION (PS1/PSX/PS2)", icon: "🎮", games: [
-    { name: "Resident Evil 3 Nemesis", url: "https://www.retrogames.cc/embed/41727-resident-evil-3-nemesis-usa.html" },
-    { name: "Metal Gear Solid", url: "https://www.retrogames.cc/embed/41618-metal-gear-solid-usa.html" },
-    { name: "Winning Eleven 2002", url: "https://www.retrogames.cc/embed/41618-winning-eleven-2002-japan.html" }
-  ]},
-  { name: "SUPER NINTENDO (SNES)", icon: "🔴", games: [
-    { name: "Donkey Kong Country 1", url: "https://www.retrogames.cc/embed/18852-donkey-kong-country-usa.html" },
-    { name: "Donkey Kong Country 2", url: "https://www.retrogames.cc/embed/18853-donkey-kong-country-2-diddy-s-kong-quest-usa.html" },
-    { name: "Donkey Kong Country 3", url: "https://www.retrogames.cc/embed/18854-donkey-kong-country-3-dixie-kong-s-double-trouble-usa.html" },
-    { name: "Mario Kart", url: "https://www.retrogames.cc/embed/17344-super-mario-kart-usa.html" },
-    { name: "Top Gear 1", url: "https://www.retrogames.cc/embed/17441-top-gear-usa.html" },
-    { name: "Mortal Kombat Ultimate", url: "https://www.retrogames.cc/embed/17462-ultimate-mortal-kombat-3-usa.html" }
-  ]},
-  { name: "ARCADE / MAME", icon: "🥊", games: [
-    { name: "The King of Fighters 2002", url: "https://www.retrogames.cc/embed/42614-the-king-of-fighters-2002-magic-plus-ii-bootleg.html" },
-    { name: "Marvel vs Capcom", url: "https://www.retrogames.cc/embed/9264-marvel-vs-capcom-clash-of-super-heroes-usa-980123.html" }
-  ]},
-  { name: "CLÁSSICOS & IA (ARENA)", icon: "♟️", games: [
-    { name: "Damas Brasileira (IA 1-20)", url: "https://www.playok.com/pt/damas/" },
-    { name: "Xadrez Master", url: "https://www.sparkchess.com/play-chess-online.html" },
-    { name: "Sinuca 8 Ball", url: "https://games.atribuna.com.br/jogos/8ballpool/" },
-    { name: "Dominó Online", url: "https://www.coolmathgames.com/0-dominoes" },
-    { name: "Snake Retro", url: "https://www.google.com/search?q=play+snake" }
-  ]}
-]
-
 export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
+  const [games, setGames] = React.useState<GameItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
   const [activeVideo, setActiveVideo] = React.useState<{ items: ContentItem[], index: number } | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -69,7 +43,7 @@ export default function HomeContent() {
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
   
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
-  const [activeGame, setActiveGame] = React.useState<{name: string, url: string} | null>(null)
+  const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [gameRankings, setGameRankings] = React.useState<GameRanking[]>([])
   const [waitingPlayers, setWaitingPlayers] = React.useState<User[]>([])
   const [iaLevel, setIaLevel] = React.useState(5)
@@ -117,10 +91,14 @@ export default function HomeContent() {
         setCatCounts(counts);
       }
 
-      const ranks = await getGameRankings();
+      const [ranks, waiting, gList] = await Promise.all([
+        getGameRankings(),
+        getWaitingPlayers(),
+        getRemoteGames()
+      ]);
       setGameRankings(ranks);
-      const waiting = await getWaitingPlayers();
       setWaitingPlayers(waiting);
+      setGames(gList);
 
     } catch (err) { } finally { setLoading(false); }
   }, [router, channelId]);
@@ -140,7 +118,7 @@ export default function HomeContent() {
     setPinInput("");
     if (cat.special === 'games') {
       if (!user?.isGamesEnabled) {
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Fale com o Mestre Léo para liberar a Arena." });
+        toast({ variant: "destructive", title: "ARENA BLOQUEADA", description: "Mestre Léo ainda não autorizou seu PIN para combate." });
         return;
       }
       setUnlockTarget('GAMES');
@@ -181,7 +159,6 @@ export default function HomeContent() {
     const nextIdx = direction === 'next' ? (activeVideo.index + 1) % len : (activeVideo.index - 1 + len) % len;
     const nextItem = activeVideo.items[nextIdx];
 
-    // BLINDAGEM MESTRE: Se o próximo for série, fecha o player e abre a grade
     if (nextItem.type === 'series' || nextItem.type === 'multi-season') {
       setActiveVideo(null);
       setSelectedSeries(nextItem);
@@ -196,7 +173,7 @@ export default function HomeContent() {
     }
   };
 
-  const startMatch = async (game: {name: string, url: string}) => {
+  const startMatch = async (game: GameItem) => {
     setSearchingOpponent(true);
     if (user) await setUserSearchingMatch(user.pin, true);
     setTimeout(async () => {
@@ -225,6 +202,8 @@ export default function HomeContent() {
 
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
 
+  const consolesList = Array.from(new Set(games.map(g => g.console))).sort();
+
   return (
     <div className="min-h-screen bg-cinematic text-foreground pb-20 select-none">
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
@@ -232,7 +211,7 @@ export default function HomeContent() {
           {selectedCat || q ? (
             <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
           ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v6500.0</span></div>
+          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v8500.0</span></div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
@@ -310,12 +289,12 @@ export default function HomeContent() {
                      <div className="flex items-center gap-2"><Bot className="h-4 w-4 text-emerald-500" /><span className="text-[10px] font-black uppercase">IA Nível (1-20)</span></div>
                      <Slider value={[iaLevel]} min={1} max={20} step={1} onValueChange={v => setIaLevel(v[0])} />
                   </div>
-                  {CONSOLES_LIBRARY.map(console => (
-                    <div key={console.name} className="space-y-3">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40">{console.icon} {console.name}</div>
+                  {consolesList.map(consoleName => (
+                    <div key={consoleName} className="space-y-3">
+                       <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40">🎮 {consoleName}</div>
                        <div className="grid gap-2">
-                          {console.games.map(game => (
-                            <Button key={game.name} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">{game.name}</Button>
+                          {games.filter(g => g.console === consoleName).map(game => (
+                            <Button key={game.id} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl font-bold uppercase text-[9px] px-4">{game.title}</Button>
                           ))}
                        </div>
                     </div>
@@ -329,7 +308,16 @@ export default function HomeContent() {
                        <div className="flex items-center gap-4"><span className="text-[10px] font-black uppercase text-primary">{user?.pin}</span><Swords className="h-4 w-4 text-white/20" /><span className="text-[10px] font-black uppercase text-emerald-500">{opponent?.pin}</span></div>
                        <div className="flex gap-2"><Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button><Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button></div>
                     </div>
-                    <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
+                    {activeGame.type === 'embed' ? (
+                      <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-black/80">
+                         <Download className="h-20 w-20 text-emerald-500 mb-6 animate-bounce" />
+                         <h3 className="text-3xl font-black uppercase italic text-emerald-500">Baixando ROM no Aparelho...</h3>
+                         <p className="text-xs font-bold uppercase opacity-40 max-w-sm">O jogo está sendo armazenado no cache local do seu dispositivo para máxima velocidade. O espaço consumido será o do seu aparelho.</p>
+                         <Button className="mt-8 bg-emerald-500 font-black uppercase" onClick={() => window.open(activeGame.url, '_blank')}>INSTALAR AGORA (CLIENT-SIDE)</Button>
+                      </div>
+                    )}
                  </div>
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
