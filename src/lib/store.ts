@@ -334,14 +334,19 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `🔑 *SEU PIN:* ${pin}\n` +
          `📅 *PLANO:* ${tier.toUpperCase()}\n` +
          `🖥️ *TELAS:* ${screens}\n\n` +
-         `🌐 *ASSISTIR NO NAVEGADOR (WEB/TV):*\n` +
+         `🌐 *ASSISTIR NO NAVEGADOR (PWA/WEB):*\n` +
          `${appUrl}\n\n` +
-         `🛰️ *DADOS PARA IPTV (SMARTERS/XCIPTV):*\n` +
+         `🛰️ *DADOS PARA IPTV (APPS EXTERNOS):*\n` +
          `👤 *Usuário:* ${pin}\n` +
          `🔑 *Senha:* ${pin}\n` +
          `🔗 *URL do Servidor:* ${appUrl.replace('https://', '').replace('http://', '')}\n\n` +
-         `📄 *LISTA M3U DIRECTA:*\n` +
+         `📄 *LISTA M3U DIRETA:*\n` +
          `${playlistUrl}\n\n` +
+         `🚀 *APPS RECOMENDADOS:*\n` +
+         `• *Android/TV Box:* XCIPTV, IPTV Smarters Pro, OTT Navigator.\n` +
+         `• *iPhone/Apple TV:* IPTV Smarters, CloudStream.\n` +
+         `• *Smart TVs:* SS IPTV, Bay IPTV, Smart IPTV.\n` +
+         `• *PC:* VLC Player ou nosso Web App.\n\n` +
          `*Bom divertimento!* 🍿`;
 };
 
