@@ -53,9 +53,7 @@ export default function HomeContent() {
   const channelId = searchParams.get('id') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
-    // Se o player estiver fechando, ignora a carga automática para não reabrir
     if (isClosingRef.current) return;
-    
     setLoading(true);
     try {
       const session = localStorage.getItem("user_session");
@@ -65,7 +63,6 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, CATEGORIES.find(c => c.id === categoryId)?.genre || "");
       setContent(data);
 
-      // Sintonização automática via URL
       if (channelId && lastOpenedIdRef.current !== channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
@@ -84,11 +81,7 @@ export default function HomeContent() {
         setCatCounts(counts);
       }
 
-      if (games.length === 0) {
-        const gList = await getRemoteGames();
-        setGames(gList);
-      }
-
+      if (games.length === 0) setGames(await getRemoteGames());
       setUser(currentUser);
     } catch (err) { } finally { setLoading(false); }
   }, [router, games.length, channelId]);
@@ -98,7 +91,6 @@ export default function HomeContent() {
   const handleItemClick = (idx: number, e?: React.MouseEvent) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     if (isClosingRef.current) return;
-    
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', item.id);
@@ -106,15 +98,12 @@ export default function HomeContent() {
   };
 
   const handleEpisodeClick = (series: ContentItem, ep: any, allEps: any[]) => {
-    // Cria uma lista de episódios para navegação do player
     const sortedEps = [...allEps].sort((a, b) => a.number - b.number);
     const playList = sortedEps.map(item => ({
-      ...series,
       id: `${series.id}_ep_${item.number}`,
       title: `${series.title} - EP ${item.number}`,
       streamUrl: item.streamUrl
     }));
-    
     const idx = sortedEps.indexOf(ep);
     setActiveVideo({ items: playList, index: idx });
   };
@@ -136,42 +125,25 @@ export default function HomeContent() {
     if (isClosingRef.current) return;
 
     if (cat.special === 'games' || cat.restricted) {
-      if (cat.special === 'games' && !user?.isGamesEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Habilite Games no Painel de Controle." }); 
-        return; 
-      }
-      if (cat.restricted && !user?.isAdultEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "Habilite Adultos no Painel de Controle." }); 
-        return; 
-      }
+      if (cat.special === 'games' && !user?.isGamesEnabled) { toast({ variant: "destructive", title: "GAMES BLOQUEADOS" }); return; }
+      if (cat.restricted && !user?.isAdultEnabled) { toast({ variant: "destructive", title: "ADULTOS BLOQUEADOS" }); return; }
       
-      if (!isUnlocked) {
-        setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
-        setIsPinOpen(true);
-      } else {
-        if (cat.special === 'games') setGamesMenuOpen(true);
-        else setSelectedCat(cat.id);
-      }
-    } else {
-      setSelectedCat(cat.id);
-    }
+      if (!isUnlocked) { setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT'); setIsPinOpen(true); }
+      else { if (cat.special === 'games') setGamesMenuOpen(true); else setSelectedCat(cat.id); }
+    } else { setSelectedCat(cat.id); }
   };
 
   const verifyGlobalPassword = async () => {
     setLoading(true);
     const settings = await getGlobalSettings();
     setLoading(false);
-    
     if (pinInput === settings.parentalPin) {
       setIsUnlocked(true);
       if (unlockTarget === 'ADULT') setSelectedCat('ADULT');
       else if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
       setIsPinOpen(false);
       setPinInput("");
-    } else {
-      toast({ variant: "destructive", title: "SENHA INCORRETA" });
-      setPinInput("");
-    }
+    } else { toast({ variant: "destructive", title: "SENHA INCORRETA" }); setPinInput(""); }
   };
 
   const closePlayer = () => {
@@ -179,13 +151,9 @@ export default function HomeContent() {
     lastOpenedIdRef.current = null;
     setActiveVideo(null);
     setSelectedSeries(null);
-    
-    // Limpa a URL instantaneamente
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
-    
-    // Trava de segurança de 2 segundos para evitar o player duplo (sincronia de URL)
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -196,22 +164,12 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
-    setIsUnlocked(false); // TRANCA TUDO AO SAIR (SENHA VOLÁTIL)
-    
-    const p = new URLSearchParams(window.location.search);
-    p.delete('q');
-    p.delete('id');
-    router.replace(`/user/home?${p.toString()}`);
-    
+    setIsUnlocked(false); // SEGURANÇA VOLÁTIL: Reseta ao sair
+    router.replace(`/user/home`);
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
-  if (loading && content.length === 0) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Léo TV Stream...</p>
-    </div>
-  );
+  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   const consolesList = Array.from(new Set(games.map(g => g.console))).sort();
 
@@ -220,128 +178,61 @@ export default function HomeContent() {
       <header className="h-20 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
-            <button onClick={closeRestrictedArea} className="h-12 w-12 rounded-full bg-muted hover:bg-primary hover:text-white transition-all flex items-center justify-center shadow-sm">
-              <ChevronLeft className="h-6 w-6" />
-            </button>
+            <button onClick={closeRestrictedArea} className="h-12 w-12 rounded-full bg-muted hover:bg-primary hover:text-white transition-all flex items-center justify-center shadow-sm"><ChevronLeft className="h-6 w-6" /></button>
           ) : (
-            <div className="bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20">
-              <Tv className="h-6 w-6 text-white" />
-            </div>
+            <div className="bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20"><Tv className="h-6 w-6 text-white" /></div>
           )}
-          <div className="hidden lg:block">
-            <span className="text-xl font-black text-primary uppercase italic tracking-tight block leading-none">Léo TV Stream</span>
-            <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest">Premium Streaming Master</span>
-          </div>
+          <div className="hidden lg:block"><span className="text-xl font-black text-primary uppercase italic leading-none">Léo TV Stream</span></div>
         </div>
-        
-        <div className="flex-1 max-w-2xl mx-4">
-          <VoiceSearch />
-        </div>
-
-        <div className="flex items-center gap-2">
-           <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-muted-foreground h-10 w-10 rounded-full hover:bg-destructive/10 hover:text-destructive">
-             <LogOut className="h-5 w-5" />
-           </Button>
-        </div>
+        <div className="flex-1 max-w-2xl mx-4"><VoiceSearch /></div>
+        <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-muted-foreground"><LogOut className="h-5 w-5" /></Button>
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto">
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in duration-500">
-            {CATEGORIES.map(c => {
-              const count = catCounts[c.id] || 0;
-              return (
-                <button 
-                  key={c.id} 
-                  onClick={(e) => handleCategoryClick(c, e)} 
-                  className={`group relative h-48 rounded-3xl overflow-hidden border border-border hover:border-primary transition-all hover:scale-[1.02] shadow-md hover:shadow-xl bg-card`}
-                >
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
-                    <div className={`p-4 rounded-2xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
-                      <c.icon className="h-8 w-8" />
-                    </div>
-                    <div className="text-center">
-                      <span className="text-base font-black uppercase tracking-tight text-foreground block">{c.name}</span>
-                      {count > 0 && (
-                        <span className="bg-muted px-3 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground uppercase mt-2 inline-block">
-                          {count.toLocaleString()} Itens
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
+            {CATEGORIES.map(c => (
+              <button key={c.id} onClick={(e) => handleCategoryClick(c, e)} className="group relative h-48 rounded-3xl overflow-hidden border border-border hover:border-primary transition-all bg-card">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6">
+                  <div className={`p-4 rounded-2xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
+                  <div className="text-center"><span className="text-base font-black uppercase tracking-tight text-foreground block">{c.name}</span><span className="bg-muted px-3 py-0.5 rounded-full text-[9px] font-bold text-muted-foreground uppercase mt-2 inline-block">{(catCounts[c.id] || 0).toLocaleString()} Itens</span></div>
+                </div>
+              </button>
+            ))}
           </div>
         ) : (
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-300">
-            <div className="flex items-center justify-between border-b border-border pb-6">
-              <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">
-                {q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}
-              </h2>
-            </div>
-            {content.length === 0 ? (
-              <div className="py-20 text-center space-y-4 opacity-20">
-                <Tv className="h-20 w-20 mx-auto" />
-                <p className="font-black uppercase text-lg">Nenhum sinal localizado.</p>
-              </div>
-            ) : (
-              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {content.map((item, idx) => (
-                  <div 
-                    key={item.id} 
-                    onClick={(e) => handleItemClick(idx, e)} 
-                    className="group relative aspect-[2/3] bg-card rounded-2xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all hover:scale-[1.03] shadow-sm hover:shadow-lg"
-                  >
-                    {item.imageUrl ? (
-                      <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-90 group-hover:opacity-100" unoptimized />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                        <Tv className="h-10 w-10 text-muted-foreground opacity-20" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-4 flex flex-col justify-end">
-                      <h3 className="font-bold text-[11px] uppercase truncate text-white group-hover:text-primary transition-colors">{item.title}</h3>
-                      <p className="text-[8px] font-bold text-zinc-400 uppercase mt-0.5 truncate">{item.genre}</p>
-                    </div>
+            <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">{q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+            <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {content.map((item, idx) => (
+                <div key={item.id} onClick={(e) => handleItemClick(idx, e)} className="group relative aspect-[2/3] bg-card rounded-2xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-sm">
+                  {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover opacity-90 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-muted"><Tv className="h-10 w-10 opacity-20" /></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent p-4 flex flex-col justify-end">
+                    <h3 className="font-bold text-[11px] uppercase truncate text-white group-hover:text-primary">{item.title}</h3>
+                    <p className="text-[8px] font-bold text-zinc-400 uppercase mt-0.5 truncate">{item.genre}</p>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(val) => { if(!val) closePlayer(); }}>
         <DialogContent className="max-w-5xl bg-black border-border p-0 overflow-hidden rounded-3xl shadow-2xl">
-          {activeVideo && (
-            <VideoPlayer 
-              key={`player-${activeVideo.items[activeVideo.index].id}`}
-              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
-              title={activeVideo.items[activeVideo.index].title} 
-              id={activeVideo.items[activeVideo.index].id} 
-              onNext={handleNext}
-              onPrev={handlePrev}
-            />
-          )}
+          {activeVideo && <VideoPlayer key={`player-${activeVideo.items[activeVideo.index].id}`} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary italic mb-6">Episódios: {selectedSeries.title}</h3>
                <div className="grid gap-2">
                   {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
-                    <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, selectedSeries.episodes!)} className="h-14 justify-start bg-muted rounded-xl border-border hover:border-primary px-6">
-                       <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
-                       <Play className="ml-auto h-4 w-4 text-primary" />
-                    </Button>
+                    <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, selectedSeries.episodes!)} className="h-14 justify-start bg-muted rounded-xl border-border hover:border-primary px-6"><span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span><Play className="ml-auto h-4 w-4 text-primary" /></Button>
                   ))}
                   {selectedSeries.seasons?.sort((a,b) => a.number - b.number).map(season => (
                     <div key={season.id} className="space-y-2 mb-4">
                       <p className="text-[10px] font-black text-primary uppercase pl-2 border-l-2 border-primary ml-2">Temporada {season.number}</p>
                       {season.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, season.episodes)} className="w-full h-12 justify-start bg-muted border-border hover:border-primary px-6 rounded-xl">
-                          <span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span>
-                          <Play className="ml-auto h-3 w-3 text-primary" />
-                        </Button>
+                        <Button key={ep.id} variant="outline" onClick={() => handleEpisodeClick(selectedSeries, ep, season.episodes)} className="w-full h-12 justify-start bg-muted border-border hover:border-primary px-6 rounded-xl"><span className="font-bold uppercase text-[9px]">EP {ep.number} - {ep.title}</span><Play className="ml-auto h-3 w-3 text-primary" /></Button>
                       ))}
                     </div>
                   ))}
@@ -355,33 +246,16 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card border-border rounded-3xl p-10 text-center">
           <Lock className="h-12 w-12 text-primary mx-auto mb-6" />
           <div className="text-xl font-black uppercase italic text-foreground mb-4">Área Restrita Master</div>
-          <p className="text-xs font-medium text-muted-foreground mb-6">Insira a senha parental para continuar.</p>
-          <input 
-            type="password" 
-            title="Senha Parental" 
-            maxLength={4} 
-            className="h-16 w-48 bg-muted border-border text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none border focus:border-primary mb-6" 
-            value={pinInput} 
-            onChange={e => setPinInput(e.target.value)} 
-            onKeyDown={e => e.key === 'Enter' && verifyGlobalPassword()} 
-            autoFocus 
-          />
-          <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-14 bg-primary text-sm font-black uppercase rounded-2xl">
-            {loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR'}
-          </Button>
+          <input type="password" title="Senha Parental" maxLength={4} className="h-16 w-48 bg-muted border-border text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none border focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyGlobalPassword()} autoFocus />
+          <Button onClick={verifyGlobalPassword} disabled={loading} className="w-full h-14 bg-primary text-sm font-black uppercase rounded-2xl">{loading ? <Loader2 className="animate-spin" /> : 'DESBLOQUEAR'}</Button>
         </DialogContent>
       </Dialog>
 
       <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { closeRestrictedArea(); } }}>
         <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card border-border rounded-[2.5rem] p-0 overflow-hidden flex flex-col">
           <div className="h-16 bg-emerald-600/10 border-b border-border px-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Gamepad2 className="h-6 w-6 text-emerald-600" />
-              <h2 className="text-lg font-black uppercase italic text-emerald-600">Léo Games Arena</h2>
-            </div>
-            <button onClick={closeRestrictedArea} className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground flex items-center justify-center transition-colors">
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-3"><Gamepad2 className="h-6 w-6 text-emerald-600" /><h2 className="text-lg font-black uppercase italic text-emerald-600">Léo Games Arena</h2></div>
+            <button onClick={closeRestrictedArea} className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground flex items-center justify-center"><X className="h-5 w-5" /></button>
           </div>
           <div className="flex-1 flex overflow-hidden">
             <div className={`w-72 border-r border-border p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
@@ -389,11 +263,9 @@ export default function HomeContent() {
                   {consolesList.map(consoleName => (
                     <div key={consoleName} className="space-y-2">
                        <div className="text-[10px] font-black uppercase opacity-40 px-2">Console: {consoleName}</div>
-                       <div className="grid gap-1">
-                          {games.filter(g => g.console === consoleName).map(game => (
+                       <div className="grid gap-1">{games.filter(g => g.console === consoleName).map(game => (
                             <Button key={game.id} variant="ghost" onClick={() => setActiveGame(game)} className="justify-start h-10 hover:bg-emerald-600/10 hover:text-emerald-600 rounded-xl font-bold uppercase text-[10px] px-3">{game.title}</Button>
-                          ))}
-                       </div>
+                          ))}</div>
                     </div>
                   ))}
                </div>
@@ -401,27 +273,11 @@ export default function HomeContent() {
             <div className="flex-1 relative flex flex-col bg-muted/30">
                {activeGame ? (
                  <div className="flex-1 flex flex-col">
-                    <div className="h-12 bg-card border-b border-border flex items-center justify-between px-6">
-                       <span className="text-[10px] font-black uppercase text-emerald-600">{activeGame.title}</span>
-                       <Button size="sm" variant="ghost" onClick={() => setActiveGame(null)} className="h-8 text-[9px] font-black uppercase">Fechar Arena</Button>
-                    </div>
-                    {activeGame.type === 'embed' ? (
-                      <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                         <Download className="h-16 w-16 text-emerald-600 mb-6" />
-                         <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download ROM</h3>
-                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download para o seu aparelho.</p>
-                         <Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR AGORA</Button>
-                      </div>
-                    )}
+                    <div className="h-12 bg-card border-b border-border flex items-center justify-between px-6"><span className="text-[10px] font-black uppercase text-emerald-600">{activeGame.title}</span><Button size="sm" variant="ghost" onClick={() => setActiveGame(null)} className="h-8 text-[9px] font-black uppercase">Fechar Arena</Button></div>
+                    {activeGame.type === 'embed' ? <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen /> : <div className="flex-1 flex flex-col items-center justify-center p-10 text-center"><Download className="h-16 w-16 text-emerald-600 mb-6" /><h3 className="text-2xl font-black uppercase italic text-emerald-600">Download ROM</h3><Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR AGORA</Button></div>}
                  </div>
                ) : (
-                 <div className="flex-1 flex flex-col items-center justify-center p-10 text-center opacity-40">
-                    <Trophy className="h-16 w-16 text-emerald-600 mx-auto mb-6" />
-                    <h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Retro Master</h3>
-                    <p className="text-[10px] font-bold uppercase mt-2">Escolha um jogo no menu lateral.</p>
-                 </div>
+                 <div className="flex-1 flex flex-col items-center justify-center p-10 text-center opacity-40"><Trophy className="h-16 w-16 text-emerald-600 mx-auto mb-6" /><h3 className="text-2xl font-black uppercase italic tracking-tight">Arena Retro Master</h3></div>
                )}
             </div>
           </div>
