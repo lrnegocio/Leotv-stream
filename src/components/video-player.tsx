@@ -41,6 +41,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
+    // Detectar iFrame bruto
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -48,24 +49,24 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
+    // SINTONIZADOR YOUTUBE SOBERANO
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
-      if (lowerUrl.includes('v=')) {
-        ytId = urlStr.split('v=')[1]?.split('&')[0];
-      } else if (lowerUrl.includes('youtu.be/')) {
-        ytId = urlStr.split('youtu.be/')[1]?.split('?')[0];
-      } else if (lowerUrl.includes('embed/')) {
-        ytId = urlStr.split('embed/')[1]?.split('?')[0];
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = urlStr.match(regExp);
+      if (match && match[2].length === 11) {
+        ytId = match[2];
       }
       
       if (ytId) {
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, 
           type: 'iframe' 
         };
       }
     }
 
+    // SINTONIZADOR ADULTO (XVIDEOS/BRAZZERS/BANG)
     if (lowerUrl.includes('xvideos.com')) {
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]+)/i);
       if (vidMatch && vidMatch[1]) {
@@ -77,15 +78,20 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com'];
-    if (iframeProviders.some(p => lowerUrl.includes(p))) {
+    if (iframeProviders.some(p => lowerUrl.includes(p)) && !lowerUrl.includes('.m3u8')) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
 
+    // SINTONIZADOR HLS / M3U8 / TS
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
     
-    if (isM3U8 || isTS || urlStr.startsWith('http://')) {
-       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
+    if (isM3U8 || isTS) {
+       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
+    }
+    
+    if (urlStr.startsWith('http://')) {
+       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
     
     return { processedUrl: urlStr, type: isM3U8 ? 'hls' : 'video' };
@@ -121,11 +127,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
+            // Se não for o proxy e for um link externo, passa pelo túnel
+            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          autoStartLoad: true
+          autoStartLoad: true,
+          retryDelay: 1000,
+          maxBufferLength: 30
         });
 
         hls.loadSource(processedUrl);
@@ -139,14 +148,22 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (retryCount < 2) {
+            console.error("HLS Fatal Error:", data);
+            if (retryCount < 3) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal offline ou protegido.");
+              setError("Sinal instável ou protegido. Tente reconectar.");
               setLoading(false);
             }
           }
+        });
+      } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
+        // Nativo (Safari/iOS)
+        video.src = processedUrl;
+        video.addEventListener('loadedmetadata', () => {
+          video.play().catch(() => {});
+          setLoading(false);
         });
       }
     } else if (type === 'video') {
@@ -154,6 +171,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         video.src = processedUrl;
         video.onloadeddata = () => {
           video.play().catch(() => {});
+          setLoading(false);
+        };
+        video.onerror = () => {
+          setError("Erro ao carregar vídeo.");
           setLoading(false);
         };
       }

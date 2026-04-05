@@ -43,6 +43,7 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
+  // TRAVA DE SEGURANÇA CONTRA PLAYER DUPLO
   const isClosingRef = React.useRef(false)
   const lastOpenedIdRef = React.useRef<string | null>(null)
   
@@ -58,16 +59,7 @@ export default function HomeContent() {
       if (!session) { router.push("/login"); return; }
       const currentUser = JSON.parse(session);
       
-      const fresh = await validateDeviceLogin(currentUser.pin, currentUser.deviceId || "web");
-      if (!fresh.error && fresh.user) {
-        setUser(fresh.user);
-        localStorage.setItem("user_session", JSON.stringify(fresh.user));
-      } else {
-        setUser(currentUser);
-      }
-
-      const targetGenre = categoryId ? CATEGORIES.find(c => c.id === categoryId)?.genre : "";
-      const data = await getRemoteContent(false, queryStr, targetGenre);
+      const data = await getRemoteContent(false, queryStr, CATEGORIES.find(c => c.id === categoryId)?.genre || "");
       setContent(data);
 
       if (channelId && !isClosingRef.current && lastOpenedIdRef.current !== channelId) {
@@ -93,6 +85,7 @@ export default function HomeContent() {
         setGames(gList);
       }
 
+      setUser(currentUser);
     } catch (err) { } finally { setLoading(false); }
   }, [router, games.length, channelId]);
 
@@ -128,18 +121,17 @@ export default function HomeContent() {
     setActiveVideo({ ...activeVideo, index: prevIdx });
   };
 
-  const handleCategoryClick = async (cat: any, e: React.MouseEvent) => {
+  const handleCategoryClick = (cat: any, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     if (isClosingRef.current) return;
 
-    setPinInput("");
     if (cat.special === 'games' || cat.restricted) {
       if (cat.special === 'games' && !user?.isGamesEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Habilite Games no Painel." }); 
+        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Habilite Games no Painel de Controle." }); 
         return; 
       }
       if (cat.restricted && !user?.isAdultEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "Habilite Adultos no Painel." }); 
+        toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "Habilite Adultos no Painel de Controle." }); 
         return; 
       }
       setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
@@ -173,13 +165,10 @@ export default function HomeContent() {
     
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
-    const newUrl = p.toString() ? `${window.location.pathname}?${p.toString()}` : window.location.pathname;
+    router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
     
-    router.replace(newUrl, { scroll: false });
-    
-    setTimeout(() => { 
-      isClosingRef.current = false; 
-    }, 2000);
+    // Trava de 2 segundos para evitar reabertura fantasma
+    setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
   const closeRestrictedArea = () => {
@@ -189,10 +178,12 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
+    
     const p = new URLSearchParams(window.location.search);
     p.delete('q');
     p.delete('id');
     router.replace(`/user/home?${p.toString()}`);
+    
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
