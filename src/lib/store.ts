@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v30.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v33.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -106,7 +106,7 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (DUAL-LINK v30.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO v33.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -114,8 +114,11 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
-    const { data: items } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (!items) return "#EXTM3U\n";
+    // FILTRO MESTRE: No IPTV, só mostramos o que tem directStreamUrl
+    const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
+    if (!allItems) return "#EXTM3U\n";
+
+    const items = allItems.filter(i => !!i.directStreamUrl || (i.type === 'series' && i.episodes?.some((e:any) => !!e.directStreamUrl)));
 
     const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
@@ -136,6 +139,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
       } else if (item.type === 'series' || item.type === 'multi-season') {
         if (item.episodes) {
           item.episodes.forEach((ep: Episode) => {
+            if (!ep.directStreamUrl) return; // Só manda para o IPTV se tiver link direto
             const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
             m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
           });
@@ -143,6 +147,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
         if (item.seasons) {
           item.seasons.forEach((s: Season) => {
             s.episodes.forEach((ep: Episode) => {
+              if (!ep.directStreamUrl) return;
               const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
               m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
             });
@@ -158,7 +163,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO v33.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -174,7 +179,18 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     if (categoryGenre) query = query.eq('genre', categoryGenre.toUpperCase());
     const { data } = await query.order('title', { ascending: true });
-    return (data || []).map(i => ({ ...i, isRestricted: !!i.isRestricted, title: (i.title || "").toUpperCase() }));
+    
+    let items = data || [];
+
+    // FILTRO MESTRE v33.0
+    if (isIptv) {
+      // No IPTV, só canais com directStreamUrl aparecem
+      return items.filter(i => !!i.directStreamUrl || i.type === 'series' || i.type === 'multi-season');
+    } else {
+      // No PWA, canais com APENAS directStreamUrl não aparecem (a menos que seja admin)
+      // Se tiver streamUrl, aparece. Se for admin, vê tudo.
+      return items.filter(i => !!i.streamUrl || i.type === 'series' || i.type === 'multi-season');
+    }
   } catch (e) { return []; }
 }
 

@@ -77,7 +77,9 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    const content = await getRemoteContent(true);
+    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v33)
+    const allContent = await getRemoteContent(true);
+    const content = allContent.filter(i => !!i.directStreamUrl || i.type === 'series' || i.type === 'multi-season');
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();

@@ -35,40 +35,45 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR DE EMBEDS SNIPER v32
+    // SINTONIZADOR DE EMBEDS SNIPER v33
+    // YouTube
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
     }
 
+    // Dailymotion
     if (lowerUrl.includes('dailymotion.com')) {
       const vidId = urlStr.split('/video/')[1]?.split('?')[0];
       return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
     }
 
+    // Adultos (Pornhub/XVideos)
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
       if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' };
     }
 
+    // XVideos Sniper v33 (Suporte a IDs alfanuméricos complexos)
     if (lowerUrl.includes('xvideos.com')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
       const vidId = vidIdMatch ? vidIdMatch[1] : null;
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR DE STREAMING XUI STYLE (PROXY OBRIGATÓRIO PARA .TS E .M3U8)
+    // SINTONIZADOR DE STREAMING XUI STYLE (PROXY OBRIGATÓRIO PARA .TS, .M3U8 E HTTP)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl') || lowerUrl.includes('blinder.space');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
-    const isPHP = lowerUrl.includes('.php') && lowerUrl.includes('redecanais');
+    const isPHP = lowerUrl.includes('.php') || lowerUrl.includes('canal=');
+    const isHTTP = urlStr.startsWith('http://');
     
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
-    if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
+    if (isPHP || lowerUrl.includes('webplayer.one')) return { processedUrl: proxied, type: 'iframe' }; 
+    if (isM3U8 || isTS || isHTTP) return { processedUrl: proxied, type: 'hls' };
     
-    return { processedUrl: urlStr.startsWith('http://') ? proxied : urlStr, type: 'video' };
+    return { processedUrl: urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -88,7 +93,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const initPlayer = React.useCallback(async () => {
     const video = videoRef.current;
-    if (!processedUrl || (!video && type !== 'iframe')) return;
+    if (!processedUrl) return;
+    if (type !== 'iframe' && !video) return;
     if (type === 'hls' && !hlsLoaded) return;
 
     cleanupPlayer();

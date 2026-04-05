@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v32.0 - SUPORTE .TS & ANTI-ERROR 500
- * Protocolo de limpeza total de cabeçalhos para evitar Internal Server Error no Next.js 15.
+ * TÚNEL XUI MASTER v33.0 - SUPORTE .TS & BLINDER FIX
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -21,11 +20,14 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
-    // Camuflagem Estratégica
-    if (targetUrl.includes('redecanais')) {
+    // Camuflagem Estratégica v33
+    const lowerTarget = targetUrl.toLowerCase();
+    if (lowerTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
-    } else if (targetUrl.includes('blinder.space')) {
+    } else if (lowerTarget.includes('blinder.space')) {
       requestHeaders.set('Referer', 'http://blinder.space/');
+    } else if (lowerTarget.includes('webplayer.one')) {
+      requestHeaders.set('Referer', 'http://supremo.webplayer.one/');
     } else {
       try {
         const urlObj = new URL(targetUrl);
@@ -36,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s de paciência XUI
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s para .ts pesados
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -47,23 +49,25 @@ export async function GET(req: NextRequest) {
     
     clearTimeout(timeoutId);
 
-    // FILTRO ANTI-HTML: Impede que erros de texto travem o player de vídeo
+    // FILTRO ANTI-HTML: Impede que erros de texto travem o player
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html') && (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4'))) {
        return new NextResponse("Sinal Offline", { status: 503 });
     }
 
-    // CONSTRUÇÃO DE RESPOSTA IMUNE (LIMPEZA CIRÚRGICA v32)
     const responseHeaders = new Headers();
     
-    // Copiamos apenas o essencial para evitar conflito com o processamento do Next.js
-    const safeHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
-    safeHeaders.forEach(h => {
-      const v = res.headers.get(h);
-      if (v) responseHeaders.set(h, v);
+    // Limpeza Cirúrgica de Headers (Fix Next.js 15 Error 500)
+    const perigoHeaders = ['transfer-encoding', 'content-encoding', 'connection', 'keep-alive'];
+    const safeHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
+    
+    res.headers.forEach((v, k) => {
+      if (!perigoHeaders.includes(k.toLowerCase()) && safeHeaders.includes(k.toLowerCase())) {
+        responseHeaders.set(k, v);
+      }
     });
 
-    // Forçamos tipos específicos se detectado
+    // Forçamos tipos específicos para arquivos .ts e .m3u8
     if (targetUrl.includes('.ts')) {
       responseHeaders.set('content-type', 'video/mp2t');
     } else if (targetUrl.includes('.m3u8')) {
@@ -71,7 +75,6 @@ export async function GET(req: NextRequest) {
     }
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
     if (!res.body) return new NextResponse("Stream Vazia", { status: 502 });
@@ -82,7 +85,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    // Retornamos 200 limpo para não quebrar o motor HLS do navegador com uma página de erro 500
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
