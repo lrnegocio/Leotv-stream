@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/navigation"
+import Link from "next/link"
 import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase, BarChart3, Gamepad2 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { VoiceSearch } from "@/components/voice-search"
