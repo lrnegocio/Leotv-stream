@@ -44,9 +44,6 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [gameRankings, setGameRankings] = React.useState<GameRanking[]>([])
-  const [waitingPlayers, setWaitingPlayers] = React.useState<User[]>([])
-  const [searchingOpponent, setSearchingOpponent] = React.useState(false)
-  const [opponent, setOpponent] = React.useState<{pin: string, rank: number} | null>(null)
   
   const lastCloseTime = React.useRef(0)
   const lastClickTime = React.useRef(0)
@@ -95,13 +92,11 @@ export default function HomeContent() {
         setCatCounts(counts);
       }
 
-      const [ranks, waiting, gList] = await Promise.all([
+      const [ranks, gList] = await Promise.all([
         getGameRankings(),
-        getWaitingPlayers(),
         getRemoteGames()
       ]);
       setGameRankings(ranks);
-      setWaitingPlayers(waiting);
       setGames(gList);
 
     } catch (err) { } finally { setLoading(false); }
@@ -113,7 +108,7 @@ export default function HomeContent() {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     
     const now = Date.now();
-    // BLOQUEIO DE CLIQUES FANTASMAS v60: Ignora cliques por 1.2s após fechar algo
+    // TRAVA DE CLIQUES FANTASMAS: Ignora cliques por 1.2s após fechar o player
     if (now - lastCloseTime.current < 1200) return;
     if (now - lastClickTime.current < 800) return;
     lastClickTime.current = now;
@@ -149,15 +144,19 @@ export default function HomeContent() {
     if (now - lastCloseTime.current < 1200) return;
 
     setPinInput("");
-    if (cat.special === 'games') {
-      if (!user?.isGamesEnabled) { toast({ variant: "destructive", title: "ARENA BLOQUEADA" }); return; }
-      setUnlockTarget('GAMES');
-      setIsPinOpen(true);
-      return;
-    }
-    if (cat.restricted) {
-      if (!user?.isAdultEnabled) { toast({ variant: "destructive", title: "ACESSO BLOQUEADO" }); return; }
-      setUnlockTarget('ADULT');
+    
+    // TRAVA PARENTAL ÚNICA: Arena e Adultos pedem o mesmo PIN
+    if (cat.special === 'games' || cat.restricted) {
+      if (cat.special === 'games' && !user?.isGamesEnabled) { 
+        toast({ variant: "destructive", title: "ARENA BLOQUEADA PARA ESTE PIN" }); 
+        return; 
+      }
+      if (cat.restricted && !user?.isAdultEnabled) { 
+        toast({ variant: "destructive", title: "ACESSO ADULTO BLOQUEADO PARA ESTE PIN" }); 
+        return; 
+      }
+      
+      setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
       setIsPinOpen(true);
     } else {
       setSelectedCat(cat.id);
@@ -168,46 +167,48 @@ export default function HomeContent() {
     setLoading(true);
     const settings = await getGlobalSettings();
     setLoading(false);
+    
     if (pinInput === settings.parentalPin) {
       if (unlockTarget === 'ADULT') setSelectedCat('ADULT');
       else if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
       setIsPinOpen(false);
       setPinInput("");
-      setUnlockTarget(null);
+      // NÃO SALVAMOS O ESTADO DE DESBLOQUEIO EM VARIÁVEIS PERSISTENTES
     } else {
-      toast({ variant: "destructive", title: "SENHA INVÁLIDA" });
+      toast({ variant: "destructive", title: "SENHA PARENTAL INCORRETA" });
       setPinInput("");
     }
   };
 
-  const startMatch = async (game: GameItem) => {
-    setSearchingOpponent(true);
-    if (user) await setUserSearchingMatch(user.pin, true);
-    setTimeout(async () => {
-      const waiting = await getWaitingPlayers();
-      const possible = waiting.filter(w => w.pin !== user?.pin);
-      if (possible.length > 0) {
-        setOpponent({ pin: possible[0].pin, rank: gameRankings.findIndex(r => r.pin === possible[0].pin) + 1 || 99 });
-      } else {
-        setOpponent({ pin: `IA LÉO TV (NÍVEL 5)`, rank: 1 });
-      }
-      setActiveGame(game);
-      setSearchingOpponent(false);
-    }, 2000);
+  /**
+   * MEMÓRIA ZERO v65: Toda vez que sai da área restrita,
+   * o sistema limpa o acesso e obriga a digitar o PIN de novo.
+   */
+  const closeRestrictedArea = () => {
+    lastCloseTime.current = Date.now();
+    setSelectedCat(null);
+    setGamesMenuOpen(false);
+    setActiveGame(null);
+    setUnlockTarget(null);
+    setPinInput(""); // Garante que a senha digitada sumiu
+    router.replace("/user/home");
   };
 
   const finishGame = async (res: 'win' | 'draw' | 'loss') => {
     if (user) {
       await updateGameScore(user.pin, res);
-      await setUserSearchingMatch(user.pin, false);
       const ranks = await getGameRankings();
       setGameRankings(ranks);
     }
     setActiveGame(null);
-    setOpponent(null);
   };
 
-  if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p></div>;
+  if (loading && content.length === 0) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cinematic">
+      <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      <p className="text-[10px] font-black uppercase text-primary tracking-widest mt-4">Sincronizando Sistema Master Léo TV...</p>
+    </div>
+  );
 
   const consolesList = Array.from(new Set(games.map(g => g.console))).sort();
 
@@ -216,13 +217,24 @@ export default function HomeContent() {
       <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-3xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {selectedCat || q ? (
-            <Button variant="ghost" onClick={() => { setSelectedCat(null); router.replace("/user/home"); }} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all"><ChevronLeft className="h-8 w-8 text-white" /></Button>
-          ) : <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20"><Tv className="h-7 w-7 text-white" /></div>}
-          <div className="hidden lg:block"><span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span><span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v10700.0</span></div>
+            <button onClick={closeRestrictedArea} className="h-14 w-14 rounded-full bg-white/5 hover:bg-primary transition-all flex items-center justify-center">
+              <ChevronLeft className="h-8 w-8 text-white" />
+            </button>
+          ) : (
+            <div className="bg-primary p-2.5 rounded-2xl rotate-2 shadow-lg shadow-primary/20">
+              <Tv className="h-7 w-7 text-white" />
+            </div>
+          )}
+          <div className="hidden lg:block">
+            <span className="text-2xl font-black text-primary uppercase italic tracking-tighter block leading-none">LÉO TV MASTER</span>
+            <span className="text-[9px] font-black opacity-40 uppercase tracking-widest">Sinais Unificados v11300.0</span>
+          </div>
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
-           <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
+           <Button variant="ghost" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-full hover:bg-destructive/10">
+             <LogOut className="h-6 w-6" />
+           </Button>
         </div>
       </header>
 
@@ -232,10 +244,23 @@ export default function HomeContent() {
             {CATEGORIES.map(c => {
               const count = catCounts[c.id] || 0;
               return (
-                <button key={c.id} onClick={(e) => handleCategoryClick(c, e)} className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color || 'bg-card'} bg-opacity-20`}>
+                <button 
+                  key={c.id} 
+                  onClick={(e) => handleCategoryClick(c, e)} 
+                  className={`group relative h-56 rounded-[2.5rem] overflow-hidden border-2 border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl ${c.color || 'bg-card'} bg-opacity-20`}
+                >
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-                    <div className={`p-4 rounded-3xl ${c.color || 'bg-primary'} text-white shadow-xl group-hover:rotate-12 transition-transform`}><c.icon className="h-10 w-10" /></div>
-                    <div className="text-center"><span className="text-lg font-black uppercase italic text-white block">{c.name}</span>{count > 0 && <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">{count.toLocaleString()} SINAIS</span>}</div>
+                    <div className={`p-4 rounded-3xl ${c.color || 'bg-primary'} text-white shadow-xl group-hover:rotate-12 transition-transform`}>
+                      <c.icon className="h-10 w-10" />
+                    </div>
+                    <div className="text-center">
+                      <span className="text-lg font-black uppercase italic text-white block">{c.name}</span>
+                      {count > 0 && (
+                        <span className="bg-black/40 px-3 py-1 rounded-full text-[9px] font-black text-primary border border-primary/20 uppercase mt-2 inline-block">
+                          {count.toLocaleString()} SINAIS
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               )
@@ -243,12 +268,26 @@ export default function HomeContent() {
           </div>
         ) : (
           <div className="space-y-10 animate-in slide-in-from-bottom-10">
-            <div className="flex items-center justify-between border-b border-white/5 pb-6"><h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">{q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2></div>
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+              <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">{q ? `BUSCANDO: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+            </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {content.map((item, idx) => (
-                <div key={item.id} onClick={(e) => handleItemClick(idx, e)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl">
-                  {item.imageUrl ? <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center bg-primary/10"><Tv className="h-12 w-12 text-primary opacity-20" /></div>}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end"><h3 className="font-black text-[12px] uppercase italic truncate text-white group-hover:text-primary leading-tight">{item.title}</h3></div>
+                <div 
+                  key={item.id} 
+                  onClick={(e) => handleItemClick(idx, e)} 
+                  className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-white/5 hover:border-primary transition-all hover:scale-105 shadow-2xl"
+                >
+                  {item.imageUrl ? (
+                    <Image src={item.imageUrl} alt="Capa" fill className="object-cover opacity-80 group-hover:opacity-100" unoptimized />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/10">
+                      <Tv className="h-12 w-12 text-primary opacity-20" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+                    <h3 className="font-black text-[12px] uppercase italic truncate text-white group-hover:text-primary leading-tight">{item.title}</h3>
+                  </div>
                 </div>
               ))}
             </div>
@@ -285,7 +324,9 @@ export default function HomeContent() {
             <div className="flex flex-col h-[85vh]">
               <div className="relative h-64 shrink-0">
                 {selectedSeries.imageUrl && <Image src={selectedSeries.imageUrl} alt="Capa" fill className="object-cover" unoptimized />}
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end"><div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent p-10 flex flex-col justify-end">
+                  <div className="text-5xl font-black uppercase italic tracking-tighter text-white leading-none">{selectedSeries.title}</div>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scroll scrollbar-visible">
                 {selectedSeries.episodes && selectedSeries.episodes.length > 0 ? (
@@ -302,7 +343,10 @@ export default function HomeContent() {
                         }));
                         setActiveVideo({ items: eps, index: selectedSeries.episodes!.indexOf(ep) }); 
                         setSelectedSeries(null);
-                      }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all"><div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div><span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span></Button>
+                      }} className="w-full h-16 justify-start bg-white/5 border-white/5 hover:border-primary rounded-2xl px-8 transition-all">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-xs text-primary mr-6">{ep.number}</div>
+                        <span className="font-black uppercase text-sm">EP {ep.number} - {ep.title}</span>
+                      </Button>
                     ))}
                   </div>
                 ) : selectedSeries.seasons?.map(season => (
@@ -321,7 +365,10 @@ export default function HomeContent() {
                           }));
                           setActiveVideo({ items: eps, index: season.episodes.indexOf(ep) }); 
                           setSelectedSeries(null);
-                        }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all"><div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div><span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span></Button>
+                        }} className="w-full h-14 justify-start bg-white/5 border-white/5 hover:border-primary rounded-xl px-8 transition-all">
+                          <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center font-black text-[10px] text-primary mr-6">{ep.number}</div>
+                          <span className="font-bold uppercase text-xs">EP {ep.number} - {ep.title}</span>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -332,11 +379,16 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { lastCloseTime.current = Date.now(); setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); } }}>
+      <Dialog open={gamesMenuOpen} onOpenChange={(val) => { if(!val) { closeRestrictedArea(); } }}>
         <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden outline-none flex flex-col">
           <div className="h-20 bg-emerald-600/20 border-b border-white/5 px-8 flex items-center justify-between">
-            <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-500" /><h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Multiplayer</h2></div>
-            <Button variant="ghost" onClick={() => { setActiveGame(null); setGamesMenuOpen(false); if(user) setUserSearchingMatch(user.pin, false); }} className="rounded-full hover:bg-red-500/20 text-red-500"><X className="h-6 w-6" /></Button>
+            <div className="flex items-center gap-4">
+              <Gamepad2 className="h-8 w-8 text-emerald-500" />
+              <h2 className="text-2xl font-black uppercase italic text-emerald-500 tracking-tighter">Léo Arena Retro</h2>
+            </div>
+            <button onClick={closeRestrictedArea} className="h-10 w-10 rounded-full hover:bg-red-500/20 text-red-500 flex items-center justify-center">
+              <X className="h-6 w-6" />
+            </button>
           </div>
           <div className="flex-1 flex overflow-hidden bg-black/40">
             <div className={`w-80 border-r border-white/5 p-6 overflow-y-auto custom-scroll ${activeGame ? 'hidden lg:block' : 'block'}`}>
@@ -346,7 +398,7 @@ export default function HomeContent() {
                        <div className="flex items-center gap-2 text-[10px] font-black uppercase opacity-40">🎮 {consoleName}</div>
                        <div className="grid gap-2">
                           {games.filter(g => g.console === consoleName).map(game => (
-                            <Button key={game.id} variant="outline" onClick={() => startMatch(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 rounded-xl font-bold uppercase text-[9px] px-4">{game.title}</Button>
+                            <Button key={game.id} variant="outline" onClick={() => setActiveGame(game)} className="justify-start h-12 bg-white/5 border-white/5 hover:border-emerald-500 rounded-xl font-bold uppercase text-[9px] px-4">{game.title}</Button>
                           ))}
                        </div>
                     </div>
@@ -357,22 +409,29 @@ export default function HomeContent() {
                {activeGame ? (
                  <div className="flex-1 flex flex-col">
                     <div className="h-14 bg-black/60 flex items-center justify-between px-6 border-b border-white/5">
-                       <div className="flex items-center gap-4"><span className="text-[10px] font-black uppercase text-primary">{user?.pin}</span><Swords className="h-4 w-4 text-white/20" /><span className="text-[10px] font-black uppercase text-emerald-500">{opponent?.pin}</span></div>
-                       <div className="flex gap-2"><Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button><Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button></div>
+                       <div className="flex items-center gap-4"><span className="text-[10px] font-black uppercase text-emerald-500">{activeGame.title}</span></div>
+                       <div className="flex gap-2">
+                         <Button size="sm" onClick={() => finishGame('win')} className="bg-green-600 text-[8px] font-black h-8 uppercase">Venci</Button>
+                         <Button size="sm" variant="destructive" onClick={() => finishGame('loss')} className="text-[8px] font-black h-8 uppercase">Perdi</Button>
+                       </div>
                     </div>
                     {activeGame.type === 'embed' ? (
                       <iframe src={activeGame.url} className="flex-1 w-full border-0" allowFullScreen />
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-black/80">
                          <Download className="h-20 w-20 text-emerald-500 mb-6 animate-bounce" />
-                         <h3 className="text-3xl font-black uppercase italic text-emerald-500">Baixando ROM no Aparelho...</h3>
-                         <Button className="mt-8 bg-emerald-500 font-black uppercase" onClick={() => window.open(activeGame.url, '_blank')}>INSTALAR AGORA</Button>
+                         <h3 className="text-3xl font-black uppercase italic text-emerald-500">Baixando ROM...</h3>
+                         <Button className="mt-8 bg-emerald-500 font-black uppercase" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR AGORA</Button>
                       </div>
                     )}
                  </div>
                ) : (
                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
-                    {searchingOpponent ? <div className="space-y-6 animate-pulse"><Loader2 className="h-20 w-20 animate-spin text-emerald-500 mx-auto" /><h3 className="text-2xl font-black uppercase italic text-emerald-500">Buscando Guerreiros...</h3></div> : <div className="max-w-md space-y-8"><Trophy className="h-24 w-24 text-yellow-500 mx-auto" /><h3 className="text-4xl font-black uppercase italic tracking-tighter">Arena dos Melhores</h3></div>}
+                    <div className="max-w-md space-y-8">
+                      <Trophy className="h-24 w-24 text-yellow-500 mx-auto" />
+                      <h3 className="text-4xl font-black uppercase italic tracking-tighter">Escolha um Clássico</h3>
+                      <p className="text-[10px] font-bold uppercase opacity-40">Selecione o console e o jogo no menu lateral.</p>
+                    </div>
                  </div>
                )}
             </div>
@@ -380,10 +439,11 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPinOpen} onOpenChange={(val) => { if(!val) { lastCloseTime.current = Date.now(); setIsPinOpen(false); setPinInput(""); } }}>
+      <Dialog open={isPinOpen} onOpenChange={(val) => { if(!val) { setIsPinOpen(false); setPinInput(""); setUnlockTarget(null); } }}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic text-primary mb-6">Segurança Master</div>
+          <p className="text-[10px] font-bold uppercase opacity-40 mb-6">Digite a senha parental global para desbloquear.</p>
           <input 
             type="password" 
             title="PIN" 
