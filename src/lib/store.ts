@@ -122,6 +122,16 @@ export async function saveContent(item: Partial<ContentItem>) {
   } catch (e) { return false; }
 }
 
+export async function bulkUpdateContent(ids: string[], updates: Partial<ContentItem>) {
+  try {
+    const { error } = await supabase
+      .from('content')
+      .update(updates)
+      .in('id', ids);
+    return !error;
+  } catch (e) { return false; }
+}
+
 export async function getCategoryCount(genre: string) {
   try {
     const trimmedGenre = genre.trim().toUpperCase();

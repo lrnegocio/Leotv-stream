@@ -1,17 +1,19 @@
-
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getRemoteContent, removeContent, bulkRemoveContent, ContentItem } from "@/lib/store"
+import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import Image from "next/image"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 
 export default function ContentManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
@@ -21,6 +23,10 @@ export default function ContentManagementPage() {
   const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string, id: string} | null>(null)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
+  
+  // Edição em Massa
+  const [isBulkEditing, setIsBulkEditing] = React.useState(false)
+  const [bulkUpdates, setBulkUpdates] = React.useState({ genre: "", isRestricted: false })
 
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
@@ -61,6 +67,26 @@ export default function ContentManagementPage() {
     }
   }
 
+  const handleBulkUpdate = async () => {
+    if (selectedIds.length === 0) return
+    setIsDeleting(true)
+    
+    // Prepara o objeto de update
+    const updates: any = {}
+    if (bulkUpdates.genre) updates.genre = bulkUpdates.genre
+    updates.isRestricted = bulkUpdates.isRestricted
+
+    if (await bulkUpdateContent(selectedIds, updates)) {
+      setIsBulkEditing(false)
+      setSelectedIds([])
+      await loadItems(searchTerm)
+      toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA!" })
+    } else {
+      toast({ variant: "destructive", title: "Erro ao atualizar em massa." })
+    }
+    setIsDeleting(false)
+  }
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
   }
@@ -79,9 +105,14 @@ export default function ContentManagementPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && (
-            <Button variant="destructive" onClick={handleBulkDelete} disabled={isDeleting} className="h-10 px-4 rounded-xl text-[9px] font-black uppercase">
-              <Trash2 className="mr-2 h-3 w-3" /> Excluir ({selectedIds.length})
-            </Button>
+            <>
+              <Button onClick={() => setIsBulkEditing(true)} className="bg-amber-500 hover:bg-amber-600 h-10 px-4 rounded-xl text-[9px] font-black uppercase shadow-lg shadow-amber-500/20">
+                <Edit className="mr-2 h-3 w-3" /> Editar Selecionados ({selectedIds.length})
+              </Button>
+              <Button variant="destructive" onClick={handleBulkDelete} disabled={isDeleting} className="h-10 px-4 rounded-xl text-[9px] font-black uppercase">
+                <Trash2 className="mr-2 h-3 w-3" /> Excluir ({selectedIds.length})
+              </Button>
+            </>
           )}
           <Button asChild className="bg-primary h-10 px-6 rounded-xl text-[9px] font-black uppercase shadow-lg shadow-primary/20">
             <Link href="/admin/content/new"><Plus className="mr-2 h-4 w-4" /> Novo Conteúdo</Link>
@@ -142,6 +173,45 @@ export default function ContentManagementPage() {
           })}
         </div>
       )}
+
+      {/* Dialog para Edição em Massa */}
+      <Dialog open={isBulkEditing} onOpenChange={setIsBulkEditing}>
+        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2rem] p-8 shadow-2xl">
+          <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem em Massa ({selectedIds.length})</DialogTitle></DialogHeader>
+          <div className="space-y-6 py-4">
+             <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black opacity-60">Nova Categoria/Genre (Opcional)</Label>
+                <Select value={bulkUpdates.genre} onValueChange={v => setBulkUpdates({...bulkUpdates, genre: v})}>
+                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue placeholder="Manter atual" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
+                    <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
+                    <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
+                    <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
+                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
+                    <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                    <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
+                    <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
+                  </SelectContent>
+                </Select>
+             </div>
+             <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                   <Lock className="h-4 w-4 text-primary" />
+                   <Label className="uppercase text-[10px] font-black italic">Restringir Conteúdo?</Label>
+                </div>
+                <Switch checked={bulkUpdates.isRestricted} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isRestricted: v})} />
+             </div>
+          </div>
+          <DialogFooter>
+             <Button onClick={handleBulkUpdate} className="w-full h-14 bg-amber-500 font-black uppercase rounded-xl" disabled={isDeleting}>
+                {isDeleting ? <Loader2 className="animate-spin" /> : 'APLICAR MUDANÇAS AGORA'}
+             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">

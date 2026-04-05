@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -43,8 +42,9 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
+  // TRAVA MESTRE: Impede o player de abrir duas vezes
   const isClosingRef = React.useRef(false)
-  const lastCloseTime = React.useRef(0)
+  const lastOpenedIdRef = React.useRef<string | null>(null)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -70,10 +70,11 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      // BLOQUEIO MESTRE: Não abre o player se estivermos em processo de fechamento
-      if (channelId && !activeVideo && !selectedSeries && !isClosingRef.current) {
+      // Sintonização Automática via URL (Recalibrada)
+      if (channelId && !isClosingRef.current && lastOpenedIdRef.current !== channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
+          lastOpenedIdRef.current = channelId;
           if (item.type === 'series' || item.type === 'multi-season') {
             setSelectedSeries(item);
           } else {
@@ -94,27 +95,18 @@ export default function HomeContent() {
       }
 
     } catch (err) { } finally { setLoading(false); }
-  }, [router, activeVideo, selectedSeries, games.length, channelId]);
+  }, [router, games.length, channelId]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
   const handleItemClick = (idx: number, e?: React.MouseEvent) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (isClosingRef.current) return;
     
-    const now = Date.now();
-    if (now - lastCloseTime.current < 1200) return;
-    
-    isClosingRef.current = false;
     const item = content[idx];
     const params = new URLSearchParams(window.location.search);
     params.set('id', item.id);
     router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
-    
-    if (item.type === 'series' || item.type === 'multi-season') {
-      setSelectedSeries(item);
-    } else {
-      setActiveVideo({ items: content, index: idx });
-    }
   };
 
   const handleNext = () => {
@@ -139,17 +131,16 @@ export default function HomeContent() {
 
   const handleCategoryClick = async (cat: any, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    const now = Date.now();
-    if (now - lastCloseTime.current < 1200) return;
+    if (isClosingRef.current) return;
 
     setPinInput("");
     if (cat.special === 'games' || cat.restricted) {
       if (cat.special === 'games' && !user?.isGamesEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "O acesso a jogos não está habilitado para o seu PIN." }); 
+        toast({ variant: "destructive", title: "ACESSO BLOQUEADO", description: "Habilite Games no Painel." }); 
         return; 
       }
       if (cat.restricted && !user?.isAdultEnabled) { 
-        toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "O acesso a conteúdo adulto não está habilitado." }); 
+        toast({ variant: "destructive", title: "ACESSO RESTRITO", description: "Habilite Adultos no Painel." }); 
         return; 
       }
       setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT');
@@ -170,27 +161,31 @@ export default function HomeContent() {
       setIsPinOpen(false);
       setPinInput("");
     } else {
-      toast({ variant: "destructive", title: "SENHA INCORRETA", description: "A senha parental informada é inválida." });
+      toast({ variant: "destructive", title: "SENHA INCORRETA" });
       setPinInput("");
     }
   };
 
   const closePlayer = () => {
     isClosingRef.current = true;
-    lastCloseTime.current = Date.now();
+    lastOpenedIdRef.current = null;
     setActiveVideo(null);
     setSelectedSeries(null);
     
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     const newUrl = p.toString() ? `${window.location.pathname}?${p.toString()}` : window.location.pathname;
+    
+    // Sincronização Master: Limpa URL e bloqueia reabertura por 2s
     router.replace(newUrl, { scroll: false });
     
-    setTimeout(() => { isClosingRef.current = false; }, 1500);
+    setTimeout(() => { 
+      isClosingRef.current = false; 
+    }, 2000);
   };
 
   const closeRestrictedArea = () => {
-    lastCloseTime.current = Date.now();
+    isClosingRef.current = true;
     setSelectedCat(null);
     setGamesMenuOpen(false);
     setActiveGame(null);
@@ -200,6 +195,7 @@ export default function HomeContent() {
     p.delete('q');
     p.delete('id');
     router.replace(`/user/home?${p.toString()}`);
+    setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
   if (loading && content.length === 0) return (
@@ -407,7 +403,7 @@ export default function HomeContent() {
                       <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                          <Download className="h-16 w-16 text-emerald-600 mb-6" />
                          <h3 className="text-2xl font-black uppercase italic text-emerald-600">Download Master</h3>
-                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download manual para rodar no seu aparelho.</p>
+                         <p className="text-xs text-muted-foreground max-w-xs mb-8">Esta ROM requer download manual.</p>
                          <Button className="bg-emerald-600 font-black uppercase rounded-xl h-12 px-10" onClick={() => window.open(activeGame.url, '_blank')}>BAIXAR ROM</Button>
                       </div>
                     )}

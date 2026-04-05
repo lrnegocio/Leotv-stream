@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -58,34 +57,25 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR INTELIGENTE LÉO TV - RECALIBRAGEM ADULTA
+    // SINTONIZADOR LÉO TV - REVERSÃO YOUTUBE & RECALIBRAGEM ADULTO
     const iframeProviders = [
-      'rdcanais.com', 
-      'redecanais', 
-      'reidoscanais', 
-      'embed', 
-      'player', 
-      'streamad', 
-      'voodrew', 
       'youtube.com',
       'youtu.be',
+      'embed', 
+      'player', 
+      'voodrew',
+      'rdcanais',
+      'redecanais',
+      'reidoscanais',
       'xvideos.com',
       'brazzers.com',
-      'bangbros.com',
-      'xhamster.com',
-      'pornhub.com'
+      'bangbros.com'
     ];
 
     if (iframeProviders.some(p => lowerUrl.includes(p))) {
       let finalUrl = urlStr;
       
-      // Calibragem YouTube
-      if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-        const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
-        finalUrl = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`;
-      }
-
-      // Calibragem XVideos Master
+      // Calibragem XVideos Master: converte link de página em embedframe
       if (lowerUrl.includes('xvideos.com') && !lowerUrl.includes('embedframe')) {
         const vidMatch = urlStr.match(/video(\d+)/);
         if (vidMatch && vidMatch[1]) {
@@ -93,13 +83,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         }
       }
       
+      // YouTube: Deixa como iFrame nativo sem alteração agressiva para evitar erro 153
       return { processedUrl: finalUrl, type: 'iframe' };
     }
 
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
-    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
     
-    // TÚNEL MASTER: Envia via proxy para burlar bloqueios geográficos e de CORS
     if (isM3U8 || isTS || urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
@@ -141,10 +131,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          autoStartLoad: true,
-          retryDelay: 1000,
-          enableWorker: true,
-          lowLatencyMode: true
+          autoStartLoad: true
         });
 
         hls.loadSource(processedUrl);
@@ -158,28 +145,23 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (retryCount < 3) {
+            if (retryCount < 2) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal de transmissão indisponível no momento.");
+              setError("Sinal de transmissão offline.");
               setLoading(false);
             }
           }
         });
-      } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = processedUrl;
-        video.play().catch(() => {});
-        setLoading(false);
       }
     } else if (type === 'video') {
       if (video) {
         video.src = processedUrl;
         video.onloadeddata = () => {
-          video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
+          video.play().catch(() => {});
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar arquivo de mídia."); setLoading(false); };
       }
     } else {
       if (type !== 'iframe') setLoading(false);
@@ -196,7 +178,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Carregando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Sintonizando Sinal Master...</p>
         </div>
       )}
 
@@ -204,8 +186,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
           <AlertCircle className="h-10 w-10 text-destructive mb-4 opacity-50" />
           <p className="text-white text-[10px] font-bold uppercase mb-6 opacity-60">{error}</p>
-          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/40 text-primary hover:bg-primary hover:text-white rounded-xl px-6 font-black uppercase text-[10px]">
-            <RefreshCcw className="h-4 w-4 mr-2" /> TENTAR RECONEXÃO
+          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/40 text-primary rounded-xl px-6 font-black uppercase text-[10px]">
+            <RefreshCcw className="h-4 w-4 mr-2" /> RECONECTAR
           </Button>
         </div>
       )}
@@ -217,7 +199,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
           onLoad={() => setLoading(false)}
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allow="autoplay; encrypted-media; fullscreen"
           referrerPolicy="no-referrer"
         />
       ) : (
