@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL XUI MASTER v37.0 - PURIFICAÇÃO TOTAL & ANTI-500
- * Esta versão remove cabeçalhos conflitantes que causam Internal Server Error no Next.js 15.
+ * TÚNEL XUI MASTER v40.0 - PURIFICAÇÃO TOTAL & BYPASS ANTI-ERROR
+ * Versão otimizada para links .ts, Blinder e RedeCanais.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,11 +18,10 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade Master para Bypass de Provedor
+    // Identidade de Elite para Bypass
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
-    // Camuflagem de Origem (Bypass Blinder & Canais Profissionais)
     const lowerTarget = targetUrl.toLowerCase();
     if (lowerTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.cafe/');
@@ -30,6 +29,8 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'http://blinder.space/');
     } else if (lowerTarget.includes('webplayer.one')) {
       requestHeaders.set('Referer', 'http://supremo.webplayer.one/');
+    } else if (lowerTarget.includes('xvideos')) {
+      requestHeaders.set('Referer', 'https://www.xvideos.com/');
     }
 
     const controller = new AbortController();
@@ -44,18 +45,9 @@ export async function GET(req: NextRequest) {
     
     clearTimeout(timeoutId);
 
-    // Filtro Anti-Lixo: Se o servidor original mandar erro em HTML, barramos para não travar o player.
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('text/html') && (targetUrl.includes('.m3u8') || targetUrl.includes('.ts') || targetUrl.includes('.mp4'))) {
-       return new NextResponse("Sinal Offline ou Erro de Origem", { status: 503 });
-    }
-
     const responseHeaders = new Headers();
     
-    /**
-     * LIMPEZA CIRÚRGICA v37.0
-     * Removemos cabeçalhos que o Next.js 15 proíbe de repassar em Responses de streaming.
-     */
+    // LIMPEZA CIRÚRGICA DE HEADERS (FIM DO ERRO 500)
     const forbiddenHeaders = [
       'transfer-encoding', 
       'content-encoding', 
@@ -67,7 +59,7 @@ export async function GET(req: NextRequest) {
       'upgrade',
       'proxy-authenticate',
       'proxy-authorization',
-      'content-length' // Recalculado pelo servidor
+      'content-length'
     ];
     
     res.headers.forEach((v, k) => {
@@ -89,7 +81,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    // Silencia o erro para o servidor não entrar em colapso
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }

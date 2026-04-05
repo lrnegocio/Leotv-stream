@@ -5,6 +5,9 @@ import { getRemoteContent, getRemoteGames } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * XTREAM API MASTER v40.0 - COM CONTROLE PARENTAL & ARENA GAMES
+ */
 export async function GET(req: NextRequest) {
   const headers = { 
     'Content-Type': 'application/json', 
@@ -23,34 +26,30 @@ export async function GET(req: NextRequest) {
 
   try {
     let activeUser: any = null;
-    const pinsToTry = Array.from(new Set([username, password])).filter(p => p.length > 0);
+    const pin = (username || password).toUpperCase().trim();
     
-    for (const pin of pinsToTry) {
-      if (pin.toLowerCase() === 'adm77x2p') {
-        activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 };
-        break;
-      }
-      
+    if (pin === 'ADM77X2P') {
+      activeUser = { pin: 'ADM77X2P', isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 };
+    } else {
       const { data } = await supabase
         .from('users')
         .select('*')
-        .eq('pin', pin.toUpperCase().trim())
+        .eq('pin', pin)
         .maybeSingle();
 
       if (data && !data.isBlocked) {
-        if (data.expiryDate && new Date(data.expiryDate) < new Date()) continue;
+        if (data.expiryDate && new Date(data.expiryDate) < new Date()) {
+           return NextResponse.json({ user_info: { auth: 0, status: "Expired" } }, { headers });
+        }
         activeUser = data;
-        break;
       }
     }
 
     if (!activeUser) {
-      return NextResponse.json({ 
-        user_info: { auth: 0, status: "Acesso Negado", message: "PIN INVÁLIDO OU EXPIRADO" } 
-      }, { headers });
+      return NextResponse.json({ user_info: { auth: 0, status: "Acesso Negado" } }, { headers });
     }
 
-    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v39)
+    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v40)
     const content = await getRemoteContent(true);
 
     if (!action) {
@@ -65,7 +64,7 @@ export async function GET(req: NextRequest) {
           allowed_output_formats: ["m3u8", "ts", "mp4"]
         },
         server_info: { 
-          url: req.nextUrl.origin.replace('https://', '').replace('http://', ''), 
+          url: req.nextUrl.host, 
           port: "443", 
           https_port: "443", 
           server_protocol: "https", 
@@ -77,7 +76,12 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_live_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'channel').map(i => i.genre.toUpperCase()))).sort();
-      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 1).toString(), category_name: name, parent_id: "0" })), { headers });
+      return NextResponse.json(cats.map((name, idx) => ({ 
+        category_id: (idx + 1).toString(), 
+        category_name: name, 
+        parent_id: "0",
+        parental_control: name.includes('ADULTO') || name.includes('XXX') ? "1" : "0" 
+      })), { headers });
     }
 
     if (action === 'get_live_streams') {
@@ -101,11 +105,15 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_vod_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
-      const response = cats.map((name, idx) => ({ category_id: (idx + 100).toString(), category_name: name, parent_id: "0" }));
+      const response = cats.map((name, idx) => ({ 
+        category_id: (idx + 100).toString(), 
+        category_name: name, 
+        parent_id: "0",
+        parental_control: name.includes('ADULTO') || name.includes('XXX') ? "1" : "0"
+      }));
       
-      // Injeta Arena Games se autorizado
       if (activeUser.isGamesEnabled) {
-        response.push({ category_id: "999", category_name: "🎮 ARENA GAMES LÉO TV", parent_id: "0" });
+        response.push({ category_id: "999", category_name: "🎮 ARENA GAMES LÉO TV", parent_id: "0", parental_control: "1" });
       }
       
       return NextResponse.json(response, { headers });
@@ -113,8 +121,6 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_vod_streams') {
       const catId = searchParams.get('category_id');
-      
-      // Entrega Jogos na categoria 999
       if (catId === '999' && activeUser.isGamesEnabled) {
         const games = await getRemoteGames();
         return NextResponse.json(games.map(g => ({
@@ -123,19 +129,17 @@ export async function GET(req: NextRequest) {
           stream_id: g.id,
           stream_icon: g.imageUrl || "",
           category_id: "999",
-          container_extension: "mp4" // Dummy extension for IPTV compatibility
+          container_extension: "mp4"
         })), { headers });
       }
 
       let items = content.filter(i => i.type === 'movie');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
-      
       if (catId) {
         const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
         const targetGenre = cats[parseInt(catId) - 100];
         if (targetGenre) items = items.filter(i => i.genre.toUpperCase() === targetGenre);
       }
-
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
         name: i.title.toUpperCase(), 

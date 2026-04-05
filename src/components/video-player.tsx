@@ -13,6 +13,9 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
+/**
+ * SINTONIZADOR SNIPER v40.0 - SUPORTE TS & BLINDER MASTER
+ */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
@@ -35,7 +38,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR SNIPER v37 - YouTube & Adultos
+    // DETECÇÃO DE SITES ADULTOS (SNIPER)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -48,35 +51,37 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
-      const viewKey = viewKeyMatch ? viewKeyMatch[1] : null;
-      if (viewKey) return { processedUrl: `https://www.pornhub.com/embed/${viewKey}`, type: 'iframe' };
+      if (viewKeyMatch) return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
     }
 
     if (lowerUrl.includes('xvideos.com')) {
       const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
-      const vidId = vidIdMatch ? vidIdMatch[1] : null;
-      if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
+      if (vidIdMatch) return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR BLINDER & TS MASTER v37
+    // SINTONIZADOR DE STREAMING PROFISSIONAL
     const isBlinder = lowerUrl.includes('blinder.space');
-    const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl');
-    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
+    const isRedeCanais = lowerUrl.includes('redecanais') || lowerUrl.includes('ch.php');
+    const isTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('hls-') || lowerUrl.includes('.ts?');
+    const isM3U8 = lowerUrl.includes('.m3u8');
     const isMP4 = lowerUrl.includes('.mp4');
-    const isPHP = lowerUrl.includes('.php') || lowerUrl.includes('canal=') || lowerUrl.includes('webplayer.one');
+    const isWebPlayer = lowerUrl.includes('webplayer.one');
     const isHTTP = urlStr.startsWith('http://');
     
+    // TÚNEL XUI OBRIGATÓRIO PARA LINKS BLOQUEADOS OU HTTP
     const proxied = `/api/proxy?url=${encodeURIComponent(urlStr)}`;
 
-    if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
-    
-    // Links Blinder ou HTTP exigem Proxy obrigatoriamente
-    if (isBlinder || isHTTP || isM3U8 || isTS || isMP4) {
-       if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
-       return { processedUrl: proxied, type: 'video' };
+    if (isRedeCanais && lowerUrl.includes('.php')) {
+      return { processedUrl: proxied, type: 'iframe' }; 
     }
     
-    return { processedUrl: urlStr, type: 'video' };
+    if (isBlinder || isRedeCanais || isWebPlayer || isHTTP || isTS) {
+       if (isM3U8 || isTS || lowerUrl.includes('m3u8')) return { processedUrl: proxied, type: 'hls' };
+       if (isMP4) return { processedUrl: proxied, type: 'video' };
+       return { processedUrl: proxied, type: 'iframe' };
+    }
+    
+    return { processedUrl: urlStr, type: isM3U8 ? 'hls' : 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -109,15 +114,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que todos os fragmentos .ts também passem pelo proxy se o original for bloqueado
-            if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder'))) {
+            // Bypass de fragmentos .ts para Blinder/MPEG-TS
+            if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder') || rUrl.includes('xvideos-cdn'))) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
           autoStartLoad: true,
-          retryDelay: 1500,
-          onErrorFatalRetry: true,
-          enableWorker: true
+          retryDelay: 1000,
+          maxMaxBufferLength: 30
         });
 
         hls.loadSource(processedUrl);
@@ -130,12 +134,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         });
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal && retryCount < 5) {
-            setRetryCount(prev => prev + 1);
-            hls.startLoad();
-          } else if (data.fatal) {
-            setError("Sinal instável. Tente re-sincronizar.");
-            setLoading(false);
+          if (data.fatal) {
+            if (retryCount < 3) {
+              setRetryCount(prev => prev + 1);
+              hls.startLoad();
+            } else {
+              setError("Sinal instável. Tente re-sintonizar.");
+              setLoading(false);
+            }
           }
         });
       } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
@@ -149,7 +155,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           video.play().catch(() => { if(video){ video.muted = true; video.play().catch(() => {}); } });
           setLoading(false);
         };
-        video.onerror = () => { setError("Falha ao carregar arquivo de vídeo."); setLoading(false); };
+        video.onerror = () => { setError("Falha ao carregar sinal de vídeo."); setLoading(false); };
       }
     } else {
       setLoading(false);
@@ -203,10 +209,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
       <div className={`absolute inset-0 z-20 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
-          <ChevronLeft className="h-6 w-6 text-white group-hover/btn:scale-110" />
+          <ChevronLeft className="h-6 w-6 text-white" />
         </button>
         <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-12 w-12 rounded-full bg-black/60 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all group/btn opacity-0 group-hover:opacity-100">
-          <ChevronRight className="h-6 w-6 text-white group-hover/btn:scale-110" />
+          <ChevronRight className="h-6 w-6 text-white" />
         </button>
       </div>
     </div>
