@@ -84,7 +84,8 @@ export interface GameRanking {
 }
 
 /**
- * GESTÃO DE CONTEÚDO UNIFICADA v62 - SOBERANIA PWA
+ * GESTÃO DE CONTEÚDO UNIFICADA v63 - SUPREMACIA PWA
+ * Mantida a compatibilidade com a tabela original do Supabase.
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -102,6 +103,7 @@ export async function saveContent(item: Partial<ContentItem>) {
     const id = item.id || "leo_" + Math.random().toString(36).substring(2, 12);
     const finalUrl = item.streamUrl || "";
     
+    // Payload fiel ao seu script SQL
     const payload: any = {
       id, 
       title: (item.title || "NOVO SINAL").toUpperCase().trim(),
@@ -111,7 +113,8 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: finalUrl,
-      episodes: (item.type === 'series') ? (item.episodes || []) : (item.seasons ? null : []),
+      // Se for série master (temporadas), o campo episodes fica nulo para evitar erro de tipo
+      episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
     

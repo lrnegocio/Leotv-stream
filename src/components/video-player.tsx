@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -14,9 +13,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v61.0 - LIBERAÇÃO TOTAL DE IFRAMES
- * Removido o atributo sandbox para permitir que players do Rei dos Canais funcionem sem bloqueios.
- * Suporte a Tags Iframe, links brutos, M3U8, TS e redirecionadores.
+ * SINTONIZADOR SNIPER v63.0 - EXCLUSIVO PWA
+ * Especialista em M3U8 com Proxy de Fragmentos Total.
+ * Suporta Iframes, MP4, M3U8 e Links Brutos.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -38,17 +37,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // EXTRATOR ATÔMICO DE IFRAME: Se o mestre colar a tag inteira, nós limpamos
+    // EXTRATOR DE TAG IFRAME COMPLETA
     if (urlStr.toLowerCase().startsWith('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
-      if (srcMatch && srcMatch[1]) {
-        urlStr = srcMatch[1];
-      }
+      if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
     }
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIA REI DOS CANAIS / RDCANAIS / EMBEDS GERAIS
+    // IDENTIFICAÇÃO DE PROVEDORES DE EMBED (IFRAME)
     const iframeProviders = [
       'rdcanais.com', 
       'redecanais', 
@@ -58,39 +55,35 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       'player', 
       'streamad', 
       'voodrew', 
-      'hxfile', 
-      'fembed',
-      'adultswim'
+      'adultswim',
+      'youtube.com',
+      'youtu.be',
+      'dailymotion.com'
     ];
 
-    const isIframeProvider = iframeProviders.some(p => lowerUrl.includes(p));
-
-    if (isIframeProvider) {
-      return { processedUrl: urlStr, type: 'iframe' };
-    }
-
-    // EXTRATOR XVIDEOS SNIPER
-    if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
-      const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
-      if (vidIdMatch) {
-        return { processedUrl: `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`, type: 'iframe' };
+    if (iframeProviders.some(p => lowerUrl.includes(p)) || lowerUrl.includes('xvideos.com')) {
+      let finalUrl = urlStr;
+      
+      // Ajuste XVideos
+      if (lowerUrl.includes('xvideos.com')) {
+        const vidIdMatch = urlStr.match(/video\.?([a-z0-9]+)/i) || urlStr.match(/\/video([0-9]+)/);
+        if (vidIdMatch) finalUrl = `https://www.xvideos.com/embedframe/${vidIdMatch[1]}`;
       }
+      
+      // Ajuste YouTube
+      if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+        const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
+        finalUrl = `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`;
+      }
+
+      return { processedUrl: finalUrl, type: 'iframe' };
     }
 
-    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-      const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
-    }
-
-    if (lowerUrl.includes('dailymotion.com')) {
-      const vidId = urlStr.split('/video/')[1]?.split('?')[0];
-      return { processedUrl: `https://www.dailymotion.com/embed/video/${vidId}?autoplay=1`, type: 'iframe' }
-    }
-
+    // IDENTIFICAÇÃO DE FORMATOS DE STREAMING
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('.mpg');
     
-    // Forçamos o Proxy Master para sinais de IPTV (.m3u8, .ts) para evitar bloqueios de CORS
+    // Todos os sinais de IPTV (.m3u8, .ts) ou HTTP inseguro passam pelo Túnel Master
     if (isM3U8 || isTS || urlStr.startsWith('http://')) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isM3U8 || isTS ? 'hls' : 'video' };
     }
@@ -127,6 +120,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
+          // CONFIGURAÇÃO SNIPER: Força o proxy em cada segmento (.ts) para bypass de CORS
           xhrSetup: (xhr: any, rUrl: string) => {
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
@@ -134,7 +128,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           },
           autoStartLoad: true,
           retryDelay: 1000,
-          enableWorker: true
+          enableWorker: true,
+          lowLatencyMode: true
         });
 
         hls.loadSource(processedUrl);
@@ -147,12 +142,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         });
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal && retryCount < 3) {
-            setRetryCount(prev => prev + 1);
-            hls.startLoad();
-          } else if (data.fatal) {
-            setError("Sinal instável. Tente novamente em instantes.");
-            setLoading(false);
+          if (data.fatal) {
+            if (retryCount < 3) {
+              setRetryCount(prev => prev + 1);
+              hls.startLoad();
+            } else {
+              setError("Sinal instável. O servidor de origem bloqueou a conexão.");
+              setLoading(false);
+            }
           }
         });
       } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
@@ -205,7 +202,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
           onLoad={() => setLoading(false)}
-          // REMOVIDO SANDBOX v61 PARA EVITAR BLOQUEIO DE SINAL PROFISSIONAL (RD CANAIS / REI DOS CANAIS)
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         />
       ) : (
