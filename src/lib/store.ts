@@ -74,7 +74,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v36.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v37.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -106,7 +106,7 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v36.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v37.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -114,7 +114,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     const { data: user } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
-    // FILTRO MESTRE v36: No IPTV, só mostramos o que tem directStreamUrl (Link Direto)
+    // FILTRO MESTRE v37: No IPTV, só mostramos o que tem directStreamUrl (Link Direto)
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
     if (!allItems) return "#EXTM3U\n";
 
@@ -136,11 +136,9 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
         const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
         m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
       } else if (item.type === 'series' || item.type === 'multi-season') {
-        let hasEpisodes = false;
         if (item.episodes) {
           item.episodes.forEach((ep: Episode) => {
             if (!ep.directStreamUrl) return; 
-            hasEpisodes = true;
             const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
             m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
           });
@@ -149,7 +147,6 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
           item.seasons.forEach((s: Season) => {
             s.episodes.forEach((ep: Episode) => {
               if (!ep.directStreamUrl) return;
-              hasEpisodes = true;
               const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
               m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
             });
@@ -165,7 +162,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v36.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v37.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -184,7 +181,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     
     let items = data || [];
 
-    // ISOLAMENTO TOTAL v36.0
+    // ISOLAMENTO TOTAL v37.0 - Separação Absoluta de Links
     if (isIptv) {
       // IPTV: SÓ itens com directStreamUrl (Link Direto)
       return items.filter(i => {

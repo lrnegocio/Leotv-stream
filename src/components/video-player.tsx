@@ -35,7 +35,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR SNIPER v36
+    // SINTONIZADOR SNIPER v37 - YouTube & Adultos
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       const vidId = urlStr.includes('v=') ? urlStr.split('v=')[1]?.split('&')[0] : urlStr.split('youtu.be/')[1]?.split('?')[0];
       return { processedUrl: `https://www.youtube-nocookie.com/embed/${vidId}?autoplay=1&rel=0`, type: 'iframe' }
@@ -58,7 +58,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (vidId) return { processedUrl: `https://www.xvideos.com/embedframe/${vidId}`, type: 'iframe' };
     }
 
-    // SINTONIZADOR BLINDER & TS MASTER v36
+    // SINTONIZADOR BLINDER & TS MASTER v37
     const isBlinder = lowerUrl.includes('blinder.space');
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('mpegurl');
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('stream');
@@ -70,10 +70,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     if (isPHP) return { processedUrl: proxied, type: 'iframe' }; 
     
+    // Links Blinder ou HTTP exigem Proxy obrigatoriamente
     if (isBlinder || isHTTP || isM3U8 || isTS || isMP4) {
-       // Se for Blinder, HTTP ou extensões de stream, usamos o Proxy.
        if (isM3U8 || isTS) return { processedUrl: proxied, type: 'hls' };
-       // Se for MP4 da Blinder, tratamos como vídeo nativo mas através do proxy.
        return { processedUrl: proxied, type: 'video' };
     }
     
@@ -110,7 +109,10 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            if (!rUrl.includes('/api/proxy')) xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
+            // Garante que todos os fragmentos .ts também passem pelo proxy se o original for bloqueado
+            if (!rUrl.includes('/api/proxy') && (rUrl.startsWith('http://') || rUrl.includes('blinder'))) {
+               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
+            }
           },
           autoStartLoad: true,
           retryDelay: 1500,
