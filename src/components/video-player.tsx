@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * SINTONIZADOR SNIPER v59.0 - MOTOR DE PURIFICAÇÃO RADICAL
- * Estabilização de sinais IPTV (.m3u8, .ts) e bypass total de segurança.
+ * SINTONIZADOR SNIPER v60.0 - MOTOR DE EXTRAÇÃO E PURIFICAÇÃO
+ * Suporte a Tags Iframe, links brutos, M3U8, TS e redirecionadores.
  */
 export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -35,8 +35,37 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
-    const urlStr = u.trim()
+    let urlStr = u.trim()
+
+    // EXTRATOR ATÔMICO DE IFRAME: Se o mestre colar a tag inteira, nós limpamos
+    if (urlStr.toLowerCase().startsWith('<iframe')) {
+      const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
+      if (srcMatch && srcMatch[1]) {
+        urlStr = srcMatch[1];
+      }
+    }
+
     const lowerUrl = urlStr.toLowerCase()
+
+    // SINTONIA REI DOS CANAIS / RDCANAIS / EMBEDS GERAIS
+    const iframeProviders = [
+      'rdcanais.com', 
+      'redecanais', 
+      'reidoscanais', 
+      'embed', 
+      'player', 
+      'streamad', 
+      'voodrew', 
+      'hxfile', 
+      'fembed',
+      'adultswim'
+    ];
+
+    const isIframeProvider = iframeProviders.some(p => lowerUrl.includes(p));
+
+    if (isIframeProvider) {
+      return { processedUrl: urlStr, type: 'iframe' };
+    }
 
     // EXTRATOR XVIDEOS SNIPER
     if (lowerUrl.includes('xvideos.com') || lowerUrl.includes('video.')) {
@@ -97,7 +126,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Força o proxy em cada segmento do sinal para evitar bloqueios do servidor de origem
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/')) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -154,7 +182,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       {loading && !error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando Canal v59...</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-60">Sintonizando Sinal Master...</p>
         </div>
       )}
 
@@ -176,6 +204,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           onLoad={() => setLoading(false)}
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups-to-escape-sandbox"
+          allow="autoplay; encrypted-media; picture-in-picture"
         />
       ) : (
         <video 
