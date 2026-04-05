@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw, Maximize, Minimize } from "lucide-center"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -20,16 +20,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [error, setError] = React.useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const hlsRef = React.useRef<any>(null)
-  const [hlsLoaded, setHlsLoaded] = React.useState(false)
   const [retryCount, setRetryCount] = React.useState(0)
-
-  React.useEffect(() => {
-    const checkHls = () => {
-      if ((window as any).Hls) setHlsLoaded(true);
-      else setTimeout(checkHls, 100);
-    };
-    checkHls();
-  }, []);
 
   React.useEffect(() => {
     const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -50,7 +41,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Extração de iFrames brutos
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -58,7 +48,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // --- RECALIBRAGEM YOUTUBE MASTER (ANTI-ERRO 153) ---
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       if (lowerUrl.includes('v=')) {
@@ -71,15 +60,13 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       
       if (ytId) {
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1`, 
           type: 'iframe' 
         };
       }
     }
 
-    // --- RECALIBRAGEM XVIDEOS MASTER (EXTRAÇÃO DE ID SOBERANA) ---
     if (lowerUrl.includes('xvideos.com')) {
-      // Tenta pegar o ID no formato /video.XXXXXXX/ ou /videoXXXXXXX
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]+)/i);
       if (vidMatch && vidMatch[1]) {
         return { 
@@ -87,20 +74,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           type: 'iframe' 
         };
       }
-      return { processedUrl: urlStr, type: 'iframe' };
     }
 
-    const iframeProviders = [
-      'embed', 
-      'player', 
-      'voodrew',
-      'rdcanais',
-      'redecanais',
-      'reidoscanais',
-      'brazzers.com',
-      'bangbros.com'
-    ];
-
+    const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com'];
     if (iframeProviders.some(p => lowerUrl.includes(p))) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
@@ -167,7 +143,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal de transmissão offline.");
+              setError("Sinal offline ou protegido.");
               setLoading(false);
             }
           }

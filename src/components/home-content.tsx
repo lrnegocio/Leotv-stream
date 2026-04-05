@@ -43,7 +43,6 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
-  // TRAVA MESTRE: Impede o player de abrir duas vezes
   const isClosingRef = React.useRef(false)
   const lastOpenedIdRef = React.useRef<string | null>(null)
   
@@ -71,7 +70,6 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, targetGenre);
       setContent(data);
 
-      // Sintonização Automática via URL (Recalibrada)
       if (channelId && !isClosingRef.current && lastOpenedIdRef.current !== channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
@@ -177,7 +175,6 @@ export default function HomeContent() {
     p.delete('id');
     const newUrl = p.toString() ? `${window.location.pathname}?${p.toString()}` : window.location.pathname;
     
-    // Sincronização Master: Limpa URL e bloqueia reabertura por 2s
     router.replace(newUrl, { scroll: false });
     
     setTimeout(() => { 
