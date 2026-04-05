@@ -85,7 +85,7 @@ export interface Reseller {
 }
 
 // ==========================================
-// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v38.0)
+// FUNÇÕES DE EXCLUSÃO (BUILD SAFE v39.0)
 // ==========================================
 
 export async function removeUser(id: string) {
@@ -124,7 +124,7 @@ export async function removeGame(id: string) {
 }
 
 // ==========================================
-// FUNÇÕES DE JOGOS (ARENA RETRO v38.0)
+// FUNÇÕES DE JOGOS (ARENA RETRO v39.0)
 // ==========================================
 
 export async function getRemoteGames(): Promise<GameItem[]> {
@@ -143,7 +143,7 @@ export async function saveGame(game: Partial<GameItem>) {
 }
 
 // ==========================================
-// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v38.0)
+// FUNÇÕES DE PLAYLIST M3U (ISOLAMENTO TOTAL v39.0)
 // ==========================================
 
 export async function generateM3UPlaylist(pin: string, originUrl?: string): Promise<string> {
@@ -152,44 +152,55 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
     if (!user || user.isBlocked) return "#EXTM3U\n#EXTINF:-1,ACESSO NEGADO OU PIN BLOQUEADO\n";
 
     const { data: allItems } = await supabase.from('content').select('*').order('title', { ascending: true });
-    if (!allItems) return "#EXTM3U\n";
-
+    const { data: allGames } = await supabase.from('games').select('*').order('title', { ascending: true });
+    
     const origin = originUrl || "";
     let m3u = "#EXTM3U\n";
     
-    allItems.forEach(item => {
-      if (item.isRestricted && !user.isAdultEnabled) return;
-      if (!item.directStreamUrl) return; // ISOLAMENTO: Só vai para IPTV se tiver link secundário
+    // Canais e Filmes (Apenas com link secundário para IPTV)
+    if (allItems) {
+      allItems.forEach(item => {
+        if (item.isRestricted && !user.isAdultEnabled) return;
+        if (!item.directStreamUrl) return; 
 
-      const group = (item.genre || "GERAL").toUpperCase();
-      const logo = item.imageUrl || "";
-      const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
-      
-      if (item.type === 'channel') {
-        const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
-        m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
-      } else if (item.type === 'movie') {
-        const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
-        m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
-      } else if (item.type === 'series' || item.type === 'multi-season') {
-        if (item.episodes) {
-          item.episodes.forEach((ep: Episode) => {
-            if (!ep.directStreamUrl) return; 
-            const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
-            m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
-          });
-        }
-        if (item.seasons) {
-          item.seasons.forEach((s: Season) => {
-            s.episodes.forEach((ep: Episode) => {
-              if (!ep.directStreamUrl) return;
+        const group = (item.genre || "GERAL").toUpperCase();
+        const logo = item.imageUrl || "";
+        const cleanTitle = (item.title || "SEM TITULO").toUpperCase();
+        
+        if (item.type === 'channel') {
+          const streamUrl = `${origin}/live/${pin}/${pin}/${item.id}.m3u8`;
+          m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="${group}",${cleanTitle}\n${streamUrl}\n`;
+        } else if (item.type === 'movie') {
+          const streamUrl = `${origin}/movie/${pin}/${pin}/${item.id}.mp4`;
+          m3u += `#EXTINF:-1 tvg-id="${item.id}" tvg-name="${cleanTitle}" tvg-logo="${logo}" group-title="FILMES - ${group}",${cleanTitle}\n${streamUrl}\n`;
+        } else if (item.type === 'series' || item.type === 'multi-season') {
+          if (item.episodes) {
+            item.episodes.forEach((ep: Episode) => {
+              if (!ep.directStreamUrl) return; 
               const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
-              m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+              m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle}",${cleanTitle} - EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
             });
-          });
+          }
+          if (item.seasons) {
+            item.seasons.forEach((s: Season) => {
+              s.episodes.forEach((ep: Episode) => {
+                if (!ep.directStreamUrl) return;
+                const streamUrl = `${origin}/series/${pin}/${pin}/${ep.id}.mp4`;
+                m3u += `#EXTINF:-1 tvg-id="${ep.id}" tvg-name="${cleanTitle} T${s.number} E${ep.number}" tvg-logo="${logo}" group-title="SERIES - ${cleanTitle} T${s.number}",${cleanTitle} - T${s.number} EP ${ep.number} ${ep.title}\n${streamUrl}\n`;
+              });
+            });
+          }
         }
-      }
-    });
+      });
+    }
+
+    // ARENA GAMES NO IPTV
+    if (allGames && user.isGamesEnabled) {
+      allGames.forEach(game => {
+        const gameUrl = `${origin}/user/home?id=game_${game.id}`;
+        m3u += `#EXTINF:-1 tvg-id="game_${game.id}" tvg-name="${game.title.toUpperCase()}" tvg-logo="${game.imageUrl || ""}" group-title="ARENA GAMES RETRO",${game.title.toUpperCase()}\n${gameUrl}\n`;
+      });
+    }
 
     return m3u;
   } catch (e) {
@@ -198,7 +209,7 @@ export async function generateM3UPlaylist(pin: string, originUrl?: string): Prom
 }
 
 // ==========================================
-// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v38.0)
+// FUNÇÕES DE CONTEÚDO (ISOLAMENTO TOTAL v39.0)
 // ==========================================
 
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
@@ -218,6 +229,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     let items = data || [];
 
     if (isIptv) {
+      // No IPTV só aparecem itens com link secundário preenchido
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.directStreamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.directStreamUrl);
@@ -225,6 +237,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
         return false;
       });
     } else {
+      // No PWA só aparecem itens com link soberano preenchido
       return items.filter(i => {
         if (i.type === 'channel' || i.type === 'movie') return !!i.streamUrl;
         if (i.type === 'series') return i.episodes?.some((e: any) => !!e.streamUrl);

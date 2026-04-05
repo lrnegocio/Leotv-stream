@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase-client';
-import { getRemoteContent } from '@/lib/store';
+import { getRemoteContent, getRemoteGames } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     
     for (const pin of pinsToTry) {
       if (pin.toLowerCase() === 'adm77x2p') {
-        activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, maxScreens: 999 };
+        activeUser = { pin: 'adm77x2p', isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 };
         break;
       }
       
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       }, { headers });
     }
 
-    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v34)
+    // No IPTV, só mostramos itens com directStreamUrl (ISOLAMENTO v39)
     const content = await getRemoteContent(true);
 
     if (!action) {
@@ -101,18 +101,47 @@ export async function GET(req: NextRequest) {
 
     if (action === 'get_vod_categories') {
       const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
-      return NextResponse.json(cats.map((name, idx) => ({ category_id: (idx + 100).toString(), category_name: name, parent_id: "0" })), { headers });
+      const response = cats.map((name, idx) => ({ category_id: (idx + 100).toString(), category_name: name, parent_id: "0" }));
+      
+      // Injeta Arena Games se autorizado
+      if (activeUser.isGamesEnabled) {
+        response.push({ category_id: "999", category_name: "🎮 ARENA GAMES LÉO TV", parent_id: "0" });
+      }
+      
+      return NextResponse.json(response, { headers });
     }
 
     if (action === 'get_vod_streams') {
+      const catId = searchParams.get('category_id');
+      
+      // Entrega Jogos na categoria 999
+      if (catId === '999' && activeUser.isGamesEnabled) {
+        const games = await getRemoteGames();
+        return NextResponse.json(games.map(g => ({
+          num: g.id,
+          name: `🎮 ${g.title.toUpperCase()}`,
+          stream_id: g.id,
+          stream_icon: g.imageUrl || "",
+          category_id: "999",
+          container_extension: "mp4" // Dummy extension for IPTV compatibility
+        })), { headers });
+      }
+
       let items = content.filter(i => i.type === 'movie');
       if (!activeUser.isAdultEnabled) items = items.filter(i => !i.isRestricted);
+      
+      if (catId) {
+        const cats = Array.from(new Set(content.filter(i => i.type === 'movie').map(i => i.genre.toUpperCase()))).sort();
+        const targetGenre = cats[parseInt(catId) - 100];
+        if (targetGenre) items = items.filter(i => i.genre.toUpperCase() === targetGenre);
+      }
+
       return NextResponse.json(items.map(i => ({ 
         num: i.id, 
         name: i.title.toUpperCase(), 
         stream_id: i.id, 
         stream_icon: i.imageUrl || "", 
-        category_id: "100", 
+        category_id: catId || "100", 
         container_extension: "mp4" 
       })), { headers });
     }
