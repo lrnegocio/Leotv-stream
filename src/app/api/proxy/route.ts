@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 /**
  * TÚNEL MASTER v85.0 - OTIMIZADO PARA TODOS OS SINAIS
  * Agora lida com HLS (.m3u8), TS segments, MP4 e streams CORS-sensitive.
+ * Suporte a RANGE habilitado para vídeos do Blinder e Archive.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range - VITAL para vídeos diretos e progressivos
+    // Suporte a Range - VITAL para vídeos diretos (Blinder/MP4)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -68,7 +69,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Proxy Master Error:", error.message);
-    // Fallback de segurança para não quebrar a aplicação
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }

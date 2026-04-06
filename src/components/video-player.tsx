@@ -42,7 +42,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     let urlStr = u.trim()
 
     // EXTRATOR DE TAGS HTML (Caso o link seja um <iframe...>)
-    if (urlStr.toLowerCase().startsWith('<iframe') || urlStr.toLowerCase().includes('<iframe')) {
+    if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
     }
@@ -57,14 +57,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // YOUTUBE SOBERANO (RECONSTRUÇÃO LIMPA SEM ERRO 153)
+    // YOUTUBE SOBERANO (RECONSTRUÇÃO LIMPA)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
       ytId = (match && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0&iv_load_policy=3`, type: 'iframe' };
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, type: 'iframe' };
       }
     }
 
@@ -76,22 +76,18 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // HLS / M3U8 / TS / CHUNKLIST (TÚNEL PROXY MASTER)
+    // HLS / M3U8 / TS / CHUNKLIST (TÚNEL PROXY MASTER TOTAL)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('m3u8') || lowerUrl.includes('chunklist');
     if (isHLS) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
     }
 
-    // VÍDEOS DIRETOS (MP4, WEBM, ETC) - PROXY PARA CORS
+    // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
     const isDirectVideo = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirectVideo) {
-      if (lowerUrl.includes('blinder.space') || lowerUrl.includes('archive.org') || lowerUrl.includes('googleusercontent')) {
-        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
-      }
-      return { processedUrl: urlStr, type: 'video' };
+      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
-    // IFRAMES GENÉRICOS (RDCANAIS, PLAYER, ETC)
     return { processedUrl: urlStr, type: 'iframe' };
   }, [])
 
@@ -123,6 +119,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que cada pedaço (.ts) também passe pelo Proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -173,7 +170,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div ref={containerRef} key={`player-${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
+    <div ref={containerRef} key={`p-${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -193,7 +190,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       
       {type === 'iframe' ? (
         <iframe 
-          key={`frame-${url}`}
+          key={`f-${url}`}
           src={processedUrl!} 
           className="w-full h-full border-0 relative z-10" 
           allowFullScreen 
