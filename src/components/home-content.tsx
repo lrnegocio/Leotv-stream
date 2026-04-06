@@ -60,7 +60,8 @@ export default function HomeContent() {
       if (!session) { router.push("/login"); return; }
       const currentUser = JSON.parse(session);
       
-      const data = await getRemoteContent(false, queryStr, CATEGORIES.find(c => c.id === categoryId)?.genre || "");
+      const genreToFilter = CATEGORIES.find(c => c.id === categoryId)?.genre || "";
+      const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
 
       if (channelId && lastOpenedIdRef.current !== channelId) {
@@ -128,9 +129,17 @@ export default function HomeContent() {
       if (cat.special === 'games' && !user?.isGamesEnabled) { toast({ variant: "destructive", title: "GAMES BLOQUEADOS" }); return; }
       if (cat.restricted && !user?.isAdultEnabled) { toast({ variant: "destructive", title: "ADULTOS BLOQUEADOS" }); return; }
       
-      if (!isUnlocked) { setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT'); setIsPinOpen(true); }
-      else { if (cat.special === 'games') setGamesMenuOpen(true); else setSelectedCat(cat.id); }
-    } else { setSelectedCat(cat.id); }
+      if (!isUnlocked) { 
+        setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT'); 
+        setIsPinOpen(true); 
+      }
+      else { 
+        if (cat.special === 'games') setGamesMenuOpen(true); 
+        else setSelectedCat(cat.id); 
+      }
+    } else { 
+      setSelectedCat(cat.id); 
+    }
   };
 
   const verifyGlobalPassword = async () => {
@@ -143,7 +152,10 @@ export default function HomeContent() {
       else if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
       setIsPinOpen(false);
       setPinInput("");
-    } else { toast({ variant: "destructive", title: "SENHA INCORRETA" }); setPinInput(""); }
+    } else { 
+      toast({ variant: "destructive", title: "SENHA INCORRETA" }); 
+      setPinInput(""); 
+    }
   };
 
   const closePlayer = () => {
@@ -154,7 +166,7 @@ export default function HomeContent() {
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
-    // Bloqueio de 2 segundos para evitar player fantasma
+    // Bloqueio de segurança para evitar player fantasma
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -165,7 +177,7 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
-    setIsUnlocked(false); // SEGURANÇA VOLÁTIL: Reseta ao sair
+    setIsUnlocked(false); // Reseta a segurança ao sair
     router.replace(`/user/home`);
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
@@ -203,7 +215,10 @@ export default function HomeContent() {
           </div>
         ) : (
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-300">
-            <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">{q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+            <div className="flex items-center justify-between">
+               <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">{q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+               {isUnlocked && (selectedCat === 'ADULT' || unlockTarget === 'ADULT') && <Badge className="bg-red-500 font-black uppercase">ACESSO LIBERADO</Badge>}
+            </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {content.map((item, idx) => (
                 <div key={item.id} onClick={(e) => handleItemClick(idx, e)} className="group relative aspect-[2/3] bg-card rounded-2xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-sm">
@@ -221,7 +236,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(val) => { if(!val) closePlayer(); }}>
         <DialogContent className="max-w-5xl bg-black border-border p-0 overflow-hidden rounded-3xl shadow-2xl">
-          {activeVideo && <VideoPlayer key={`player-${activeVideo.items[activeVideo.index].id}`} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && <VideoPlayer key={`player-${activeVideo.items[activeVideo.index].id}-${activeVideo.index}`} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary italic mb-6">Episódios: {selectedSeries.title}</h3>

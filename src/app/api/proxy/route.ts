@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v75.0 - RECALIBRAGEM PARA HLS E ADULTOS
- * Otimizado para permitir que fluxos .m3u8 e .ts fluam sem interrupções.
+ * TÚNEL MASTER v80.0 - OTIMIZADO PARA HLS (.m3u8 / .ts)
+ * Permite que fluxos protegidos fluam sem interrupções de CORS ou SSL.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,15 +16,13 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range - VITAL para vídeos fluírem sem travar (especialmente segmentação .ts)
+    // Suporte a Range - ESSENCIAL para vídeos (.ts segments)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Camuflagem Ultra-Fiel
+    // Identidade Master
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
-    requestHeaders.set('Connection', 'keep-alive');
     
     const targetUrlObj = new URL(targetUrl);
     requestHeaders.set('Origin', targetUrlObj.origin);
@@ -38,16 +36,13 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // Lista de cabeçalhos seguros para repassar ao player
+    // Cabeçalhos de vídeo necessários
     const allowedHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control',
-      'expires',
-      'last-modified',
-      'etag'
+      'cache-control'
     ];
     
     res.headers.forEach((v, k) => {
@@ -57,10 +52,9 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Força CORS Total para o Player Web
+    // Força liberação CORS para o Player
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
-    responseHeaders.set('Access-Control-Expose-Headers', '*');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });

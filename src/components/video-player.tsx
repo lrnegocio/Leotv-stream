@@ -40,9 +40,9 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
-
-    // SINTONIZADOR YOUTUBE SOBERANO (FIM DO ERRO 153)
     const lowerUrl = urlStr.toLowerCase()
+
+    // SINTONIZADOR YOUTUBE SOBERANO (REMOVIDO EMBED COMPLEXO PARA EVITAR 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -50,9 +50,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       ytId = (match && match[7].length === 11) ? match[7] : "";
       
       if (ytId) {
-        // Link limpo para evitar Erro 153
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}`, 
           type: 'iframe' 
         };
       }
@@ -74,11 +73,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
     
     if (isM3U8 || isTS) {
+       // Força passar pelo proxy para garantir CORS e fluidez
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
     }
     
-    // Provedores de iFrame (Web)
-    if (lowerUrl.includes('embed') || lowerUrl.includes('player') || lowerUrl.includes('voodrew') || lowerUrl.includes('rdcanais') || lowerUrl.includes('redecanais')) {
+    // Provedores de iFrame Genéricos
+    if (lowerUrl.includes('embed') || lowerUrl.includes('player') || lowerUrl.includes('voodrew') || lowerUrl.includes('rdcanais')) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
 
@@ -95,7 +95,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     const video = videoRef.current;
     if (video) {
       video.pause();
-      video.src = "";
+      video.removeAttribute('src');
       video.load();
     }
   }, []);
@@ -113,12 +113,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que TODOS os fragmentos passem pelo proxy para não dar erro
+            // Garante que TODOS os fragmentos e redirects passem pelo proxy se necessário
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          autoStartLoad: true
+          autoStartLoad: true,
+          retryDelay: 1000,
+          maxRetryDelay: 5000
         });
 
         hls.loadSource(processedUrl);
@@ -132,11 +134,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (retryCount < 3) {
+            console.error("HLS Fatal Error:", data);
+            if (retryCount < 5) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente reconectar ou mude o canal.");
+              setError("Sinal instável. Tente reconectar.");
               setLoading(false);
             }
           }
@@ -200,7 +203,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      {/* Controles de Navegação Master */}
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <button 
           onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
