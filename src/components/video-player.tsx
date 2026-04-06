@@ -29,6 +29,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const lowerUrl = urlStr.toLowerCase()
+    const isHttp = urlStr.startsWith('http:');
 
     // PORNHUB MASTER
     if (lowerUrl.includes('pornhub.com')) {
@@ -46,7 +47,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // YOUTUBE BLINDADO (FIM DO ERRO 153)
+    // YOUTUBE FIEL (ESTILO CANVA)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -57,16 +58,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // HLS / M3U8 / TS (TECNOLOGIA IPTV COM TÚNEL TOTAL)
+    // HLS / M3U8 / TS (TECNOLOGIA IPTV CANVA)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     if (isHLS) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
+      // Se for HTTP, usamos o túnel para evitar erro de segurança do navegador
+      const finalUrl = isHttp ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
+      return { processedUrl: finalUrl, type: 'hls' };
     }
 
-    // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
+    // VÍDEOS DIRETOS (MP4 / BLINDER / ARCHIVE)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
+      const finalUrl = isHttp ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
+      return { processedUrl: finalUrl, type: 'video' };
     }
 
     return { processedUrl: urlStr, type: 'iframe' };
@@ -90,17 +94,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
-          xhrSetup: (xhr: any, rUrl: string) => {
-            // TECNOLOGIA IPTV NATIVA: Cada fragmento (.ts) do vídeo passa pelo Túnel Proxy
-            if (rUrl.startsWith('http') && !rUrl.includes('/api/proxy') && !rUrl.includes(window.location.hostname)) {
-               xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
-            }
-          },
-          manifestLoadingMaxRetry: 20,
-          levelLoadingMaxRetry: 20,
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 120
+          backBufferLength: 90
         });
         
         hls.loadSource(processedUrl);
@@ -118,16 +114,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls.on(Hls.Events.ERROR, (_: any, data: any) => { 
           if(data.fatal) { 
             switch(data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                setError("Sinal instável. Tente reconectar."); 
-                setLoading(false); 
-                break;
+              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+              default: setError("Sinal instável. Tente reconectar."); setLoading(false); break;
             }
           } 
         });
@@ -189,10 +178,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onPrev} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-6 w-6 text-white" /></button>
-        <button onClick={onNext} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-6 w-6 text-white" /></button>
-      </div>
+      {(onNext || onPrev) && (
+        <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={onPrev} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-6 w-6 text-white" /></button>
+          <button onClick={onNext} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-6 w-6 text-white" /></button>
+        </div>
+      )}
     </div>
   )
 }

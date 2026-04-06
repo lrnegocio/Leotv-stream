@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v102.0 - SOBERANO (TECNOLOGIA IPTV NATIVA)
+ * TÚNEL MASTER v103.0 - REPETIDOR DE FLUXO PURO
  * Suporte total a Range (Blinder/MP4) e Fluxo Contínuo de Fragmentos (.ts)
- * Resolve definitivamente erros de CORS, Mixed Content e Bloqueio de IP.
+ * Remove a complexidade e foca na passagem do sinal para evitar Mixed Content.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,16 +16,12 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // REPASSA RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE) E STREAMING LONGO
+    // REPASSA RANGE - CRÍTICO PARA MP4 E STREAMING LONGO
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     
-    const targetUrlObj = new URL(targetUrl);
-    requestHeaders.set('Origin', targetUrlObj.origin);
-    requestHeaders.set('Referer', targetUrlObj.origin + '/');
-
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
@@ -34,14 +30,13 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // REPASSA CABEÇALHOS CRUCIAIS DO VÍDEO
+    // REPASSA CABEÇALHOS CRUCIAIS DE VÍDEO
     const allowedHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control',
-      'last-modified'
+      'cache-control'
     ];
     
     res.headers.forEach((v, k) => {
@@ -51,17 +46,16 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL
+    // LIBERAÇÃO CORS TOTAL PARA O NAVEGADOR
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
-    responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
     // RETORNA O CORPO COMO STREAM PARA PERFORMANCE MÁXIMA
     return new Response(res.body, {
-      status: res.status === 206 ? 206 : (res.ok ? 200 : res.status),
+      status: res.status === 206 ? 206 : 200,
       headers: responseHeaders,
     });
 
@@ -74,7 +68,7 @@ export async function OPTIONS() {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': '*',
     },
   });
