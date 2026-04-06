@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -18,7 +17,7 @@ export default function SettingsPage() {
   const [error, setError] = React.useState<string | null>(null)
   
   const [listText, setListText] = React.useState("")
-  const [isImporting, setIsProcessing] = React.useState(false)
+  const [isProcessing, setIsProcessing] = React.useState(false)
 
   React.useEffect(() => {
     const load = async () => {
@@ -120,7 +119,7 @@ export default function SettingsPage() {
           <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Configurações de Rede e Recuperação de Dados.</p>
         </div>
         <Button onClick={restoreMasterChannels} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] h-12 rounded-xl hover:bg-primary hover:text-white" disabled={isProcessing}>
-          <RefreshCcw className="mr-2 h-4 w-4" /> Restaurar Sinais Padrão
+          {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />} Restaurar Sinais Padrão
         </Button>
       </div>
 

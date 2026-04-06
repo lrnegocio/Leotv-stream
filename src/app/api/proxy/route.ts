@@ -1,12 +1,11 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v95.0 - SOBERANO
+ * TÚNEL MASTER v98.0 - SOBERANO
  * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
- * Resolvendo travamentos de sinais pesados.
+ * Resolvendo travamentos de sinais pesados e erros de CORS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -53,6 +52,7 @@ export async function GET(req: NextRequest) {
     // LIBERAÇÃO CORS TOTAL
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
+    responseHeaders.set('Access-Control-Allow-Headers', '*');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 

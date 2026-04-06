@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -39,18 +38,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // YOUTUBE BLINDADO (EVITA ERRO 153)
+    // YOUTUBE BLINDADO (FIM DO ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
       ytId = (match && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&origin=${window.location.origin}`, type: 'iframe' };
+        // Removido 'origin' que causava erro 153 em alguns casos
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, type: 'iframe' };
       }
     }
 
-    // XVIDEOS MASTER
+    // XVIDEOS MASTER (DETECTOR DE ID COMPLEXO)
     if (lowerUrl.includes('xvideos.com')) {
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
       if (vidMatch && vidMatch[1]) {
@@ -58,7 +58,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // HLS / M3U8 / TS (TÚNEL PROXY MASTER)
+    // HLS / M3U8 / TS (TÚNEL PROXY MASTER TOTAL)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     if (isHLS) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
@@ -92,10 +92,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // PROXY TOTAL: Garante que cada pedaço do vídeo passe pelo Proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
-          }
+          },
+          manifestLoadingMaxRetry: 4,
+          levelLoadingMaxRetry: 4
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -107,7 +110,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           }); 
           setLoading(false); 
         });
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { setError("Sinal instável."); setLoading(false); } });
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { setError("Sinal instável. Tente reconectar."); setLoading(false); } });
       }
     } else if (type === 'video') {
       if (videoRef.current) { 
@@ -116,9 +119,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current?.play().catch(() => {}); 
           setLoading(false); 
         }; 
+        videoRef.current.onerror = () => { setError("Sinal instável."); setLoading(false); };
       }
     } else if (type === 'iframe') {
-      // Iframe carrega via src diretamente
+      // Iframes carregam via src diretamente
     }
   }, [processedUrl, type, cleanup]);
 
@@ -147,8 +151,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={onPrev} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary"><ChevronLeft className="h-6 w-6 text-white" /></button>
-        <button onClick={onNext} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary"><ChevronRight className="h-6 w-6 text-white" /></button>
+        <button onClick={onPrev} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-6 w-6 text-white" /></button>
+        <button onClick={onNext} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-6 w-6 text-white" /></button>
       </div>
     </div>
   )
