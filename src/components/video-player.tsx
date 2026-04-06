@@ -41,7 +41,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Detectar se é um iFrame bruto colado
+    // Detectar se é um iFrame bruto
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -49,15 +49,18 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR YOUTUBE SOBERANO (REFINADO PARA EVITAR ERRO 153)
+    // SINTONIZADOR YOUTUBE SOBERANO (RECONSTRUÇÃO TOTAL PARA EVITAR ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
-      const match = urlStr.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-      if (match && match[1]) ytId = match[1];
+      const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+      const match = urlStr.match(regExp);
+      ytId = (match && match[7].length === 11) ? match[7] : "";
       
       if (ytId) {
+        // Injetar origin para satisfazer políticas de segurança do Google
+        const origin = typeof window !== 'undefined' ? window.location.origin : "";
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&origin=${window.location.origin}`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`, 
           type: 'iframe' 
         };
       }
@@ -76,7 +79,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     }
 
     // Provedores de iFrame conhecidos
-    const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com', 'pornhub.com/embed'];
+    const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com', 'pornhub.com/embed', 'tape', 'stream'];
     if (iframeProviders.some(p => lowerUrl.includes(p)) && !lowerUrl.includes('.m3u8')) {
       return { processedUrl: urlStr, type: 'iframe' };
     }
@@ -176,7 +179,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div ref={containerRef} key={`${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-border group shadow-2xl rounded-2xl">
+    <div ref={containerRef} key={`${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -215,7 +218,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         />
       )}
 
-      {/* Controles de Navegação */}
+      {/* Controles de Navegação Master */}
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100">
         <button 
           onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 

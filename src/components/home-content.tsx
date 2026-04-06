@@ -154,6 +154,7 @@ export default function HomeContent() {
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
+    // Bloqueio de 2 segundos para evitar player fantasma
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
