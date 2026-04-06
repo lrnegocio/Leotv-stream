@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v80.0 - OTIMIZADO PARA HLS (.m3u8 / .ts)
- * Permite que fluxos protegidos fluam sem interrupções de CORS ou SSL.
+ * TÚNEL MASTER v85.0 - OTIMIZADO PARA TODOS OS SINAIS
+ * Agora lida com HLS (.m3u8), TS segments, MP4 e streams CORS-sensitive.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range - ESSENCIAL para vídeos (.ts segments)
+    // Suporte a Range - VITAL para vídeos diretos e progressivos
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade Master
+    // Identidade Master para evitar bloqueios de bot
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
@@ -36,13 +36,15 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // Cabeçalhos de vídeo necessários
+    // Mapeamento de cabeçalhos de vídeo críticos
     const allowedHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control'
+      'cache-control',
+      'access-control-allow-origin',
+      'access-control-allow-methods'
     ];
     
     res.headers.forEach((v, k) => {
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Força liberação CORS para o Player
+    // Força liberação CORS total para o Player Client-Side
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -65,7 +67,8 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Proxy Error:", error.message);
+    console.error("Proxy Master Error:", error.message);
+    // Fallback de segurança para não quebrar a aplicação
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }

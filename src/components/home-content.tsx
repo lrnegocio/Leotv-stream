@@ -60,7 +60,8 @@ export default function HomeContent() {
       if (!session) { router.push("/login"); return; }
       const currentUser = JSON.parse(session);
       
-      const genreToFilter = CATEGORIES.find(c => c.id === categoryId)?.genre || "";
+      const categoryObj = CATEGORIES.find(c => c.id === categoryId);
+      const genreToFilter = categoryObj?.genre || "";
       const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
 
@@ -126,14 +127,13 @@ export default function HomeContent() {
     if (isClosingRef.current) return;
 
     if (cat.special === 'games' || cat.restricted) {
-      if (cat.special === 'games' && !user?.isGamesEnabled) { toast({ variant: "destructive", title: "GAMES BLOQUEADOS" }); return; }
-      if (cat.restricted && !user?.isAdultEnabled) { toast({ variant: "destructive", title: "ADULTOS BLOQUEADOS" }); return; }
+      if (cat.special === 'games' && !user?.isGamesEnabled) { toast({ variant: "destructive", title: "ARENA BLOQUEADA PARA ESTE PIN" }); return; }
+      if (cat.restricted && !user?.isAdultEnabled) { toast({ variant: "destructive", title: "ADULTOS BLOQUEADOS PARA ESTE PIN" }); return; }
       
       if (!isUnlocked) { 
         setUnlockTarget(cat.special === 'games' ? 'GAMES' : 'ADULT'); 
         setIsPinOpen(true); 
-      }
-      else { 
+      } else { 
         if (cat.special === 'games') setGamesMenuOpen(true); 
         else setSelectedCat(cat.id); 
       }
@@ -166,7 +166,6 @@ export default function HomeContent() {
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
-    // Bloqueio de segurança para evitar player fantasma
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -177,13 +176,14 @@ export default function HomeContent() {
     setActiveGame(null);
     setUnlockTarget(null);
     setPinInput("");
-    setIsUnlocked(false); // Reseta a segurança ao sair
+    setIsUnlocked(false);
     router.replace(`/user/home`);
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
   if (loading && content.length === 0) return <div className="min-h-screen flex flex-col items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
+  const currentCategory = CATEGORIES.find(c => c.id === selectedCat);
   const consolesList = Array.from(new Set(games.map(g => g.console))).sort();
 
   return (
@@ -216,7 +216,7 @@ export default function HomeContent() {
         ) : (
           <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-300">
             <div className="flex items-center justify-between">
-               <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">{q ? `Busca: ${q.toUpperCase()}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+               <h2 className="text-2xl font-black uppercase italic tracking-tight text-foreground">{q ? `Busca: ${q.toUpperCase()}` : currentCategory?.name}</h2>
                {isUnlocked && (selectedCat === 'ADULT' || unlockTarget === 'ADULT') && <Badge className="bg-red-500 font-black uppercase">ACESSO LIBERADO</Badge>}
             </div>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -236,7 +236,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(val) => { if(!val) closePlayer(); }}>
         <DialogContent className="max-w-5xl bg-black border-border p-0 overflow-hidden rounded-3xl shadow-2xl">
-          {activeVideo && <VideoPlayer key={`player-${activeVideo.items[activeVideo.index].id}-${activeVideo.index}`} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && <VideoPlayer key={`player-${activeVideo.items[activeVideo.index].id}`} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} id={activeVideo.items[activeVideo.index].id} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary italic mb-6">Episódios: {selectedSeries.title}</h3>
