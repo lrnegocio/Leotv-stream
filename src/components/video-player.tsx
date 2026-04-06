@@ -41,15 +41,8 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Detectar iFrames brutos
-    if (urlStr.toLowerCase().includes('<iframe')) {
-      const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
-      if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
-    }
-
+    // SINTONIZADOR YOUTUBE SOBERANO (FIM DO ERRO 153)
     const lowerUrl = urlStr.toLowerCase()
-
-    // SINTONIZADOR YOUTUBE SOBERANO (RECONSTRUÇÃO PARA ELIMINAR ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -57,18 +50,16 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       ytId = (match && match[7].length === 11) ? match[7] : "";
       
       if (ytId) {
-        // O Origin dinâmico é a chave para matar o erro 153
-        const origin = typeof window !== 'undefined' ? window.location.origin : "";
+        // Link limpo para evitar Erro 153
         return { 
-          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`, 
+          processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, 
           type: 'iframe' 
         };
       }
     }
 
-    // SINTONIZADOR ADULTO MASTER (XVideos, BangBros, Brazzers)
+    // EXTRATOR ADULTO MASTER (XVideos)
     if (lowerUrl.includes('xvideos.com')) {
-      // Extração de ID em links como video.kabopuh3e7b
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
       if (vidMatch && vidMatch[1]) {
         return { 
@@ -78,26 +69,20 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // Provedores de iFrame conhecidos
-    const iframeProviders = ['embed', 'player', 'voodrew', 'rdcanais', 'redecanais', 'reidoscanais', 'brazzers.com', 'bangbros.com', 'pornhub.com/embed', 'tape', 'stream'];
-    if (iframeProviders.some(p => lowerUrl.includes(p)) && !lowerUrl.includes('.m3u8')) {
-      return { processedUrl: urlStr, type: 'iframe' };
-    }
-
-    // SINTONIZADOR HLS / M3U8 / TS (TÚNEL MASTER PROXY)
+    // SINTONIZADOR HLS / M3U8 (TÚNEL PROXY MASTER)
     const isM3U8 = lowerUrl.includes('.m3u8') || lowerUrl.includes('m3u8');
-    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg') || lowerUrl.includes('ts=') || lowerUrl.includes('stream');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpeg');
     
     if (isM3U8 || isTS) {
        return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
     }
     
-    // Fallback para HTTP comum (Proxy para evitar Mixed Content)
-    if (urlStr.startsWith('http://') && !lowerUrl.includes('localhost')) {
-       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
+    // Provedores de iFrame (Web)
+    if (lowerUrl.includes('embed') || lowerUrl.includes('player') || lowerUrl.includes('voodrew') || lowerUrl.includes('rdcanais') || lowerUrl.includes('redecanais')) {
+      return { processedUrl: urlStr, type: 'iframe' };
     }
-    
-    return { processedUrl: urlStr, type: isM3U8 ? 'hls' : 'video' };
+
+    return { processedUrl: urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -128,13 +113,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que TODOS os fragmentos .ts e .m3u8 passem pelo proxy
+            // Garante que TODOS os fragmentos passem pelo proxy para não dar erro
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          autoStartLoad: true,
-          retryDelay: 1000
+          autoStartLoad: true
         });
 
         hls.loadSource(processedUrl);
@@ -142,32 +126,30 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
         hlsRef.current = hls;
         
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video?.play().catch(() => { 
-            if(video) { video.muted = true; video.play().catch(() => {}); } 
-          });
+          video?.play().catch(() => { if(video) video.muted = true; video?.play(); });
           setLoading(false);
         });
 
         hls.on(Hls.Events.ERROR, (_: any, data: any) => {
           if (data.fatal) {
-            if (retryCount < 2) {
+            if (retryCount < 3) {
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável. Tente outro canal ou reconecte.");
+              setError("Sinal instável. Tente reconectar ou mude o canal.");
               setLoading(false);
             }
           }
         });
       } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = processedUrl;
-        video.addEventListener('loadedmetadata', () => { video.play().catch(() => {}); setLoading(false); });
+        video.onloadedmetadata = () => { video.play(); setLoading(false); };
       }
     } else if (type === 'video') {
       if (video) {
         video.src = processedUrl;
-        video.onloadeddata = () => { video.play().catch(() => {}); setLoading(false); };
-        video.onerror = () => { setError("Sinal de vídeo não suportado."); setLoading(false); };
+        video.onloadeddata = () => { video.play(); setLoading(false); };
+        video.onerror = () => { setError("Sinal não suportado."); setLoading(false); };
       }
     } else {
       if (type !== 'iframe') setLoading(false);
@@ -206,7 +188,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           allowFullScreen 
           onLoad={() => setLoading(false)}
           allow="autoplay; encrypted-media; fullscreen"
-          referrerPolicy="no-referrer"
         />
       ) : (
         <video 
