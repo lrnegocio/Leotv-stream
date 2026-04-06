@@ -47,10 +47,6 @@ export interface Reseller {
   name: string;
   username: string;
   password?: string;
-  cpf?: string;
-  birthDate?: string;
-  phone?: string;
-  email?: string;
   credits: number;
   totalSold: number;
   isBlocked: boolean;
@@ -74,8 +70,7 @@ export interface User {
   activatedAt?: string | null;
   individualMessage?: string;
   gamePoints?: number;
-  isSearchingMatch?: boolean;
-  searchingMatchAt?: string | null;
+  created_at?: string;
 }
 
 export interface GameRanking {
@@ -118,8 +113,12 @@ export async function saveContent(item: Partial<ContentItem>) {
     };
     
     const { error } = await supabase.from('content').upsert(payload);
+    if (error) console.error("Supabase Upsert Error:", error);
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("saveContent exception:", e);
+    return false; 
+  }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: Partial<ContentItem>) {
@@ -317,35 +316,6 @@ export async function updateGlobalSettings(value: any) {
     const { error } = await supabase.from('settings').upsert(payload);
     return !error;
   } catch (e) { return false; }
-}
-
-export async function updateGameScore(pin: string, result: 'win' | 'draw' | 'loss') {
-  try {
-    const { data: user } = await supabase.from('users').select('gamePoints').eq('pin', pin.toUpperCase()).single();
-    let pts = user?.gamePoints || 0;
-    if (result === 'win') pts += 10;
-    else if (result === 'draw') pts += 3;
-    else if (result === 'loss') pts = Math.max(0, pts - 5);
-    const { error } = await supabase.from('users').update({ gamePoints: pts, isSearchingMatch: false }).eq('pin', pin.toUpperCase());
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function setUserSearchingMatch(pin: string, isSearching: boolean) {
-  try {
-    const { error } = await supabase.from('users').update({ 
-      isSearchingMatch: isSearching, 
-      searchingMatchAt: isSearching ? new Date().toISOString() : null 
-    }).eq('pin', pin.toUpperCase());
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getWaitingPlayers(): Promise<User[]> {
-  try {
-    const { data } = await supabase.from('users').select('*').eq('isSearchingMatch', true).order('searchingMatchAt', { ascending: false });
-    return data || [];
-  } catch (e) { return []; }
 }
 
 export async function getGameRankings(): Promise<GameRanking[]> {

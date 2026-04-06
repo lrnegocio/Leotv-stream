@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v98.0 - SOBERANO
+ * TÚNEL MASTER v99.0 - SOBERANO
  * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
  * Resolvendo travamentos de sinais pesados e erros de CORS.
  */
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const targetUrl = searchParams.get('url');
 
-  if (!targetUrl) return new NextResponse("Sinal Ausente", { status: 400 });
+  if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
   try {
     const requestHeaders = new Headers();
@@ -34,12 +34,14 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
+    // Lista de cabeçalhos que queremos repassar do sinal original
     const allowedHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control'
+      'cache-control',
+      'last-modified'
     ];
     
     res.headers.forEach((v, k) => {
@@ -49,19 +51,32 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL
+    // LIBERAÇÃO CORS TOTAL E BLINDAGEM
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
+    responseHeaders.set('X-Content-Type-Options', 'nosniff');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
+    // Repassa o status 206 (Partial Content) se for uma Range Request
     return new Response(res.body, {
-      status: res.status === 206 ? 206 : 200,
+      status: res.status === 206 ? 206 : (res.ok ? 200 : res.status),
       headers: responseHeaders,
     });
 
   } catch (error: any) {
+    console.error("Proxy Error:", error.message);
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
+      'Access-Control-Allow-Headers': '*',
+    },
+  });
 }

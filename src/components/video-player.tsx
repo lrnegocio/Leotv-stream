@@ -43,10 +43,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
-      ytId = (match && match[7].length === 11) ? match[7] : "";
+      ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        // Removido 'origin' que causava erro 153 em alguns casos
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, type: 'iframe' };
+        // Formato mais limpo para evitar Erro 153
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}`, type: 'iframe' };
       }
     }
 
@@ -67,6 +67,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
+      // Força Proxy para MP4 para suportar Range Headers (Blinder/Archive)
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
@@ -97,8 +98,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          manifestLoadingMaxRetry: 4,
-          levelLoadingMaxRetry: 4
+          manifestLoadingMaxRetry: 10,
+          levelLoadingMaxRetry: 10,
+          enableWorker: true
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -110,7 +112,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           }); 
           setLoading(false); 
         });
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { setError("Sinal instável. Tente reconectar."); setLoading(false); } });
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => { 
+          if(data.fatal) { 
+            console.error("HLS Error:", data);
+            setError("Sinal instável. Tente reconectar."); 
+            setLoading(false); 
+          } 
+        });
+      } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
+        // Suporte nativo Safari
+        videoRef.current.src = processedUrl;
+        setLoading(false);
       }
     } else if (type === 'video') {
       if (videoRef.current) { 
@@ -119,10 +131,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current?.play().catch(() => {}); 
           setLoading(false); 
         }; 
-        videoRef.current.onerror = () => { setError("Sinal instável."); setLoading(false); };
+        videoRef.current.onerror = (e) => { 
+          console.error("Video Tag Error:", e);
+          setError("Sinal instável."); 
+          setLoading(false); 
+        };
       }
     } else if (type === 'iframe') {
-      // Iframes carregam via src diretamente
+      // Iframes carregam via src diretamente, o evento onLoad no JSX cuida do loading
     }
   }, [processedUrl, type, cleanup]);
 
@@ -145,9 +161,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
       
       {type === 'iframe' ? (
-        <iframe src={processedUrl!} className="w-full h-full border-0 relative z-10" allowFullScreen allow="autoplay; encrypted-media; fullscreen" onLoad={() => setLoading(false)} />
+        <iframe 
+          src={processedUrl!} 
+          className="w-full h-full border-0 relative z-10" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media; fullscreen" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
-        <video ref={videoRef} className="w-full h-full object-contain relative z-10" autoPlay playsInline controls crossOrigin="anonymous" />
+        <video 
+          ref={videoRef} 
+          className="w-full h-full object-contain relative z-10" 
+          autoPlay 
+          playsInline 
+          controls 
+          crossOrigin="anonymous" 
+        />
       )}
 
       <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">

@@ -59,15 +59,24 @@ export default function SettingsPage() {
   const restoreMasterChannels = async () => {
     if (!confirm("Mestre, deseja injetar os Sinais Master padrão agora?")) return;
     setIsProcessing(true);
-    const defaults = [
-      { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
-      { title: "TV CULTURA", genre: "LÉO TV AO VIVO", streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
-      { title: "FILME: DONA ARANHA", genre: "LÉO TV DESENHOS", streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
-      { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" }
-    ];
-    for (const c of defaults) { await saveContent(c as any); }
-    setIsProcessing(false);
-    toast({ title: "SINAIS MASTER RESTAURADOS!" });
+    try {
+      const defaults = [
+        { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
+        { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
+        { title: "FILME: DONA ARANHA", genre: "LÉO TV DESENHOS", type: 'movie', streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
+        { title: "FILME: BLINDER TESTE", genre: "LÉO TV FILMES", type: 'movie', streamUrl: "http://blinder.space/movie/207946522/261879000/5668928.mp4", imageUrl: "https://picsum.photos/seed/blinder/200/300" },
+        { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", type: 'channel', streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" },
+        { title: "YOUTUBE MASTER TESTE", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/yt/200/300" }
+      ];
+      for (const c of defaults) { 
+        await saveContent(c as any); 
+      }
+      toast({ title: "SINAIS MASTER RESTAURADOS!" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   const handleImportList = async () => {
