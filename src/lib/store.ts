@@ -90,14 +90,18 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
     
     const { data } = await query.order('title', { ascending: true });
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      streamUrl: item.streamUrl || "",
+      imageUrl: item.imageUrl || "",
+      isRestricted: !!item.isRestricted
+    }));
   } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    const finalUrl = item.streamUrl || "";
     
     const payload: any = {
       id, 
@@ -107,16 +111,14 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Transmissão StreamSight",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
-      streamUrl: finalUrl,
+      streamUrl: item.streamUrl || "",
       episodes: (item.type === 'series') ? (item.episodes || []) : null,
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : null
     };
     
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) console.error("Supabase Upsert Error:", error);
     return !error;
   } catch (e) { 
-    console.error("saveContent exception:", e);
     return false; 
   }
 }
@@ -246,13 +248,12 @@ export async function getRemoteGames(): Promise<GameItem[]> {
 export async function saveGame(game: Partial<GameItem>) {
   try {
     const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
-    const url = game.url || "";
     const payload = {
       id,
       title: (game.title || "NOVO JOGO").toUpperCase().trim(),
       type: 'channel', 
       genre: `ARENA: ${game.console || 'OUTROS'}`,
-      streamUrl: url,
+      streamUrl: game.url || "",
       description: `GAME_TYPE:${game.type || 'embed'}`,
       imageUrl: game.imageUrl || "",
       isRestricted: true 
@@ -335,7 +336,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `📅 *PLANO:* ${tier.toUpperCase()}\n` +
          `📱 *LIMITE DE TELAS:* ${screens}\n\n` +
          `🌐 *ASSISTA AQUI:* ${url}\n\n` +
-         `🍿 *Instale o Web App para uma experiência nativa em seu aparelho!*`;
+         `🍿 *Instale o Web App para uma experiÊncia nativa em seu aparelho!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES SE COLAR O CÓDIGO INTEIRO)
+    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES)
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // PORNHUB / ADULTO MASTER
+    // PORNHUB MASTER
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       if (viewKeyMatch && viewKeyMatch[1]) {
@@ -53,7 +53,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const match = urlStr.match(regExp);
       ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, type: 'iframe' };
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}`, type: 'iframe' };
       }
     }
 
@@ -91,8 +91,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // TECNOLOGIA IPTV: Cada fragmento (.ts) do vídeo passa pelo Túnel Proxy
-            if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
+            // TECNOLOGIA IPTV NATIVA: Cada fragmento (.ts) do vídeo passa pelo Túnel Proxy
+            if (rUrl.startsWith('http') && !rUrl.includes('/api/proxy') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
@@ -148,7 +148,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         };
       }
     } else if (type === 'iframe') {
-      // O loading do iFrame é controlado pelo evento onLoad da tag
+      // O loading do iFrame é controlado pelo onLoad da tag
     }
   }, [processedUrl, type, cleanup]);
 
