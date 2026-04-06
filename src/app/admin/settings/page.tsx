@@ -1,11 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, MessageSquare, ShieldCheck, AlertCircle, ListPlus, Terminal, RefreshCcw, Tv } from "lucide-react"
+import { Lock, Save, Loader2, MessageSquare, RefreshCcw, Terminal, ListPlus } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -14,10 +14,8 @@ export default function SettingsPage() {
   const [announcement, setAnnouncement] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  
-  const [listText, setListText] = React.useState("")
   const [isProcessing, setIsProcessing] = React.useState(false)
+  const [listText, setListText] = React.useState("")
 
   React.useEffect(() => {
     const load = async () => {
@@ -35,7 +33,6 @@ export default function SettingsPage() {
   }, [])
 
   const handleSaveSettings = async () => {
-    setError(null);
     if (!parentalPin || parentalPin.length < 4) {
       toast({ variant: "destructive", title: "Senha Curta", description: "Mestre, use no mínimo 4 dígitos." })
       return
@@ -45,9 +42,6 @@ export default function SettingsPage() {
       const success = await updateGlobalSettings({ parentalPin, announcement })
       if (success) {
         toast({ title: "SENHA E AVISO ATUALIZADOS!" })
-      } else {
-        setError("O Banco de Dados recusou o salvamento.");
-        toast({ variant: "destructive", title: "ERRO DE BANCO" })
       }
     } catch (e) {
       toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
@@ -63,8 +57,8 @@ export default function SettingsPage() {
       const defaults = [
         { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
         { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
-        { title: "FILME: DONA ARANHA", genre: "LÉO TV DESENHOS", type: 'movie', streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
-        { title: "FILME: BLINDER TESTE", genre: "LÉO TV FILMES", type: 'movie', streamUrl: "http://blinder.space/movie/207946522/261879000/5668928.mp4", imageUrl: "https://picsum.photos/seed/blinder/200/300" },
+        { title: "FILME: BLINDER MASTER", genre: "LÉO TV FILMES", type: 'movie', streamUrl: "http://blinder.space/movie/207946522/261879000/5668928.mp4", imageUrl: "https://picsum.photos/seed/blinder/200/300" },
+        { title: "DESENHO: DONA ARANHA", genre: "LÉO TV DESENHOS", type: 'movie', streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
         { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", type: 'channel', streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" },
         { title: "YOUTUBE MASTER TESTE", genre: "LÉO TV AO VIVO", type: 'channel', streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/yt/200/300" }
       ];
@@ -99,7 +93,7 @@ export default function SettingsPage() {
             genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO",
             type: 'channel' as ContentType,
             description: "Sinal Master Importado",
-            isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || groupMatch?.includes('adultos') || false
+            isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || false
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {

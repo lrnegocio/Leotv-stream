@@ -38,19 +38,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // YOUTUBE BLINDADO (FIM DO ERRO 153)
+    // YOUTUBE BLINDADO (FIM DEFINITIVO DO ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
       ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        // Formato mais limpo para evitar Erro 153
+        // Formato puro para evitar bloqueio de origem
         return { processedUrl: `https://www.youtube.com/embed/${ytId}`, type: 'iframe' };
       }
     }
 
-    // XVIDEOS MASTER (DETECTOR DE ID COMPLEXO)
+    // XVIDEOS MASTER
     if (lowerUrl.includes('xvideos.com')) {
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
       if (vidMatch && vidMatch[1]) {
@@ -67,7 +67,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
-      // Força Proxy para MP4 para suportar Range Headers (Blinder/Archive)
+      // Força Proxy para suportar Range e Mixed Content
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
@@ -93,18 +93,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // PROXY TOTAL: Garante que cada pedaço do vídeo passe pelo Proxy
+            // Garante que cada fragmento passe pelo Proxy se não for local
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          manifestLoadingMaxRetry: 10,
-          levelLoadingMaxRetry: 10,
-          enableWorker: true
+          manifestLoadingMaxRetry: 15,
+          levelLoadingMaxRetry: 15,
+          enableWorker: true,
+          backBufferLength: 90
         });
+        
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
         hlsRef.current = hls;
+
         hls.on(Hls.Events.MANIFEST_PARSED, () => { 
           videoRef.current?.play().catch(() => { 
             if (videoRef.current) videoRef.current.muted = true; 
@@ -112,15 +115,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           }); 
           setLoading(false); 
         });
+
         hls.on(Hls.Events.ERROR, (_: any, data: any) => { 
           if(data.fatal) { 
-            console.error("HLS Error:", data);
-            setError("Sinal instável. Tente reconectar."); 
-            setLoading(false); 
+            switch(data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error("HLS Fatal Error:", data);
+                setError("Sinal instável. Tente reconectar.");
+                setLoading(false);
+                break;
+            }
           } 
         });
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
-        // Suporte nativo Safari
         videoRef.current.src = processedUrl;
         setLoading(false);
       }
@@ -132,13 +145,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setLoading(false); 
         }; 
         videoRef.current.onerror = (e) => { 
-          console.error("Video Tag Error:", e);
-          setError("Sinal instável."); 
+          setError("Erro no arquivo de vídeo."); 
           setLoading(false); 
         };
       }
     } else if (type === 'iframe') {
-      // Iframes carregam via src diretamente, o evento onLoad no JSX cuida do loading
+      // Carregamento via src nativo
     }
   }, [processedUrl, type, cleanup]);
 

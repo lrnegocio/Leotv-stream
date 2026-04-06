@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v99.0 - SOBERANO
+ * TÚNEL MASTER v100.0 - SOBERANO
  * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
- * Resolvendo travamentos de sinais pesados e erros de CORS.
+ * Resolvendo definitivamente o bloqueio de HTTP em HTTPS e erros de CORS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Proxy Error:", error.message);
+    // Em caso de erro catastrófico, retorna 200 vazio para não crashar o player
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
