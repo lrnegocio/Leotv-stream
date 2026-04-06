@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v100.0 - SOBERANO
- * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
- * Resolvendo definitivamente o bloqueio de HTTP em HTTPS e erros de CORS.
+ * TÚNEL MASTER v100.0 - SOBERANO (TECNOLOGIA IPTV NATIVA)
+ * Suporte total a Range (Blinder/MP4) e Fluxo Contínuo de Fragmentos (.ts)
+ * Resolve definitivamente erros de CORS, Mixed Content e Bloqueio de IP.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // SUPORTE A RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE)
+    // SUPORTE A RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE) E STREAMING LONGO
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // Lista de cabeçalhos que queremos repassar do sinal original
+    // Repassa cabeçalhos cruciais de vídeo do sinal original
     const allowedHeaders = [
       'content-type',
       'content-length',
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL E BLINDAGEM
+    // LIBERAÇÃO CORS TOTAL (TECNOLOGIA IPTV WEB)
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
@@ -59,15 +59,14 @@ export async function GET(req: NextRequest) {
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
-    // Repassa o status 206 (Partial Content) se for uma Range Request
+    // Retorna o corpo como stream para performance máxima (sem delay)
     return new Response(res.body, {
       status: res.status === 206 ? 206 : (res.ok ? 200 : res.status),
       headers: responseHeaders,
     });
 
   } catch (error: any) {
-    console.error("Proxy Error:", error.message);
-    // Em caso de erro catastrófico, retorna 200 vazio para não crashar o player
+    console.error("Erro no Túnel Master:", error.message);
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }

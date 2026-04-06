@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -43,6 +42,7 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
+  // TRAVA ANTI-PLAYER DUPLO: Bloqueia reabertura por 2 segundos ao fechar
   const isClosingRef = React.useRef(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -62,6 +62,7 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
 
+      // Sintonização Automática por URL
       if (channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
@@ -126,6 +127,7 @@ export default function HomeContent() {
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
+    // Mantém a trava por 2 segundos para o sistema respirar
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -191,7 +193,7 @@ export default function HomeContent() {
                <h3 className="text-xl font-black uppercase text-primary mb-6 italic">Episódios: {selectedSeries.title}</h3>
                <div className="grid gap-2">
                   {(selectedSeries.episodes || selectedSeries.seasons?.flatMap(s => s.episodes) || []).sort((a,b) => a.number - b.number).map(ep => (
-                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: selectedSeries.episodes || [], index: (selectedSeries.episodes || []).indexOf(ep) })} className="h-14 justify-start bg-muted rounded-xl border-border px-6 hover:border-primary transition-all">
+                    <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: selectedSeries.episodes || selectedSeries.seasons?.flatMap(s => s.episodes) || [], index: (selectedSeries.episodes || selectedSeries.seasons?.flatMap(s => s.episodes) || []).indexOf(ep) })} className="h-14 justify-start bg-muted rounded-xl border-border px-6 hover:border-primary transition-all">
                       <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
                       <Play className="ml-auto h-4 w-4 text-primary" />
                     </Button>

@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES)
+    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES SE COLAR O CÓDIGO INTEIRO)
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -30,23 +30,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // PORNHUB / ADULTO
+    // PORNHUB / ADULTO MASTER
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       if (viewKeyMatch && viewKeyMatch[1]) {
         return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
-      }
-    }
-
-    // YOUTUBE BLINDADO (FIM DEFINITIVO DO ERRO 153)
-    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-      let ytId = "";
-      const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-      const match = urlStr.match(regExp);
-      ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
-      if (ytId) {
-        // Formato puro para evitar bloqueio de origem
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}`, type: 'iframe' };
       }
     }
 
@@ -58,7 +46,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // HLS / M3U8 / TS (TÚNEL PROXY MASTER TOTAL)
+    // YOUTUBE BLINDADO (FIM DO ERRO 153)
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+      let ytId = "";
+      const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+      const match = urlStr.match(regExp);
+      ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
+      if (ytId) {
+        // Formato limpo com parâmetros de segurança do Google
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, type: 'iframe' };
+      }
+    }
+
+    // HLS / M3U8 / TS (TECNOLOGIA IPTV COM TÚNEL TOTAL)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     if (isHLS) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
@@ -67,7 +67,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
-      // Força Proxy para suportar Range e Mixed Content
+      // Passa pelo Proxy para suportar Range Headers (Carregamento por partes)
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
@@ -93,15 +93,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que cada fragmento passe pelo Proxy se não for local
+            // TECNOLOGIA IPTV: Cada fragmento (.ts) do vídeo passa pelo Túnel Proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
           },
-          manifestLoadingMaxRetry: 15,
-          levelLoadingMaxRetry: 15,
+          manifestLoadingMaxRetry: 20,
+          levelLoadingMaxRetry: 20,
           enableWorker: true,
-          backBufferLength: 90
+          lowLatencyMode: true,
+          backBufferLength: 120
         });
         
         hls.loadSource(processedUrl);
@@ -126,9 +127,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 hls.recoverMediaError();
                 break;
               default:
-                console.error("HLS Fatal Error:", data);
-                setError("Sinal instável. Tente reconectar.");
-                setLoading(false);
+                console.error("HLS Error:", data);
+                setError("Sinal instável. Tente reconectar."); 
+                setLoading(false); 
                 break;
             }
           } 
@@ -144,13 +145,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current?.play().catch(() => {}); 
           setLoading(false); 
         }; 
-        videoRef.current.onerror = (e) => { 
+        videoRef.current.onerror = () => { 
           setError("Erro no arquivo de vídeo."); 
           setLoading(false); 
         };
       }
     } else if (type === 'iframe') {
-      // Carregamento via src nativo
+      // O loading do iFrame é controlado pelo evento onLoad da tag
     }
   }, [processedUrl, type, cleanup]);
 
@@ -168,7 +169,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10">
           <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-          <Button onClick={init} variant="outline" className="h-10 border-primary/40 text-primary uppercase font-black text-[10px]">RECONECTAR</Button>
+          <Button onClick={init} variant="outline" className="h-10 border-primary/40 text-primary uppercase font-black text-[10px]">RECONECTAR SINAL</Button>
         </div>
       )}
       
