@@ -41,7 +41,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // Detectar se é um iFrame bruto
+    // Detectar iFrames brutos
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -49,7 +49,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // SINTONIZADOR YOUTUBE SOBERANO (RECONSTRUÇÃO TOTAL PARA EVITAR ERRO 153)
+    // SINTONIZADOR YOUTUBE SOBERANO (RECONSTRUÇÃO PARA ELIMINAR ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -57,7 +57,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       ytId = (match && match[7].length === 11) ? match[7] : "";
       
       if (ytId) {
-        // Injetar origin para satisfazer políticas de segurança do Google
+        // O Origin dinâmico é a chave para matar o erro 153
         const origin = typeof window !== 'undefined' ? window.location.origin : "";
         return { 
           processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`, 
@@ -68,7 +68,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     // SINTONIZADOR ADULTO MASTER (XVideos, BangBros, Brazzers)
     if (lowerUrl.includes('xvideos.com')) {
-      // Extração de ID em links tipo /video.ID/titulo ou /videoID/titulo
+      // Extração de ID em links como video.kabopuh3e7b
       const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
       if (vidMatch && vidMatch[1]) {
         return { 
@@ -128,6 +128,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
+            // Garante que TODOS os fragmentos .ts e .m3u8 passem pelo proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('data:') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
@@ -153,7 +154,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
               setRetryCount(prev => prev + 1);
               hls.startLoad();
             } else {
-              setError("Sinal instável ou bloqueado. Tente outro canal.");
+              setError("Sinal instável. Tente outro canal ou reconecte.");
               setLoading(false);
             }
           }
@@ -179,7 +180,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   }, [initPlayer, cleanupPlayer]);
 
   return (
-    <div ref={containerRef} key={`${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
+    <div ref={containerRef} key={`player-${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
