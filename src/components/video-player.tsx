@@ -53,7 +53,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const match = urlStr.match(regExp);
       ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        // Formato limpo com parâmetros de segurança do Google
         return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`, type: 'iframe' };
       }
     }
@@ -67,7 +66,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
-      // Passa pelo Proxy para suportar Range Headers (Carregamento por partes)
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
@@ -127,7 +125,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 hls.recoverMediaError();
                 break;
               default:
-                console.error("HLS Error:", data);
                 setError("Sinal instável. Tente reconectar."); 
                 setLoading(false); 
                 break;
