@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, MessageSquare, ShieldCheck, AlertCircle, ListPlus, Terminal, Trash2 } from "lucide-react"
+import { Lock, Save, Loader2, MessageSquare, ShieldCheck, AlertCircle, ListPlus, Terminal, RefreshCcw, Tv } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -57,54 +57,54 @@ export default function SettingsPage() {
     }
   }
 
+  const restoreMasterChannels = async () => {
+    if (!confirm("Mestre, deseja injetar os Sinais Master padrão agora?")) return;
+    setIsProcessing(true);
+    const defaults = [
+      { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
+      { title: "TV CULTURA", genre: "LÉO TV AO VIVO", streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
+      { title: "FILME: DONA ARANHA", genre: "LÉO TV DESENHOS", streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
+      { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" }
+    ];
+    for (const c of defaults) { await saveContent(c as any); }
+    setIsProcessing(false);
+    toast({ title: "SINAIS MASTER RESTAURADOS!" });
+  }
+
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
     let imported = 0;
-    
     try {
       const lines = listText.split('\n');
       let currentItem: any = null;
-
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-
         if (line.startsWith('#EXTINF:')) {
           const nameMatch = line.match(/,(.*)$/);
           const logoMatch = line.match(/tvg-logo="(.*?)"/);
           const groupMatch = line.match(/group-title="(.*?)"/);
-          
           currentItem = {
             title: nameMatch ? nameMatch[1].trim() : "NOVO CANAL",
             imageUrl: logoMatch ? logoMatch[1] : "",
             genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO",
             type: 'channel' as ContentType,
-            description: "Sinal importado via Terminal Master.",
+            description: "Sinal Master Importado",
             isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || groupMatch?.includes('adultos') || false
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
-            // Se for série, organiza por episódios
-            if (currentItem.title.toLowerCase().includes(' e') || currentItem.title.toLowerCase().includes(' ep')) {
-               currentItem.type = 'series';
-            }
-
-            await saveContent({
-              ...currentItem,
-              streamUrl: line,
-              directStreamUrl: line // Dual-Link inicial
-            });
+            await saveContent({ ...currentItem, streamUrl: line });
             imported++;
             currentItem = null;
           }
         }
       }
-      
       toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais adicionados ao banco!` });
       setListText("");
     } catch (e) {
-      toast({ variant: "destructive", title: "FALHA NO TERMINAL", description: "Formato de lista inválido." });
+      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
     } finally {
       setIsProcessing(false);
     }
@@ -114,16 +114,15 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Importador Master</h1>
-        <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão Central de Rede e Injeção de Dados em Massa.</p>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-center gap-3 text-destructive text-xs font-black uppercase">
-          <AlertCircle className="h-5 w-5" /> {error}
+      <div className="flex justify-between items-center">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Gestão Master</h1>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Configurações de Rede e Recuperação de Dados.</p>
         </div>
-      )}
+        <Button onClick={restoreMasterChannels} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] h-12 rounded-xl hover:bg-primary hover:text-white" disabled={isProcessing}>
+          <RefreshCcw className="mr-2 h-4 w-4" /> Restaurar Sinais Padrão
+        </Button>
+      </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
@@ -131,19 +130,11 @@ export default function SettingsPage() {
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl"><MessageSquare className="h-6 w-6 text-primary" /></div>
-                <div>
-                  <CardTitle className="uppercase text-lg font-black italic">Mural de Avisos</CardTitle>
-                  <CardDescription className="text-[10px] uppercase font-bold opacity-60">Mensagem global exibida no topo do app.</CardDescription>
-                </div>
+                <div><CardTitle className="uppercase text-lg font-black italic">Mural de Avisos</CardTitle></div>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea 
-                value={announcement}
-                onChange={e => setAnnouncement(e.target.value)}
-                placeholder="Ex: Novos filmes adicionados! Aproveitem o sinal Master..."
-                className="h-32 bg-black/40 border-white/5 font-bold text-xs rounded-xl"
-              />
+              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs rounded-xl" />
             </CardContent>
           </Card>
 
@@ -151,29 +142,13 @@ export default function SettingsPage() {
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl"><Lock className="h-6 w-6 text-primary" /></div>
-                <div>
-                  <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-                  <CardDescription className="text-[10px] uppercase font-bold opacity-60">Trava para Adultos e Arena Games.</CardDescription>
-                </div>
+                <div><CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle></div>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <div className="flex gap-4 items-end">
-                <div className="space-y-2 flex-1">
-                  <Input 
-                    value={parentalPin} 
-                    onChange={(e) => setParentalPin(e.target.value)} 
-                    className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 rounded-2xl focus:border-primary border-white/10 shadow-inner" 
-                    maxLength={4} 
-                  />
-                </div>
-                <button 
-                  onClick={handleSaveSettings} 
-                  disabled={saving}
-                  className="h-16 px-10 font-black uppercase bg-primary text-white rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="h-5 w-5" />}
-                </button>
+              <div className="flex gap-4">
+                <Input value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 rounded-2xl border-white/10" maxLength={4} />
+                <Button onClick={handleSaveSettings} disabled={saving} className="h-16 px-10 bg-primary font-black uppercase rounded-2xl shadow-xl">{saving ? <Loader2 className="animate-spin" /> : <Save />}</Button>
               </div>
             </CardContent>
           </Card>
@@ -184,37 +159,13 @@ export default function SettingsPage() {
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-emerald-500/10 rounded-2xl"><Terminal className="h-6 w-6 text-emerald-500" /></div>
-                <div>
-                  <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Terminal de Importação</CardTitle>
-                  <CardDescription className="text-[10px] uppercase font-bold opacity-60">Cole sua lista M3U aqui para adicionar sinais em massa.</CardDescription>
-                </div>
+                <div><CardTitle className="uppercase text-lg font-black italic text-emerald-500">Terminal de Importação</CardTitle></div>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea 
-                value={listText}
-                onChange={e => setListText(e.target.value)}
-                placeholder="#EXTINF:-1 tvg-logo='...' group-title='FILMES',NOME\nhttp://sinal..."
-                className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl custom-scroll"
-              />
-              <Button 
-                onClick={handleImportList} 
-                disabled={isImporting || !listText}
-                className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20"
-              >
-                {isImporting ? <Loader2 className="h-6 w-6 animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR SINAIS NA REDE</>}
-              </Button>
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="#EXTINF:-1,CANAL\nhttp://link..." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR SINAIS</>}</Button>
             </CardContent>
-          </Card>
-
-          <Card className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
-             <div className="flex items-center gap-4">
-                <ShieldCheck className="h-10 w-10 text-emerald-500" />
-                <div>
-                   <h4 className="font-black uppercase text-sm">Sincronizador Inteligente</h4>
-                   <p className="text-[9px] opacity-60 uppercase font-bold">O sistema detecta automaticamente nomes, logotipos e categorias da sua lista.</p>
-                </div>
-             </div>
           </Card>
         </div>
       </div>

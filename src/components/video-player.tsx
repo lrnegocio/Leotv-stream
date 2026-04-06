@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -13,12 +13,10 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
-export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps) {
+export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
-  const containerRef = React.useRef<HTMLDivElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [isFullscreen, setIsFullscreen] = React.useState(false)
   const hlsRef = React.useRef<any>(null)
 
   const sintonize = React.useCallback((u: string) => {
@@ -33,7 +31,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // PORNHUB SOBERANO
+    // PORNHUB / ADULTO
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       if (viewKeyMatch && viewKeyMatch[1]) {
@@ -89,7 +87,6 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
     setError(null);
     setLoading(true);
 
-    const video = videoRef.current;
     if (type === 'hls') {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
@@ -101,13 +98,25 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
           }
         });
         hls.loadSource(processedUrl);
-        hls.attachMedia(video!);
+        hls.attachMedia(videoRef.current!);
         hlsRef.current = hls;
-        hls.on(Hls.Events.MANIFEST_PARSED, () => { video?.play().catch(() => { video!.muted = true; video?.play(); }); setLoading(false); });
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { 
+          videoRef.current?.play().catch(() => { 
+            if (videoRef.current) videoRef.current.muted = true; 
+            videoRef.current?.play(); 
+          }); 
+          setLoading(false); 
+        });
         hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { setError("Sinal instável."); setLoading(false); } });
       }
     } else if (type === 'video') {
-      if (video) { video.src = processedUrl; video.onloadeddata = () => { video.play().catch(() => {}); setLoading(false); }; }
+      if (videoRef.current) { 
+        videoRef.current.src = processedUrl; 
+        videoRef.current.onloadeddata = () => { 
+          videoRef.current?.play().catch(() => {}); 
+          setLoading(false); 
+        }; 
+      }
     } else if (type === 'iframe') {
       // Iframe carrega via src diretamente
     }
@@ -116,7 +125,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup]);
 
   return (
-    <div ref={containerRef} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 rounded-2xl group shadow-2xl">
+    <div className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 rounded-2xl group shadow-2xl">
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />

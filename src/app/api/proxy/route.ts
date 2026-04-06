@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v90.0 - SOBERANO
+ * TÚNEL MASTER v95.0 - SOBERANO
  * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
+ * Resolvendo travamentos de sinais pesados.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // SUPORTE A RANGE - CRÍTICO PARA MP4 PESADO (BLINDER/ARCHIVE)
+    // SUPORTE A RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL PARA O PLAYER
+    // LIBERAÇÃO CORS TOTAL
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
 
