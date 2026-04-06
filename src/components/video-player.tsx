@@ -20,28 +20,12 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
   const [error, setError] = React.useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const hlsRef = React.useRef<any>(null)
-  const [retryCount, setRetryCount] = React.useState(0)
-
-  React.useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
 
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // EXTRATOR DE TAGS HTML (Caso o link seja um <iframe...>)
+    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES)
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -49,7 +33,7 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
     const lowerUrl = urlStr.toLowerCase()
 
-    // PORNHUB MASTER
+    // PORNHUB SOBERANO
     if (lowerUrl.includes('pornhub.com')) {
       const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
       if (viewKeyMatch && viewKeyMatch[1]) {
@@ -57,14 +41,14 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // YOUTUBE SOBERANO (RECONSTRUÇÃO LIMPA)
+    // YOUTUBE BLINDADO (EVITA ERRO 153)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
       ytId = (match && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&showinfo=0`, type: 'iframe' };
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&origin=${window.location.origin}`, type: 'iframe' };
       }
     }
 
@@ -76,15 +60,15 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
       }
     }
 
-    // HLS / M3U8 / TS / CHUNKLIST (TÚNEL PROXY MASTER TOTAL)
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('m3u8') || lowerUrl.includes('chunklist');
+    // HLS / M3U8 / TS (TÚNEL PROXY MASTER)
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     if (isHLS) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'hls' };
     }
 
     // VÍDEOS DIRETOS (BLINDER / ARCHIVE / MP4)
-    const isDirectVideo = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
-    if (isDirectVideo) {
+    const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
+    if (isDirect) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: 'video' };
     }
 
@@ -93,142 +77,69 @@ export function VideoPlayer({ url, title, id, onNext, onPrev }: VideoPlayerProps
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
 
-  const cleanupPlayer = React.useCallback(() => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    const video = videoRef.current;
-    if (video) {
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-    }
+  const cleanup = React.useCallback(() => {
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    const v = videoRef.current;
+    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
   }, []);
 
-  const initPlayer = React.useCallback(async () => {
+  const init = React.useCallback(async () => {
     if (!processedUrl) return;
-    cleanupPlayer();
+    cleanup();
     setError(null);
     setLoading(true);
 
     const video = videoRef.current;
-
     if (type === 'hls') {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any, rUrl: string) => {
-            // Garante que cada pedaço (.ts) também passe pelo Proxy
             if (!rUrl.includes('/api/proxy') && !rUrl.startsWith('/') && !rUrl.includes(window.location.hostname)) {
                xhr.open('GET', `/api/proxy?url=${encodeURIComponent(rUrl)}`, true);
             }
-          },
-          autoStartLoad: true,
-          retryDelay: 1000,
-          maxRetryDelay: 5000
+          }
         });
-
         hls.loadSource(processedUrl);
         hls.attachMedia(video!);
         hlsRef.current = hls;
-        
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video?.play().catch(() => { if(video) video.muted = true; video?.play(); });
-          setLoading(false);
-        });
-
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal) {
-            if (retryCount < 5) {
-              setRetryCount(prev => prev + 1);
-              hls.startLoad();
-            } else {
-              setError("Sinal instável. Tente reconectar.");
-              setLoading(false);
-            }
-          }
-        });
-      } else if (video?.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = processedUrl;
-        video.onloadedmetadata = () => { video.play(); setLoading(false); };
+        hls.on(Hls.Events.MANIFEST_PARSED, () => { video?.play().catch(() => { video!.muted = true; video?.play(); }); setLoading(false); });
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { setError("Sinal instável."); setLoading(false); } });
       }
     } else if (type === 'video') {
-      if (video) {
-        video.src = processedUrl;
-        video.onloadeddata = () => { video.play(); setLoading(false); };
-        video.onerror = () => { setError("Sinal de vídeo indisponível."); setLoading(false); };
-      }
-    } else {
-      if (type !== 'iframe') setLoading(false);
+      if (video) { video.src = processedUrl; video.onloadeddata = () => { video.play().catch(() => {}); setLoading(false); }; }
+    } else if (type === 'iframe') {
+      // Iframe carrega via src diretamente
     }
-  }, [processedUrl, type, cleanupPlayer, retryCount]);
+  }, [processedUrl, type, cleanup]);
 
-  React.useEffect(() => {
-    initPlayer();
-    return () => cleanupPlayer();
-  }, [initPlayer, cleanupPlayer]);
+  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup]);
 
   return (
-    <div ref={containerRef} key={`p-${id}-${url}`} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 group shadow-2xl rounded-2xl">
+    <div ref={containerRef} className="relative aspect-video w-full bg-black overflow-hidden border border-white/5 rounded-2xl group shadow-2xl">
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sintonizando Sinal Master...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-2" />
+          <p className="text-[8px] font-black uppercase tracking-widest text-primary">Sintonizando Master...</p>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
+        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10">
           <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-          <p className="text-white text-[10px] font-bold uppercase mb-6 opacity-60">{error}</p>
-          <Button onClick={() => { setRetryCount(0); initPlayer(); }} variant="outline" className="h-10 border-primary/40 text-primary rounded-xl px-6 font-black uppercase text-[10px]">
-            <RefreshCcw className="h-4 w-4 mr-2" /> RECONECTAR
-          </Button>
+          <Button onClick={init} variant="outline" className="h-10 border-primary/40 text-primary uppercase font-black text-[10px]">RECONECTAR</Button>
         </div>
       )}
       
       {type === 'iframe' ? (
-        <iframe 
-          key={`f-${url}`}
-          src={processedUrl!} 
-          className="w-full h-full border-0 relative z-10" 
-          allowFullScreen 
-          onLoad={() => setLoading(false)}
-          allow="autoplay; encrypted-media; fullscreen"
-        />
+        <iframe src={processedUrl!} className="w-full h-full border-0 relative z-10" allowFullScreen allow="autoplay; encrypted-media; fullscreen" onLoad={() => setLoading(false)} />
       ) : (
-        <video 
-          ref={videoRef} 
-          className="w-full h-full object-contain relative z-10" 
-          autoPlay 
-          playsInline 
-          controls={true}
-          crossOrigin="anonymous"
-        />
+        <video ref={videoRef} className="w-full h-full object-contain relative z-10" autoPlay playsInline controls crossOrigin="anonymous" />
       )}
 
-      <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100">
-        <button 
-          onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
-          className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-xl"
-        >
-          <ChevronLeft className="h-6 w-6 text-white" />
-        </button>
-        
-        <button 
-          onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} 
-          className="pointer-events-auto h-12 w-12 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all absolute top-6 right-6"
-        >
-          {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
-        </button>
-
-        <button 
-          onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
-          className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-xl"
-        >
-          <ChevronRight className="h-6 w-6 text-white" />
-        </button>
+      <div className="absolute inset-0 z-20 flex items-center justify-between px-6 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={onPrev} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary"><ChevronLeft className="h-6 w-6 text-white" /></button>
+        <button onClick={onNext} className="pointer-events-auto h-12 w-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary"><ChevronRight className="h-6 w-6 text-white" /></button>
       </div>
     </div>
   )

@@ -4,9 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v85.0 - OTIMIZADO PARA TODOS OS SINAIS
- * Agora lida com HLS (.m3u8), TS segments, MP4 e streams CORS-sensitive.
- * Suporte a RANGE habilitado para vídeos do Blinder e Archive.
+ * TÚNEL MASTER v90.0 - SOBERANO
+ * Suporte total a Range (Blinder/Archive/MP4) e HLS (.m3u8/.ts)
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,13 +16,11 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range - VITAL para vídeos diretos (Blinder/MP4)
+    // SUPORTE A RANGE - CRÍTICO PARA MP4 PESADO (BLINDER/ARCHIVE)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Identidade Master para evitar bloqueios de bot
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    requestHeaders.set('Accept', '*/*');
     
     const targetUrlObj = new URL(targetUrl);
     requestHeaders.set('Origin', targetUrlObj.origin);
@@ -37,15 +34,12 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // Mapeamento de cabeçalhos de vídeo críticos
     const allowedHeaders = [
       'content-type',
       'content-length',
       'content-range',
       'accept-ranges',
-      'cache-control',
-      'access-control-allow-origin',
-      'access-control-allow-methods'
+      'cache-control'
     ];
     
     res.headers.forEach((v, k) => {
@@ -55,10 +49,9 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Força liberação CORS total para o Player Client-Side
+    // LIBERAÇÃO CORS TOTAL PARA O PLAYER
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
-    responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
@@ -68,7 +61,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Proxy Master Error:", error.message);
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
