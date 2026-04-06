@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v100.0 - SOBERANO (TECNOLOGIA IPTV NATIVA)
+ * TÚNEL MASTER v102.0 - SOBERANO (TECNOLOGIA IPTV NATIVA)
  * Suporte total a Range (Blinder/MP4) e Fluxo Contínuo de Fragmentos (.ts)
  * Resolve definitivamente erros de CORS, Mixed Content e Bloqueio de IP.
  */
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // SUPORTE A RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE) E STREAMING LONGO
+    // REPASSA RANGE - CRÍTICO PARA FILMES MP4 (BLINDER/ARCHIVE) E STREAMING LONGO
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     
     const responseHeaders = new Headers();
     
-    // Repassa cabeçalhos cruciais de vídeo do sinal original
+    // REPASSA CABEÇALHOS CRUCIAIS DO VÍDEO
     const allowedHeaders = [
       'content-type',
       'content-length',
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL (TECNOLOGIA IPTV WEB)
+    // LIBERAÇÃO CORS TOTAL
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS, HEAD');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
@@ -59,14 +59,13 @@ export async function GET(req: NextRequest) {
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
-    // Retorna o corpo como stream para performance máxima (sem delay)
+    // RETORNA O CORPO COMO STREAM PARA PERFORMANCE MÁXIMA
     return new Response(res.body, {
       status: res.status === 206 ? 206 : (res.ok ? 200 : res.status),
       headers: responseHeaders,
     });
 
   } catch (error: any) {
-    console.error("Erro no Túnel Master:", error.message);
     return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }
