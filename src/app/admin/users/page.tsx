@@ -70,7 +70,8 @@ export default function UserManagementPage() {
     setIsSaving(true);
     const existingUser = users.find(u => u.id === editingUserId);
     
-    const userData: User = {
+    // CORREÇÃO: Enviamos apenas o que o saveUser/Supabase espera
+    const userData: Partial<User> = {
       id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: newUser.pin.toUpperCase().trim(),
       role: (editingUserId === 'master' || newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
@@ -83,20 +84,18 @@ export default function UserManagementPage() {
       isGamesEnabled: !!newUser.isGamesEnabled,
       activatedAt: existingUser?.activatedAt || null,
       individualMessage: newUser.individualMessage.trim(),
-      gamePoints: existingUser?.gamePoints || 0,
-      isSearchingMatch: existingUser?.isSearchingMatch || false,
-      searchingMatchAt: existingUser?.searchingMatchAt || null
+      gamePoints: existingUser?.gamePoints || 0
     }
 
     const success = await saveUser(userData);
     
     if (success) {
-      toast({ title: "CLIENTE ATUALIZADO NO BANCO!" });
+      toast({ title: "CLIENTE ATUALIZADO!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO AO SALVAR CLIENTE" });
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique se o PIN já existe." });
     }
     setIsSaving(false);
   }

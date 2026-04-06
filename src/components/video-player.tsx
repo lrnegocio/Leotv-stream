@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -22,54 +23,47 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // LIMPADOR DE TAGS HTML (EXTRAI SRC DE IFRAMES)
+    // DETECTOR DE TAGS HTML (EXTRAI SRC DE IFRAMES)
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
     }
 
     const lowerUrl = urlStr.toLowerCase()
-    const isHttp = urlStr.startsWith('http:');
-
-    // PORNHUB MASTER
-    if (lowerUrl.includes('pornhub.com')) {
-      const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
-      if (viewKeyMatch && viewKeyMatch[1]) {
-        return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
-      }
-    }
-
-    // XVIDEOS MASTER
-    if (lowerUrl.includes('xvideos.com')) {
-      const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
-      if (vidMatch && vidMatch[1]) {
-        return { processedUrl: `https://www.xvideos.com/embedframe/${vidMatch[1]}`, type: 'iframe' };
-      }
-    }
-
-    // YOUTUBE FIEL (ESTILO CANVA)
+    
+    // YOUTUBE FIEL (SIMPLES COMO NO CANVA)
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
       const match = urlStr.match(regExp);
       ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
       if (ytId) {
-        return { processedUrl: `https://www.youtube.com/embed/${ytId}`, type: 'iframe' };
+        return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
       }
+    }
+
+    // PORNHUB / XVIDEOS MASTER
+    if (lowerUrl.includes('pornhub.com')) {
+      const viewKeyMatch = urlStr.match(/viewkey=([a-z0-9]+)/i);
+      if (viewKeyMatch && viewKeyMatch[1]) return { processedUrl: `https://www.pornhub.com/embed/${viewKeyMatch[1]}`, type: 'iframe' };
+    }
+    if (lowerUrl.includes('xvideos.com')) {
+      const vidMatch = urlStr.match(/video[.\/]?([a-z0-9]{7,15})/i);
+      if (vidMatch && vidMatch[1]) return { processedUrl: `https://www.xvideos.com/embedframe/${vidMatch[1]}`, type: 'iframe' };
     }
 
     // HLS / M3U8 / TS (TECNOLOGIA IPTV CANVA)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     if (isHLS) {
-      // Se for HTTP, usamos o túnel para evitar erro de segurança do navegador
-      const finalUrl = isHttp ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
+      // Forçamos o Túnel apenas se for http:// para evitar Mixed Content
+      const finalUrl = urlStr.startsWith('http:') ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
       return { processedUrl: finalUrl, type: 'hls' };
     }
 
     // VÍDEOS DIRETOS (MP4 / BLINDER / ARCHIVE)
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     if (isDirect) {
-      const finalUrl = isHttp ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
+      const finalUrl = urlStr.startsWith('http:') ? `/api/proxy?url=${encodeURIComponent(urlStr)}` : urlStr;
       return { processedUrl: finalUrl, type: 'video' };
     }
 
@@ -96,7 +90,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 90
+          // Tecnologia Master: Força o uso do túnel em cada fragmento .ts se necessário
+          xhrSetup: (xhr: any, url: string) => {
+            if (url.startsWith('http:')) {
+              xhr.open('GET', `/api/proxy?url=${encodeURIComponent(url)}`, true);
+            }
+          }
         });
         
         hls.loadSource(processedUrl);
@@ -137,7 +136,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         };
       }
     } else if (type === 'iframe') {
-      // O loading do iFrame é controlado pelo onLoad da tag
+      // O loading do iFrame é controlado pelo onLoad
     }
   }, [processedUrl, type, cleanup]);
 

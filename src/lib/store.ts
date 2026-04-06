@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -165,7 +166,16 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveReseller(reseller: Partial<Reseller>) {
   try {
-    const { error } = await supabase.from('resellers').upsert(reseller);
+    const payload = {
+      id: reseller.id,
+      name: reseller.name,
+      username: reseller.username,
+      password: reseller.password,
+      credits: reseller.credits || 0,
+      totalSold: reseller.totalSold || 0,
+      isBlocked: !!reseller.isBlocked
+    };
+    const { error } = await supabase.from('resellers').upsert(payload);
     return !error;
   } catch (e) { return false; }
 }
@@ -274,11 +284,30 @@ export async function getRemoteUsers() {
   } catch (e) { return []; }
 }
 
-export async function saveUser(user: User) {
+export async function saveUser(user: Partial<User>) {
   try {
-    const { error } = await supabase.from('users').upsert(user);
+    const payload = {
+      id: user.id,
+      pin: user.pin,
+      role: user.role || 'user',
+      subscriptionTier: user.subscriptionTier || 'monthly',
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens || 1,
+      activeDevices: user.activeDevices || [],
+      isBlocked: !!user.isBlocked,
+      isAdultEnabled: !!user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      resellerId: user.resellerId,
+      activatedAt: user.activatedAt,
+      individualMessage: user.individualMessage,
+      gamePoints: user.gamePoints || 0
+    };
+    
+    const { error } = await supabase.from('users').upsert(payload);
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    return false; 
+  }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -336,7 +365,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
          `📅 *PLANO:* ${tier.toUpperCase()}\n` +
          `📱 *LIMITE DE TELAS:* ${screens}\n\n` +
          `🌐 *ASSISTA AQUI:* ${url}\n\n` +
-         `🍿 *Instale o Web App para uma experiÊncia nativa em seu aparelho!*`;
+         `🍿 *Instale o Web App para uma experiência nativa em seu aparelho!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {

@@ -1,11 +1,11 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v103.0 - REPETIDOR DE FLUXO PURO
- * Suporte total a Range (Blinder/MP4) e Fluxo Contínuo de Fragmentos (.ts)
- * Remove a complexidade e foca na passagem do sinal para evitar Mixed Content.
+ * TÚNEL MASTER v104.0 - REPETIDOR DE FLUXO PURO (ESTILO CANVA)
+ * Suporte total a Range (Blinder/MP4) e Fluxo de Fragmentos (.ts)
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // LIBERAÇÃO CORS TOTAL PARA O NAVEGADOR
+    // LIBERAÇÃO CORS TOTAL
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
