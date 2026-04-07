@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -183,9 +184,23 @@ export default function HomeContent() {
       </main>
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(v) => !v && closePlayer()}>
+<<<<<<< HEAD
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-3xl overflow-hidden shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
+=======
+        <DialogContent className="max-w-screen-2xl bg-black p-0 border-0 rounded-none md:rounded-3xl overflow-hidden shadow-2xl">
+          {/* REMOVIDO O KEY PARA MANTER A TELA CHEIA DURANTE A NAVEGAÇÃO */}
+          {activeVideo && (
+            <VideoPlayer 
+              url={activeVideo.items[activeVideo.index].streamUrl || ""} 
+              title={activeVideo.items[activeVideo.index].title} 
+              onNext={handleNext} 
+              onPrev={handlePrev} 
+            />
+          )}
+          {selectedSeries && !activeVideo && (
+>>>>>>> e3559e6bfc52055b03fadf839d4c772d0f6149bb
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary mb-6 italic">Episódios: {selectedSeries.title}</h3>
                <div className="grid gap-2">
