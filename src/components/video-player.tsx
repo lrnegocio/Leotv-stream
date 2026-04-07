@@ -23,6 +23,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
 
   // Tecnologia Master: Detecta e limpa links sujos (iFrames)
+  // MANTENDO A LÓGICA DE LINKS CONFORME SOLICITADO (ESTILO CANVA)
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
@@ -42,7 +43,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
     }
 
-    // Proxy para HTTP ou M3U8 (Evita Mixed Content e CORS)
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     const isDirect = lowerUrl.includes('.mp4') || lowerUrl.includes('.webm') || lowerUrl.includes('.mpeg');
     
@@ -61,11 +61,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch(() => {});
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(() => {});
     }
   }
 
-  // Sincroniza o estado quando o usuário sai do fullscreen (ex: apertando ESC)
   React.useEffect(() => {
     const handleFsChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -102,10 +101,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls.attachMedia(videoRef.current!);
         hlsRef.current = hls;
         hls.on(Hls.Events.MANIFEST_PARSED, () => { 
-          videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); }); 
+          videoRef.current?.play().catch(() => { 
+            if (videoRef.current) videoRef.current.muted = true; 
+            videoRef.current?.play(); 
+          }); 
           setLoading(false); 
         });
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) { hls.recoverMediaError(); } });
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => { 
+          if(data.fatal) { hls.recoverMediaError(); } 
+        });
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = processedUrl;
         setLoading(false);
@@ -114,7 +118,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }; 
-        videoRef.current.onerror = () => { setError("Erro no arquivo de vídeo."); setLoading(false); };
+        videoRef.current.onerror = () => { setError("Sinal instável."); setLoading(false); };
       }
     }
   }, [processedUrl, type, cleanup]);
@@ -126,7 +130,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onTouchStart={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden group shadow-2xl ${isFullscreen ? 'h-screen w-screen' : 'aspect-video rounded-2xl border border-white/5'}`}
+      className={`relative w-full bg-black overflow-hidden group shadow-2xl flex items-center justify-center ${isFullscreen ? 'h-screen w-screen' : 'aspect-video rounded-2xl border border-white/5'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
@@ -136,9 +140,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {error && (
-        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10">
-          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-          <Button onClick={init} variant="outline" className="h-10 border-primary/40 text-primary uppercase font-black text-[10px]">RECONECTAR</Button>
+        <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/90 p-10 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4 mx-auto" />
+          <Button onClick={init} variant="outline" className="h-10 border-primary/40 text-primary uppercase font-black text-[10px]">RECONECTAR SINAL</Button>
         </div>
       )}
       
@@ -148,24 +152,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <video ref={videoRef} className="w-full h-full object-contain relative z-10" autoPlay playsInline controls={!isFullscreen} crossOrigin="anonymous" />
       )}
 
-      {/* SETAS MASTER - VISÍVEIS EM TELA CHEIA E MANTENDO O Z-INDEX */}
+      {/* SETAS MASTER - VISÍVEIS EM TELA CHEIA (Z-INDEX 200) */}
       {(onNext || onPrev) && (
-        <div className={`absolute inset-0 z-[150] flex items-center justify-between px-10 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
-            <ChevronLeft className="h-8 w-8 text-white" />
+        <div className={`absolute inset-0 z-[200] flex items-center justify-between px-6 md:px-10 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onPrev?.(); }} 
+            className="pointer-events-auto h-12 w-12 md:h-16 md:w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl group/btn"
+          >
+            <ChevronLeft className="h-6 w-6 md:h-8 md:w-8 text-white group-hover/btn:scale-110 transition-transform" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
-            <ChevronRight className="h-8 w-8 text-white" />
+          <button 
+            onClick={(e) => { e.stopPropagation(); onNext?.(); }} 
+            className="pointer-events-auto h-12 w-12 md:h-16 md:w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl group/btn"
+          >
+            <ChevronRight className="h-6 w-6 md:h-8 md:w-8 text-white group-hover/btn:scale-110 transition-transform" />
           </button>
         </div>
       )}
 
       {/* BOTÃO FULLSCREEN CUSTOM */}
-      <div className={`absolute bottom-6 right-6 z-[150] transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute bottom-6 right-6 z-[200] transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={toggleFullscreen} className="h-12 w-12 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
           {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>
       </div>
+
+      {isFullscreen && showControls && (
+        <div className="absolute top-6 left-6 z-[200] bg-black/40 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white">{title}</p>
+        </div>
+      )}
     </div>
   )
 }

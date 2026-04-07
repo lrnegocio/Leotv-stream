@@ -184,7 +184,6 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(v) => !v && closePlayer()}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-3xl overflow-hidden shadow-2xl">
-          {/* REMOVIDO A KEY PARA MANTER O FULLSCREEN AO MUDAR DE CANAL */}
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">

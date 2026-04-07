@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -225,7 +224,7 @@ export async function getRemoteUsers() {
 
 export async function saveUser(user: Partial<User>) {
   try {
-    // BLINDAGEM MESTRE: Enviamos APENAS as colunas que existem no banco novo
+    // BLINDAGEM MESTRE: Enviamos APENAS as colunas que existem no banco
     const payload = {
       id: user.id,
       pin: user.pin,
