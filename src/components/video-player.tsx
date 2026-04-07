@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -61,18 +60,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   }
+
+  // Sincroniza o estado quando o usuário sai do fullscreen (ex: apertando ESC)
+  React.useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
 
   const handleMouseMove = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isFullscreen) setShowControls(false);
+      if (document.fullscreenElement) setShowControls(false);
     }, 3000);
   }
 
@@ -120,7 +126,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onTouchStart={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden group shadow-2xl ${isFullscreen ? 'h-screen' : 'aspect-video rounded-2xl border border-white/5'}`}
+      className={`relative w-full bg-black overflow-hidden group shadow-2xl ${isFullscreen ? 'h-screen w-screen' : 'aspect-video rounded-2xl border border-white/5'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black">
@@ -142,20 +148,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <video ref={videoRef} className="w-full h-full object-contain relative z-10" autoPlay playsInline controls={!isFullscreen} crossOrigin="anonymous" />
       )}
 
-      {/* SETAS MASTER - SEMPRE VISÍVEIS SE MOUSE MEXER */}
+      {/* SETAS MASTER - VISÍVEIS EM TELA CHEIA E MANTENDO O Z-INDEX */}
       {(onNext || onPrev) && (
-        <div className={`absolute inset-0 z-50 flex items-center justify-between px-10 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={onPrev} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
+        <div className={`absolute inset-0 z-[150] flex items-center justify-between px-10 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
             <ChevronLeft className="h-8 w-8 text-white" />
           </button>
-          <button onClick={onNext} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary hover:scale-110 transition-all shadow-2xl">
             <ChevronRight className="h-8 w-8 text-white" />
           </button>
         </div>
       )}
 
       {/* BOTÃO FULLSCREEN CUSTOM */}
-      <div className={`absolute bottom-6 right-6 z-50 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute bottom-6 right-6 z-[150] transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <button onClick={toggleFullscreen} className="h-12 w-12 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
           {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>

@@ -42,7 +42,6 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   
-  // TRAVA ANTI-PLAYER DUPLO: Bloqueia reabertura por 2 segundos ao fechar
   const isClosingRef = React.useRef(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -62,7 +61,6 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
 
-      // Sintonização Automática por URL
       if (channelId) {
         const item = data.find(i => i.id === channelId);
         if (item) {
@@ -127,7 +125,6 @@ export default function HomeContent() {
     const p = new URLSearchParams(window.location.search);
     p.delete('id');
     router.replace(`${window.location.pathname}?${p.toString()}`, { scroll: false });
-    // Mantém a trava por 2 segundos para o sistema respirar
     setTimeout(() => { isClosingRef.current = false; }, 2000);
   };
 
@@ -187,7 +184,8 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo || !!selectedSeries} onOpenChange={(v) => !v && closePlayer()}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-3xl overflow-hidden shadow-2xl">
-          {activeVideo && <VideoPlayer key={activeVideo.items[activeVideo.index].id} url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
+          {/* REMOVIDO A KEY PARA MANTER O FULLSCREEN AO MUDAR DE CANAL */}
+          {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
           {selectedSeries && (
             <div className="p-8 bg-card max-h-[80vh] overflow-y-auto custom-scroll">
                <h3 className="text-xl font-black uppercase text-primary mb-6 italic">Episódios: {selectedSeries.title}</h3>
