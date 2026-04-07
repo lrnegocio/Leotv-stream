@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER v104.0 - REPETIDOR DE FLUXO PURO (ESTILO CANVA)
- * Suporte total a Range (Blinder/MP4) e Fluxo de Fragmentos (.ts)
+ * TÚNEL MASTER v105.0 - REPETIDOR DE FLUXO E RANGE (STATUS 206)
+ * Suporte total a Streaming Profissional para Blinder e M3U8.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -15,8 +15,6 @@ export async function GET(req: NextRequest) {
 
   try {
     const requestHeaders = new Headers();
-    
-    // REPASSA RANGE - CRÍTICO PARA MP4 E STREAMING LONGO
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -29,31 +27,19 @@ export async function GET(req: NextRequest) {
     });
     
     const responseHeaders = new Headers();
-    
-    // REPASSA CABEÇALHOS CRUCIAIS DE VÍDEO
-    const allowedHeaders = [
-      'content-type',
-      'content-length',
-      'content-range',
-      'accept-ranges',
-      'cache-control'
-    ];
+    const allowedHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
     
     res.headers.forEach((v, k) => {
       const lowerKey = k.toLowerCase();
-      if (allowedHeaders.includes(lowerKey)) {
-        responseHeaders.set(k, v);
-      }
+      if (allowedHeaders.includes(lowerKey)) responseHeaders.set(k, v);
     });
 
-    // LIBERAÇÃO CORS TOTAL
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     responseHeaders.set('Access-Control-Allow-Headers', '*');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
-    // RETORNA O CORPO COMO STREAM PARA PERFORMANCE MÁXIMA
     return new Response(res.body, {
       status: res.status === 206 ? 206 : 200,
       headers: responseHeaders,

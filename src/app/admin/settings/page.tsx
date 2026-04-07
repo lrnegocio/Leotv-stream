@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -62,10 +63,7 @@ export default function SettingsPage() {
         { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", type: 'channel' as ContentType, streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" },
         { title: "YOUTUBE MASTER TESTE", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/yt/200/300" }
       ];
-      
-      for (const c of defaults) { 
-        await saveContent(c); 
-      }
+      for (const c of defaults) { await saveContent(c); }
       toast({ title: "SINAIS MASTER RESTAURADOS!" });
     } catch (e) {
       toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
@@ -88,20 +86,9 @@ export default function SettingsPage() {
           const nameMatch = line.match(/,(.*)$/);
           const logoMatch = line.match(/tvg-logo="(.*?)"/);
           const groupMatch = line.match(/group-title="(.*?)"/);
-          currentItem = {
-            title: nameMatch ? nameMatch[1].trim() : "NOVO CANAL",
-            imageUrl: logoMatch ? logoMatch[1] : "",
-            genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO",
-            type: 'channel' as ContentType,
-            description: "Sinal Master Importado",
-            isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || false
-          };
+          currentItem = { title: nameMatch ? nameMatch[1].trim() : "NOVO CANAL", imageUrl: logoMatch ? logoMatch[1] : "", genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO", type: 'channel' as ContentType, description: "Sinal Master Importado", isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || false };
         } else if (line.startsWith('http')) {
-          if (currentItem) {
-            await saveContent({ ...currentItem, streamUrl: line });
-            imported++;
-            currentItem = null;
-          }
+          if (currentItem) { await saveContent({ ...currentItem, streamUrl: line }); imported++; currentItem = null; }
         }
       }
       toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais adicionados ao banco!` });
