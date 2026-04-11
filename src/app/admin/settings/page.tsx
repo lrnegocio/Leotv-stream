@@ -43,7 +43,7 @@ export default function SettingsPage() {
   }
 
   /**
-   * TERMINAL MASTER INTELIGENTE v143
+   * TERMINAL MASTER INTELIGENTE v144
    * Mapeamento forçado de gêneros e processamento blindado de episódios.
    */
   const handleImportList = async () => {
@@ -68,7 +68,7 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // MAPEAMENTO FORÇADO v143: Tudo que tem "SERIE" vai para "LÉO TV SÉRIES"
+          // MAPEAMENTO FORÇADO v144: Tudo que tem "SERIE" vai para "LÉO TV SÉRIES"
           const isSeries = groupStr.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
 
           currentItem = {

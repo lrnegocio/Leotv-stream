@@ -100,7 +100,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
     return (data || []).map(item => ({
       ...item,
-      // Blindagem contra nomes de colunas camelCase no JS vs Postgres
       streamUrl: item.streamUrl || item["streamUrl"] || "",
       imageUrl: item.imageUrl || item["imageUrl"] || "",
       isRestricted: !!(item.isRestricted || item["isRestricted"]),
@@ -113,7 +112,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v143
+ * SALVAMENTO BLINDADO v144
  * Protege as capas existentes e sincroniza com as aspas do SQL do Mestre Léo.
  */
 export async function saveContent(item: Partial<ContentItem>) {

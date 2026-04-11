@@ -91,7 +91,7 @@ export default function HomeContent() {
   };
 
   /**
-   * UNIFICAÇÃO DE EPISÓDIOS v143
+   * UNIFICAÇÃO DE EPISÓDIOS v144
    * Junta episódios de temporadas e episódios avulsos em uma lista única e funcional.
    */
   const getEpisodes = (item: ContentItem) => {
