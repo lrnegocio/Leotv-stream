@@ -22,11 +22,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
 
-  /**
-   * SINTONIZADOR SOBERANO v141 - ECONOMIA DE BANDA
-   * Usa link DIRETO para links HTTPS para não gastar os 10GB da Vercel.
-   * Só usa o Proxy em links HTTP para evitar erro de Mixed Content.
-   */
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
@@ -38,7 +33,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase();
     
-    // YouTube Inteligente
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -49,7 +43,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     
-    // ECONOMIA MASTER: Se for HTTPS, vai direto. Se for HTTP, usa Proxy.
+    // ECONOMIA SOBERANA: Se for HTTPS, vai direto da fonte. Só usa Proxy se for HTTP antigo.
     if (urlStr.startsWith('http:')) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHLS ? 'hls' : 'video' };
     }

@@ -78,76 +78,45 @@ export interface GameRanking {
   points: number;
 }
 
-/**
- * BUSCA DE CONTEÚDO SOBERANA
- * Filtra por gênero e busca textual com suporte total a aspas SQL.
- */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    
-    if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
+    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) {
-      query = query.eq('genre', trimmedGenre);
-    }
-
+    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
     const { data, error } = await query.order('title', { ascending: true });
-    
     if (error) throw error;
-
     return (data || []).map(item => ({
       ...item,
       streamUrl: item.streamUrl || "",
       imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
-      episodes: item.episodes || [],
-      seasons: item.seasons || []
+      episodes: Array.isArray(item.episodes) ? item.episodes : [],
+      seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
-  } catch (e) {
-    console.error("Erro ao buscar conteúdo:", e);
-    return [];
-  }
+  } catch (e) { return []; }
 }
 
-/**
- * SALVAMENTO BLINDADO v141
- * Sincronização absoluta com as colunas do Mestre Léo.
- */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    
-    // Trava de Segurança: Não apaga capa se o novo valor for vazio
-    let finalImageUrl = item.imageUrl || "";
-    if (!finalImageUrl && item.id) {
-      const existing = await getContentById(item.id);
-      if (existing?.imageUrl) finalImageUrl = existing.imageUrl;
-    }
-
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": finalImageUrl, 
+      "imageUrl": item.imageUrl || "", 
       "isRestricted": !!item.isRestricted,
       "streamUrl": item.streamUrl || "",
-      "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : null,
-      "seasons": (item.type === 'multi-season') ? (item.seasons || []) : null
+      "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
+      "seasons": (item.type === 'multi-season') ? (item.seasons || []) : []
     };
-
+    if (!item.imageUrl && item.id) delete payload.imageUrl;
     const { error } = await supabase.from('content').upsert(payload);
     if (error) throw error;
     return true;
-  } catch (e) {
-    console.error("Erro Supabase Save Content:", JSON.stringify(e));
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
@@ -156,7 +125,6 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
     if (updates.genre) payload.genre = updates.genre.toUpperCase();
     if (updates.isRestricted !== undefined) payload.isRestricted = updates.isRestricted;
     if (updates.imageUrl) payload.imageUrl = updates.imageUrl;
-
     const { error } = await supabase.from('content').update(payload).in('id', ids);
     return !error;
   } catch (e) { return false; }
@@ -321,29 +289,19 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
     if (!cleanPin) return { error: "PIN INVÁLIDO" };
-    
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
-    
     const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
     const user = users?.[0];
-    
     if (error || !user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
-    
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
-
-    // KICK SOBERANO: Derruba sessão anterior se ultrapassar o limite
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
-      if (devices.length >= user.maxScreens) {
-        devices = [deviceId]; 
-      } else {
-        devices.push(deviceId);
-      }
+      if (devices.length >= user.maxScreens) devices = [deviceId]; 
+      else devices.push(deviceId);
       await supabase.from('users').update({ "activeDevices": devices }).eq('id', user.id);
     }
-
     return { user: { ...user, activeDevices: devices } };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
@@ -351,22 +309,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return { 
-      parentalPin: data?.value?.parentalPin || "1234", 
-      announcement: data?.value?.announcement || "" 
-    };
+    return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
   } catch (e) { return { parentalPin: "1234", announcement: "" }; }
 }
 
 export async function updateGlobalSettings(value: any) {
   try {
-    const payload = { 
-      key: 'global', 
-      value: { 
-        parentalPin: String(value.parentalPin), 
-        announcement: String(value.announcement) 
-      } 
-    };
+    const payload = { key: 'global', value: { parentalPin: String(value.parentalPin), announcement: String(value.announcement) } };
     const { error } = await supabase.from('settings').upsert(payload);
     return !error;
   } catch (e) { return false; }

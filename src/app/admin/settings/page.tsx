@@ -23,11 +23,7 @@ export default function SettingsPage() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
         setAnnouncement(settings.announcement || "")
-      } catch (err) {
-        console.error("Erro ao carregar settings:", err)
-      } finally {
-        setLoading(false)
-      }
+      } catch (err) { } finally { setLoading(false) }
     }
     load()
   }, [])
@@ -39,20 +35,13 @@ export default function SettingsPage() {
     }
     setSaving(true)
     try {
-      const success = await updateGlobalSettings({ parentalPin, announcement })
-      if (success) {
+      if (await updateGlobalSettings({ parentalPin, announcement })) {
         toast({ title: "SENHA E AVISO ATUALIZADOS!" })
       }
-    } catch (e) {
-      toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
-    } finally {
-      setSaving(false)
-    }
+    } catch (e) { toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
+    } finally { setSaving(false) }
   }
 
-  /**
-   * TERMINAL MASTER v141 - BLINDAGEM E MAPEAMENTO SÉRIES
-   */
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
@@ -82,7 +71,7 @@ export default function SettingsPage() {
             imageUrl: logo,
             genre: isSeries ? "LÉO TV SÉRIES" : groupStr,
             type: isSeries ? 'multi-season' : 'channel' as ContentType,
-            description: "Importado via Terminal Master",
+            description: "Importado via Terminal Master v142",
             isRestricted: groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('ADULTOS')
           };
         } else if (line.startsWith('http')) {
@@ -96,12 +85,7 @@ export default function SettingsPage() {
               const eNum = parseInt(eMatch[1] as string) || 1;
 
               if (!seriesMap.has(baseTitle)) {
-                seriesMap.set(baseTitle, {
-                  ...currentItem,
-                  title: baseTitle,
-                  genre: "LÉO TV SÉRIES",
-                  seasons: []
-                });
+                seriesMap.set(baseTitle, { ...currentItem, title: baseTitle, genre: "LÉO TV SÉRIES", seasons: [] });
               }
 
               const series = seriesMap.get(baseTitle);
@@ -110,12 +94,7 @@ export default function SettingsPage() {
                 season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
                 series.seasons.push(season);
               }
-              season.episodes.push({
-                id: `ep_${Date.now()}_${Math.random()}`,
-                title: currentItem.title,
-                number: eNum,
-                streamUrl: line
-              });
+              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: line });
             } else {
               await saveContent({ ...currentItem, streamUrl: line });
               imported++;
@@ -132,12 +111,8 @@ export default function SettingsPage() {
 
       toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
       setListText("");
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (e) { toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
+    } finally { setIsProcessing(false); }
   }
 
   const restoreMasterChannels = async () => {
@@ -150,11 +125,8 @@ export default function SettingsPage() {
       ];
       for (const c of defaults) { await saveContent(c); }
       toast({ title: "SINAIS MASTER RESTAURADOS!" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (e) { toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
+    } finally { setIsProcessing(false); }
   }
 
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>

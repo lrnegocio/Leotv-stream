@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Laugh, Play, Gamepad2, X, Trophy } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -42,7 +42,6 @@ export default function HomeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
-  const channelId = searchParams.get('id') || ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     setLoading(true);
@@ -57,36 +56,25 @@ export default function HomeContent() {
       const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
 
-      if (channelId) {
-        const item = await getContentById(channelId);
-        if (item) {
-          if (item.type === 'series' || item.type === 'multi-season') setSelectedSeries(item);
-          else setActiveVideo({ items: [item], index: 0 });
-        }
-      }
-
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
         for (const cat of CATEGORIES) { if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); }
         setCatCounts(counts);
       }
-
       if (games.length === 0) setGames(await getRemoteGames());
     } catch (err) { } finally { setLoading(false); }
-  }, [router, games.length, channelId]);
+  }, [router, games.length]);
 
   React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
 
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
-    const nextIdx = (activeVideo.index + 1) % activeVideo.items.length;
-    setActiveVideo({ ...activeVideo, index: nextIdx });
+    setActiveVideo({ ...activeVideo, index: (activeVideo.index + 1) % activeVideo.items.length });
   };
 
   const handlePrev = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
-    const prevIdx = (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length;
-    setActiveVideo({ ...activeVideo, index: prevIdx });
+    setActiveVideo({ ...activeVideo, index: (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length });
   };
 
   const verifyPassword = async () => {
@@ -102,7 +90,6 @@ export default function HomeContent() {
     }
   };
 
-  // Lógica de Extração de Episódios SOBERANA v141: Junta tudo!
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
     const seasonEps = Array.isArray(item.seasons) ? item.seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []) : [];
@@ -112,9 +99,10 @@ export default function HomeContent() {
 
   const openItem = async (item: ContentItem) => {
     if (item.type === 'multi-season' || item.type === 'series') {
-      // Busca profunda para garantir que os episódios venham do banco
+      setLoading(true);
       const deepItem = await getContentById(item.id);
       setSelectedSeries(deepItem || item);
+      setLoading(false);
     } else {
       setActiveVideo({ items: content, index: content.indexOf(item) });
     }
