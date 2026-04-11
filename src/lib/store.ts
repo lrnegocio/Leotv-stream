@@ -140,10 +140,7 @@ export async function saveContent(item: Partial<ContentItem>) {
     };
 
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase Save Content:", JSON.stringify(error));
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e) { 
     return false; 
@@ -346,7 +343,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
-      // KICK SOBERANO: Se estourar o limite, derruba o primeiro login e libera este.
       if (devices.length >= (user.maxScreens || 1)) {
         devices = [deviceId];
       } else {
