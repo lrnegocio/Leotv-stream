@@ -44,7 +44,7 @@ export default function SettingsPage() {
 
   /**
    * TERMINAL MASTER INTELIGENTE v144
-   * Mapeamento forçado de gêneros e processamento blindado de episódios.
+   * Mapeamento forçado de gêneros e unificação blindada de episódios.
    */
   const handleImportList = async () => {
     if (!listText.trim()) return;

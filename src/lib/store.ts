@@ -119,7 +119,6 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
-    // Trava de Resgate: Se não enviou imagem, mantém a que já está no banco
     let currentImage = item.imageUrl;
     if (!currentImage && item.id) {
       const existing = await getContentById(item.id);
