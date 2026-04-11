@@ -102,11 +102,22 @@ export default function HomeContent() {
     }
   };
 
-  // Lógica de Extração de Episódios Soberana
+  // Lógica de Extração de Episódios SOBERANA v140: Junta tudo!
   const getEpisodes = (item: ContentItem) => {
-    const directEps = item.episodes || [];
-    const seasonEps = (item.seasons || []).flatMap(s => s.episodes || []);
-    return [...directEps, ...seasonEps].sort((a, b) => a.number - b.number);
+    const directEps = Array.isArray(item.episodes) ? item.episodes : [];
+    const seasonEps = Array.isArray(item.seasons) ? item.seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []) : [];
+    const all = [...directEps, ...seasonEps];
+    return all.sort((a, b) => a.number - b.number);
+  };
+
+  const openItem = async (item: ContentItem) => {
+    if (item.type === 'multi-season' || item.type === 'series') {
+      // Busca profunda para garantir que os episódios venham do banco
+      const deepItem = await getContentById(item.id);
+      setSelectedSeries(deepItem || item);
+    } else {
+      setActiveVideo({ items: content, index: content.indexOf(item) });
+    }
   };
 
   if (loading && content.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -147,7 +158,7 @@ export default function HomeContent() {
             <h2 className="text-2xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {content.map((item) => (
-                <div key={item.id} onClick={() => { if(item.type === 'multi-season' || item.type === 'series') setSelectedSeries(item); else setActiveVideo({ items: content, index: content.indexOf(item) }); }} className="group relative aspect-[2/3] bg-card rounded-3xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-lg">
+                <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-3xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-lg">
                   {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-10 w-10" /></div>}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent p-4 flex flex-col justify-end">
                     <h3 className="font-bold text-[11px] uppercase truncate text-white">{item.title}</h3>
@@ -160,14 +171,12 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* PLAYER SOBERANO */}
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-screen-2xl bg-black p-0 border-0 rounded-none md:rounded-3xl overflow-hidden shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>
 
-      {/* LISTA DE EPISÓDIOS SOBERANA */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-2xl bg-card rounded-3xl p-8 overflow-hidden">
           {selectedSeries && (
@@ -176,7 +185,7 @@ export default function HomeContent() {
                 <h3 className="text-xl font-black uppercase text-primary italic">{selectedSeries.title}</h3>
                 <span className="text-[10px] font-bold opacity-40 uppercase">{getEpisodes(selectedSeries).length} Episódios</span>
               </div>
-              <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll">
+              <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                 {getEpisodes(selectedSeries).map(ep => (
                   <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: getEpisodes(selectedSeries), index: getEpisodes(selectedSeries).indexOf(ep) })} className="h-14 justify-start bg-muted rounded-2xl border-border px-6 hover:border-primary transition-all">
                     <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
@@ -199,7 +208,6 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      {/* ARENA GAMES SOBERANA */}
       <Dialog open={gamesMenuOpen} onOpenChange={() => setGamesMenuOpen(false)}>
         <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col">
           <div className="h-16 bg-emerald-600/10 border-b border-border px-8 flex items-center justify-between">
@@ -207,7 +215,7 @@ export default function HomeContent() {
             <button onClick={() => setGamesMenuOpen(false)} className="h-8 w-8 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
           </div>
           <div className="flex-1 flex overflow-hidden">
-            <div className="w-72 border-r border-border p-6 overflow-y-auto bg-black/5 custom-scroll">
+            <div className="w-72 border-r border-border p-6 overflow-y-auto bg-black/5 custom-scroll scrollbar-visible">
                {Array.from(new Set(games.map(g => g.console))).map(c => (
                  <div key={c} className="mb-6"><div className="text-[10px] font-black uppercase opacity-40 px-2 mb-2 tracking-widest">{c}</div>
                  {games.filter(g => g.console === c).map(g => <Button key={g.id} variant="ghost" onClick={() => setActiveGame(g)} className={`w-full justify-start h-10 rounded-xl text-[10px] font-bold uppercase ${activeGame?.id === g.id ? 'bg-emerald-500 text-white' : 'hover:bg-emerald-500/10'}`}>{g.title}</Button>)}

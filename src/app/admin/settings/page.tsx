@@ -51,8 +51,8 @@ export default function SettingsPage() {
   }
 
   /**
-   * TERMINAL MASTER v139 - INTELIGÊNCIA EM SÉRIES
-   * Agora detecta automaticamente episódios e temporadas mesmo com nomes longos.
+   * TERMINAL MASTER v140 - BLINDAGEM TOTAL
+   * Corrige erro de toUpperCase e mapeia Séries corretamente para aparecer no cliente.
    */
   const handleImportList = async () => {
     if (!listText.trim()) return;
@@ -71,26 +71,28 @@ export default function SettingsPage() {
           const nameMatch = line.match(/,(.*)$/);
           const logoMatch = line.match(/tvg-logo="(.*?)"/);
           const groupMatch = line.match(/group-title="(.*?)"/);
+          
           const rawName = nameMatch ? nameMatch[1].trim() : "NOVO CANAL";
           const logo = logoMatch ? logoMatch[1] : "";
-          const group = groupMatch ? groupMatch[1] : "LÉO TV AO VIVO";
+          const group = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          const isSeries = group.toUpperCase().includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
+          // Se tiver "SERIE" no grupo ou no nome, manda pra pasta de SÉRIES
+          const isSeries = group.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
 
           currentItem = {
             title: rawName,
             imageUrl: logo,
-            genre: isSeries ? "LÉO TV SÉRIES" : group.toUpperCase(),
+            genre: isSeries ? "LÉO TV SÉRIES" : group,
             type: isSeries ? 'multi-season' : 'channel' as ContentType,
             description: "Importado via Terminal Master",
-            isRestricted: group.toUpperCase().includes('ADULT') || group.toUpperCase().includes('XXX')
+            isRestricted: group.includes('ADULT') || group.includes('XXX') || group.includes('ADULTOS')
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
             if (currentItem.type === 'multi-season') {
-              // Lógica de Agrupamento de Séries
+              // Lógica de Agrupamento Inteligente de Séries
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
-              const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || [null, "1"];
+              const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
               const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
               
               const sNum = parseInt(sMatch[1] as string) || 1;
@@ -100,6 +102,7 @@ export default function SettingsPage() {
                 seriesMap.set(baseTitle, {
                   ...currentItem,
                   title: baseTitle,
+                  genre: "LÉO TV SÉRIES",
                   seasons: []
                 });
               }
@@ -125,7 +128,7 @@ export default function SettingsPage() {
         }
       }
 
-      // Salva as séries agrupadas
+      // Salva as séries agrupadas com todos os episódios
       for (const series of seriesMap.values()) {
         await saveContent(series);
         imported++;

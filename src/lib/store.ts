@@ -80,7 +80,7 @@ export interface GameRanking {
 
 /**
  * BUSCA DE CONTEÚDO SOBERANA
- * Filtra por gênero e busca textual com suporte a camelCase do Supabase.
+ * Filtra por gênero e busca textual com suporte total a aspas SQL.
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -114,32 +114,28 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO
- * Usa aspas nas colunas para evitar erro de Case-Sensitivity e protege capas existentes.
+ * SALVAMENTO BLINDADO v140
+ * Usa aspas em todas as colunas críticas para garantir sincronia com a tabela do Mestre Léo.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
-    // Proteção de Capa: Se estiver editando e não enviou imagem, mantém a antiga
-    let finalImageUrl = item.imageUrl || "";
-    if (item.id && !finalImageUrl) {
-      const { data: existing } = await supabase.from('content').select('"imageUrl"').eq('id', item.id).maybeSingle();
-      if (existing) finalImageUrl = existing.imageUrl;
-    }
-
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": finalImageUrl, 
+      "imageUrl": item.imageUrl || "", 
       "isRestricted": !!item.isRestricted,
       "streamUrl": item.streamUrl || "",
-      "episodes": (item.type === 'series') ? (item.episodes || []) : null,
+      "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : null,
       "seasons": (item.type === 'multi-season') ? (item.seasons || []) : null
     };
+
+    // Remove campos nulos para não sobrescrever capas se estiver editando sem enviar imagem
+    if (!payload.imageUrl && item.id) delete payload.imageUrl;
 
     const { error } = await supabase.from('content').upsert(payload);
     
@@ -155,7 +151,6 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   try {
-    // Mapeia colunas para o padrão do banco
     const payload: any = {};
     if (updates.genre) payload.genre = updates.genre.toUpperCase();
     if (updates.isRestricted !== undefined) payload.isRestricted = updates.isRestricted;
@@ -326,7 +321,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const cleanPin = pin?.trim().toUpperCase();
     if (!cleanPin) return { error: "PIN INVÁLIDO" };
     
-    // Mestre Soberano
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
     
     const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
@@ -338,12 +332,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
 
-    // KICK SOBERANO: Se o dispositivo mudou e só tem 1 tela, libera para o novo
+    // KICK SOBERANO: Derruba sessão anterior se ultrapassar o limite
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
       if (devices.length >= user.maxScreens) {
-        // Remove o mais antigo e adiciona o novo (Auto-Kick)
-        devices = [deviceId];
+        devices = [deviceId]; // Derruba todos e deixa só o atual
       } else {
         devices.push(deviceId);
       }

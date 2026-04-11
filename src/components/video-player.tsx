@@ -23,9 +23,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
 
   /**
-   * SINTONIZADOR SOBERANO v139
-   * OTIMIZAÇÃO: Usa link DIRETO para links HTTPS para economizar banda da Vercel.
-   * Só usa o Proxy em links HTTP ou se houver erro de carregamento.
+   * SINTONIZADOR SOBERANO v140 - ECONOMIA DE BANDA
+   * Usa link DIRETO para links HTTPS para não gastar os 10GB da Vercel.
+   * Só usa o Proxy em links HTTP ou se houver erro.
    */
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
@@ -47,15 +47,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
     }
 
-    // XVideos e Adultos
-    if (lowerUrl.includes('xvideos.com/video')) {
-      const videoId = urlStr.match(/video(\d+)/)?.[1];
-      if (videoId) return { processedUrl: `https://www.xvideos.com/embedframe/${videoId}`, type: 'iframe' };
-    }
-
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     
-    // ECONOMIA DE BANDA VERCEL: Se for HTTPS, vai direto. Se for HTTP, usa Proxy.
+    // BLINDAGEM DE BANDA: Se for HTTPS, vai direto. Se for HTTP, usa Proxy.
     if (urlStr.startsWith('http:')) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHLS ? 'hls' : 'video' };
     }
