@@ -382,3 +382,4 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 export const getExpiryMessage = (pin: string, days: number) => {
   return `*LÉO TV STREAM - AVISO DE RENOVAÇÃO* ⚠️\n\nOlá! Seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\nRenove agora para manter sua programação ativa sem interrupções! 🍿`;
 };
+export const cleanName = (n: string) => n.toUpperCase().trim();
