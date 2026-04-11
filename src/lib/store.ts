@@ -78,53 +78,86 @@ export interface GameRanking {
   points: number;
 }
 
+/**
+ * BUSCA DE CONTEÚDO SOBERANA
+ * Filtra por gênero e busca textual, ignorando a arena de games.
+ */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
+    
     const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
+    if (trimmedGenre) {
+      query = query.eq('genre', trimmedGenre);
+    }
+
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
+
     return (data || []).map(item => ({
       ...item,
-      streamUrl: item.streamUrl || "",
-      imageUrl: item.imageUrl || "",
-      isRestricted: !!item.isRestricted,
+      // Blindagem contra nomes de colunas camelCase no JS vs Postgres
+      streamUrl: item.streamUrl || item["streamUrl"] || "",
+      imageUrl: item.imageUrl || item["imageUrl"] || "",
+      isRestricted: !!(item.isRestricted || item["isRestricted"]),
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    return []; 
+  }
 }
 
+/**
+ * SALVAMENTO BLINDADO v143
+ * Protege as capas existentes e sincroniza com as aspas do SQL do Mestre Léo.
+ */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
+    
+    // Trava de Resgate: Se não enviou imagem, mantém a que já está no banco
+    let currentImage = item.imageUrl;
+    if (!currentImage && item.id) {
+      const existing = await getContentById(item.id);
+      if (existing) currentImage = existing.imageUrl;
+    }
+
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": item.imageUrl || "", 
+      "imageUrl": currentImage || "", 
       "isRestricted": !!item.isRestricted,
       "streamUrl": item.streamUrl || "",
       "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
       "seasons": (item.type === 'multi-season') ? (item.seasons || []) : []
     };
-    if (!item.imageUrl && item.id) delete payload.imageUrl;
+
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) throw error;
+    if (error) {
+      console.error("Erro Supabase Save Content:", JSON.stringify(error));
+      return false;
+    }
     return true;
-  } catch (e) { return false; }
+  } catch (e) { 
+    return false; 
+  }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   try {
     const payload: any = {};
     if (updates.genre) payload.genre = updates.genre.toUpperCase();
-    if (updates.isRestricted !== undefined) payload.isRestricted = updates.isRestricted;
-    if (updates.imageUrl) payload.imageUrl = updates.imageUrl;
+    if (updates.isRestricted !== undefined) payload["isRestricted"] = updates.isRestricted;
+    if (updates.imageUrl) payload["imageUrl"] = updates.imageUrl;
+    
     const { error } = await supabase.from('content').update(payload).in('id', ids);
     return !error;
   } catch (e) { return false; }
@@ -180,7 +213,11 @@ export async function removeReseller(id: string) {
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      streamUrl: item.streamUrl || item["streamUrl"] || "",
+      imageUrl: item.imageUrl || item["imageUrl"] || ""
+    }));
   } catch (e) { return []; }
 }
 
@@ -194,7 +231,15 @@ export async function getTotalContentCount(): Promise<number> {
 export async function getContentById(id: string): Promise<ContentItem | null> {
   try {
     const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    return data;
+    if (!data) return null;
+    return {
+      ...data,
+      streamUrl: data.streamUrl || data["streamUrl"] || "",
+      imageUrl: data.imageUrl || data["imageUrl"] || "",
+      isRestricted: !!(data.isRestricted || data["isRestricted"]),
+      episodes: Array.isArray(data.episodes) ? data.episodes : [],
+      seasons: Array.isArray(data.seasons) ? data.seasons : []
+    };
   } catch (e) { return null; }
 }
 
@@ -227,9 +272,9 @@ export async function getRemoteGames(): Promise<GameItem[]> {
       title: item.title, 
       console: item.genre.replace('ARENA: ', ''), 
       type: item.description?.includes('GAME_TYPE:embed') ? 'embed' : 'direct', 
-      url: item.streamUrl || "", 
-      emulatorUrl: item.streamUrl || "", 
-      imageUrl: item.imageUrl, 
+      url: item.streamUrl || item["streamUrl"] || "", 
+      emulatorUrl: item.streamUrl || item["streamUrl"] || "", 
+      imageUrl: item.imageUrl || item["imageUrl"] || "", 
       genre: item.genre 
     }));
   } catch (e) { return []; }
@@ -290,16 +335,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const cleanPin = pin?.trim().toUpperCase();
     if (!cleanPin) return { error: "PIN INVÁLIDO" };
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
+    
     const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
     const user = users?.[0];
+    
     if (error || !user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
+    
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
+    
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
-      if (devices.length >= user.maxScreens) devices = [deviceId]; 
-      else devices.push(deviceId);
+      // KICK SOBERANO: Se estourar o limite, derruba o primeiro login e libera este.
+      if (devices.length >= (user.maxScreens || 1)) {
+        devices = [deviceId];
+      } else {
+        devices.push(deviceId);
+      }
       await supabase.from('users').update({ "activeDevices": devices }).eq('id', user.id);
     }
     return { user: { ...user, activeDevices: devices } };

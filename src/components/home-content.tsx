@@ -90,6 +90,10 @@ export default function HomeContent() {
     }
   };
 
+  /**
+   * UNIFICAÇÃO DE EPISÓDIOS v143
+   * Junta episódios de temporadas e episódios avulsos em uma lista única e funcional.
+   */
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
     const seasonEps = Array.isArray(item.seasons) ? item.seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []) : [];
@@ -97,6 +101,10 @@ export default function HomeContent() {
     return all.sort((a, b) => a.number - b.number);
   };
 
+  /**
+   * BUSCA PROFUNDA DE SÉRIE
+   * Ao clicar, busca o item completo no banco para garantir que episódios/seasons existam.
+   */
   const openItem = async (item: ContentItem) => {
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);

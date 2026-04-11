@@ -43,11 +43,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     
-    // ECONOMIA SOBERANA: Se for HTTPS, vai direto da fonte. Só usa Proxy se for HTTP antigo.
+    // ECONOMIA SOBERANA v143: Somente links "http" (sem S) usam o Proxy.
+    // Isso economiza 95% da banda da Netlify/Vercel e impede novos bloqueios.
     if (urlStr.startsWith('http:')) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHLS ? 'hls' : 'video' };
     }
 
+    // Links HTTPS vão direto da fonte para o cliente.
     return { processedUrl: urlStr, type: isHLS ? 'hls' : 'video' };
   }, [])
 

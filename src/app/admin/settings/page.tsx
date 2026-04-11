@@ -42,6 +42,10 @@ export default function SettingsPage() {
     } finally { setSaving(false) }
   }
 
+  /**
+   * TERMINAL MASTER INTELIGENTE v143
+   * Mapeamento forçado de gêneros e processamento blindado de episódios.
+   */
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
@@ -64,6 +68,7 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
+          // MAPEAMENTO FORÇADO v143: Tudo que tem "SERIE" vai para "LÉO TV SÉRIES"
           const isSeries = groupStr.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
 
           currentItem = {
@@ -71,12 +76,13 @@ export default function SettingsPage() {
             imageUrl: logo,
             genre: isSeries ? "LÉO TV SÉRIES" : groupStr,
             type: isSeries ? 'multi-season' : 'channel' as ContentType,
-            description: "Importado via Terminal Master v142",
+            description: "Importado via Terminal Master Soberano",
             isRestricted: groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('ADULTOS')
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
             if (currentItem.type === 'multi-season') {
+              // Agrupador de Séries Inteligente
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
               const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
@@ -111,7 +117,8 @@ export default function SettingsPage() {
 
       toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
       setListText("");
-    } catch (e) { toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
+    } catch (e) { 
+      toast({ variant: "destructive", title: "FALHA NO TERMINAL", description: "Verifique a formatação da sua lista M3U." });
     } finally { setIsProcessing(false); }
   }
 
