@@ -114,37 +114,38 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v140
- * Usa aspas em todas as colunas críticas para garantir sincronia com a tabela do Mestre Léo.
+ * SALVAMENTO BLINDADO v141
+ * Sincronização absoluta com as colunas do Mestre Léo.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
+    // Trava de Segurança: Não apaga capa se o novo valor for vazio
+    let finalImageUrl = item.imageUrl || "";
+    if (!finalImageUrl && item.id) {
+      const existing = await getContentById(item.id);
+      if (existing?.imageUrl) finalImageUrl = existing.imageUrl;
+    }
+
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": item.imageUrl || "", 
+      "imageUrl": finalImageUrl, 
       "isRestricted": !!item.isRestricted,
       "streamUrl": item.streamUrl || "",
       "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : null,
       "seasons": (item.type === 'multi-season') ? (item.seasons || []) : null
     };
 
-    // Remove campos nulos para não sobrescrever capas se estiver editando sem enviar imagem
-    if (!payload.imageUrl && item.id) delete payload.imageUrl;
-
     const { error } = await supabase.from('content').upsert(payload);
-    
-    if (error) {
-      console.error("Erro Supabase Save Content:", JSON.stringify(error));
-      return false;
-    }
+    if (error) throw error;
     return true;
   } catch (e) {
+    console.error("Erro Supabase Save Content:", JSON.stringify(e));
     return false;
   }
 }
@@ -336,7 +337,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
       if (devices.length >= user.maxScreens) {
-        devices = [deviceId]; // Derruba todos e deixa só o atual
+        devices = [deviceId]; 
       } else {
         devices.push(deviceId);
       }

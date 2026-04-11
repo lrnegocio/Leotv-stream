@@ -23,9 +23,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
 
   /**
-   * SINTONIZADOR SOBERANO v140 - ECONOMIA DE BANDA
+   * SINTONIZADOR SOBERANO v141 - ECONOMIA DE BANDA
    * Usa link DIRETO para links HTTPS para não gastar os 10GB da Vercel.
-   * Só usa o Proxy em links HTTP ou se houver erro.
+   * Só usa o Proxy em links HTTP para evitar erro de Mixed Content.
    */
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
@@ -49,7 +49,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
     
-    // BLINDAGEM DE BANDA: Se for HTTPS, vai direto. Se for HTTP, usa Proxy.
+    // ECONOMIA MASTER: Se for HTTPS, vai direto. Se for HTTP, usa Proxy.
     if (urlStr.startsWith('http:')) {
       return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHLS ? 'hls' : 'video' };
     }

@@ -102,7 +102,7 @@ export default function HomeContent() {
     }
   };
 
-  // Lógica de Extração de Episódios SOBERANA v140: Junta tudo!
+  // Lógica de Extração de Episódios SOBERANA v141: Junta tudo!
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
     const seasonEps = Array.isArray(item.seasons) ? item.seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []) : [];

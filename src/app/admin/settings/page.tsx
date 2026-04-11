@@ -51,8 +51,7 @@ export default function SettingsPage() {
   }
 
   /**
-   * TERMINAL MASTER v140 - BLINDAGEM TOTAL
-   * Corrige erro de toUpperCase e mapeia Séries corretamente para aparecer no cliente.
+   * TERMINAL MASTER v141 - BLINDAGEM E MAPEAMENTO SÉRIES
    */
   const handleImportList = async () => {
     if (!listText.trim()) return;
@@ -74,23 +73,21 @@ export default function SettingsPage() {
           
           const rawName = nameMatch ? nameMatch[1].trim() : "NOVO CANAL";
           const logo = logoMatch ? logoMatch[1] : "";
-          const group = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
+          const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // Se tiver "SERIE" no grupo ou no nome, manda pra pasta de SÉRIES
-          const isSeries = group.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
+          const isSeries = groupStr.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
 
           currentItem = {
             title: rawName,
             imageUrl: logo,
-            genre: isSeries ? "LÉO TV SÉRIES" : group,
+            genre: isSeries ? "LÉO TV SÉRIES" : groupStr,
             type: isSeries ? 'multi-season' : 'channel' as ContentType,
             description: "Importado via Terminal Master",
-            isRestricted: group.includes('ADULT') || group.includes('XXX') || group.includes('ADULTOS')
+            isRestricted: groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('ADULTOS')
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
             if (currentItem.type === 'multi-season') {
-              // Lógica de Agrupamento Inteligente de Séries
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
               const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
@@ -128,7 +125,6 @@ export default function SettingsPage() {
         }
       }
 
-      // Salva as séries agrupadas com todos os episódios
       for (const series of seriesMap.values()) {
         await saveContent(series);
         imported++;
@@ -150,8 +146,7 @@ export default function SettingsPage() {
     try {
       const defaults = [
         { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
-        { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
-        { title: "CANAL DO LÉO", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/leo/200/300" }
+        { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" }
       ];
       for (const c of defaults) { await saveContent(c); }
       toast({ title: "SINAIS MASTER RESTAURADOS!" });
