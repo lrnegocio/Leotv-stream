@@ -33,6 +33,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase();
     
+    // Suporte YouTube
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -41,15 +42,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist');
+    // Identificação de Tipo de Sinal
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
+    const isTS = lowerUrl.includes('.ts');
     
-    // ECONOMIA SOBERANA v144: Somente links "http" (sem S) usam o Proxy.
-    // Isso economiza 95% da banda da hospedagem e impede bloqueios por Fair Use.
-    if (urlStr.startsWith('http:')) {
-      return { processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, type: isHLS ? 'hls' : 'video' };
+    // ECONOMIA SOBERANA v145: 
+    // Somente links "http" (sem S) ou arquivos ".ts" usam o Proxy para garantir compatibilidade.
+    // Links HTTPS .m3u8 vão direto para poupar banda da hospedagem.
+    if (urlStr.startsWith('http:') || isTS) {
+      return { 
+        processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
+        type: isHLS ? 'hls' : 'video' 
+      };
     }
 
-    // Links HTTPS vão direto da fonte para o cliente.
     return { processedUrl: urlStr, type: isHLS ? 'hls' : 'video' };
   }, [])
 
@@ -96,7 +102,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (type === 'hls') {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        const hls = new Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true,
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+        });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
         hlsRef.current = hls;

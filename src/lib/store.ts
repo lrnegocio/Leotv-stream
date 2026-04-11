@@ -79,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA
+ * BUSCA DE CONTEÚDO SOBERANA v145
  * Filtra por gênero e busca textual, ignorando a arena de games.
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -112,7 +112,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v144
+ * SALVAMENTO BLINDADO v145
  * Protege as capas existentes e sincroniza com as aspas do SQL do Mestre Léo.
  */
 export async function saveContent(item: Partial<ContentItem>) {
@@ -340,10 +340,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
     
+    // KICK SOBERANO v145: Se o cliente tem 1 tela e tenta entrar de outro lugar, derruba o antigo.
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
       if (devices.length >= (user.maxScreens || 1)) {
-        devices = [deviceId];
+        devices = [deviceId]; // Kick: remove todos os outros e coloca o novo
       } else {
         devices.push(deviceId);
       }

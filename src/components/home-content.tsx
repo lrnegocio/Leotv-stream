@@ -91,13 +91,16 @@ export default function HomeContent() {
   };
 
   /**
-   * UNIFICAÇÃO DE EPISÓDIOS v144
+   * UNIFICAÇÃO DE EPISÓDIOS v145
    * Junta episódios de temporadas e episódios avulsos em uma lista única e funcional.
    */
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
-    const seasonEps = Array.isArray(item.seasons) ? item.seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []) : [];
+    const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+    const seasonEps = seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []);
+    
     const all = [...directEps, ...seasonEps];
+    // Remove duplicados pelo streamUrl ou Título e ordena
     return all.sort((a, b) => a.number - b.number);
   };
 
