@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -51,6 +50,97 @@ export default function SettingsPage() {
     }
   }
 
+  /**
+   * TERMINAL MASTER v139 - INTELIGÊNCIA EM SÉRIES
+   * Agora detecta automaticamente episódios e temporadas mesmo com nomes longos.
+   */
+  const handleImportList = async () => {
+    if (!listText.trim()) return;
+    setIsProcessing(true);
+    let imported = 0;
+    try {
+      const lines = listText.split('\n');
+      const seriesMap = new Map<string, any>();
+      let currentItem: any = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        if (line.startsWith('#EXTINF:')) {
+          const nameMatch = line.match(/,(.*)$/);
+          const logoMatch = line.match(/tvg-logo="(.*?)"/);
+          const groupMatch = line.match(/group-title="(.*?)"/);
+          const rawName = nameMatch ? nameMatch[1].trim() : "NOVO CANAL";
+          const logo = logoMatch ? logoMatch[1] : "";
+          const group = groupMatch ? groupMatch[1] : "LÉO TV AO VIVO";
+          
+          const isSeries = group.toUpperCase().includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
+
+          currentItem = {
+            title: rawName,
+            imageUrl: logo,
+            genre: isSeries ? "LÉO TV SÉRIES" : group.toUpperCase(),
+            type: isSeries ? 'multi-season' : 'channel' as ContentType,
+            description: "Importado via Terminal Master",
+            isRestricted: group.toUpperCase().includes('ADULT') || group.toUpperCase().includes('XXX')
+          };
+        } else if (line.startsWith('http')) {
+          if (currentItem) {
+            if (currentItem.type === 'multi-season') {
+              // Lógica de Agrupamento de Séries
+              const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
+              const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || [null, "1"];
+              const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
+              
+              const sNum = parseInt(sMatch[1] as string) || 1;
+              const eNum = parseInt(eMatch[1] as string) || 1;
+
+              if (!seriesMap.has(baseTitle)) {
+                seriesMap.set(baseTitle, {
+                  ...currentItem,
+                  title: baseTitle,
+                  seasons: []
+                });
+              }
+
+              const series = seriesMap.get(baseTitle);
+              let season = series.seasons.find((s: any) => s.number === sNum);
+              if (!season) {
+                season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
+                series.seasons.push(season);
+              }
+              season.episodes.push({
+                id: `ep_${Date.now()}_${Math.random()}`,
+                title: currentItem.title,
+                number: eNum,
+                streamUrl: line
+              });
+            } else {
+              await saveContent({ ...currentItem, streamUrl: line });
+              imported++;
+            }
+            currentItem = null;
+          }
+        }
+      }
+
+      // Salva as séries agrupadas
+      for (const series of seriesMap.values()) {
+        await saveContent(series);
+        imported++;
+      }
+
+      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
+      setListText("");
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   const restoreMasterChannels = async () => {
     if (!confirm("Mestre, deseja injetar os Sinais Master padrão agora?")) return;
     setIsProcessing(true);
@@ -58,43 +148,12 @@ export default function SettingsPage() {
       const defaults = [
         { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
         { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" },
-        { title: "FILME: BLINDER MASTER", genre: "LÉO TV FILMES", type: 'movie' as ContentType, streamUrl: "http://blinder.space/movie/207946522/261879000/5668928.mp4", imageUrl: "https://picsum.photos/seed/blinder/200/300" },
-        { title: "DESENHO: DONA ARANHA", genre: "LÉO TV DESENHOS", type: 'movie' as ContentType, streamUrl: "https://archive.org/download/dona-aranha-musica-infantil-oficial/DONA%20ARANHA%20-%20M%C3%BAsica%20Infantil%20-%20OFICIAL.mp4", imageUrl: "https://picsum.photos/seed/spider/200/300" },
-        { title: "SINAL ADULTO TESTE", genre: "LÉO TV ADULTOS", type: 'channel' as ContentType, streamUrl: "https://pt.pornhub.com/view_video.php?viewkey=69ccea0dd6223", isRestricted: true, imageUrl: "https://picsum.photos/seed/adult/200/300" },
-        { title: "YOUTUBE MASTER TESTE", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/yt/200/300" }
+        { title: "CANAL DO LÉO", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://www.youtube.com/watch?v=5qap5aO4i9A", imageUrl: "https://picsum.photos/seed/leo/200/300" }
       ];
       for (const c of defaults) { await saveContent(c); }
       toast({ title: "SINAIS MASTER RESTAURADOS!" });
     } catch (e) {
       toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  const handleImportList = async () => {
-    if (!listText.trim()) return;
-    setIsProcessing(true);
-    let imported = 0;
-    try {
-      const lines = listText.split('\n');
-      let currentItem: any = null;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        if (line.startsWith('#EXTINF:')) {
-          const nameMatch = line.match(/,(.*)$/);
-          const logoMatch = line.match(/tvg-logo="(.*?)"/);
-          const groupMatch = line.match(/group-title="(.*?)"/);
-          currentItem = { title: nameMatch ? nameMatch[1].trim() : "NOVO CANAL", imageUrl: logoMatch ? logoMatch[1] : "", genre: groupMatch ? groupMatch[1].toUpperCase() : "LÉO TV AO VIVO", type: 'channel' as ContentType, description: "Sinal Master Importado", isRestricted: groupMatch?.includes('ADULT') || groupMatch?.includes('XXX') || false };
-        } else if (line.startsWith('http')) {
-          if (currentItem) { await saveContent({ ...currentItem, streamUrl: line }); imported++; currentItem = null; }
-        }
-      }
-      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais adicionados ao banco!` });
-      setListText("");
-    } catch (e) {
-      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
     } finally {
       setIsProcessing(false);
     }
@@ -107,9 +166,9 @@ export default function SettingsPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Gestão Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Configurações de Rede e Recuperação de Dados.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Controle Soberano de Rede.</p>
         </div>
-        <Button onClick={restoreMasterChannels} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] h-12 rounded-xl hover:bg-primary hover:text-white" disabled={isProcessing}>
+        <Button onClick={restoreMasterChannels} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] h-12 rounded-xl" disabled={isProcessing}>
           {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />} Restaurar Sinais Padrão
         </Button>
       </div>
@@ -120,11 +179,11 @@ export default function SettingsPage() {
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl"><MessageSquare className="h-6 w-6 text-primary" /></div>
-                <div><CardTitle className="uppercase text-lg font-black italic">Mural de Avisos</CardTitle></div>
+                <CardTitle className="uppercase text-lg font-black italic">Mural de Avisos</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs rounded-xl" />
+              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
             </CardContent>
           </Card>
 
@@ -132,7 +191,7 @@ export default function SettingsPage() {
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl"><Lock className="h-6 w-6 text-primary" /></div>
-                <div><CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle></div>
+                <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
@@ -149,12 +208,12 @@ export default function SettingsPage() {
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-emerald-500/10 rounded-2xl"><Terminal className="h-6 w-6 text-emerald-500" /></div>
-                <div><CardTitle className="uppercase text-lg font-black italic text-emerald-500">Terminal de Importação</CardTitle></div>
+                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Terminal Master Inteligente</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="#EXTINF:-1,CANAL\nhttp://link..." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
-              <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR SINAIS</>}</Button>
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole aqui sua lista M3U de Canais ou Séries..." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
             </CardContent>
           </Card>
         </div>
