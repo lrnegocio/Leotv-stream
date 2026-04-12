@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -80,8 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v146
- * Filtra por gênero e busca textual, ignorando a arena de games.
+ * BUSCA DE CONTEÚDO SOBERANA v147
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -113,13 +111,21 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v146
- * Protege as capas existentes e sincroniza com as aspas do SQL do Mestre Léo.
+ * SALVAMENTO BLINDADO v147
+ * Executa a troca de .ts para .m3u8 no ato do salvamento.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
+    // Troca automática de extensão v147
+    const fixUrl = (u: string) => {
+      if (!u) return "";
+      if (u.toLowerCase().endsWith('.ts')) return u.substring(0, u.length - 3) + '.m3u8';
+      if (u.toLowerCase().includes('.ts?')) return u.replace(/\.ts\?/i, '.m3u8?');
+      return u;
+    };
+
     let currentImage = item.imageUrl;
     if (!currentImage && item.id) {
       const existing = await getContentById(item.id);
@@ -134,9 +140,13 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Sinal Master Léo Tv",
       "imageUrl": currentImage || "", 
       "isRestricted": !!item.isRestricted,
-      "streamUrl": item.streamUrl || "",
-      "episodes": (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
-      "seasons": (item.type === 'multi-season') ? (item.seasons || []) : []
+      "streamUrl": fixUrl(item.streamUrl || ""),
+      "episodes": (item.type === 'series' || item.type === 'multi-season') 
+        ? (item.episodes || []).map(ep => ({ ...ep, streamUrl: fixUrl(ep.streamUrl) })) 
+        : [],
+      "seasons": (item.type === 'multi-season') 
+        ? (item.seasons || []).map(s => ({ ...s, episodes: s.episodes.map(ep => ({ ...ep, streamUrl: fixUrl(ep.streamUrl) })) })) 
+        : []
     };
 
     const { error } = await supabase.from('content').upsert(payload);
@@ -341,11 +351,10 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
     
-    // KICK SOBERANO v146: Se o cliente tem 1 tela e tenta entrar de outro lugar, derruba o antigo.
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
       if (devices.length >= (user.maxScreens || 1)) {
-        devices = [deviceId]; // Kick: remove todos os outros e coloca o novo
+        devices = [deviceId]; 
       } else {
         devices.push(deviceId);
       }

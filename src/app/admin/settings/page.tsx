@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -43,10 +42,6 @@ export default function SettingsPage() {
     } finally { setSaving(false) }
   }
 
-  /**
-   * TERMINAL MASTER INTELIGENTE v146
-   * Mapeamento Soberano: Garante que os canais caiam nas pastas que o cliente vê.
-   */
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
@@ -69,19 +64,19 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // MAPEAMENTO SOBERANO v146
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          if (groupStr.includes('SERIE') || rawName.toUpperCase().includes(' S0') || rawName.toUpperCase().includes(' E0')) {
+          // MAPEAMENTO SOBERANO v147
+          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || rawName.toUpperCase().includes(' S0') || rawName.toUpperCase().includes(' E0')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
-          } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD')) {
+          } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD') || groupStr.includes('4K') || groupStr.includes('UHD')) {
             targetGenre = "LÉO TV FILMES";
             targetType = 'movie';
-          } else if (groupStr.includes('ADULT') || groupStr.includes('XXX')) {
+          } else if (groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('18+')) {
             targetGenre = "LÉO TV ADULTOS";
-          } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO')) {
+          } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO') || groupStr.includes('INFANTIL')) {
             targetGenre = "LÉO TV DESENHOS";
           } else if (groupStr.includes('NOVELA')) {
             targetGenre = "LÉO TV NOVELAS";
@@ -99,8 +94,15 @@ export default function SettingsPage() {
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
+            // CONVERSÃO SOBERANA v147: Troca .ts por .m3u8 no import
+            let finalUrl = line;
+            if (finalUrl.toLowerCase().endsWith('.ts')) {
+              finalUrl = finalUrl.substring(0, finalUrl.length - 3) + '.m3u8';
+            } else if (finalUrl.toLowerCase().includes('.ts?')) {
+              finalUrl = finalUrl.replace(/\.ts\?/i, '.m3u8?');
+            }
+
             if (currentItem.type === 'multi-season') {
-              // Agrupador de Séries Inteligente
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
               const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
@@ -118,9 +120,9 @@ export default function SettingsPage() {
                 season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
                 series.seasons.push(season);
               }
-              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: line });
+              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: finalUrl });
             } else {
-              await saveContent({ ...currentItem, streamUrl: line });
+              await saveContent({ ...currentItem, streamUrl: finalUrl });
               imported++;
             }
             currentItem = null;

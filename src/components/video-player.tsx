@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -27,6 +26,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
+    // REVERSÃO SOBERANA v147: Troca automática de .ts para .m3u8
+    // O sistema agora força a extensão que o navegador aceita
+    if (urlStr.toLowerCase().endsWith('.ts')) {
+      urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
+    } else if (urlStr.toLowerCase().includes('.ts?')) {
+      urlStr = urlStr.replace(/\.ts\?/i, '.m3u8?');
+    }
+
     // Suporte a iframes colados direto
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
@@ -35,7 +42,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase();
     
-    // Suporte YouTube Soberano
+    // Suporte YouTube
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -45,18 +52,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
-    const isTS = lowerUrl.includes('.ts');
     
-    // REGRA DE OURO v146: 
-    // Links HTTP ou arquivos .ts PRECISAM do Proxy para funcionar no navegador (CORS/Mixed Content)
-    if (urlStr.startsWith('http:') || isTS) {
+    // REGRA DE OURO v147: Links HTTP precisam do Proxy para CORS
+    if (urlStr.startsWith('http:')) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
         type: isHLS ? 'hls' : 'video' 
       };
     }
 
-    // Links HTTPS .m3u8 vão direto para economizar banda do servidor
     return { processedUrl: urlStr, type: isHLS ? 'hls' : 'video' };
   }, [])
 
