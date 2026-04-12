@@ -104,7 +104,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const cleanUrl = (u: string) => {
       if (!u) return "";
       let res = u.trim();
-      // Troca automática .ts para .m3u8 como solicitado pelo Mestre Léo
       if (res.toLowerCase().endsWith('.ts')) {
         res = res.substring(0, res.length - 3) + '.m3u8';
       }
@@ -134,13 +133,12 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // Busca simples para evitar erros de coluna
-    const { data, error } = await supabase.from('users').select('*');
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (e) { 
     console.error("Erro Supabase GetUsers:", e);
-    throw e; // Re-throw para o frontend mostrar o erro real
+    return [];
   }
 }
 
@@ -295,7 +293,6 @@ export async function bulkUpdateContent(ids: string[], updates: any) { try { con
 export async function saveUser(user: Partial<User>) {
   try {
     let finalId = user.id;
-    // Se for novo ou editado por PIN, tenta achar o ID existente para evitar erro de duplicata
     if (user.pin) {
       const { data: existing } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
       if (existing) finalId = existing.id;
@@ -332,23 +329,24 @@ export async function getGameRankings(): Promise<GameRanking[]> {
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
-  const domain = new URL(url).hostname;
+  const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
   return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
 
 *SEUS DADOS DE ACESSO SOBERANO:*
-🔑 *CÓDIGO PIN:* \`${pin}\`
+👤 *Usuário:* \`${pin}\`
+🔐 *Senha:* \`${pin}\`
 📅 *Plano:* ${tier.toUpperCase()}
 📱 *Limite de Telas:* ${screens}
 
 🌍 *URLS DISPONÍVEIS:*
 1️⃣ https://${domain}
 
-📺 *SMART TV (LG, SAMSUNG, ROKU, ANDROID):*
+📺 *SMART TV (LG, SAMSUNG, ROKU):*
 ✅ Abra o navegador da sua TV
 ✅ Acesse: https://${domain}
-✅ Digite seu PIN e clique no botão *INSTALAR* (Ícone flutuante)
+✅ Digite seu PIN e clique em *INSTALAR*
 
-➡️ *IPTV SMARTERS / XCIPTV / APLICATIVOS:*
+➡️ *IPTV SMARTERS / XCIPTV / TELEVIZO:*
 ✅ *Name:* Léo TV
 ✅ *Usuário:* \`${pin}\`
 ✅ *Senha:* \`${pin}\`
