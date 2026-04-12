@@ -79,6 +79,24 @@ export interface GameRanking {
   points: number;
 }
 
+// BUSCA DE CONTINGÊNCIA: Tenta achar uma fonte alternativa pública se a principal cair
+export async function findAlternativeSource(channelName: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('content')
+      .select('streamUrl')
+      .ilike('title', `%${channelName}%`)
+      .not('streamUrl', 'is', null)
+      .limit(5);
+    
+    if (data && data.length > 1) {
+      // Retorna a segunda opção que não seja a que falhou (lógica simplificada)
+      return data[Math.floor(Math.random() * data.length)].streamUrl;
+    }
+    return null;
+  } catch (e) { return null; }
+}
+
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -104,6 +122,10 @@ export async function saveContent(item: Partial<ContentItem>) {
     const cleanUrl = (u: string) => {
       if (!u) return "";
       let res = u.trim();
+      // Conversão automática para m3u8 se for .ts para compatibilidade HLS
+      if (res.toLowerCase().endsWith('.ts')) {
+        res = res.substring(0, res.length - 3) + '.m3u8';
+      }
       return res;
     };
 
@@ -133,9 +155,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch (e) { 
-    return [];
-  }
+  } catch (e) { return []; }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {

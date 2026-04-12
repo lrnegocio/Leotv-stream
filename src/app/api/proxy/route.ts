@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
+    // MÁSCARA MASTER: Oculta a origem real enviando um User-Agent genérico
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Referer', new URL(targetUrl).origin);
     
@@ -23,6 +24,11 @@ export async function GET(req: NextRequest) {
       redirect: 'follow',
     });
     
+    // FAILOVER: Se a origem retornar erro de acesso, o proxy retorna erro para o player buscar alternativa
+    if (res.status === 401 || res.status === 403) {
+      return new Response("ACESSO EXPIRADO NA ORIGEM", { status: 401 });
+    }
+
     const responseHeaders = new Headers();
     const allowedHeaders = [
       'content-type', 
@@ -37,8 +43,8 @@ export async function GET(req: NextRequest) {
       if (allowedHeaders.includes(lowerKey)) responseHeaders.set(k, v);
     });
 
-    // REGRA SOBERANA: Se for .ts, força o content-type de stream para o navegador aceitar
-    if (targetUrl.toLowerCase().endsWith('.ts')) {
+    // REGRA SOBERANA: Força o content-type correto para evitar o erro de 0:00
+    if (targetUrl.toLowerCase().endsWith('.ts') || targetUrl.toLowerCase().includes('.ts?')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
     }
 
@@ -52,6 +58,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    return new Response(null, { status: 200, headers: { 'Access-Control-Allow-Origin': '*' } });
+    return new Response(null, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 }

@@ -2,8 +2,9 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { findAlternativeSource } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -20,6 +21,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [error, setError] = React.useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
+  const [currentUrl, setCurrentUrl] = React.useState(url)
+  const [isFallback, setIsFallback] = React.useState(false)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
 
@@ -28,7 +31,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase();
     
-    // MOTOR SOBERANO v158: Tratamento de Embeds para os principais sites de entretenimento
     if (lowerUrl.includes('xvideos.com')) {
       const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
       if (videoIdMatch) {
@@ -58,7 +60,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
 
-    // REGRA SOBERANA: Se for .ts ou sinal instável, usamos o Túnel Master para conversão em tempo real
+    // MÁSCARA SOBERANA: Protege o link original via Proxy se for link direto
     if (isDirectTS || (urlStr.startsWith('http:') && !isHLS)) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
@@ -73,7 +75,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return { processedUrl: urlStr, type: 'video' };
   }, [])
 
-  const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
+  const { processedUrl, type } = React.useMemo(() => sintonize(currentUrl), [currentUrl, sintonize])
+
+  const tryFallback = async () => {
+    setError("Sinal de origem expirado. Buscando rota alternativa...");
+    const alt = await findAlternativeSource(title);
+    if (alt && alt !== currentUrl) {
+      setIsFallback(true);
+      setCurrentUrl(alt);
+    } else {
+      setError("Sinal fora do ar no momento. Tente novamente mais tarde.");
+    }
+  }
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -119,8 +132,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           enableWorker: true, 
           lowLatencyMode: true,
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
-          manifestLoadingMaxRetry: 15,
-          levelLoadingMaxRetry: 15
+          manifestLoadingMaxRetry: 5,
+          levelLoadingMaxRetry: 5
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -138,33 +151,37 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
+                if (data.response?.code === 401 || data.response?.code === 403) {
+                  tryFallback();
+                } else {
+                  hls.startLoad();
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 hls.recoverMediaError();
                 break;
               default:
                 cleanup();
-                setError("Sinal instável. Tentando reconexão...");
-                setTimeout(init, 3000);
+                tryFallback();
                 break;
             }
           }
         });
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = processedUrl;
+        videoRef.current.onerror = () => tryFallback();
         setLoading(false);
       }
     } else {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
-        videoRef.current.onerror = () => { setError("Sinal indisponível."); setLoading(false); };
+        videoRef.current.onerror = () => tryFallback();
       }
     }
   }, [processedUrl, type, cleanup]);
 
-  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup, url]);
+  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup, currentUrl]);
 
   return (
     <div 
@@ -175,7 +192,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Rede Léo TV...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">
+            {isFallback ? 'Sintonizando Rota Alternativa...' : 'Sintonizando Rede Léo TV...'}
+          </p>
         </div>
       )}
 
@@ -183,7 +202,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-6">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <p className="text-white font-bold uppercase text-xs mb-4">{error}</p>
-          <Button onClick={init} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR RECONEXÃO</Button>
+          <div className="flex gap-2">
+            <Button onClick={init} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR DE NOVO</Button>
+            <Button onClick={tryFallback} variant="outline" className="border-emerald-500/40 text-emerald-500 uppercase font-black text-[10px]">BUSCAR ALTERNATIVA</Button>
+          </div>
         </div>
       )}
       
@@ -228,6 +250,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isFullscreen && showControls && (
         <div className="absolute top-8 left-8 z-40 bg-black/40 backdrop-blur-xl px-6 py-2 rounded-2xl border border-white/10">
           <p className="text-xs font-black uppercase italic text-white tracking-widest">{title}</p>
+          {isFallback && <p className="text-[8px] font-black text-emerald-500 uppercase mt-1">SINAL DE CONTINGÊNCIA ATIVO</p>}
         </div>
       )}
     </div>
