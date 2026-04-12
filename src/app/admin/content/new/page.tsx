@@ -128,15 +128,16 @@ export default function NewContentPage() {
                   <SelectContent>
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
-                    <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV SÉRIES">LÉO TV SÉRIES</SelectItem>
                     <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
+                    <SelectItem value="LÉO TV MUSICAS">LÉO TV MÚSICAS</SelectItem>
+                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
                     <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
                     <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
                     <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
                     <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
-                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

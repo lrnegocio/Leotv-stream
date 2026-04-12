@@ -27,6 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
+    // CONVERSÃO SOBERANA: Se o link termina em .ts, troca por .m3u8 para gerar o manifest temporário
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
@@ -50,7 +51,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    if (urlStr.startsWith('http:')) {
+    // ECONOMIA DE BANDA: Só usa o proxy se for link inseguro (http) ou se for sinal ts/m3u8 que precisa de CORS
+    if (urlStr.startsWith('http:') || isHLS) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
         type: isHLS ? 'hls' : 'video' 
@@ -134,9 +136,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 hls.recoverMediaError();
                 break;
               default:
-                setError("Sinal instável. Tente novamente em alguns segundos.");
-                setLoading(false);
-                cleanup();
+                setError("Sinal instável. Reconectando...");
+                setTimeout(init, 2000);
                 break;
             }
           }
@@ -163,7 +164,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'max-h-[80vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
+      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'max-h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">

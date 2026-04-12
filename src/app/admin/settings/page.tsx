@@ -48,14 +48,6 @@ export default function SettingsPage() {
     setIsProcessing(true);
     let imported = 0;
     
-    const fixUrl = (u: string) => {
-      if (!u) return "";
-      let urlStr = u.trim();
-      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
-      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
-      return urlStr;
-    };
-
     try {
       const lines = listText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const seriesMap = new Map<string, any>();
@@ -73,6 +65,7 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
+          // Limpeza de links grudados no nome
           if (rawName.includes('http')) {
             rawName = rawName.split('http')[0].trim();
           }
@@ -92,8 +85,10 @@ export default function SettingsPage() {
             targetGenre = "LÉO TV PIADAS";
           } else if (groupStr.includes('REEL') || groupStr.includes('TIKTOK')) {
             targetGenre = "LÉO TV REELS";
-          } else if (groupStr.includes('CLIPE') || groupStr.includes('MUSICA') || groupStr.includes('BIS')) {
+          } else if (groupStr.includes('CLIPE')) {
             targetGenre = "LÉO TV VÍDEO CLIPES";
+          } else if (groupStr.includes('MUSICA') || groupStr.includes('BIS')) {
+            targetGenre = "LÉO TV MUSICAS";
           } else if (groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('18+')) {
             targetGenre = "LÉO TV ADULTOS";
           } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO') || groupStr.includes('INFANTIL')) {
@@ -115,15 +110,12 @@ export default function SettingsPage() {
 
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
           if (inlineUrlMatch) {
-             const finalUrl = fixUrl(inlineUrlMatch[1]);
-             await saveContent({ ...currentItem, streamUrl: finalUrl });
+             await saveContent({ ...currentItem, streamUrl: inlineUrlMatch[1] });
              imported++;
              currentItem = null;
           }
         } else if (line.toLowerCase().startsWith('http')) {
           if (currentItem) {
-            const finalUrl = fixUrl(line);
-
             if (currentItem.type === 'multi-season') {
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
@@ -142,9 +134,9 @@ export default function SettingsPage() {
                 season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
                 series.seasons.push(season);
               }
-              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: finalUrl });
+              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: line });
             } else {
-              await saveContent({ ...currentItem, streamUrl: finalUrl });
+              await saveContent({ ...currentItem, streamUrl: line });
               imported++;
             }
             currentItem = null;
