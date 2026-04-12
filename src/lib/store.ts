@@ -79,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v147
+ * BUSCA DE CONTEÚDO SOBERANA v148
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -111,19 +111,19 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v147
- * Executa a troca de .ts para .m3u8 no ato do salvamento.
+ * SALVAMENTO BLINDADO v148
+ * Executa a troca OBRIGATÓRIA de .ts para .m3u8 no banco de dados.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
-    // Troca automática de extensão v147
     const fixUrl = (u: string) => {
       if (!u) return "";
-      if (u.toLowerCase().endsWith('.ts')) return u.substring(0, u.length - 3) + '.m3u8';
-      if (u.toLowerCase().includes('.ts?')) return u.replace(/\.ts\?/i, '.m3u8?');
-      return u;
+      let urlStr = u.trim();
+      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
+      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
+      return urlStr;
     };
 
     let currentImage = item.imageUrl;
@@ -289,12 +289,21 @@ export async function getRemoteGames(): Promise<GameItem[]> {
 export async function saveGame(game: Partial<GameItem>) {
   try {
     const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
+    
+    const fixUrl = (u: string) => {
+      if (!u) return "";
+      let urlStr = u.trim();
+      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
+      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
+      return urlStr;
+    };
+
     const payload = { 
       id, 
       title: (game.title || "NOVO JOGO").toUpperCase().trim(), 
       type: 'channel', 
       genre: `ARENA: ${game.console || 'OUTROS'}`, 
-      "streamUrl": game.url || "", 
+      "streamUrl": fixUrl(game.url || ""), 
       description: `GAME_TYPE:${game.type || 'embed'}`, 
       "imageUrl": game.imageUrl || "", 
       "isRestricted": true 

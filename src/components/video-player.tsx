@@ -26,8 +26,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // REVERSÃO SOBERANA v147: Troca automática de .ts para .m3u8
-    // O sistema agora força a extensão que o navegador aceita
+    // OBRIGATORIO v148: Troca automática de .ts para .m3u8 para ativar manifest temporário
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
@@ -53,7 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // REGRA DE OURO v147: Links HTTP precisam do Proxy para CORS
+    // REGRA DE OURO v148: Links HTTP precisam do Proxy para evitar bloqueio CORS e Banda
     if (urlStr.startsWith('http:')) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 

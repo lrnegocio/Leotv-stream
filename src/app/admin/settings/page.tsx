@@ -46,14 +46,23 @@ export default function SettingsPage() {
     if (!listText.trim()) return;
     setIsProcessing(true);
     let imported = 0;
+    
+    const fixUrl = (u: string) => {
+      if (!u) return "";
+      let urlStr = u.trim();
+      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
+      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
+      return urlStr;
+    };
+
     try {
-      const lines = listText.split('\n');
+      // Divide por linha e remove espaços vazios
+      const lines = listText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const seriesMap = new Map<string, any>();
       let currentItem: any = null;
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
+        const line = lines[i];
 
         if (line.startsWith('#EXTINF:')) {
           const nameMatch = line.match(/,(.*)$/);
@@ -67,8 +76,8 @@ export default function SettingsPage() {
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          // MAPEAMENTO SOBERANO v147
-          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || rawName.toUpperCase().includes(' S0') || rawName.toUpperCase().includes(' E0')) {
+          // MAPEAMENTO SOBERANO v148
+          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
           } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD') || groupStr.includes('4K') || groupStr.includes('UHD')) {
@@ -92,15 +101,18 @@ export default function SettingsPage() {
             description: "Sinal Master Importado",
             isRestricted: targetGenre === "LÉO TV ADULTOS"
           };
-        } else if (line.startsWith('http')) {
+
+          // SUPORTE LINK NA MESMA LINHA v148
+          const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
+          if (inlineUrlMatch) {
+             const finalUrl = fixUrl(inlineUrlMatch[1]);
+             await saveContent({ ...currentItem, streamUrl: finalUrl });
+             imported++;
+             currentItem = null;
+          }
+        } else if (line.toLowerCase().startsWith('http')) {
           if (currentItem) {
-            // CONVERSÃO SOBERANA v147: Troca .ts por .m3u8 no import
-            let finalUrl = line;
-            if (finalUrl.toLowerCase().endsWith('.ts')) {
-              finalUrl = finalUrl.substring(0, finalUrl.length - 3) + '.m3u8';
-            } else if (finalUrl.toLowerCase().includes('.ts?')) {
-              finalUrl = finalUrl.replace(/\.ts\?/i, '.m3u8?');
-            }
+            const finalUrl = fixUrl(line);
 
             if (currentItem.type === 'multi-season') {
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
