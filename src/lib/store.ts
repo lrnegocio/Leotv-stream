@@ -90,7 +90,6 @@ export async function findAlternativeSource(channelName: string): Promise<string
       .limit(5);
     
     if (data && data.length > 1) {
-      // Retorna a segunda opção que não seja a que falhou (lógica simplificada)
       return data[Math.floor(Math.random() * data.length)].streamUrl;
     }
     return null;
@@ -119,16 +118,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    const cleanUrl = (u: string) => {
-      if (!u) return "";
-      let res = u.trim();
-      // Conversão automática para m3u8 se for .ts para compatibilidade HLS
-      if (res.toLowerCase().endsWith('.ts')) {
-        res = res.substring(0, res.length - 3) + '.m3u8';
-      }
-      return res;
-    };
-
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
@@ -137,12 +126,12 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Sinal Master Léo Tv",
       "imageUrl": item.imageUrl || "", 
       "isRestricted": !!item.isRestricted,
-      "streamUrl": cleanUrl(item.streamUrl || ""),
+      "streamUrl": item.streamUrl || "",
       "episodes": (item.type === 'series' || item.type === 'multi-season') 
-        ? (item.episodes || []).map(ep => ({ ...ep, streamUrl: cleanUrl(ep.streamUrl) })) 
+        ? (item.episodes || []) 
         : [],
       "seasons": (item.type === 'multi-season') 
-        ? (item.seasons || []).map(s => ({ ...s, episodes: s.episodes.map(ep => ({ ...ep, streamUrl: cleanUrl(ep.streamUrl) })) })) 
+        ? (item.seasons || []) 
         : []
     };
     const { error } = await supabase.from('content').upsert(payload);
@@ -346,33 +335,42 @@ export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const shortCode = pin.substring(0, 6);
+  const codeRP725 = pin.substring(0, 8); // 8 dígitos
+  const shortCode = pin.substring(0, 6); // 6 dígitos para Vizzion
   
   return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
 
-*SEUS DADOS DE ACESSO SOBERANO:*
-👤 *Usuário:* \`${pin}\`
-🔐 *Senha:* \`${pin}\`
+🚀 *SEUS DADOS DE ACESSO MASTER:*
+👤 *Usuário:* \`${pin}\` (9 dígitos)
+🔐 *Senha:* \`${pin}\` (9 dígitos)
 📅 *Plano:* ${tier.toUpperCase()}
 📱 *Limite de Telas:* ${screens}
 
-🌍 *URLS DISPONÍVEIS:*
+🌍 *URLS OFICIAIS:*
 1️⃣ https://${domain}
 2️⃣ http://${domain}
 
-➡️ *APP PARCEIRO VIZZION PLAY* 📺 (LG, Samsung, Roku)
+➡️ *SMART TVS (LG, SAMSUNG, ROKU):*
+📺 *App:* Vizzion Play
 ✅ *Código:* \`${shortCode}\`
 ✅ *Usuário:* \`${pin}\`
 ✅ *Senha:* \`${pin}\`
 
-🔴 *APP PARCEIRO PLAY SIM / ASSIST PLUS +*
+🔴 *App:* Play Sim / Assist Plus
 ✅ *Código:* \`${shortCode}\`
 ✅ *Usuário:* \`${pin}\`
 ✅ *Senha:* \`${pin}\`
 
-➡️ *APLICATIVOS ANDROID (VUSER / RP725):*
-✅ *Usuário:* \`${pin}\`
-✅ *Senha:* \`${pin}\`
+➡️ *APLICATIVOS ANDROID (TV BOX E CELULAR):*
+
+🔷 *App:* VUSER
+👤 *Usuário:* \`${pin}\` (9 dígitos)
+🔐 *Senha:* \`${pin}\` (9 dígitos)
+
+🔶 *App:* RP725
+🔢 *CÓDIGO:* \`${codeRP725}\` (8 dígitos)
+👤 *Usuário:* \`${pin}\` (9 dígitos)
+🔐 *Senha:* \`${pin}\` (9 dígitos)
 
 ➡️ *IPTV SMARTERS PLAYER:*
 ✅ *Name:* Léo TV
