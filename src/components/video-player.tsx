@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -26,7 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // OBRIGATORIO v148: Troca automática de .ts para .m3u8 para ativar manifest temporário
+    // OBRIGATÓRIO v149: Conversão total de .ts para .m3u8 para navegadores
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
@@ -52,7 +53,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // REGRA DE OURO v148: Links HTTP precisam do Proxy para evitar bloqueio CORS e Banda
+    // REGRA SOBERANA v149: Links HTTP precisam do Proxy para evitar Mixed Content e Bloqueios
     if (urlStr.startsWith('http:')) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
@@ -109,16 +110,41 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         const hls = new Hls({ 
           enableWorker: true, 
           lowLatencyMode: true,
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+          xhrSetup: (xhr: any) => { 
+            xhr.withCredentials = false;
+          },
+          manifestLoadingMaxRetry: 4,
+          levelLoadingMaxRetry: 4
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
         hlsRef.current = hls;
+        
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); });
+          videoRef.current?.play().catch(() => { 
+            if (videoRef.current) videoRef.current.muted = true; 
+            videoRef.current?.play(); 
+          });
           setLoading(false);
         });
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => { if(data.fatal) hls.recoverMediaError(); });
+
+        hls.on(Hls.Events.ERROR, (_: any, data: any) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                setError("Sinal instável. Tente novamente em alguns segundos.");
+                setLoading(false);
+                cleanup();
+                break;
+            }
+          }
+        });
       } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = processedUrl;
         setLoading(false);
@@ -127,7 +153,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
-        videoRef.current.onerror = () => { setError("Sinal instável ou formato não suportado."); setLoading(false); };
+        videoRef.current.onerror = () => { 
+          setError("Este formato de sinal não é suportado pelo seu navegador."); 
+          setLoading(false); 
+        };
       }
     }
   }, [processedUrl, type, cleanup]);
@@ -156,9 +185,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
       
       {type === 'iframe' ? (
-        <iframe src={processedUrl!} className="w-full h-full border-0 z-10" allowFullScreen allow="autoplay; encrypted-media; fullscreen" onLoad={() => setLoading(false)} />
+        <iframe 
+          src={processedUrl!} 
+          className="w-full h-full border-0 z-10" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media; fullscreen" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
-        <video ref={videoRef} className="w-full h-full object-contain z-10" autoPlay playsInline controls={!isFullscreen} crossOrigin="anonymous" />
+        <video 
+          ref={videoRef} 
+          className="w-full h-full object-contain z-10" 
+          autoPlay 
+          playsInline 
+          controls={!isFullscreen} 
+          crossOrigin="anonymous" 
+        />
       )}
 
       {(onNext || onPrev) && !error && (

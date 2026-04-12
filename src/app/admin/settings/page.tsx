@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -50,13 +51,13 @@ export default function SettingsPage() {
     const fixUrl = (u: string) => {
       if (!u) return "";
       let urlStr = u.trim();
+      // Troca automática soberana .ts -> .m3u8
       if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
       if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
       return urlStr;
     };
 
     try {
-      // Divide por linha e remove espaços vazios
       const lines = listText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const seriesMap = new Map<string, any>();
       let currentItem: any = null;
@@ -69,14 +70,19 @@ export default function SettingsPage() {
           const logoMatch = line.match(/tvg-logo="(.*?)"/);
           const groupMatch = line.match(/group-title="(.*?)"/);
           
-          const rawName = nameMatch ? nameMatch[1].trim() : "NOVO CANAL";
+          let rawName = nameMatch ? nameMatch[1].trim() : "NOVO SINAL";
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
+          // Limpa o link do nome se ele vier colado (como no caso da Reggiana)
+          if (rawName.includes('http')) {
+            rawName = rawName.split('http')[0].trim();
+          }
+
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          // MAPEAMENTO SOBERANO v148
+          // MAPEAMENTO SOBERANO v149
           if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
@@ -102,7 +108,7 @@ export default function SettingsPage() {
             isRestricted: targetGenre === "LÉO TV ADULTOS"
           };
 
-          // SUPORTE LINK NA MESMA LINHA v148
+          // SUPORTE LINK NA MESMA LINHA v149 (Caso da Reggiana)
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
           if (inlineUrlMatch) {
              const finalUrl = fixUrl(inlineUrlMatch[1]);
