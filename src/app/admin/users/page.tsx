@@ -39,8 +39,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      console.error("Erro ao carregar PINs:", err);
-      toast({ variant: "destructive", title: "Erro de conexão Master.", description: "Verifique as chaves do Supabase na Netlify." })
+      toast({ variant: "destructive", title: "Erro de conexão Master." })
     } finally {
       setLoading(false)
     }
@@ -64,13 +63,12 @@ export default function UserManagementPage() {
     return { label: `${diffDays} DIA(S) ATIVO`, color: "bg-emerald-500/10 text-emerald-500", icon: UserCheck };
   };
 
-  const handleGeneratePin = () => { setNewUser(prev => ({ ...prev, pin: generateRandomPin(11) })) }
+  const handleGeneratePin = () => { setNewUser(prev => ({ ...prev, pin: generateRandomPin(9) })) }
 
   const handleSaveUser = async () => {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // Busca usuário atual para manter campos
     const existingUser = users.find(u => u.pin === newUser.pin.toUpperCase().trim() || u.id === editingUserId);
     
     const userData: Partial<User> = {
@@ -97,7 +95,7 @@ export default function UserManagementPage() {
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO NO NÚCLEO", description: "O Banco de Dados recusou a sintonização." });
+      toast({ variant: "destructive", title: "ERRO NO NÚCLEO" });
     }
     setIsSaving(false);
   }
@@ -151,7 +149,7 @@ export default function UserManagementPage() {
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
-           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(9), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
@@ -235,9 +233,9 @@ export default function UserManagementPage() {
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (9 Dígitos)</Label>
               <div className="flex gap-2">
-                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" />
+                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" maxLength={9} />
                 <Button variant="outline" onClick={handleGeneratePin} className="h-14 border-white/5"><RefreshCcw className="h-4 w-4 text-primary" /></Button>
               </div>
             </div>
@@ -265,7 +263,7 @@ export default function UserManagementPage() {
 
             <div className="space-y-2">
                <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP (Bloco de Notas)</Label>
-               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura vence hoje..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
+               <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura está pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
           </div>
           <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS'}</Button></DialogFooter>

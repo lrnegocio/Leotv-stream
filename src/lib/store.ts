@@ -104,9 +104,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const cleanUrl = (u: string) => {
       if (!u) return "";
       let res = u.trim();
-      if (res.toLowerCase().endsWith('.ts')) {
-        res = res.substring(0, res.length - 3) + '.m3u8';
-      }
       return res;
     };
 
@@ -137,7 +134,6 @@ export async function getRemoteUsers(): Promise<User[]> {
     if (error) throw error;
     return data || [];
   } catch (e) { 
-    console.error("Erro Supabase GetUsers:", e);
     return [];
   }
 }
@@ -326,10 +322,12 @@ export async function getGameRankings(): Promise<GameRanking[]> {
   } catch (e) { return []; }
 }
 
-export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
+export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
+  const shortCode = pin.substring(0, 6);
+  
   return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
 
 *SEUS DADOS DE ACESSO SOBERANO:*
@@ -340,22 +338,36 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 
 🌍 *URLS DISPONÍVEIS:*
 1️⃣ https://${domain}
+2️⃣ http://${domain}
 
-📺 *SMART TV (LG, SAMSUNG, ROKU):*
-✅ Abra o navegador da sua TV
-✅ Acesse: https://${domain}
-✅ Digite seu PIN e clique em *INSTALAR*
+➡️ *APP PARCEIRO VIZZION PLAY* 📺 (LG, Samsung, Roku)
+✅ *Código:* \`${shortCode}\`
+✅ *Usuário:* \`${pin}\`
+✅ *Senha:* \`${pin}\`
 
-➡️ *IPTV SMARTERS / XCIPTV / TELEVIZO:*
+🔴 *APP PARCEIRO PLAY SIM / ASSIST PLUS +*
+✅ *Código:* \`${shortCode}\`
+✅ *Usuário:* \`${pin}\`
+✅ *Senha:* \`${pin}\`
+
+➡️ *APLICATIVOS ANDROID (VUSER / RP725):*
+✅ *Usuário:* \`${pin}\`
+✅ *Senha:* \`${pin}\`
+
+➡️ *IPTV SMARTERS PLAYER:*
 ✅ *Name:* Léo TV
 ✅ *Usuário:* \`${pin}\`
 ✅ *Senha:* \`${pin}\`
 ✅ *URL:* http://${domain}
 
-📡 *LINKS DIRETOS (M3U):*
-🔹 http://${domain}/api/playlist?username=${pin}&password=${pin}
+🌐 *WEB PLAYER:*
+🔗 http://${domain}/user/home
 
-🍿 *Instale o Web App para a melhor experiência de cinema!*`;
+📡 *LINKS DIRETOS (M3U / HLS):*
+🔹 *M3U:* http://${domain}/api/playlist?username=${pin}&password=${pin}
+🔹 *HLS:* http://${domain}/api/playlist?username=${pin}&password=${pin}&output=hls
+
+🍿 *Instale o Web App no seu navegador para a melhor experiência!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
