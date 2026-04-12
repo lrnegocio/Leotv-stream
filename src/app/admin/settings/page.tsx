@@ -114,12 +114,18 @@ export default function SettingsPage() {
           };
 
           if (extractedUrl) {
-             await saveContent({ ...currentItem, streamUrl: extractedUrl });
+             // CORREÇÃO: Força .m3u8 no salvamento do Terminal
+             let finalUrl = extractedUrl;
+             if (finalUrl.toLowerCase().endsWith('.ts')) finalUrl = finalUrl.substring(0, finalUrl.length-3) + '.m3u8';
+             await saveContent({ ...currentItem, streamUrl: finalUrl });
              imported++;
              currentItem = null;
           }
         } else if (line.toLowerCase().startsWith('http')) {
           if (currentItem) {
+            let finalUrl = line;
+            if (finalUrl.toLowerCase().endsWith('.ts')) finalUrl = finalUrl.substring(0, finalUrl.length-3) + '.m3u8';
+
             if (currentItem.type === 'multi-season') {
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
@@ -136,9 +142,9 @@ export default function SettingsPage() {
                 season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
                 series.seasons.push(season);
               }
-              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: line });
+              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: finalUrl });
             } else {
-              await saveContent({ ...currentItem, streamUrl: line });
+              await saveContent({ ...currentItem, streamUrl: finalUrl });
               imported++;
             }
             currentItem = null;

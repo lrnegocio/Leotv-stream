@@ -33,11 +33,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       urlStr = urlStr.replace(/\.ts\?/i, '.m3u8?');
     }
 
-    if (urlStr.toLowerCase().includes('<iframe')) {
-      const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
-      if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
-    }
-
     const lowerUrl = urlStr.toLowerCase();
     
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
@@ -50,15 +45,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // ECONOMIA DE BANDA: Só usa o proxy se for link inseguro (http) ou se precisar de correção de cabeçalhos
-    if (urlStr.startsWith('http:') || isHLS) {
-      return { 
-        processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-        type: isHLS ? 'hls' : 'video' 
-      };
+    // Se for link seguro (https) e não for HLS, tenta carregar direto
+    if (urlStr.startsWith('https:') && !isHLS) {
+      return { processedUrl: urlStr, type: 'video' };
     }
 
-    return { processedUrl: urlStr, type: isHLS ? 'hls' : 'video' };
+    // Caso contrário, usa o proxy master
+    return { 
+      processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
+      type: isHLS ? 'hls' : 'video' 
+    };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
