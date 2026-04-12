@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -27,7 +26,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // CONVERSÃO SOBERANA: Se o link termina em .ts, troca por .m3u8 para gerar o manifest temporário
+    // CONVERSÃO SOBERANA: Troca .ts por .m3u8 para ativar o manifest automático
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
@@ -51,7 +50,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // ECONOMIA DE BANDA: Só usa o proxy se for link inseguro (http) ou se for sinal ts/m3u8 que precisa de CORS
+    // ECONOMIA DE BANDA: Só usa o proxy se for link inseguro (http) ou se precisar de correção de cabeçalhos
     if (urlStr.startsWith('http:') || isHLS) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
@@ -169,7 +168,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal Master Léo TV...</p>
         </div>
       )}
 

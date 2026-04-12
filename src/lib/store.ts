@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -80,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v149
+ * BUSCA DE CONTEÚDO SOBERANA v152
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -112,8 +111,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v149
- * Executa a troca OBRIGATÓRIA de .ts para .m3u8 no banco de dados para compatibilidade.
+ * SALVAMENTO BLINDADO v152
+ * Troca OBRIGATÓRIA de .ts para .m3u8 no banco para compatibilidade total.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {

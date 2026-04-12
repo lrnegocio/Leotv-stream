@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -31,7 +30,7 @@ export default function SettingsPage() {
 
   const handleSaveSettings = async () => {
     if (!parentalPin || parentalPin.length < 4) {
-      toast({ variant: "destructive", title: "Senha Curta", description: "Mestre, use no mínimo 4 dígitos." })
+      toast({ variant: "destructive", title: "Senha Curta" })
       return
     }
     setSaving(true)
@@ -65,7 +64,11 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // Limpeza de links grudados no nome
+          // EXTRAÇÃO AGRESSIVA DE LINK NA MESMA LINHA
+          const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
+          let extractedUrl = inlineUrlMatch ? inlineUrlMatch[1] : "";
+          
+          // Limpeza do nome caso o link esteja grudado
           if (rawName.includes('http')) {
             rawName = rawName.split('http')[0].trim();
           }
@@ -97,6 +100,8 @@ export default function SettingsPage() {
             targetGenre = "LÉO TV NOVELAS";
           } else if (groupStr.includes('DORAMA')) {
             targetGenre = "LÉO TV DORAMAS";
+          } else if (groupStr.includes('RADIO')) {
+            targetGenre = "LÉO TV RÁDIOS";
           }
 
           currentItem = {
@@ -108,9 +113,8 @@ export default function SettingsPage() {
             isRestricted: targetGenre === "LÉO TV ADULTOS"
           };
 
-          const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
-          if (inlineUrlMatch) {
-             await saveContent({ ...currentItem, streamUrl: inlineUrlMatch[1] });
+          if (extractedUrl) {
+             await saveContent({ ...currentItem, streamUrl: extractedUrl });
              imported++;
              currentItem = null;
           }
@@ -120,14 +124,12 @@ export default function SettingsPage() {
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
               const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
               const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
-              
               const sNum = parseInt(sMatch[1] as string) || 1;
               const eNum = parseInt(eMatch[1] as string) || 1;
 
               if (!seriesMap.has(baseTitle)) {
                 seriesMap.set(baseTitle, { ...currentItem, title: baseTitle, seasons: [] });
               }
-
               const series = seriesMap.get(baseTitle);
               let season = series.seasons.find((s: any) => s.number === sNum);
               if (!season) {
@@ -149,10 +151,10 @@ export default function SettingsPage() {
         imported++;
       }
 
-      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
+      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados!` });
       setListText("");
     } catch (e) { 
-      toast({ variant: "destructive", title: "FALHA NO TERMINAL", description: "Verifique a formatação da sua lista M3U." });
+      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
     } finally { setIsProcessing(false); }
   }
 
@@ -197,7 +199,7 @@ export default function SettingsPage() {
               <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal Master Inteligente</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole aqui sua lista M3U de Canais ou Séries..." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U. Links .ts serão convertidos para .m3u8 automaticamente." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
               <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
             </CardContent>
           </Card>
