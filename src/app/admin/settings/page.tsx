@@ -64,26 +64,25 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // EXTRAÇÃO INTELIGENTE DE LINK NA MESMA LINHA OU LINHA SEGUINTE
-          const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
-          let extractedUrl = inlineUrlMatch ? inlineUrlMatch[1] : "";
+          // EXTRAÇÃO INTELIGENTE: Pega o link mesmo se estiver colado no nome
+          const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i) || rawName.match(/(https?:\/\/[^\s,]+)$/i);
+          let extractedUrl = inlineUrlMatch ? inlineUrlMatch[0] : "";
           
-          if (rawName.includes('http')) {
-            const parts = rawName.split('http');
-            rawName = parts[0].trim();
-            if (!extractedUrl) extractedUrl = 'http' + parts[1].trim();
+          if (extractedUrl && rawName.includes(extractedUrl)) {
+            rawName = rawName.replace(extractedUrl, '').trim();
           }
 
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW')) {
+          // Mapeamento Soberano de Pastas
+          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW') || groupStr.includes('TIM')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
           } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD') || groupStr.includes('4K') || groupStr.includes('UHD')) {
             targetGenre = "LÉO TV FILMES";
             targetType = 'movie';
-          } else if (groupStr.includes('ESPORTE') || groupStr.includes('SPORT') || groupStr.includes('FUTEBOL')) {
+          } else if (groupStr.includes('ESPORTE') || groupStr.includes('SPORT') || groupStr.includes('FUTEBOL') || groupStr.includes('PREMIERE') || groupStr.includes('DAZN')) {
             targetGenre = "LÉO TV ESPORTES";
           } else if (groupStr.includes('PIADA') || groupStr.includes('HUMOR')) {
             targetGenre = "LÉO TV PIADAS";
@@ -115,16 +114,13 @@ export default function SettingsPage() {
           };
 
           if (extractedUrl) {
-             let finalUrl = extractedUrl;
-             if (finalUrl.toLowerCase().endsWith('.ts')) finalUrl = finalUrl.substring(0, finalUrl.length-3) + '.m3u8';
-             await saveContent({ ...currentItem, streamUrl: finalUrl });
+             await saveContent({ ...currentItem, streamUrl: extractedUrl });
              imported++;
              currentItem = null;
           }
         } else if (line.toLowerCase().startsWith('http')) {
           if (currentItem) {
             let finalUrl = line;
-            if (finalUrl.toLowerCase().endsWith('.ts')) finalUrl = finalUrl.substring(0, finalUrl.length-3) + '.m3u8';
 
             if (currentItem.type === 'multi-season') {
               const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
@@ -157,10 +153,10 @@ export default function SettingsPage() {
         imported++;
       }
 
-      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados!` });
+      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
       setListText("");
     } catch (e) { 
-      toast({ variant: "destructive", title: "FALHA NO TERMINAL" });
+      toast({ variant: "destructive", title: "FALHA NA IMPORTAÇÃO" });
     } finally { setIsProcessing(false); }
   }
 
@@ -171,7 +167,7 @@ export default function SettingsPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Configurações de Segurança e Importação.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Segurança e Injeção de Sinais em Massa.</p>
         </div>
       </div>
 
@@ -202,10 +198,10 @@ export default function SettingsPage() {
         <div className="space-y-8">
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
-              <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal Master Inteligente</CardTitle>
+              <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U. Links .ts serão convertidos para .m3u8 automaticamente." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U. Suporta links na mesma linha ou abaixo." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
               <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
             </CardContent>
           </Card>

@@ -79,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v154
+ * BUSCA DE CONTEÚDO SOBERANA v155
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -111,26 +111,14 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v154
- * Conversão OBRIGATÓRIA de .ts para .m3u8 no banco para compatibilidade total.
+ * SALVAMENTO SOBERANO v155
+ * Mantém o link ORIGINAL do fornecedor para evitar quebras de sinal.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     
-    const fixUrl = (u: string) => {
-      if (!u) return "";
-      let urlStr = u.trim();
-      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
-      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
-      return urlStr;
-    };
-
-    let currentImage = item.imageUrl;
-    if (!currentImage && item.id) {
-      const existing = await getContentById(item.id);
-      if (existing) currentImage = existing.imageUrl;
-    }
+    const cleanUrl = (u: string) => u ? u.trim() : "";
 
     const payload: any = {
       id, 
@@ -138,14 +126,14 @@ export async function saveContent(item: Partial<ContentItem>) {
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": currentImage || "", 
+      "imageUrl": item.imageUrl || "", 
       "isRestricted": !!item.isRestricted,
-      "streamUrl": fixUrl(item.streamUrl || ""),
+      "streamUrl": cleanUrl(item.streamUrl || ""),
       "episodes": (item.type === 'series' || item.type === 'multi-season') 
-        ? (item.episodes || []).map(ep => ({ ...ep, streamUrl: fixUrl(ep.streamUrl) })) 
+        ? (item.episodes || []).map(ep => ({ ...ep, streamUrl: cleanUrl(ep.streamUrl) })) 
         : [],
       "seasons": (item.type === 'multi-season') 
-        ? (item.seasons || []).map(s => ({ ...s, episodes: s.episodes.map(ep => ({ ...ep, streamUrl: fixUrl(ep.streamUrl) })) })) 
+        ? (item.seasons || []).map(s => ({ ...s, episodes: s.episodes.map(ep => ({ ...ep, streamUrl: cleanUrl(ep.streamUrl) })) })) 
         : []
     };
 
@@ -289,21 +277,12 @@ export async function getRemoteGames(): Promise<GameItem[]> {
 export async function saveGame(game: Partial<GameItem>) {
   try {
     const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
-    
-    const fixUrl = (u: string) => {
-      if (!u) return "";
-      let urlStr = u.trim();
-      if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
-      if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
-      return urlStr;
-    };
-
     const payload = { 
       id, 
       title: (game.title || "NOVO JOGO").toUpperCase().trim(), 
       type: 'channel', 
       genre: `ARENA: ${game.console || 'OUTROS'}`, 
-      "streamUrl": fixUrl(game.url || ""), 
+      "streamUrl": game.url || "", 
       description: `GAME_TYPE:${game.type || 'embed'}`, 
       "imageUrl": game.imageUrl || "", 
       "isRestricted": true 

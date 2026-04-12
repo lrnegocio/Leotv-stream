@@ -20,6 +20,16 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Léo TV Stream',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'application-name': 'Léo TV',
+    'msapplication-TileColor': '#6D2DCC',
+    'theme-color': '#6D2DCC',
+    // Metas específicas para Smart TVs
+    'tv-app-capable': 'yes',
+    'handheldfriendly': 'true',
+  }
 };
 
 export const viewport: Viewport = {

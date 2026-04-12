@@ -25,16 +25,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const sintonize = React.useCallback((u: string) => {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
-
-    // CONVERSÃO SOBERANA: Troca .ts por .m3u8 para ativar o manifest automático do fornecedor
-    if (urlStr.toLowerCase().endsWith('.ts')) {
-      urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
-    } else if (urlStr.toLowerCase().includes('.ts?')) {
-      urlStr = urlStr.replace(/\.ts\?/i, '.m3u8?');
-    }
-
     const lowerUrl = urlStr.toLowerCase();
     
+    // Tratamento Inteligente de Links
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -44,16 +37,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
-    
-    // Se for link seguro (https) e for HLS, carrega direto pra economizar banda
+    const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
+
+    // SINTONIA SOBERANA:
+    // 1. Se for HTTPS e M3U8, vai direto pra economizar banda.
+    // 2. Se for HTTP ou .TS, passa pelo Túnel Proxy para converter e proteger.
     if (urlStr.startsWith('https:') && isHLS) {
       return { processedUrl: urlStr, type: 'hls' };
     }
 
-    // Caso contrário, usa o proxy master
+    // Se for .ts, usamos o proxy e indicamos que ele deve ser tratado como HLS se possível,
+    // ou apenas fluxado. O segredo é que o proxy permite que o navegador ignore a Mixed Content.
     return { 
       processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-      type: isHLS ? 'hls' : 'video' 
+      type: (isHLS || isDirectTS) ? 'hls' : 'video' 
     };
   }, [])
 
@@ -103,11 +100,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         const hls = new Hls({ 
           enableWorker: true, 
           lowLatencyMode: true,
-          xhrSetup: (xhr: any) => { 
-            xhr.withCredentials = false;
-          },
-          manifestLoadingMaxRetry: 4,
-          levelLoadingMaxRetry: 4
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
+          manifestLoadingMaxRetry: 6,
+          levelLoadingMaxRetry: 6
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -131,8 +126,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 hls.recoverMediaError();
                 break;
               default:
-                setError("Sinal instável. Reconectando...");
-                setTimeout(init, 2000);
+                // Se o .m3u8 falhar, vamos tentar carregar como vídeo puro caso o servidor suporte
+                if (videoRef.current) {
+                  videoRef.current.src = processedUrl;
+                  videoRef.current.play().catch(() => {});
+                }
                 break;
             }
           }
@@ -145,10 +143,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
-        videoRef.current.onerror = () => { 
-          setError("Sinal não suportado."); 
-          setLoading(false); 
-        };
+        videoRef.current.onerror = () => { setError("Sinal Master indisponível no momento."); setLoading(false); };
       }
     }
   }, [processedUrl, type, cleanup]);
@@ -164,7 +159,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal Master Léo TV...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Rede Léo TV...</p>
         </div>
       )}
 
