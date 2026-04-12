@@ -28,7 +28,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase();
     
-    // Tratamento de XVideos (Embed Inteligente)
+    // MOTOR SOBERANO v158: Tratamento de Embeds para os principais sites de entretenimento
     if (lowerUrl.includes('xvideos.com')) {
       const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
       if (videoIdMatch) {
@@ -37,7 +37,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     }
 
-    // Tratamento de YouTube
+    if (lowerUrl.includes('pornhub.com')) {
+      const phMatch = urlStr.match(/view_video\.php\?viewkey=([^&]+)/);
+      if (phMatch) return { processedUrl: `https://www.pornhub.com/embed/${phMatch[1]}`, type: 'iframe' };
+    }
+
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -46,14 +50,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
     }
 
+    if (lowerUrl.includes('dailymotion.com')) {
+      const dId = urlStr.split('/').pop()?.split('_')[0];
+      if (dId) return { processedUrl: `https://www.dailymotion.com/embed/video/${dId}?autoplay=1`, type: 'iframe' };
+    }
+
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
 
-    // REGRA SOBERANA: Se for .ts, usamos o Túnel Master para conversão em tempo real
+    // REGRA SOBERANA: Se for .ts ou sinal instável, usamos o Túnel Master para conversão em tempo real
     if (isDirectTS || (urlStr.startsWith('http:') && !isHLS)) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-        type: isDirectTS ? 'hls' : 'video' 
+        type: 'hls' 
       };
     }
 
@@ -96,10 +105,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, []);
 
   const init = React.useCallback(async () => {
-    if (!processedUrl || type === 'iframe') {
-      if (type === 'iframe') setLoading(false);
-      return;
-    }
+    if (!processedUrl) return;
+    if (type === 'iframe') { setLoading(false); return; }
+    
     cleanup();
     setError(null);
     setLoading(true);
@@ -111,8 +119,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           enableWorker: true, 
           lowLatencyMode: true,
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
-          manifestLoadingMaxRetry: 10,
-          levelLoadingMaxRetry: 10
+          manifestLoadingMaxRetry: 15,
+          levelLoadingMaxRetry: 15
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -137,7 +145,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 break;
               default:
                 cleanup();
-                setError("Falha na sintonização do sinal HLS.");
+                setError("Sinal instável. Tentando reconexão...");
+                setTimeout(init, 3000);
                 break;
             }
           }
@@ -150,7 +159,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
-        videoRef.current.onerror = () => { setError("Sinal Master indisponível no momento."); setLoading(false); };
+        videoRef.current.onerror = () => { setError("Sinal indisponível."); setLoading(false); };
       }
     }
   }, [processedUrl, type, cleanup]);

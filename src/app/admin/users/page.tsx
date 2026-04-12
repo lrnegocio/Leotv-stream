@@ -39,7 +39,7 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro de conexão." })
+      toast({ variant: "destructive", title: "Erro de conexão Master." })
     } finally {
       setLoading(false)
     }
@@ -68,13 +68,16 @@ export default function UserManagementPage() {
   const handleSaveUser = async () => {
     if (!newUser.pin) return;
     setIsSaving(true);
-    const existingUser = users.find(u => u.id === editingUserId);
     
-    // CORREÇÃO: Enviamos apenas o que o saveUser/Supabase espera
+    // REGRA SOBERANA: Se estamos editando, usamos o ID existente. Se for novo, mas o PIN já existir na lista, pegamos o ID dele para atualizar em vez de criar duplicado.
+    const existingByPin = users.find(u => u.pin === newUser.pin.toUpperCase().trim());
+    const finalId = editingUserId || existingByPin?.id || "user_" + Date.now() + Math.random().toString(36).substring(7);
+    const existingUser = users.find(u => u.id === finalId);
+    
     const userData: Partial<User> = {
-      id: editingUserId || "user_" + Date.now() + Math.random().toString(36).substring(7),
+      id: finalId,
       pin: newUser.pin.toUpperCase().trim(),
-      role: (editingUserId === 'master' || newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
+      role: (finalId === 'master' || newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || null,
       maxScreens: parseInt(newUser.screens) || 1,
@@ -90,12 +93,12 @@ export default function UserManagementPage() {
     const success = await saveUser(userData);
     
     if (success) {
-      toast({ title: "CLIENTE ATUALIZADO!" });
+      toast({ title: "SINAL SINCRONIZADO!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique se o PIN já existe." });
+      toast({ variant: "destructive", title: "ERRO NO NÚCLEO", description: "O Banco de Dados recusou a sintonização." });
     }
     setIsSaving(false);
   }
@@ -140,9 +143,12 @@ export default function UserManagementPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle Soberano de PINs</h1>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Acessos VIP.</p>
+          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Acessos VIP ({users.length} total).</p>
         </div>
         <div className="flex gap-2">
+           <Button variant="outline" onClick={loadUsers} className="font-black uppercase text-[10px] h-12 rounded-xl">
+             <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+           </Button>
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
@@ -155,14 +161,14 @@ export default function UserManagementPage() {
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
-          placeholder="PESQUISAR PIN..." 
+          placeholder="PESQUISAR PIN NO BANCO..." 
           className="pl-12 bg-card/50 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 
         />
       </div>
 
-      {loading ? (
+      {loading && users.length === 0 ? (
         <div className="flex justify-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
       ) : (
         <div className="bg-card/30 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
@@ -177,7 +183,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((u) => {
+              {filteredUsers.sort((a,b) => b.id.localeCompare(a.id)).map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
@@ -218,7 +224,7 @@ export default function UserManagementPage() {
                 );
               })}
               {filteredUsers.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado na base.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
