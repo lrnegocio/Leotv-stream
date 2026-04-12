@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -31,7 +32,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (lowerUrl.includes('xvideos.com')) {
       const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
       if (videoIdMatch) {
-        const videoId = videoIdMatch[1].replace('video', '');
+        const videoId = videoIdMatch[1].replace('video', '').split('/')[0];
         return { processedUrl: `https://www.xvideos.com/embedframe/${videoId}`, type: 'iframe' };
       }
     }
@@ -48,16 +49,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
 
-    // Se for HTTPS e M3U8, vai direto
-    if (urlStr.startsWith('https:') && isHLS) {
+    // REGRA SOBERANA: Se for .ts, usamos o Túnel Master para conversão em tempo real
+    if (isDirectTS || (urlStr.startsWith('http:') && !isHLS)) {
+      return { 
+        processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
+        type: isDirectTS ? 'hls' : 'video' 
+      };
+    }
+
+    if (isHLS) {
       return { processedUrl: urlStr, type: 'hls' };
     }
 
-    // Se for .ts ou HTTP, passa pelo Túnel Master
-    return { 
-      processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-      type: (isHLS || isDirectTS) ? 'hls' : 'video' 
-    };
+    return { processedUrl: urlStr, type: 'video' };
   }, [])
 
   const { processedUrl, type } = React.useMemo(() => sintonize(url), [url, sintonize])
@@ -107,8 +111,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           enableWorker: true, 
           lowLatencyMode: true,
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
-          manifestLoadingMaxRetry: 6,
-          levelLoadingMaxRetry: 6
+          manifestLoadingMaxRetry: 10,
+          levelLoadingMaxRetry: 10
         });
         hls.loadSource(processedUrl);
         hls.attachMedia(videoRef.current!);
@@ -157,7 +161,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'max-h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
+      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">

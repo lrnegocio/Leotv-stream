@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -78,25 +79,14 @@ export interface GameRanking {
   points: number;
 }
 
-/**
- * BUSCA DE CONTEÚDO SOBERANA v156
- */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    
-    if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
+    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) {
-      query = query.eq('genre', trimmedGenre);
-    }
-
+    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
-
     return (data || []).map(item => ({
       ...item,
       streamUrl: item.streamUrl || item["streamUrl"] || "",
@@ -105,16 +95,13 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
-  } catch (e) { 
-    return []; 
-  }
+  } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     const cleanUrl = (u: string) => u ? u.trim() : "";
-
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
@@ -131,33 +118,30 @@ export async function saveContent(item: Partial<ContentItem>) {
         ? (item.seasons || []).map(s => ({ ...s, episodes: s.episodes.map(ep => ({ ...ep, streamUrl: cleanUrl(ep.streamUrl) })) })) 
         : []
     };
-
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) return false;
-    return true;
-  } catch (e) { 
-    return false; 
-  }
-}
-
-export async function bulkUpdateContent(ids: string[], updates: any) {
-  try {
-    const payload: any = {};
-    if (updates.genre) payload.genre = updates.genre.toUpperCase();
-    if (updates.isRestricted !== undefined) payload["isRestricted"] = updates.isRestricted;
-    if (updates.imageUrl) payload["imageUrl"] = updates.imageUrl;
-    
-    const { error } = await supabase.from('content').update(payload).in('id', ids);
     return !error;
   } catch (e) { return false; }
 }
 
-export async function getCategoryCount(genre: string) {
+export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
-    const trimmedGenre = genre.trim().toUpperCase();
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', trimmedGenre);
-    return count || 0;
-  } catch (e) { return 0; }
+    const cleanPin = pin?.trim().toUpperCase();
+    if (!cleanPin) return { error: "PIN INVÁLIDO" };
+    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
+    const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
+    const user = users?.[0];
+    if (error || !user) return { error: "PIN INVÁLIDO" };
+    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
+    const now = new Date();
+    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
+    let devices = user.activeDevices || [];
+    if (!devices.includes(deviceId)) {
+      if (devices.length >= (user.maxScreens || 1)) devices = [deviceId]; 
+      else devices.push(deviceId);
+      await supabase.from('users').update({ "activeDevices": devices }).eq('id', user.id);
+    }
+    return { user: { ...user, activeDevices: devices } };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function validateResellerLogin(username: string, password: string) {
@@ -192,65 +176,27 @@ export async function saveReseller(reseller: Partial<Reseller>) {
   } catch (e) { return false; }
 }
 
-export async function removeReseller(id: string) {
+export async function getGlobalSettings() {
   try {
-    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
+  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
+}
+
+export async function updateGlobalSettings(value: any) {
+  try {
+    const payload = { key: 'global', value: { parentalPin: String(value.parentalPin), announcement: String(value.announcement) } };
+    const { error } = await supabase.from('settings').upsert(payload);
     return !error;
   } catch (e) { return false; }
 }
 
-export async function getTopContent(limit = 10): Promise<ContentItem[]> {
+export async function getCategoryCount(genre: string) {
   try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
-    return (data || []).map(item => ({
-      ...item,
-      streamUrl: item.streamUrl || item["streamUrl"] || "",
-      imageUrl: item.imageUrl || item["imageUrl"] || ""
-    }));
-  } catch (e) { return []; }
-}
-
-export async function getTotalContentCount(): Promise<number> {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
+    const trimmedGenre = genre.trim().toUpperCase();
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', trimmedGenre);
     return count || 0;
   } catch (e) { return 0; }
-}
-
-export async function getContentById(id: string): Promise<ContentItem | null> {
-  try {
-    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    if (!data) return null;
-    return {
-      ...data,
-      streamUrl: data.streamUrl || data["streamUrl"] || "",
-      imageUrl: data.imageUrl || data["imageUrl"] || "",
-      isRestricted: !!(data.isRestricted || data["isRestricted"]),
-      episodes: Array.isArray(data.episodes) ? data.episodes : [],
-      seasons: Array.isArray(data.seasons) ? data.seasons : []
-    };
-  } catch (e) { return null; }
-}
-
-export async function removeUser(id: string) {
-  try {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function removeContent(id: string) {
-  try {
-    const { error } = await supabase.from('content').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function bulkRemoveContent(ids: string[]) {
-  try {
-    const { error } = await supabase.from('content').delete().in('id', ids);
-    return !error;
-  } catch (e) { return false; }
 }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
@@ -287,14 +233,43 @@ export async function saveGame(game: Partial<GameItem>) {
   } catch (e) { return false; }
 }
 
-export async function removeGame(id: string) { return removeContent(id); }
-
-export async function getRemoteUsers() {
+export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    return data || [];
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
+    return (data || []).map(item => ({
+      ...item,
+      streamUrl: item.streamUrl || item["streamUrl"] || "",
+      imageUrl: item.imageUrl || item["imageUrl"] || ""
+    }));
   } catch (e) { return []; }
 }
+
+export async function getTotalContentCount(): Promise<number> {
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
+    return count || 0;
+  } catch (e) { return 0; }
+}
+
+export async function getContentById(id: string): Promise<ContentItem | null> {
+  try {
+    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    if (!data) return null;
+    return {
+      ...data,
+      streamUrl: data.streamUrl || data["streamUrl"] || "",
+      imageUrl: data.imageUrl || data["imageUrl"] || "",
+      isRestricted: !!(data.isRestricted || data["isRestricted"]),
+      episodes: Array.isArray(item.episodes) ? item.episodes : [],
+      seasons: Array.isArray(item.seasons) ? item.seasons : []
+    };
+  } catch (e) { return null; }
+}
+
+export async function removeUser(id: string) { try { const { error } = await supabase.from('users').delete().eq('id', id); return !error; } catch (e) { return false; } }
+export async function removeContent(id: string) { try { const { error } = await supabase.from('content').delete().eq('id', id); return !error; } catch (e) { return false; } }
+export async function bulkRemoveContent(ids: string[]) { try { const { error } = await supabase.from('content').delete().in('id', ids); return !error; } catch (e) { return false; } }
+export async function bulkUpdateContent(ids: string[], updates: any) { try { const payload: any = {}; if (updates.genre) payload.genre = updates.genre.toUpperCase(); if (updates.isRestricted !== undefined) payload["isRestricted"] = updates.isRestricted; if (updates.imageUrl) payload["imageUrl"] = updates.imageUrl; const { error } = await supabase.from('content').update(payload).in('id', ids); return !error; } catch (e) { return false; } }
 
 export async function saveUser(user: Partial<User>) {
   try {
@@ -319,49 +294,6 @@ export async function saveUser(user: Partial<User>) {
   } catch (e) { return false; }
 }
 
-export async function validateDeviceLogin(pin: string, deviceId: string) {
-  try {
-    const cleanPin = pin?.trim().toUpperCase();
-    if (!cleanPin) return { error: "PIN INVÁLIDO" };
-    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
-    
-    const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
-    const user = users?.[0];
-    
-    if (error || !user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
-    
-    const now = new Date();
-    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
-    
-    let devices = user.activeDevices || [];
-    if (!devices.includes(deviceId)) {
-      if (devices.length >= (user.maxScreens || 1)) {
-        devices = [deviceId]; 
-      } else {
-        devices.push(deviceId);
-      }
-      await supabase.from('users').update({ "activeDevices": devices }).eq('id', user.id);
-    }
-    return { user: { ...user, activeDevices: devices } };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
-}
-
-export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
-  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
-}
-
-export async function updateGlobalSettings(value: any) {
-  try {
-    const payload = { key: 'global', value: { parentalPin: String(value.parentalPin), announcement: String(value.announcement) } };
-    const { error } = await supabase.from('settings').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
 export async function getGameRankings(): Promise<GameRanking[]> {
   try {
     const { data } = await supabase.from('users').select('pin, "gamePoints"').gt('gamePoints', 0).order('gamePoints', { ascending: false }).limit(50);
@@ -370,10 +302,38 @@ export async function getGameRankings(): Promise<GameRanking[]> {
 }
 
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
+
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
-  return `*LÉO TV STREAM - ACESSO LIBERADO* 📺\n\n🔑 *CÓDIGO PIN:* ${pin}\n📅 *PLANO:* ${tier.toUpperCase()}\n📱 *LIMITE DE TELAS:* ${screens}\n\n🌐 *ASSISTA AQUI:* ${url}\n\n🍿 *Instale o Web App para a melhor experiência!*`;
+  const domain = new URL(url).hostname;
+  return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
+
+*SEUS DADOS DE ACESSO SOBERANO:*
+🔑 *CÓDIGO PIN:* \`${pin}\`
+📅 *Plano:* ${tier.toUpperCase()}
+📱 *Limite de Telas:* ${screens}
+
+🌍 *URLS DISPONÍVEIS:*
+1️⃣ https://${domain}
+
+📺 *SMART TV (LG, SAMSUNG, ROKU, ANDROID):*
+✅ Abra o navegador da sua TV
+✅ Acesse: https://${domain}
+✅ Digite seu PIN e clique no botão *INSTALAR* (Ícone flutuante)
+
+➡️ *IPTV SMARTERS / XCIPTV / APLICATIVOS:*
+✅ *Name:* Léo TV
+✅ *Usuário:* \`${pin}\`
+✅ *Senha:* \`${pin}\`
+✅ *URL:* http://${domain}
+
+📡 *LINKS DIRETOS (M3U):*
+🔹 http://${domain}/api/playlist?pin=${pin}
+
+🍿 *Instale o Web App para a melhor experiência de cinema!*`;
 };
+
 export const getExpiryMessage = (pin: string, days: number) => {
   return `*LÉO TV STREAM - AVISO DE RENOVAÇÃO* ⚠️\n\nOlá! Seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\nRenove agora para manter sua programação ativa sem interrupções! 🍿`;
 };
+
 export const cleanName = (n: string) => n.toUpperCase().trim();
