@@ -335,7 +335,7 @@ export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const codeRP725 = pin.substring(0, 8); // 8 dígitos
+  const codeRP725 = pin.substring(0, 8); // 8 dígitos para o código de ativação
   const shortCode = pin.substring(0, 6); // 6 dígitos para Vizzion
   
   return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
