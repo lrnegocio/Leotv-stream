@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -26,6 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
+    // Suporte a iframes colados direto
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -33,7 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase();
     
-    // Suporte YouTube
+    // Suporte YouTube Soberano
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -42,13 +44,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
     }
 
-    // Identificação de Tipo de Sinal
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     const isTS = lowerUrl.includes('.ts');
     
-    // ECONOMIA SOBERANA v145: 
-    // Somente links "http" (sem S) ou arquivos ".ts" usam o Proxy para garantir compatibilidade.
-    // Links HTTPS .m3u8 vão direto para poupar banda da hospedagem.
+    // REGRA DE OURO v146: 
+    // Links HTTP ou arquivos .ts PRECISAM do Proxy para funcionar no navegador (CORS/Mixed Content)
     if (urlStr.startsWith('http:') || isTS) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
@@ -56,6 +56,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       };
     }
 
+    // Links HTTPS .m3u8 vão direto para economizar banda do servidor
     return { processedUrl: urlStr, type: isHLS ? 'hls' : 'video' };
   }, [])
 
@@ -123,7 +124,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
-        videoRef.current.onerror = () => { setError("Sinal instável."); setLoading(false); };
+        videoRef.current.onerror = () => { setError("Sinal instável ou formato não suportado."); setLoading(false); };
       }
     }
   }, [processedUrl, type, cleanup]);
@@ -139,13 +140,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando Master...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 text-center p-6">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-6">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+          <p className="text-white font-bold uppercase text-xs mb-4">{error}</p>
           <Button onClick={init} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR RECONEXÃO</Button>
         </div>
       )}

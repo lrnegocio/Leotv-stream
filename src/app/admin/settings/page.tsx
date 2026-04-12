@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -43,9 +44,8 @@ export default function SettingsPage() {
   }
 
   /**
-   * TERMINAL MASTER INTELIGENTE v145
-   * Mapeamento forçado de gêneros e unificação blindada de episódios.
-   * Suporte a links .ts e links complexos.
+   * TERMINAL MASTER INTELIGENTE v146
+   * Mapeamento Soberano: Garante que os canais caiam nas pastas que o cliente vê.
    */
   const handleImportList = async () => {
     if (!listText.trim()) return;
@@ -69,16 +69,33 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // MAPEAMENTO FORÇADO v145: Tudo que tem "SERIE" vai para "LÉO TV SÉRIES"
-          const isSeries = groupStr.includes('SERIE') || rawName.toUpperCase().includes('S0') || rawName.toUpperCase().includes('E0');
+          // MAPEAMENTO SOBERANO v146
+          let targetGenre = "LÉO TV AO VIVO";
+          let targetType: ContentType = 'channel';
+
+          if (groupStr.includes('SERIE') || rawName.toUpperCase().includes(' S0') || rawName.toUpperCase().includes(' E0')) {
+            targetGenre = "LÉO TV SÉRIES";
+            targetType = 'multi-season';
+          } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD')) {
+            targetGenre = "LÉO TV FILMES";
+            targetType = 'movie';
+          } else if (groupStr.includes('ADULT') || groupStr.includes('XXX')) {
+            targetGenre = "LÉO TV ADULTOS";
+          } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO')) {
+            targetGenre = "LÉO TV DESENHOS";
+          } else if (groupStr.includes('NOVELA')) {
+            targetGenre = "LÉO TV NOVELAS";
+          } else if (groupStr.includes('DORAMA')) {
+            targetGenre = "LÉO TV DORAMAS";
+          }
 
           currentItem = {
             title: rawName,
             imageUrl: logo,
-            genre: isSeries ? "LÉO TV SÉRIES" : groupStr,
-            type: isSeries ? 'multi-season' : 'channel' as ContentType,
-            description: "Importado via Terminal Master Soberano",
-            isRestricted: groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('ADULTOS')
+            genre: targetGenre,
+            type: targetType,
+            description: "Sinal Master Importado",
+            isRestricted: targetGenre === "LÉO TV ADULTOS"
           };
         } else if (line.startsWith('http')) {
           if (currentItem) {
@@ -92,7 +109,7 @@ export default function SettingsPage() {
               const eNum = parseInt(eMatch[1] as string) || 1;
 
               if (!seriesMap.has(baseTitle)) {
-                seriesMap.set(baseTitle, { ...currentItem, title: baseTitle, genre: "LÉO TV SÉRIES", seasons: [] });
+                seriesMap.set(baseTitle, { ...currentItem, title: baseTitle, seasons: [] });
               }
 
               const series = seriesMap.get(baseTitle);
@@ -123,42 +140,22 @@ export default function SettingsPage() {
     } finally { setIsProcessing(false); }
   }
 
-  const restoreMasterChannels = async () => {
-    if (!confirm("Mestre, deseja injetar os Sinais Master padrão agora?")) return;
-    setIsProcessing(true);
-    try {
-      const defaults = [
-        { title: "SIC PORTUGAL", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://sic.pt/direto", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/bf5a981c80f234b09dae228127d108a1.webp" },
-        { title: "TV CULTURA", genre: "LÉO TV AO VIVO", type: 'channel' as ContentType, streamUrl: "https://cdn.live.br1.jmvstream.com/w/LVW-10842/LVW10842_513N26MDBL/chunklist.m3u8", imageUrl: "https://www.cxtv.com.br/img/Tvs/Logo/webp-l/ac86ed7edabf2d886a3b8430b4f13c91.webp" }
-      ];
-      for (const c of defaults) { await saveContent(c); }
-      toast({ title: "SINAIS MASTER RESTAURADOS!" });
-    } catch (e) { toast({ variant: "destructive", title: "ERRO NA INJEÇÃO" });
-    } finally { setIsProcessing(false); }
-  }
-
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Segurança & Gestão Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Controle Soberano de Rede.</p>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana</h1>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Configurações de Segurança e Importação.</p>
         </div>
-        <Button onClick={restoreMasterChannels} variant="outline" className="border-primary/20 text-primary font-black uppercase text-[10px] h-12 rounded-xl" disabled={isProcessing}>
-          {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />} Restaurar Sinais Padrão
-        </Button>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-2xl"><MessageSquare className="h-6 w-6 text-primary" /></div>
-                <CardTitle className="uppercase text-lg font-black italic">Mural de Avisos</CardTitle>
-              </div>
+              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
@@ -167,10 +164,7 @@ export default function SettingsPage() {
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-2xl"><Lock className="h-6 w-6 text-primary" /></div>
-                <CardTitle className="uppercase text-lg font-black italic">Senha Parental Global</CardTitle>
-              </div>
+              <CardTitle className="uppercase text-sm font-black italic">Senha Parental Global</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="flex gap-4">
@@ -184,10 +178,7 @@ export default function SettingsPage() {
         <div className="space-y-8">
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-500/10 rounded-2xl"><Terminal className="h-6 w-6 text-emerald-500" /></div>
-                <CardTitle className="uppercase text-lg font-black italic text-emerald-500">Terminal Master Inteligente</CardTitle>
-              </div>
+              <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal Master Inteligente</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole aqui sua lista M3U de Canais ou Séries..." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />

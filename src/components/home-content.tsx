@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -91,7 +92,7 @@ export default function HomeContent() {
   };
 
   /**
-   * UNIFICAÇÃO DE EPISÓDIOS v145
+   * UNIFICAÇÃO DE EPISÓDIOS v146
    * Junta episódios de temporadas e episódios avulsos em uma lista única e funcional.
    */
   const getEpisodes = (item: ContentItem) => {
@@ -100,14 +101,9 @@ export default function HomeContent() {
     const seasonEps = seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []);
     
     const all = [...directEps, ...seasonEps];
-    // Remove duplicados pelo streamUrl ou Título e ordena
     return all.sort((a, b) => a.number - b.number);
   };
 
-  /**
-   * BUSCA PROFUNDA DE SÉRIE
-   * Ao clicar, busca o item completo no banco para garantir que episódios/seasons existam.
-   */
   const openItem = async (item: ContentItem) => {
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);
