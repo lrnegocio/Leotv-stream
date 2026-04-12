@@ -79,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v153
+ * BUSCA DE CONTEÚDO SOBERANA v154
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -111,8 +111,8 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 }
 
 /**
- * SALVAMENTO BLINDADO v153
- * Troca OBRIGATÓRIA de .ts para .m3u8 no banco para compatibilidade total.
+ * SALVAMENTO BLINDADO v154
+ * Conversão OBRIGATÓRIA de .ts para .m3u8 no banco para compatibilidade total.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {

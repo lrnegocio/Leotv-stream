@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, MessageSquare, RefreshCcw, Terminal, ListPlus } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
@@ -64,13 +64,14 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // EXTRAÇÃO AGRESSIVA DE LINK NA MESMA LINHA
+          // EXTRAÇÃO INTELIGENTE DE LINK NA MESMA LINHA OU LINHA SEGUINTE
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
           let extractedUrl = inlineUrlMatch ? inlineUrlMatch[1] : "";
           
-          // Limpeza do nome caso o link esteja grudado
           if (rawName.includes('http')) {
-            rawName = rawName.split('http')[0].trim();
+            const parts = rawName.split('http');
+            rawName = parts[0].trim();
+            if (!extractedUrl) extractedUrl = 'http' + parts[1].trim();
           }
 
           let targetGenre = "LÉO TV AO VIVO";
@@ -114,7 +115,6 @@ export default function SettingsPage() {
           };
 
           if (extractedUrl) {
-             // CORREÇÃO: Força .m3u8 no salvamento do Terminal
              let finalUrl = extractedUrl;
              if (finalUrl.toLowerCase().endsWith('.ts')) finalUrl = finalUrl.substring(0, finalUrl.length-3) + '.m3u8';
              await saveContent({ ...currentItem, streamUrl: finalUrl });
@@ -192,7 +192,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="flex gap-4">
-                <Input value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 rounded-2xl border-white/10" maxLength={4} />
+                <input title="PIN Parental" value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 w-full rounded-2xl border border-white/10 outline-none focus:border-primary" maxLength={4} />
                 <Button onClick={handleSaveSettings} disabled={saving} className="h-16 px-10 bg-primary font-black uppercase rounded-2xl shadow-xl">{saving ? <Loader2 className="animate-spin" /> : <Save />}</Button>
               </div>
             </CardContent>

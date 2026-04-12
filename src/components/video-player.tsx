@@ -26,7 +26,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // CONVERSÃO SOBERANA: Troca .ts por .m3u8 para ativar o manifest automático
+    // CONVERSÃO SOBERANA: Troca .ts por .m3u8 para ativar o manifest automático do fornecedor
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
@@ -45,9 +45,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // Se for link seguro (https) e não for HLS, tenta carregar direto
-    if (urlStr.startsWith('https:') && !isHLS) {
-      return { processedUrl: urlStr, type: 'video' };
+    // Se for link seguro (https) e for HLS, carrega direto pra economizar banda
+    if (urlStr.startsWith('https:') && isHLS) {
+      return { processedUrl: urlStr, type: 'hls' };
     }
 
     // Caso contrário, usa o proxy master
