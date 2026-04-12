@@ -79,7 +79,7 @@ export interface GameRanking {
 }
 
 /**
- * BUSCA DE CONTEÚDO SOBERANA v155
+ * BUSCA DE CONTEÚDO SOBERANA v156
  */
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -110,14 +110,9 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
   }
 }
 
-/**
- * SALVAMENTO SOBERANO v155
- * Mantém o link ORIGINAL do fornecedor para evitar quebras de sinal.
- */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    
     const cleanUrl = (u: string) => u ? u.trim() : "";
 
     const payload: any = {

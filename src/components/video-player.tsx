@@ -27,7 +27,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase();
     
-    // Tratamento Inteligente de Links
+    // Tratamento de XVideos (Embed Inteligente)
+    if (lowerUrl.includes('xvideos.com')) {
+      const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
+      if (videoIdMatch) {
+        const videoId = videoIdMatch[1].replace('video', '');
+        return { processedUrl: `https://www.xvideos.com/embedframe/${videoId}`, type: 'iframe' };
+      }
+    }
+
+    // Tratamento de YouTube
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -39,15 +48,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
 
-    // SINTONIA SOBERANA:
-    // 1. Se for HTTPS e M3U8, vai direto pra economizar banda.
-    // 2. Se for HTTP ou .TS, passa pelo Túnel Proxy para converter e proteger.
+    // Se for HTTPS e M3U8, vai direto
     if (urlStr.startsWith('https:') && isHLS) {
       return { processedUrl: urlStr, type: 'hls' };
     }
 
-    // Se for .ts, usamos o proxy e indicamos que ele deve ser tratado como HLS se possível,
-    // ou apenas fluxado. O segredo é que o proxy permite que o navegador ignore a Mixed Content.
+    // Se for .ts ou HTTP, passa pelo Túnel Master
     return { 
       processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
       type: (isHLS || isDirectTS) ? 'hls' : 'video' 
@@ -126,11 +132,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 hls.recoverMediaError();
                 break;
               default:
-                // Se o .m3u8 falhar, vamos tentar carregar como vídeo puro caso o servidor suporte
-                if (videoRef.current) {
-                  videoRef.current.src = processedUrl;
-                  videoRef.current.play().catch(() => {});
-                }
+                cleanup();
+                setError("Falha na sintonização do sinal HLS.");
                 break;
             }
           }
@@ -148,7 +151,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [processedUrl, type, cleanup]);
 
-  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup]);
+  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup, url]);
 
   return (
     <div 
@@ -173,6 +176,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       
       {type === 'iframe' ? (
         <iframe 
+          key={processedUrl}
           src={processedUrl!} 
           className="w-full h-full border-0 z-10" 
           allowFullScreen 
@@ -181,6 +185,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       ) : (
         <video 
+          key={processedUrl}
           ref={videoRef} 
           className="w-full h-full object-contain z-10" 
           autoPlay 
