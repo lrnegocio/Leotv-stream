@@ -27,14 +27,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!u) return { processedUrl: null, type: 'unknown' }
     let urlStr = u.trim()
 
-    // OBRIGATÓRIO v149: Conversão total de .ts para .m3u8 para navegadores
     if (urlStr.toLowerCase().endsWith('.ts')) {
       urlStr = urlStr.substring(0, urlStr.length - 3) + '.m3u8';
     } else if (urlStr.toLowerCase().includes('.ts?')) {
       urlStr = urlStr.replace(/\.ts\?/i, '.m3u8?');
     }
 
-    // Suporte a iframes colados direto
     if (urlStr.toLowerCase().includes('<iframe')) {
       const srcMatch = urlStr.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) urlStr = srcMatch[1];
@@ -42,7 +40,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = urlStr.toLowerCase();
     
-    // Suporte YouTube
     if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
       let ytId = "";
       const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -53,7 +50,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
     
-    // REGRA SOBERANA v149: Links HTTP precisam do Proxy para evitar Mixed Content e Bloqueios
     if (urlStr.startsWith('http:')) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
@@ -154,7 +150,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         videoRef.current.src = processedUrl; 
         videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
         videoRef.current.onerror = () => { 
-          setError("Este formato de sinal não é suportado pelo seu navegador."); 
+          setError("Sinal não suportado."); 
           setLoading(false); 
         };
       }
@@ -167,7 +163,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
+      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'max-h-[80vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
@@ -205,18 +201,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {(onNext || onPrev) && !error && (
         <div className={`absolute inset-0 z-40 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
-            <ChevronLeft className="h-8 w-8 text-white" />
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
+            <ChevronLeft className="h-7 w-7 text-white" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
-            <ChevronRight className="h-8 w-8 text-white" />
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
+            <ChevronRight className="h-7 w-7 text-white" />
           </button>
         </div>
       )}
 
       <div className={`absolute bottom-6 right-6 z-40 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <button onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
-          {isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}
+        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
+          {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>
       </div>
 

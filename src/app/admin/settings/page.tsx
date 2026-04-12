@@ -51,7 +51,6 @@ export default function SettingsPage() {
     const fixUrl = (u: string) => {
       if (!u) return "";
       let urlStr = u.trim();
-      // Troca automática soberana .ts -> .m3u8
       if (urlStr.toLowerCase().endsWith('.ts')) return urlStr.substring(0, urlStr.length - 3) + '.m3u8';
       if (urlStr.toLowerCase().includes('.ts?')) return urlStr.replace(/\.ts\?/i, '.m3u8?');
       return urlStr;
@@ -74,7 +73,6 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // Limpa o link do nome se ele vier colado (como no caso da Reggiana)
           if (rawName.includes('http')) {
             rawName = rawName.split('http')[0].trim();
           }
@@ -82,13 +80,20 @@ export default function SettingsPage() {
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          // MAPEAMENTO SOBERANO v149
           if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
           } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD') || groupStr.includes('4K') || groupStr.includes('UHD')) {
             targetGenre = "LÉO TV FILMES";
             targetType = 'movie';
+          } else if (groupStr.includes('ESPORTE') || groupStr.includes('SPORT') || groupStr.includes('FUTEBOL')) {
+            targetGenre = "LÉO TV ESPORTES";
+          } else if (groupStr.includes('PIADA') || groupStr.includes('HUMOR')) {
+            targetGenre = "LÉO TV PIADAS";
+          } else if (groupStr.includes('REEL') || groupStr.includes('TIKTOK')) {
+            targetGenre = "LÉO TV REELS";
+          } else if (groupStr.includes('CLIPE') || groupStr.includes('MUSICA') || groupStr.includes('BIS')) {
+            targetGenre = "LÉO TV VÍDEO CLIPES";
           } else if (groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('18+')) {
             targetGenre = "LÉO TV ADULTOS";
           } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO') || groupStr.includes('INFANTIL')) {
@@ -108,7 +113,6 @@ export default function SettingsPage() {
             isRestricted: targetGenre === "LÉO TV ADULTOS"
           };
 
-          // SUPORTE LINK NA MESMA LINHA v149 (Caso da Reggiana)
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i);
           if (inlineUrlMatch) {
              const finalUrl = fixUrl(inlineUrlMatch[1]);

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -16,11 +16,14 @@ const CATEGORIES = [
   { id: 'LIVE', name: 'CANAIS AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'FILMES MASTER', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SÉRIES' },
-  { id: 'MUSICA', name: 'LÉO TV MUSICAS', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV MUSICAS' },
-  { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
-  { id: 'KIDS', name: 'MUNDO INFANTIL', icon: Baby, color: 'bg-sky-500', genre: 'LÉO TV DESENHOS' },
-  { id: 'DORAMAS', name: 'DORAMAS', icon: Sparkles, color: 'bg-indigo-400', genre: 'LÉO TV DORAMAS' },
+  { id: 'ESPORTES', name: 'LÉO TV ESPORTES', icon: TrophyIcon, color: 'bg-orange-600', genre: 'LÉO TV ESPORTES' },
+  { id: 'CLIPES', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
+  { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Smile, color: 'bg-yellow-500', genre: 'LÉO TV PIADAS' },
+  { id: 'REELS', name: 'LÉO TV REELS', icon: Video, color: 'bg-cyan-500', genre: 'LÉO TV REELS' },
   { id: 'NOVELAS', name: 'NOVELAS', icon: Heart, color: 'bg-red-500', genre: 'LÉO TV NOVELAS' },
+  { id: 'DORAMAS', name: 'DORAMAS', icon: Sparkles, color: 'bg-indigo-400', genre: 'LÉO TV DORAMAS' },
+  { id: 'KIDS', name: 'MUNDO INFANTIL', icon: Baby, color: 'bg-sky-500', genre: 'LÉO TV DESENHOS' },
+  { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
   { id: 'GAMES', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
   { id: 'ADULT', name: 'ADULTOS', icon: Lock, color: 'bg-zinc-800', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
@@ -91,10 +94,6 @@ export default function HomeContent() {
     }
   };
 
-  /**
-   * UNIFICAÇÃO DE EPISÓDIOS v146
-   * Junta episódios de temporadas e episódios avulsos em uma lista única e funcional.
-   */
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
     const seasons = Array.isArray(item.seasons) ? item.seasons : [];
@@ -139,11 +138,11 @@ export default function HomeContent() {
                   setUnlockTarget(c.id === 'GAMES' ? 'GAMES' : 'ADULT');
                   setIsPinOpen(true);
                 } else setSelectedCat(c.id);
-              }} className="group relative h-48 rounded-3xl overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-sm">
+              }} className="group relative h-40 rounded-3xl overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-sm">
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className={`p-4 rounded-2xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
-                  <span className="text-base font-black uppercase tracking-tight">{c.name}</span>
-                  <span className="bg-muted px-3 py-0.5 rounded-full text-[9px] font-bold opacity-60">{(catCounts[c.id] || 0).toLocaleString()} Itens</span>
+                  <div className={`p-3.5 rounded-2xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-7 w-7" /></div>
+                  <span className="text-sm font-black uppercase tracking-tight">{c.name}</span>
+                  <span className="bg-muted px-3 py-0.5 rounded-full text-[8px] font-bold opacity-60">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
                 </div>
               </button>
             ))}
@@ -167,7 +166,7 @@ export default function HomeContent() {
       </main>
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-        <DialogContent className="max-w-screen-2xl bg-black p-0 border-0 rounded-none md:rounded-3xl overflow-hidden shadow-2xl">
+        <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-3xl overflow-hidden shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>

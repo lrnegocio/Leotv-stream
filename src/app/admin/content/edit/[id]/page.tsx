@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -77,7 +78,6 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
-    // CORREÇÃO: Removido directStreamUrl que causava erro no banco
     const success = await saveContent({
       ...formData,
       episodes: (formData.type === 'series') ? episodes : null,
@@ -89,7 +89,7 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O Banco de Dados recusou a atualização. Verifique as colunas." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O Banco de Dados recusou a atualização." })
     }
   }
 
@@ -142,10 +142,11 @@ export default function EditContentPage() {
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
                     <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
                     <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
                     <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
-                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
                     <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>

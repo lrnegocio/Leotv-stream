@@ -25,7 +25,6 @@ export default function ContentManagementPage() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
   const [isDeleting, setIsDeleting] = React.useState(false)
   
-  // Edição em Massa
   const [isBulkEditing, setIsBulkEditing] = React.useState(false)
   const [bulkUpdates, setBulkUpdates] = React.useState({ genre: "", isRestricted: false })
 
@@ -72,7 +71,6 @@ export default function ContentManagementPage() {
     if (selectedIds.length === 0) return
     setIsDeleting(true)
     
-    // Prepara o objeto de update
     const updates: any = {}
     if (bulkUpdates.genre) updates.genre = bulkUpdates.genre
     updates.isRestricted = bulkUpdates.isRestricted
@@ -175,23 +173,23 @@ export default function ContentManagementPage() {
         </div>
       )}
 
-      {/* Dialog para Edição em Massa */}
       <Dialog open={isBulkEditing} onOpenChange={setIsBulkEditing}>
         <DialogContent className="max-w-md bg-card border-white/10 rounded-[2rem] p-8 shadow-2xl">
           <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem em Massa ({selectedIds.length})</DialogTitle></DialogHeader>
           <div className="space-y-6 py-4">
              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Nova Categoria/Genre (Opcional)</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">Nova Categoria (Opcional)</Label>
                 <Select value={bulkUpdates.genre} onValueChange={v => setBulkUpdates({...bulkUpdates, genre: v})}>
                   <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue placeholder="Manter atual" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
                     <SelectItem value="LÉO TV SERIES">LÉO TV SERIES</SelectItem>
+                    <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
                     <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
                     <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
-                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
                     <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
@@ -240,7 +238,7 @@ export default function ContentManagementPage() {
       </Dialog>
 
       <Dialog open={!!activeEpisode} onOpenChange={() => setActiveEpisode(null)}>
-        <DialogContent className="max-w-6xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
           {activeEpisode && <VideoPlayer url={activeEpisode.url} title={activeEpisode.title} id={activeEpisode.id} />}
         </DialogContent>
       </Dialog>
