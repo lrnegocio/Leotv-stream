@@ -101,7 +101,16 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    const cleanUrl = (u: string) => u ? u.trim() : "";
+    const cleanUrl = (u: string) => {
+      if (!u) return "";
+      let res = u.trim();
+      // Troca automática .ts para .m3u8 como solicitado pelo Mestre Léo
+      if (res.toLowerCase().endsWith('.ts')) {
+        res = res.substring(0, res.length - 3) + '.m3u8';
+      }
+      return res;
+    };
+
     const payload: any = {
       id, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
@@ -121,6 +130,18 @@ export async function saveContent(item: Partial<ContentItem>) {
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
+}
+
+export async function getRemoteUsers(): Promise<User[]> {
+  try {
+    // Busca simples para evitar erros de coluna
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) throw error;
+    return data || [];
+  } catch (e) { 
+    console.error("Erro Supabase GetUsers:", e);
+    throw e; // Re-throw para o frontend mostrar o erro real
+  }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -253,15 +274,15 @@ export async function getTotalContentCount(): Promise<number> {
 
 export async function getContentById(id: string): Promise<ContentItem | null> {
   try {
-    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    if (!data) return null;
+    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    if (error || !data) return null;
     return {
       ...data,
       streamUrl: data.streamUrl || data["streamUrl"] || "",
       imageUrl: data.imageUrl || data["imageUrl"] || "",
       isRestricted: !!(data.isRestricted || data["isRestricted"]),
-      episodes: Array.isArray(item.episodes) ? item.episodes : [],
-      seasons: Array.isArray(item.seasons) ? item.seasons : []
+      episodes: Array.isArray(data.episodes) ? data.episodes : [],
+      seasons: Array.isArray(data.seasons) ? data.seasons : []
     };
   } catch (e) { return null; }
 }
@@ -273,9 +294,16 @@ export async function bulkUpdateContent(ids: string[], updates: any) { try { con
 
 export async function saveUser(user: Partial<User>) {
   try {
+    let finalId = user.id;
+    // Se for novo ou editado por PIN, tenta achar o ID existente para evitar erro de duplicata
+    if (user.pin) {
+      const { data: existing } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
+      if (existing) finalId = existing.id;
+    }
+
     const payload = {
-      id: user.id,
-      pin: user.pin,
+      id: finalId || "user_" + Date.now() + Math.random().toString(36).substring(7),
+      pin: user.pin?.trim().toUpperCase(),
       role: user.role || 'user',
       "subscriptionTier": user.subscriptionTier || 'monthly',
       "expiryDate": user.expiryDate,
@@ -327,7 +355,7 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 ✅ *URL:* http://${domain}
 
 📡 *LINKS DIRETOS (M3U):*
-🔹 http://${domain}/api/playlist?pin=${pin}
+🔹 http://${domain}/api/playlist?username=${pin}&password=${pin}
 
 🍿 *Instale o Web App para a melhor experiência de cinema!*`;
 };

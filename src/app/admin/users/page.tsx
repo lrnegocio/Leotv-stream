@@ -39,7 +39,8 @@ export default function UserManagementPage() {
       const data = await getRemoteUsers()
       setUsers(data)
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro de conexão Master." })
+      console.error("Erro ao carregar PINs:", err);
+      toast({ variant: "destructive", title: "Erro de conexão Master.", description: "Verifique as chaves do Supabase na Netlify." })
     } finally {
       setLoading(false)
     }
@@ -69,15 +70,13 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // REGRA SOBERANA: Se estamos editando, usamos o ID existente. Se for novo, mas o PIN já existir na lista, pegamos o ID dele para atualizar em vez de criar duplicado.
-    const existingByPin = users.find(u => u.pin === newUser.pin.toUpperCase().trim());
-    const finalId = editingUserId || existingByPin?.id || "user_" + Date.now() + Math.random().toString(36).substring(7);
-    const existingUser = users.find(u => u.id === finalId);
+    // Busca usuário atual para manter campos
+    const existingUser = users.find(u => u.pin === newUser.pin.toUpperCase().trim() || u.id === editingUserId);
     
     const userData: Partial<User> = {
-      id: finalId,
+      id: editingUserId || existingUser?.id,
       pin: newUser.pin.toUpperCase().trim(),
-      role: (finalId === 'master' || newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
+      role: (newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || null,
       maxScreens: parseInt(newUser.screens) || 1,
@@ -183,7 +182,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.sort((a,b) => b.id.localeCompare(a.id)).map((u) => {
+              {filteredUsers.sort((a,b) => (b.created_at || '').localeCompare(a.created_at || '')).map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
