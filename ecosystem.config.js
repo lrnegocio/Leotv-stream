@@ -8,10 +8,10 @@ module.exports = {
       NODE_ENV: "production",
       PORT: 3000
     },
-    // Otimizado para 1 Core e 2GB de RAM
+    // Otimizado para 1 Core e 1GB de RAM (Configuração de Entrada)
     instances: 1, 
     exec_mode: "fork",
-    max_memory_restart: "600M", // Reinicia se passar de 600MB para não travar a VPS
+    max_memory_restart: "450M", // Reinicia se passar de 450MB para garantir que a VPS de 1GB não trave
     autorestart: true,
     watch: false,
     exp_backoff_restart_delay: 100
