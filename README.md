@@ -1,30 +1,26 @@
 
 # Léo TV Stream - O Sistema Master (Edição VPS AlmaLinux 9)
 
-Seu sistema está pronto. Siga os passos abaixo no seu Putty para colocar o site no ar AGORA:
+Seu sistema está quase online. Siga os passos abaixo no seu Putty para abrir o site para o mundo:
 
 ### 🛠️ 1. Abertura de Firewall (IMPORTANTE PARA O SITE ABRIR):
+Cole estes comandos um por um e dê Enter:
 ```bash
-# Permite que o site seja visto no seu IP
+# Permite tráfego na porta 80 (HTTP)
+firewall-cmd --permanent --add-port=80/tcp
 firewall-cmd --permanent --add-service=http
 firewall-cmd --reload
 ```
 
-### 📦 2. Ativação do Sistema:
+### 📦 2. Atualização e Ativação do Sistema:
+Sempre que fizer mudanças no Firebase Studio, rode isso no Putty:
 ```bash
 # Entre na pasta do projeto
 cd ~/leotv
 
-# Dê permissão e rode o deploy
+# Dê permissão e rode o deploy (Ele agora limpa conflitos sozinho)
 chmod +x deploy.sh
 ./deploy.sh
-```
-
-### ♻️ 3. Ativação do Boot Automático:
-```bash
-pm2 startup
-# (Copie a linha que o comando acima gerar e cole no terminal)
-pm2 save
 ```
 
 ---

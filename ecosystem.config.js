@@ -3,7 +3,7 @@ module.exports = {
   apps : [{
     name: "leotv-master",
     script: "npm",
-    args: "start",
+    args: "start -- -p 80",
     env: {
       NODE_ENV: "production",
       PORT: 80
