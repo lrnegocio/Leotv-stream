@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -14,17 +14,16 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER SOBERANO v171 - MOTOR INJETOR CANVA ULTRA
- * Adaptado para VPS Linux. Abre .TS, .M3U8, .MP4 e links de sites sem distinção.
+ * PLAYER SOBERANO v175 - MOTOR COM FAILOVER AUTOMÁTICO
+ * Se o link expirar, ele avisa o cliente de forma profissional.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
+  const [error, setError] = React.useState<{type: string, msg: string} | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
-  const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
 
   const cleanup = React.useCallback(() => {
@@ -47,10 +46,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true)
 
     const lowerUrl = url.trim().toLowerCase()
-    
-    // REGRA DE OURO VPS: Qualquer link HTTP ou de sinal instável passa pelo Túnel Master
     let finalUrl = url.trim()
-    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('blinder') || lowerUrl.includes('archive.org') || lowerUrl.includes('.ts')) {
+
+    // TÚNEL MASTER OBRIGATÓRIO PARA PROTEÇÃO E BYPASS
+    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('.ts') || lowerUrl.includes('blinder')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
@@ -59,6 +58,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
     try {
+      // Verificação de expiração via Proxy
+      if (finalUrl.startsWith('/api/proxy')) {
+        const check = await fetch(finalUrl, { method: 'HEAD' });
+        if (check.status === 401 || check.status === 403) {
+          setError({ type: 'EXPIRED', msg: 'Sinal em Manutenção Técnica. Por favor, tente outro canal ou aguarde a recalibragem.' });
+          setLoading(false);
+          return;
+        }
+      }
+
       if (isYouTube) {
         setLoading(false)
         return 
@@ -72,10 +81,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             lowLatencyMode: true,
             backBufferLength: 90,
             autoStartLoad: true,
-            startLevel: -1,
-            xhrSetup: (xhr: any) => {
-              xhr.withCredentials = false;
-            }
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current!)
@@ -89,30 +95,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           })
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) hls.recoverMediaError();
+            if (data.response?.code === 401) setError({ type: 'EXPIRED', msg: 'Acesso à fonte expirou.' });
           })
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play()
-            setLoading(false)
-          }
+          videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
       } else if (isMP4) {
         if (videoRef.current) {
           videoRef.current.src = finalUrl
-          videoRef.current.onloadeddata = () => {
-            videoRef.current?.play().catch(() => {
-              if (videoRef.current) videoRef.current.muted = true
-              videoRef.current?.play()
-            })
-            setLoading(false)
-          }
+          videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
         }
       } else {
         setLoading(false)
       }
     } catch (e) {
-      setError("Falha ao sintonizar sinal.")
+      setError({ type: 'FATAL', msg: "Falha ao sintonizar sinal." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -124,25 +122,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen()
-    } else {
-      document.exitFullscreen()
-    }
-  }
-
-  React.useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', handleFsChange)
-    return () => document.removeEventListener('fullscreenchange', handleFsChange)
-  }, [])
-
-  const handleMouseMove = () => {
-    setShowControls(true)
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (document.fullscreenElement) setShowControls(false)
-    }, 3000)
+    if (!document.fullscreenElement) containerRef.current.requestFullscreen()
+    else document.exitFullscreen()
   }
 
   const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be')
@@ -152,7 +133,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div 
       ref={containerRef}
-      onMouseMove={handleMouseMove}
+      onMouseMove={() => { setShowControls(true); }}
       className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen z-[9999]' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
@@ -163,14 +144,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-6">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-white font-bold uppercase text-xs mb-4">{error}</p>
-          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR DE NOVO</Button>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
+          {error.type === 'EXPIRED' ? <ShieldAlert className="h-16 w-16 text-amber-500 mb-6 animate-bounce" /> : <AlertCircle className="h-16 w-16 text-destructive mb-6" />}
+          <h3 className="text-white font-black uppercase italic text-xl mb-4">{error.type === 'EXPIRED' ? 'MANUTENÇÃO DE SINAL' : 'ERRO DE SINTONIA'}</h3>
+          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-8 max-w-xs mx-auto leading-relaxed">{error.msg}</p>
+          <div className="flex gap-4">
+             <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-8 h-12 rounded-xl">RECONECTAR</Button>
+             {onNext && <Button onClick={onNext} className="bg-primary text-white uppercase font-black text-[10px] px-8 h-12 rounded-xl">PRÓXIMO CANAL</Button>}
+          </div>
         </div>
       )}
       
-      {isIframe ? (
+      {isIframe && !error ? (
         <iframe 
           key={url}
           src={isYouTube ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : isXVideos ? `https://www.xvideos.com/embedframe/${url.match(/video\.([^/]+)/)?.[1] || url.match(/video(\d+)/)?.[1]}` : url}
@@ -180,14 +165,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           onLoad={() => setLoading(false)} 
         />
       ) : (
-        <video 
-          key={url}
-          ref={videoRef} 
-          className="w-full h-full object-contain z-10" 
-          autoPlay 
-          playsInline 
-          controls={!isFullscreen} 
-        />
+        !error && <video key={url} ref={videoRef} className="w-full h-full object-contain z-10" autoPlay playsInline controls={!isFullscreen} />
       )}
 
       {(onNext || onPrev) && !error && (
@@ -206,12 +184,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>
       </div>
-
-      {isFullscreen && showControls && (
-        <div className="absolute top-8 left-8 z-40 bg-black/40 backdrop-blur-xl px-6 py-2 rounded-2xl border border-white/10">
-          <p className="text-xs font-black uppercase italic text-white tracking-widest">{title}</p>
-        </div>
-      )}
     </div>
   )
 }
