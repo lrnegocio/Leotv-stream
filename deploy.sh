@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v181..."
+echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v182..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
