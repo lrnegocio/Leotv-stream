@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v184..."
+echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v185..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -15,11 +15,8 @@ git clean -fd
 echo "📥 SINCRONIZANDO COM O NÚCLEO GITHUB..."
 git pull origin main
 
-# Verifica se o NPM existe
-if ! command -v npm &> /dev/null
-then
-    export PATH=$PATH:/usr/local/bin:/usr/bin
-fi
+# Garante que o NPM e o PM2 estão no PATH
+export PATH=$PATH:/usr/local/bin:/usr/bin
 
 # Instala dependências de forma limpa
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
@@ -33,7 +30,6 @@ NODE_OPTIONS="--max-old-space-size=512" npm run build
 echo "♻️ REINICIANDO MOTORES NA PORTA 80..."
 pm2 delete leotv-master 2>/dev/null
 pm2 start ecosystem.config.js --update-env
-
 pm2 save
 
 echo "✅ SISTEMA LÉO TV ONLINE NO IP: 24.152.37.78"
