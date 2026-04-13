@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO ATUALIZAÇÃO SOBERANA NA VPS LINUX (ALMA/UBUNTU)..."
+echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v172..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -10,24 +10,16 @@ cd "$(dirname "$0")"
 echo "📥 SINCRONIZANDO COM O NÚCLEO GITHUB..."
 git pull origin main
 
-# Instala dependências de forma limpa
+# Instala dependências de forma limpa (sem gastar muita RAM)
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
-npm install --frozen-lockfile || npm install
+npm install --no-audit --no-fund
 
 # Build otimizado para produção
-echo "🏗️  CONSTRUINDO NÚCLEO MASTER LÉO TV..."
+echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
 npm run build
 
-# Reinicia ou inicia o processo no PM2 com configuração de cluster
-if pm2 list | grep -q "leotv-master"; then
-    echo "♻️  REINICIANDO MOTORES EM MODO CLUSTER..."
-    pm2 restart ecosystem.config.js --env production
-else
-    echo "⚡ INICIANDO SISTEMA PELA PRIMEIRA VEZ..."
-    pm2 start ecosystem.config.js --env production
-fi
+# Reinicia o processo no PM2
+echo "♻️ REINICIANDO MOTORES..."
+pm2 restart leotv-master --update-env
 
-# Salva a lista para ligar sozinho se a VPS reiniciar
-pm2 save
-
-echo "✅ SISTEMA LÉO TV v171 ONLINE E VOANDO NA VPS!"
+echo "✅ SISTEMA LÉO TV ONLINE E VOANDO NA VPS!"
