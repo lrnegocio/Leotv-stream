@@ -8,7 +8,7 @@ module.exports = {
       NODE_ENV: "production",
       PORT: 3000
     },
-    // MODO CLUSTER: Usa todos os núcleos do processador da VPS
+    // MODO CLUSTER: Usa todos os núcleos do processador da VPS para máxima velocidade
     instances: "max", 
     exec_mode: "cluster",
     max_memory_restart: "1G",

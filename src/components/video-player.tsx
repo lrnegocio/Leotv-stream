@@ -14,9 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER SOBERANO v169 - MOTOR INJETOR CANVA
- * Projetado para nunca dar tela branca. 
- * Abre .TS, .M3U8, .MP4 e links de sites (YouTube/XVideos) sem distinção.
+ * PLAYER SOBERANO v171 - MOTOR INJETOR CANVA ULTRA
+ * Adaptado para VPS Linux. Abre .TS, .M3U8, .MP4 e links de sites sem distinção.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -49,9 +48,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = url.trim().toLowerCase()
     
-    // REGRA DE OURO: Links HTTP ou de servidores instáveis passam pelo Túnel VPS
+    // REGRA DE OURO VPS: Qualquer link HTTP ou de sinal instável passa pelo Túnel Master
     let finalUrl = url.trim()
-    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('blinder') || lowerUrl.includes('archive.org')) {
+    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('blinder') || lowerUrl.includes('archive.org') || lowerUrl.includes('.ts')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
@@ -62,7 +61,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     try {
       if (isYouTube) {
         setLoading(false)
-        return // Iframe direto no render
+        return 
       }
 
       if (isHLS) {
@@ -72,6 +71,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 90,
+            autoStartLoad: true,
+            startLevel: -1,
             xhrSetup: (xhr: any) => {
               xhr.withCredentials = false;
             }
@@ -87,10 +88,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-            if (data.fatal) {
-              console.warn("Tentando recuperação de sinal...");
-              hls.recoverMediaError();
-            }
+            if (data.fatal) hls.recoverMediaError();
           })
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
@@ -111,11 +109,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           }
         }
       } else {
-        // MODO IFRAME (SITES E EMBEDS)
         setLoading(false)
       }
     } catch (e) {
-      setError("Erro ao sintonizar canal.")
+      setError("Falha ao sintonizar sinal.")
       setLoading(false)
     }
   }, [url, cleanup])
