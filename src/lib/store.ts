@@ -80,9 +80,9 @@ export interface GameRanking {
 }
 
 /**
- * ENGINE SOBERANA v169
+ * ENGINE SOBERANA v170 - VPS READY
  * O Supabase gerencia o banco ilimitado de canais.
- * A VPS processa apenas os sinais ativos.
+ * A VPS processa os fluxos de vídeo em tempo real.
  */
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -95,9 +95,9 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     if (error) throw error;
     return (data || []).map(item => ({
       ...item,
-      streamUrl: item.streamUrl || item["streamUrl"] || "",
-      imageUrl: item.imageUrl || item["imageUrl"] || "",
-      isRestricted: !!(item.isRestricted || item["isRestricted"]),
+      streamUrl: item.streamUrl || "",
+      imageUrl: item.imageUrl || "",
+      isRestricted: !!item.isRestricted,
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
@@ -106,26 +106,18 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    let finalId = item.id;
-    if (!finalId) {
-      finalId = "str_" + Math.random().toString(36).substring(2, 12);
-    }
-
+    const finalId = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     const payload: any = {
       id: finalId, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
       description: item.description || "Sinal Master Léo Tv",
-      "imageUrl": item.imageUrl || "", 
-      "isRestricted": !!item.isRestricted,
-      "streamUrl": item.streamUrl || "",
-      "episodes": (item.type === 'series' || item.type === 'multi-season') 
-        ? (item.episodes || []) 
-        : [],
-      "seasons": (item.type === 'multi-season') 
-        ? (item.seasons || []) 
-        : []
+      imageUrl: item.imageUrl || "", 
+      isRestricted: !!item.isRestricted,
+      streamUrl: item.streamUrl || "",
+      episodes: (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
+      seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
@@ -147,7 +139,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (!devices.includes(deviceId)) {
       if (devices.length >= (user.maxScreens || 1)) devices = [deviceId]; 
       else devices.push(deviceId);
-      await supabase.from('users').update({ "activeDevices": devices }).eq('id', user.id);
+      await supabase.from('users').update({ activeDevices: devices }).eq('id', user.id);
     }
     return { user: { ...user, activeDevices: devices } };
   } catch (e) { return { error: "ERRO DE REDE" }; }
@@ -160,22 +152,21 @@ export async function saveUser(user: Partial<User>) {
       const { data: existing } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
       if (existing) finalId = existing.id;
     }
-
     const payload = {
       id: finalId || "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin: user.pin?.trim().toUpperCase(),
       role: user.role || 'user',
-      "subscriptionTier": user.subscriptionTier || 'monthly',
-      "expiryDate": user.expiryDate,
-      "maxScreens": user.maxScreens || 1,
-      "activeDevices": user.activeDevices || [],
-      "isBlocked": !!user.isBlocked,
-      "isAdultEnabled": !!user.isAdultEnabled,
-      "isGamesEnabled": !!user.isGamesEnabled,
-      "resellerId": user.resellerId,
-      "activatedAt": user.activatedAt,
-      "individualMessage": user.individualMessage,
-      "gamePoints": user.gamePoints || 0
+      subscriptionTier: user.subscriptionTier || 'monthly',
+      expiryDate: user.expiryDate,
+      maxScreens: user.maxScreens || 1,
+      activeDevices: user.activeDevices || [],
+      isBlocked: !!user.isBlocked,
+      isAdultEnabled: !!user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      resellerId: user.resellerId,
+      activatedAt: user.activatedAt,
+      individualMessage: user.individualMessage,
+      gamePoints: user.gamePoints || 0
     };
     const { error } = await supabase.from('users').upsert(payload);
     return !error;
@@ -196,32 +187,30 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 📅 *Plano:* ${tier.toUpperCase()}
 📱 *Telas:* ${screens}
 
-🌐 *ASSISTA PELO NAVEGADOR:*
+🌐 *ASSISTA PELO NAVEGADOR (TV/CELULAR):*
 🔗 http://${domain}/user/home
 
-➡️ *SMART TVS (SAMSUNG / LG / ROKU):*
-1️⃣ Instale o App: *IPTV SMARTERS*, *VIZZION PLAY* ou *BAY IPTV*
-2️⃣ Use seu Usuário e Senha acima.
-
 ➡️ *ANDROID (TV BOX / CELULAR):*
-🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*
+🔹 Baixe o App: *IPTV SMARTERS PRO* ou *XCIPTV*
 ✅ URL: \`http://${domain}\`
 ✅ Usuário: \`${pin}\`
 ✅ Senha: \`${pin}\`
+
+➡️ *SMART TVS (SAMSUNG / LG / ROKU):*
+1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
+2️⃣ Use seu Usuário e Senha acima.
 
 ⚠️ *TVs ANTIGAS (STB / SMART UP):*
 1️⃣ Vá em Configurações de Rede da sua TV.
 2️⃣ Mude o DNS para: \`5.161.46.209\`
 3️⃣ Abra o app e use seu PIN: \`${pin}\`
 
-📡 *LINKS DIRETOS:*
-🔹 *M3U:* http://${domain}/api/playlist?username=${pin}&password=${pin}
-🔹 *HLS:* http://${domain}/api/playlist?username=${pin}&password=${pin}&output=hls
+📡 *LINKS DIRETOS (M3U):*
+🔗 http://${domain}/api/playlist?username=${pin}&password=${pin}
 
 🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;
 };
 
-// Funções de apoio
 export async function getRemoteUsers(): Promise<User[]> { try { const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false }); return data || []; } catch (e) { return []; } }
 export async function validateResellerLogin(u: string, p: string) { try { const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO" }; } }
 export async function getRemoteResellers(): Promise<Reseller[]> { try { const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true }); return data || []; } catch (e) { return []; } }
@@ -240,3 +229,4 @@ export async function bulkRemoveContent(ids: string[]) { await supabase.from('co
 export async function bulkUpdateContent(ids: string[], updates: any) { await supabase.from('content').update(updates).in('id', ids); return true; }
 export async function getGameRankings() { return []; }
 export const cleanName = (n: string) => n.toUpperCase().trim();
+export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nOlá! Seu PIN *${p}* vence em *${d} dias*.\n\nPara não perder o sinal, realize a renovação agora! 📺`;

@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TUNEL MASTER SOBERANO v169 - Otimizado para VPS
- * Este túnel transforma links HTTP e sinais .TS em fluxos compatíveis com HTTPS e PWA.
- * Não consome espaço em disco, apenas redireciona o tráfego em tempo real.
+ * TUNEL MASTER SOBERANO v170 - VPS EDITION
+ * Otimizado para Master da Web (Linux). 
+ * Transmite fluxos .TS e .M3U8 sem carregar na RAM do servidor.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,12 +19,12 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // MÁSCARA MASTER: Envia cabeçalhos de alta compatibilidade
+    // MÁSCARA DE NAVEGADOR PROFISSIONAL
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // Referer dinâmico para evitar bloqueios de servidores como o do Blinder
+    // Evita bloqueios de referer
     try {
       const urlObj = new URL(targetUrl);
       requestHeaders.set('Referer', urlObj.origin);
@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
     }
 
     const responseHeaders = new Headers();
+    
+    // Repassa cabeçalhos vitais de vídeo
     const headersToCopy = [
       'content-type', 
       'content-length', 
@@ -56,31 +58,28 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // CORREÇÃO CRÍTICA DE MIME-TYPE PARA .TS E M3U8
+    // CORREÇÃO DE MIME-TYPE PARA IPTV
     const lowerTarget = targetUrl.toLowerCase();
-    if (lowerTarget.includes('.ts') || lowerTarget.includes('.mpegts')) {
+    if (lowerTarget.includes('.ts')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
     } else if (lowerTarget.includes('.m3u8')) {
       responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-    } else if (lowerTarget.includes('.mp4')) {
-      responseHeaders.set('Content-Type', 'video/mp4');
     }
 
-    // Liberação total de CORS para o PWA e Apps de IPTV
+    // LIBERAÇÃO TOTAL DE CORS
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    responseHeaders.set('Access-Control-Allow-Headers', '*');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
-    // Pipe de sinal: não armazena nada, apenas deixa o vídeo passar
+    // TRANSMISSÃO VIA STREAM (Não gasta RAM da VPS)
     return new Response(res.body, {
       status: res.status,
       headers: responseHeaders,
     });
 
   } catch (error: any) {
-    console.error("Erro no Túnel Master:", error);
+    console.error("Erro no Túnel VPS:", error);
     return new Response(null, { status: 500 });
   }
 }
