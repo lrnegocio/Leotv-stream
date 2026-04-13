@@ -43,7 +43,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // TÚNEL MASTER SOBERANO (Segredo do Canva para links HTTP e CORS)
+    // TÚNEL MASTER SOBERANO (Resolve links HTTP, Archive.org e Blinder)
     if (
       finalUrl.startsWith('http:') || 
       lowerUrl.includes('.ts') || 
@@ -91,7 +91,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         } else {
-          // Fallback se HLS falhar
           setLoading(false)
         }
       } else if (isMP4) {
@@ -100,10 +99,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
         }
       } else {
+        // MODO CANVAS: Se não identificou, tenta rodar como Iframe (Embed)
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar. Tente reconectar." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -131,7 +131,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Canal...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal...</p>
         </div>
       )}
 

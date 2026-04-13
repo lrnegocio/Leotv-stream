@@ -1,9 +1,9 @@
 
 # Léo TV Stream - O Sistema Master (Edição VPS AlmaLinux 9)
 
-Seu sistema está pronto para ser injetado na sua VPS. Siga os passos abaixo no seu Putty para corrigir o erro de 'npm não encontrado':
+Seu sistema está pronto. Siga os passos abaixo no seu Putty para colocar o site no ar AGORA:
 
-### 🛠️ 1. Correção da Instalação (Copie e cole no Putty):
+### 🛠️ 1. Correção e Instalação (Copie e cole no Putty):
 
 ```bash
 # Mate processos travados do instalador
@@ -17,13 +17,13 @@ dnf install -y nodejs npm git
 npm install -g pm2
 ```
 
-### 📦 2. Atualização e Injeção do Código:
+### 📦 2. Ativação do Sistema (IMPORTANTE):
 
 ```bash
-# Entre na pasta do projeto que você já clonou
+# Entre na pasta do projeto (Você já clonou, agora precisa entrar nela)
 cd ~/leotv
 
-# Dê permissão e rode o novo deploy
+# Dê permissão e rode o deploy
 chmod +x deploy.sh
 ./deploy.sh
 ```

@@ -175,25 +175,29 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 📅 *Plano:* ${tier.toUpperCase()}
 📱 *Telas:* ${screens}
 
-🌐 *ASSISTA PELO NAVEGADOR (TV/CELULAR):*
+🌐 *ASSISTA NO NAVEGADOR (Smart TV / Celular / PC):*
 🔗 http://${domain}/user/home
 
-➡️ *ANDROID (TV BOX / CELULAR):*
+➡️ *DISPOSITIVOS ANDROID (TV Box / Celular / Stick):*
 🔹 Baixe o App: *IPTV SMARTERS PRO* ou *XCIPTV*
-✅ URL: \`http://${domain}\`
+✅ Servidor: \`http://${domain}\`
 ✅ Usuário: \`${pin}\`
 ✅ Senha: \`${pin}\`
 
-➡️ *SMART TVS (SAMSUNG / LG / ROKU):*
-1️⃣ Instale o App: *BAY IPTV* ou *VIZZION PLAY*
-2️⃣ Use seu Usuário e Senha acima.
+➡️ *SMART TVS (SAMSUNG / LG):*
+🔹 Baixe o App: *VIZZION PLAY*, *BAY IPTV* ou *SSIPTV*
+✅ Use as informações de Servidor e PIN acima.
 
-⚠️ *TVs ANTIGAS (STB / SMART UP):*
-1️⃣ Vá em Configurações de Rede da sua TV.
+➡️ *APARELHOS ROKU:*
+🔹 Baixe o App: *IPTV SMARTERS*
+✅ Adicione sua lista com Servidor e PIN acima.
+
+⚠️ *TVs ANTIGAS (App STB ou SMART UP):*
+1️⃣ Vá em Configurações de Rede da TV.
 2️⃣ Mude o DNS para: \`5.161.46.209\`
 3️⃣ Abra o app e use seu PIN como Usuário e Senha.
 
-📡 *LINK DIRETO (M3U):*
+📡 *LINK DIRETO (LISTA M3U):*
 🔗 http://${domain}/api/playlist?username=${pin}&password=${pin}
 
 🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;
