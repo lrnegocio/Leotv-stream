@@ -116,9 +116,13 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const id = item.id || "str_" + Math.random().toString(36).substring(2, 12);
+    let finalId = item.id;
+    if (!finalId) {
+      finalId = "str_" + Math.random().toString(36).substring(2, 12);
+    }
+
     const payload: any = {
-      id, 
+      id: finalId, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
@@ -297,7 +301,7 @@ export async function bulkUpdateContent(ids: string[], updates: any) { try { con
 export async function saveUser(user: Partial<User>) {
   try {
     let finalId = user.id;
-    if (user.pin) {
+    if (user.pin && !finalId) {
       const { data: existing } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
       if (existing) finalId = existing.id;
     }
@@ -349,11 +353,6 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 ➡️ *SMART TVS (SAMSUNG / LG):*
 1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
 2️⃣ Use seu Usuário e Senha acima.
-
-➡️ *SMART TV ROKU:*
-1️⃣ Procure por: *IPTV SMARTERS*
-2️⃣ URL: \`http://${domain}\`
-3️⃣ Usuário e Senha: \`${pin}\`
 
 ➡️ *ANDROID (TV BOX / CELULAR):*
 🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*

@@ -2,9 +2,8 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, RefreshCcw } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { findAlternativeSource } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -21,176 +20,150 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [error, setError] = React.useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
-  const [currentUrl, setCurrentUrl] = React.useState(url)
-  const [isFallback, setIsFallback] = React.useState(false)
   const controlsTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const hlsRef = React.useRef<any>(null)
 
-  const sintonize = React.useCallback((u: string) => {
-    if (!u) return { processedUrl: null, type: 'unknown' }
-    let urlStr = u.trim()
-    const lowerUrl = urlStr.toLowerCase();
-    
-    // DETECÇÃO DE EMBEDS (IFRAMES)
-    if (lowerUrl.includes('xvideos.com')) {
-      const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
-      if (videoIdMatch) {
-        const videoId = videoIdMatch[1].replace('video', '').split('/')[0];
-        return { processedUrl: `https://www.xvideos.com/embedframe/${videoId}`, type: 'iframe' };
-      }
+  const cleanup = React.useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
     }
-
-    if (lowerUrl.includes('pornhub.com')) {
-      const phMatch = urlStr.match(/view_video\.php\?viewkey=([^&]+)/);
-      if (phMatch) return { processedUrl: `https://www.pornhub.com/embed/${phMatch[1]}`, type: 'iframe' };
+    const v = videoRef.current
+    if (v) {
+      v.pause()
+      v.removeAttribute('src')
+      v.load()
     }
-
-    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-      let ytId = "";
-      const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-      const match = urlStr.match(regExp);
-      ytId = (match && match[7] && match[7].length === 11) ? match[7] : "";
-      if (ytId) return { processedUrl: `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`, type: 'iframe' };
-    }
-
-    if (lowerUrl.includes('dailymotion.com')) {
-      const dId = urlStr.split('/').pop()?.split('_')[0];
-      if (dId) return { processedUrl: `https://www.dailymotion.com/embed/video/${dId}?autoplay=1`, type: 'iframe' };
-    }
-
-    // DETECÇÃO DE FORMATOS
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist') || lowerUrl.includes('.smil');
-    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov');
-    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpegts');
-
-    // REGRA SOBERANA: HTTP NO HTTPS PREVISA DE PROXY
-    if (urlStr.startsWith('http:')) {
-      return { 
-        processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-        type: isHLS || isTS ? 'hls' : 'video' 
-      };
-    }
-
-    if (isHLS || isTS) {
-      return { processedUrl: urlStr, type: 'hls' };
-    }
-
-    if (isMP4) {
-      return { processedUrl: urlStr, type: 'video' };
-    }
-
-    return { processedUrl: urlStr, type: 'video' };
   }, [])
 
-  const { processedUrl, type } = React.useMemo(() => sintonize(currentUrl), [currentUrl, sintonize])
+  const initPlayer = React.useCallback(async () => {
+    if (!url) return
+    cleanup()
+    setError(null)
+    setLoading(true)
 
-  const tryFallback = async () => {
-    setError("Sinal de origem instável. Buscando rota alternativa...");
-    const alt = await findAlternativeSource(title);
-    if (alt && alt !== currentUrl) {
-      setIsFallback(true);
-      setCurrentUrl(alt);
-    } else {
-      setError("Sinal fora do ar. Tente de novo em alguns instantes.");
+    const lowerUrl = url.trim().toLowerCase()
+    
+    // REGRA SOBERANA: HTTP PRECISA DE PROXY PARA RODAR NO HTTPS DA NETLIFY
+    let finalUrl = url.trim()
+    if (finalUrl.startsWith('http:')) {
+      finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
-  }
+
+    // LÓGICA ESTILO CANVA: DETECÇÃO DE TIPO
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist')
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
+    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
+    const isXVideos = lowerUrl.includes('xvideos.com')
+
+    try {
+      if (isYouTube) {
+        let vid = ""
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/
+        const match = url.match(regExp)
+        vid = (match && match[7] && match[7].length === 11) ? match[7] : ""
+        setLoading(false)
+        return // Renderizado via iframe no JSX
+      }
+
+      if (isXVideos) {
+        const videoIdMatch = url.match(/video\.([^/]+)/) || url.match(/video(\d+)/)
+        if (videoIdMatch) {
+          const videoId = videoIdMatch[1].replace('video', '').split('/')[0]
+          // XVideos via Embed para evitar erros de CORS
+          return 
+        }
+      }
+
+      if (isHLS) {
+        const Hls = (window as any).Hls
+        if (Hls && Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90
+          })
+          hls.loadSource(finalUrl)
+          hls.attachMedia(videoRef.current!)
+          hlsRef.current = hls
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            videoRef.current?.play().catch(() => {
+              if (videoRef.current) videoRef.current.muted = true
+              videoRef.current?.play()
+            })
+            setLoading(false)
+          })
+          hls.on(Hls.Events.ERROR, (_: any, data: any) => {
+            if (data.fatal) {
+              setError("Sinal instável na origem.")
+              setLoading(false)
+            }
+          })
+        } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
+          videoRef.current.src = finalUrl
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play()
+            setLoading(false)
+          }
+        }
+      } else if (isMP4) {
+        if (videoRef.current) {
+          videoRef.current.src = finalUrl
+          videoRef.current.onloadeddata = () => {
+            videoRef.current?.play().catch(() => {
+              if (videoRef.current) videoRef.current.muted = true
+              videoRef.current?.play()
+            })
+            setLoading(false)
+          }
+          videoRef.current.onerror = () => {
+            setError("Erro ao carregar vídeo MP4.")
+            setLoading(false)
+          }
+        }
+      } else {
+        // MODO IFRAME (EMBED GENÉRICO)
+        setLoading(false)
+      }
+    } catch (e) {
+      setError("Erro ao sintonizar canal.")
+      setLoading(false)
+    }
+  }, [url, cleanup])
+
+  React.useEffect(() => {
+    initPlayer()
+    return () => cleanup()
+  }, [initPlayer, cleanup])
 
   const toggleFullscreen = () => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current.requestFullscreen()
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen()
     }
   }
 
   React.useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
+    const handleFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handleFsChange)
+    return () => document.removeEventListener('fullscreenchange', handleFsChange)
+  }, [])
 
   const handleMouseMove = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    setShowControls(true)
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
     controlsTimeoutRef.current = setTimeout(() => {
-      if (document.fullscreenElement) setShowControls(false);
-    }, 3000);
+      if (document.fullscreenElement) setShowControls(false)
+    }, 3000)
   }
 
-  const cleanup = React.useCallback(() => {
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    const v = videoRef.current;
-    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
-  }, []);
-
-  const init = React.useCallback(async () => {
-    if (!processedUrl) return;
-    if (type === 'iframe') { setLoading(false); return; }
-    
-    cleanup();
-    setError(null);
-    setLoading(true);
-
-    if (type === 'hls') {
-      const Hls = (window as any).Hls;
-      if (Hls && Hls.isSupported()) {
-        const hls = new Hls({ 
-          enableWorker: true, 
-          lowLatencyMode: true,
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
-          manifestLoadingMaxRetry: 5,
-          levelLoadingMaxRetry: 5
-        });
-        hls.loadSource(processedUrl);
-        hls.attachMedia(videoRef.current!);
-        hlsRef.current = hls;
-        
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current?.play().catch(() => { 
-            if (videoRef.current) videoRef.current.muted = true; 
-            videoRef.current?.play(); 
-          });
-          setLoading(false);
-        });
-
-        hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                cleanup();
-                tryFallback();
-                break;
-            }
-          }
-        });
-      } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
-        videoRef.current.src = processedUrl;
-        videoRef.current.onerror = () => tryFallback();
-        setLoading(false);
-      }
-    } else {
-      if (videoRef.current) { 
-        videoRef.current.src = processedUrl; 
-        videoRef.current.onloadeddata = () => { 
-          videoRef.current?.play().catch(() => {
-            if (videoRef.current) videoRef.current.muted = true;
-            videoRef.current?.play();
-          }); 
-          setLoading(false); 
-        };
-        videoRef.current.onerror = () => tryFallback();
-      }
-    }
-  }, [processedUrl, type, cleanup]);
-
-  React.useEffect(() => { init(); return () => cleanup(); }, [init, cleanup, currentUrl]);
+  // IDENTIFICAÇÃO DE IFRAME PARA O RENDER
+  const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be')
+  const isXVideos = url.toLowerCase().includes('xvideos.com')
+  const isDailymotion = url.toLowerCase().includes('dailymotion.com')
+  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || isYouTube || isXVideos || isDailymotion
 
   return (
     <div 
@@ -201,9 +174,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">
-            {isFallback ? 'Sintonizando Rota Alternativa...' : 'Sintonizando Rede Léo TV...'}
-          </p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Rede Léo TV...</p>
         </div>
       )}
 
@@ -211,17 +182,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-6">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <p className="text-white font-bold uppercase text-xs mb-4">{error}</p>
-          <div className="flex gap-2">
-            <Button onClick={init} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR DE NOVO</Button>
-            <Button onClick={tryFallback} variant="outline" className="border-emerald-500/40 text-emerald-500 uppercase font-black text-[10px]">BUSCAR ALTERNATIVA</Button>
-          </div>
+          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px]">TENTAR DE NOVO</Button>
         </div>
       )}
       
-      {type === 'iframe' ? (
+      {isIframe ? (
         <iframe 
-          key={processedUrl}
-          src={processedUrl!} 
+          key={url}
+          src={isYouTube ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : isXVideos ? `https://www.xvideos.com/embedframe/${url.match(/video\.([^/]+)/)?.[1] || url.match(/video(\d+)/)?.[1]}` : url}
           className="w-full h-full border-0 z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
@@ -229,7 +197,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       ) : (
         <video 
-          key={processedUrl}
+          key={url}
           ref={videoRef} 
           className="w-full h-full object-contain z-10" 
           autoPlay 
@@ -258,7 +226,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isFullscreen && showControls && (
         <div className="absolute top-8 left-8 z-40 bg-black/40 backdrop-blur-xl px-6 py-2 rounded-2xl border border-white/10">
           <p className="text-xs font-black uppercase italic text-white tracking-widest">{title}</p>
-          {isFallback && <p className="text-[8px] font-black text-emerald-500 uppercase mt-1">SINAL DE CONTINGÊNCIA ATIVO</p>}
         </div>
       )}
     </div>

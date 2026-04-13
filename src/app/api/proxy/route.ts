@@ -14,22 +14,30 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // MÁSCARA MASTER: Oculta a origem real enviando um User-Agent genérico
+    // MÁSCARA MASTER: Envia cabeçalhos que enganam o servidor de origem
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    requestHeaders.set('Referer', new URL(targetUrl).origin);
+    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Connection', 'keep-alive');
     
+    // Referer dinâmico baseado na origem do link
+    try {
+      const urlObj = new URL(targetUrl);
+      requestHeaders.set('Referer', urlObj.origin);
+      requestHeaders.set('Origin', urlObj.origin);
+    } catch (e) {}
+
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
       redirect: 'follow',
     });
     
-    if (res.status === 401 || res.status === 403) {
-      return new Response("ACESSO EXPIRADO NA ORIGEM", { status: 401 });
+    if (!res.ok) {
+      return new Response(`Erro na Origem: ${res.status}`, { status: res.status });
     }
 
     const responseHeaders = new Headers();
-    const allowedHeaders = [
+    const headersToCopy = [
       'content-type', 
       'content-length', 
       'content-range', 
@@ -38,22 +46,21 @@ export async function GET(req: NextRequest) {
     ];
     
     res.headers.forEach((v, k) => {
-      const lowerKey = k.toLowerCase();
-      if (allowedHeaders.includes(lowerKey)) responseHeaders.set(k, v);
+      if (headersToCopy.includes(k.toLowerCase())) {
+        responseHeaders.set(k, v);
+      }
     });
 
+    // CORREÇÃO DE CONTENT-TYPE PARA SINAL DE TV
     const lowerTarget = targetUrl.toLowerCase();
-    
-    // FORÇAR CONTENT-TYPE CORRETO
-    if (lowerTarget.includes('.m3u8')) {
-      responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-    } else if (lowerTarget.includes('.ts') || lowerTarget.includes('.mpegts')) {
+    if (lowerTarget.includes('.ts') || lowerTarget.includes('.mpegts')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
-    } else if (lowerTarget.includes('.mp4')) {
-      responseHeaders.set('Content-Type', 'video/mp4');
+    } else if (lowerTarget.includes('.m3u8')) {
+      responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
     }
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
     if (!res.body) return new Response(null, { status: res.status, headers: responseHeaders });
 
@@ -63,6 +70,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    return new Response(null, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
+    console.error("Proxy Error:", error);
+    return new Response(null, { status: 500 });
   }
 }
