@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,10 +14,13 @@ import { toast } from "@/hooks/use-toast"
 import { saveContent, ContentType, cleanName, Episode, Season } from "@/lib/store"
 import Link from "next/link"
 import Image from "next/image"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { VideoPlayer } from "@/components/video-player"
 
 export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
+  const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
   const [formData, setFormData] = React.useState({
     title: "",
@@ -154,7 +157,10 @@ export default function NewContentPage() {
             <div className="grid gap-6 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Link Master Soberano</h3>
-                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+                <div className="flex gap-2">
+                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
+                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formData.streamUrl, title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -189,11 +195,14 @@ export default function NewContentPage() {
                         </div>
                         <div className="space-y-2">
                            <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
-                           <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
-                              const newEps = [...episodes]
-                              newEps[idx].streamUrl = e.target.value
-                              setEpisodes(newEps)
-                            }} className="h-8 bg-black/40 font-mono text-[9px]" />
+                           <div className="flex gap-2">
+                             <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
+                                const newEps = [...episodes]
+                                newEps[idx].streamUrl = e.target.value
+                                setEpisodes(newEps)
+                              }} className="h-10 bg-black/40 font-mono text-[9px] flex-1" />
+                             <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4" /></Button>
+                           </div>
                         </div>
                       </div>
                     ))}
@@ -238,6 +247,7 @@ export default function NewContentPage() {
                                      newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                      setSeasons(newSeasons)
                                   }} className="flex-1 h-8 bg-black/40 text-[10px]" />
+                                  <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                                   <Button type="button" variant="ghost" size="icon" onClick={() => {
                                     const newSeasons = [...seasons]
                                     newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
@@ -290,6 +300,13 @@ export default function NewContentPage() {
           </Button>
         </div>
       </form>
+
+      <Dialog open={!!testVideo} onOpenChange={() => setTestVideo(null)}>
+        <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+          <DialogHeader className="sr-only"><DialogTitle>Teste de Sinal</DialogTitle></DialogHeader>
+          {testVideo && <VideoPlayer url={testVideo.url} title={testVideo.title} />}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
