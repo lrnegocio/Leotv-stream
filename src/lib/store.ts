@@ -52,6 +52,10 @@ export interface Reseller {
   totalSold: number;
   isBlocked: boolean;
   created_at?: string;
+  cpf?: string;
+  phone?: string;
+  email?: string;
+  birthDate?: string;
 }
 
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
