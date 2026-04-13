@@ -78,6 +78,7 @@ export interface User {
   created_at?: string;
 }
 
+// FUNÇÕES DE EXPORTAÇÃO MESTRA - RECALIBRAGEM v188
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -115,6 +116,21 @@ export async function saveContent(item: Partial<ContentItem>) {
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
+}
+
+export async function removeContent(id: string) { 
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
+}
+
+export async function bulkRemoveContent(ids: string[]) {
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
+}
+
+export async function bulkUpdateContent(ids: string[], updates: any) {
+  const { error } = await supabase.from('content').update(updates).in('id', ids);
+  return !error;
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -166,60 +182,87 @@ export async function saveUser(user: Partial<User>) {
   } catch (e) { return false; }
 }
 
+export async function getRemoteUsers(): Promise<User[]> {
+  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+  return data || [];
+}
+
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
+}
+
+export async function getRemoteResellers(): Promise<Reseller[]> {
+  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+  return data || [];
+}
+
+export async function saveReseller(r: Partial<Reseller>) {
+  const { error } = await supabase.from('resellers').upsert(r);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
+}
+
+export async function validateResellerLogin(u: string, p: string) {
+  const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
+  return data ? { reseller: data } : { error: "INVÁLIDO" };
+}
+
+export async function getRemoteGames(): Promise<GameItem[]> {
+  const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
+  return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre }));
+}
+
+export async function saveGame(g: any) {
+  const { error } = await supabase.from('content').upsert({ id: g.id || "game_"+Date.now(), title: g.title.toUpperCase(), genre: `ARENA: ${g.console}`, streamUrl: g.url, description: 'GAME', imageUrl: g.imageUrl, isRestricted: true });
+  return !error;
+}
+
+export async function removeGame(id: string) {
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
+}
+
+export async function getGlobalSettings() {
+  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+  return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
+}
+
+export async function updateGlobalSettings(v: any) {
+  const { error } = await supabase.from('settings').upsert({ key: 'global', value: v });
+  return !error;
+}
+
+export async function getCategoryCount(g: string) {
+  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
+  return count || 0;
+}
+
+export async function getTopContent(l = 10) {
+  const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
+  return data || [];
+}
+
+export async function getTotalContentCount() {
+  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
+  return count || 0;
+}
+
+export async function getContentById(id: string) {
+  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+  return data;
+}
+
 export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
+export const cleanName = (n: string) => n.toUpperCase().trim();
+export async function getGameRankings() { return []; }
+export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nOlá! Seu PIN *${p}* vence em *${d} dias*.\n\nPara não perder o sinal, realize a renovação agora! 📺`;
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  
-  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* 
-
-🚀 *DADOS DE ACESSO MASTER:*
-👤 *Usuário:* \`${pin}\`
-🔐 *Senha:* \`${pin}\`
-📅 *Plano:* ${tier.toUpperCase()}
-📱 *Telas:* ${screens}
-
-🌐 *ASSISTA NO NAVEGADOR (Smart TV / Celular / PC):*
-🔗 http://${domain}/user/home
-
-➡️ *DISPOSITIVOS ANDROID (TV Box / Celular / Stick):*
-🔹 Baixe o App: *IPTV SMARTERS PRO* ou *XCIPTV*
-✅ Servidor: \`http://${domain}\`
-✅ Usuário: \`${pin}\`
-✅ Senha: \`${pin}\`
-
-➡️ *SMART TVS (SAMSUNG / LG):*
-🔹 Baixe o App: *VIZZION PLAY*, *BAY IPTV* ou *SSIPTV*
-✅ Use as informações de Servidor e PIN acima.
-
-➡️ *APARELHOS ROKU:*
-🔹 Baixe o App: *IPTV SMARTERS*
-✅ Adicione sua lista com Servidor e PIN acima.
-
-📡 *LINK DIRETO (LISTA M3U):*
-🔗 http://${domain}/api/playlist?username=${pin}&password=${pin}
-
-🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;
+  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* \n\n🚀 *DADOS DE ACESSO MASTER:*\n👤 *Usuário:* \`${pin}\`\n🔐 *Senha:* \`${pin}\`\n📅 *Plano:* ${tier.toUpperCase()}\n📱 *Telas:* ${screens}\n\n🌐 *ASSISTA NO NAVEGADOR:*\n🔗 http://${domain}\n\n➡️ *ANDROID (TV Box / Celular):*\n🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*\n✅ Servidor: \`http://${domain}\`\n\n➡️ *SMART TV (SAMSUNG / LG):*\n🔹 App: *BAY IPTV* ou *BAY TV*\n\n➡️ *ROKU:*\n🔹 App: *IPTV SMARTERS*\n\n🍿 *Instale o Web App no seu aparelho!*`;
 };
-
-export async function getRemoteUsers(): Promise<User[]> { try { const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false }); return data || []; } catch (e) { return []; } }
-export async function validateResellerLogin(u: string, p: string) { try { const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO" }; } }
-export async function getRemoteResellers(): Promise<Reseller[]> { try { const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true }); return data || []; } catch (e) { return []; } }
-export async function saveReseller(r: Partial<Reseller>) { try { const { error } = await supabase.from('resellers').upsert(r); return !error; } catch (e) { return false; } }
-export async function getGlobalSettings() { try { const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle(); return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" }; } catch (e) { return { parentalPin: "1234", announcement: "" }; } }
-export async function updateGlobalSettings(v: any) { try { const { error } = await supabase.from('settings').upsert({ key: 'global', value: v }); return !error; } catch (e) { return false; } }
-export async function getCategoryCount(g: string) { try { const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()); return count || 0; } catch (e) { return 0; } }
-export async function getRemoteGames(): Promise<GameItem[]> { try { const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %'); return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre })); } catch (e) { return []; } }
-export async function saveGame(g: any) { try { const { error } = await supabase.from('content').upsert({ id: g.id || "game_"+Date.now(), title: g.title.toUpperCase(), genre: `ARENA: ${g.console}`, streamUrl: g.url, description: 'GAME', imageUrl: g.imageUrl, isRestricted: true }); return !error; } catch (e) { return false; } }
-export async function getTopContent(l = 10) { try { const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l); return data || []; } catch (e) { return []; } }
-export async function getTotalContentCount() { try { const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %'); return count || 0; } catch (e) { return 0; } }
-export async function getContentById(id: string) { try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; } }
-export async function removeUser(id: string) { await supabase.from('users').delete().eq('id', id); return true; }
-export async function removeContent(id: string) { await supabase.from('content').delete().eq('id', id); return true; }
-export async function removeReseller(id: string) { await supabase.from('resellers').delete().eq('id', id); return true; }
-export async function removeGame(id: string) { await supabase.from('content').delete().eq('id', id); return true; }
-export async function bulkRemoveContent(ids: string[]) { await supabase.from('content').delete().in('id', ids); return true; }
-export async function bulkUpdateContent(ids: string[], updates: any) { await supabase.from('content').update(updates).in('id', ids); return true; }
-export async function getGameRankings() { return []; }
-export const cleanName = (n: string) => n.toUpperCase().trim();
-export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nOlá! Seu PIN *${p}* vence em *${d} dias*.\n\nPara não perder o sinal, realize a renovação agora! 📺`;

@@ -1,12 +1,12 @@
 
 #!/bin/bash
 
-echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v187..."
+echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v188..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# DESBLOQUEIO MASTER: Força a VPS a ficar idêntica ao GitHub
+# DESBLOQUEIO MASTER: Força a VPS a ficar idêntica ao GitHub, ignorando erros locais
 echo "🧹 LIMPANDO CONFLITOS E FORÇANDO NÚCLEO..."
 git fetch origin main
 git reset --hard origin/main
