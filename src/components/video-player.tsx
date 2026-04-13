@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -42,21 +43,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // MOTOR SOBERANO v189: Detecta links que precisam de bypass
-    const needsProxy = 
-      finalUrl.startsWith('http:') || 
-      lowerUrl.includes('.ts') || 
-      lowerUrl.includes('xvideos') || 
+    // MOTOR SOBERANO v192: Detecção agressiva de links que exigem bypass via VPS
+    const isHttp = finalUrl.startsWith('http:');
+    const isProblematicDomain = 
+      lowerUrl.includes('contfree.shop') || 
+      lowerUrl.includes('blinder.space') || 
       lowerUrl.includes('archive.org') ||
-      lowerUrl.includes('contfree.shop') ||
-      lowerUrl.includes('blinder.space') ||
-      lowerUrl.includes('reidoscanais');
+      lowerUrl.includes('xvideos') ||
+      lowerUrl.includes('reidoscanais') ||
+      lowerUrl.includes('.ts');
 
-    if (needsProxy && !finalUrl.includes('/api/proxy')) {
+    // Se for HTTP ou de um domínio conhecido por bloquear navegadores, passa pelo nosso Proxy
+    if ((isHttp || isProblematicDomain) && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || finalUrl.includes('playlist.m3u8');
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || finalUrl.includes('proxy') || finalUrl.includes('playlist.m3u8');
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
@@ -74,7 +76,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             lowLatencyMode: true,
             autoStartLoad: true,
             backBufferLength: 90,
-            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+            xhrSetup: (xhr: any) => { 
+              xhr.withCredentials = false;
+            }
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current!)
@@ -101,11 +105,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
         }
       } else {
-        // MODO CANVAS: Se não identificou, tenta rodar como Iframe (Embed)
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. Tente novamente." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. O servidor de origem pode estar offline." })
       setLoading(false)
     }
   }, [url, cleanup])
