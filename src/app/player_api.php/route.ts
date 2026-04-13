@@ -1,13 +1,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRemoteContent, validateDeviceLogin } from '@/lib/store';
+import { getRemoteContent, validateDeviceLogin, getContentById } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * XTREAM CODES API SOBERANA v160
- * Separação rígida de Canais, Filmes e Séries.
- * Compatibilidade total com Smarters, XCIPTV e Televizo.
+ * XTREAM CODES API SOBERANA v191
+ * Suporte Total a Canais, Filmes e Séries (Seasons/Episodes).
+ * Compatibilidade Master com Smarters, XCIPTV e Televizo.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -26,7 +26,9 @@ export async function GET(req: NextRequest) {
   }
 
   const user = loginRes.user;
+  const baseUrl = req.nextUrl.origin;
 
+  // Autenticação Inicial
   if (!action) {
     return NextResponse.json({
       user_info: {
@@ -39,10 +41,10 @@ export async function GET(req: NextRequest) {
         username: user.pin
       },
       server_info: {
-        url: req.nextUrl.origin,
+        url: baseUrl,
         port: "80",
         https_port: "443",
-        server_protocol: "https",
+        server_protocol: "http",
         timezone: "America/Sao_Paulo",
         timestamp_now: Math.floor(Date.now() / 1000)
       }
@@ -53,20 +55,17 @@ export async function GET(req: NextRequest) {
 
   // --- LÓGICA DE CATEGORIAS ---
   if (action === 'get_live_categories') {
-    const liveItems = allItems.filter(i => i.type === 'channel');
-    const genres = Array.from(new Set(liveItems.map(i => i.genre))).sort();
+    const genres = Array.from(new Set(allItems.filter(i => i.type === 'channel').map(i => i.genre))).sort();
     return NextResponse.json(genres.map((g, idx) => ({ category_id: String(idx + 1), category_name: g, parent_id: 0 })));
   }
 
   if (action === 'get_vod_categories') {
-    const vodItems = allItems.filter(i => i.type === 'movie');
-    const genres = Array.from(new Set(vodItems.map(i => i.genre))).sort();
+    const genres = Array.from(new Set(allItems.filter(i => i.type === 'movie').map(i => i.genre))).sort();
     return NextResponse.json(genres.map((g, idx) => ({ category_id: String(idx + 1), category_name: g, parent_id: 0 })));
   }
 
   if (action === 'get_series_categories') {
-    const seriesItems = allItems.filter(i => i.type === 'series' || i.type === 'multi-season');
-    const genres = Array.from(new Set(seriesItems.map(i => i.genre))).sort();
+    const genres = Array.from(new Set(allItems.filter(i => i.type === 'series' || i.type === 'multi-season').map(i => i.genre))).sort();
     return NextResponse.json(genres.map((g, idx) => ({ category_id: String(idx + 1), category_name: g, parent_id: 0 })));
   }
 
@@ -104,11 +103,13 @@ export async function GET(req: NextRequest) {
       stream_id: i.id,
       stream_icon: i.imageUrl || "",
       category_id: catId || "1",
+      container_extension: "mp4",
       direct_source: i.streamUrl,
       added: "1600000000"
     })));
   }
 
+  // Lista de Séries (Geral)
   if (action === 'get_series') {
     const catId = searchParams.get('category_id');
     const seriesItems = allItems.filter(i => i.type === 'series' || i.type === 'multi-season');
@@ -121,8 +122,8 @@ export async function GET(req: NextRequest) {
       name: i.title,
       series_id: i.id,
       cover: i.imageUrl || "",
-      plot: i.description || "",
-      cast: "Léo TV Stream",
+      plot: i.description || "Sinal Master Léo TV",
+      cast: "Léo TV",
       director: "Mestre Léo",
       genre: i.genre,
       releaseDate: "",
@@ -130,6 +131,67 @@ export async function GET(req: NextRequest) {
       rating: "10",
       category_id: catId || "1"
     })));
+  }
+
+  // DETALHES DA SÉRIE (Essencial para carregar episódios na TV)
+  if (action === 'get_series_info') {
+    const seriesId = searchParams.get('series_id');
+    if (!seriesId) return NextResponse.json({});
+    
+    const series = await getContentById(seriesId);
+    if (!series) return NextResponse.json({});
+
+    const formattedEpisodes: any = {};
+    
+    // Processa Séries Master (Temporadas)
+    if (series.type === 'multi-season' && series.seasons) {
+      series.seasons.forEach((season: any) => {
+        const sNum = season.number;
+        formattedEpisodes[sNum] = (season.episodes || []).map((ep: any) => ({
+          id: ep.id,
+          episode_num: ep.number,
+          title: ep.title || `Episódio ${ep.number}`,
+          container_extension: "mp4",
+          info: { duration: "00:00:00" },
+          custom_sid: "",
+          added: "1600000000",
+          season: sNum,
+          direct_source: ep.streamUrl
+        }));
+      });
+    } 
+    // Processa Séries Simples
+    else if (series.type === 'series' && series.episodes) {
+      formattedEpisodes["1"] = series.episodes.map((ep: any) => ({
+        id: ep.id,
+        episode_num: ep.number,
+        title: ep.title || `Episódio ${ep.number}`,
+        container_extension: "mp4",
+        info: { duration: "00:00:00" },
+        custom_sid: "",
+        added: "1600000000",
+        season: 1,
+        direct_source: ep.streamUrl
+      }));
+    }
+
+    return NextResponse.json({
+      seasons: series.type === 'multi-season' ? (series.seasons || []).map((s: any) => ({
+        season_number: s.number,
+        name: `Temporada ${s.number}`,
+        episode_count: s.episodes?.length || 0,
+        air_date: ""
+      })) : [{ season_number: 1, name: "Temporada Única", episode_count: series.episodes?.length || 0 }],
+      info: {
+        name: series.title,
+        cover: series.imageUrl,
+        plot: series.description,
+        genre: series.genre,
+        director: "Mestre Léo",
+        rating: "10"
+      },
+      episodes: formattedEpisodes
+    });
   }
 
   return NextResponse.json([]);

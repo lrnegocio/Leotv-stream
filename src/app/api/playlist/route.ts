@@ -1,20 +1,20 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getRemoteContent } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR DE PLAYLIST M3U SOBERANO v189
- * Gera uma lista dinâmica baseada no IP/Domínio atual da VPS.
+ * MOTOR DE PLAYLIST M3U SOBERANO v191
+ * Suporte a episódios de séries expandidos para compatibilidade total.
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const pin = searchParams.get('pin') || 'ACESSO';
     
-    // Pega o domínio atual automaticamente (IP ou DNS)
     const host = req.headers.get('host');
-    const protocol = host?.includes('localhost') ? 'http' : 'http'; // VPS usa Porta 80 HTTP
+    const protocol = 'http'; 
     const baseUrl = `${protocol}://${host}`;
 
     const items = await getRemoteContent();
@@ -23,16 +23,41 @@ export async function GET(req: NextRequest) {
     items.forEach(item => {
       const category = item.genre || "LÉO TV AO VIVO";
       const logo = item.imageUrl || "";
-      let streamUrl = item.streamUrl || "";
 
-      // Se o sinal for sensível ou HTTP, passamos pelo nosso Proxy interno
-      if (streamUrl && (streamUrl.startsWith('http:') || streamUrl.includes('archive.org') || streamUrl.includes('blinder'))) {
-        streamUrl = `${baseUrl}/api/proxy?url=${encodeURIComponent(streamUrl)}`;
-      }
+      // Canais e Filmes (Simples)
+      if (item.type === 'channel' || item.type === 'movie') {
+        let streamUrl = item.streamUrl || "";
+        if (streamUrl) {
+          if (streamUrl.startsWith('http:') || streamUrl.includes('archive.org') || streamUrl.includes('blinder')) {
+            streamUrl = `${baseUrl}/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+          }
+          m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${item.title}\n`;
+          m3u += `${streamUrl}\n`;
+        }
+      } 
+      // Séries (Expande episódios no M3U para aparecer em todos os apps)
+      else if (item.type === 'series' || item.type === 'multi-season') {
+        const episodes: any[] = [];
+        
+        if (item.type === 'series' && item.episodes) {
+          item.episodes.forEach(ep => episodes.push({ ...ep, seasonNum: 1 }));
+        } else if (item.type === 'multi-season' && item.seasons) {
+          item.seasons.forEach(s => {
+            if (s.episodes) s.episodes.forEach(ep => episodes.push({ ...ep, seasonNum: s.number }));
+          });
+        }
 
-      if (streamUrl) {
-        m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${item.title}\n`;
-        m3u += `${streamUrl}\n`;
+        episodes.forEach(ep => {
+          let epUrl = ep.streamUrl || "";
+          if (epUrl) {
+            if (epUrl.startsWith('http:') || epUrl.includes('archive.org') || epUrl.includes('blinder')) {
+              epUrl = `${baseUrl}/api/proxy?url=${encodeURIComponent(epUrl)}`;
+            }
+            const epTitle = `${item.title} - S${String(ep.seasonNum).padStart(2, '0')}E${String(ep.number).padStart(2, '0')} ${ep.title || ''}`;
+            m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${epTitle}\n`;
+            m3u += `${epUrl}\n`;
+          }
+        });
       }
     });
 
