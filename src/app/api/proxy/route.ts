@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
       redirect: 'follow',
     });
     
-    // FAILOVER: Se a origem retornar erro de acesso, o proxy retorna erro para o player buscar alternativa
     if (res.status === 401 || res.status === 403) {
       return new Response("ACESSO EXPIRADO NA ORIGEM", { status: 401 });
     }
@@ -43,9 +42,15 @@ export async function GET(req: NextRequest) {
       if (allowedHeaders.includes(lowerKey)) responseHeaders.set(k, v);
     });
 
-    // REGRA SOBERANA: Força o content-type correto para evitar o erro de 0:00
-    if (targetUrl.toLowerCase().endsWith('.ts') || targetUrl.toLowerCase().includes('.ts?')) {
+    const lowerTarget = targetUrl.toLowerCase();
+    
+    // FORÇAR CONTENT-TYPE CORRETO
+    if (lowerTarget.includes('.m3u8')) {
+      responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+    } else if (lowerTarget.includes('.ts') || lowerTarget.includes('.mpegts')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
+    } else if (lowerTarget.includes('.mp4')) {
+      responseHeaders.set('Content-Type', 'video/mp4');
     }
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');

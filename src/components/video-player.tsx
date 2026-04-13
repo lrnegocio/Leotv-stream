@@ -31,6 +31,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     let urlStr = u.trim()
     const lowerUrl = urlStr.toLowerCase();
     
+    // DETECÇÃO DE EMBEDS (IFRAMES)
     if (lowerUrl.includes('xvideos.com')) {
       const videoIdMatch = urlStr.match(/video\.([^/]+)/) || urlStr.match(/video(\d+)/);
       if (videoIdMatch) {
@@ -57,19 +58,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (dId) return { processedUrl: `https://www.dailymotion.com/embed/video/${dId}?autoplay=1`, type: 'iframe' };
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist');
-    const isDirectTS = lowerUrl.endsWith('.ts') || lowerUrl.includes('.ts?');
+    // DETECÇÃO DE FORMATOS
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('chunklist') || lowerUrl.includes('.smil');
+    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov');
+    const isTS = lowerUrl.includes('.ts') || lowerUrl.includes('.mpegts');
 
-    // MÁSCARA SOBERANA: Protege o link original via Proxy se for link direto
-    if (isDirectTS || (urlStr.startsWith('http:') && !isHLS)) {
+    // REGRA SOBERANA: HTTP NO HTTPS PREVISA DE PROXY
+    if (urlStr.startsWith('http:')) {
       return { 
         processedUrl: `/api/proxy?url=${encodeURIComponent(urlStr)}`, 
-        type: 'hls' 
+        type: isHLS || isTS ? 'hls' : 'video' 
       };
     }
 
-    if (isHLS) {
+    if (isHLS || isTS) {
       return { processedUrl: urlStr, type: 'hls' };
+    }
+
+    if (isMP4) {
+      return { processedUrl: urlStr, type: 'video' };
     }
 
     return { processedUrl: urlStr, type: 'video' };
@@ -78,13 +85,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const { processedUrl, type } = React.useMemo(() => sintonize(currentUrl), [currentUrl, sintonize])
 
   const tryFallback = async () => {
-    setError("Sinal de origem expirado. Buscando rota alternativa...");
+    setError("Sinal de origem instável. Buscando rota alternativa...");
     const alt = await findAlternativeSource(title);
     if (alt && alt !== currentUrl) {
       setIsFallback(true);
       setCurrentUrl(alt);
     } else {
-      setError("Sinal fora do ar no momento. Tente novamente mais tarde.");
+      setError("Sinal fora do ar. Tente de novo em alguns instantes.");
     }
   }
 
@@ -151,11 +158,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                if (data.response?.code === 401 || data.response?.code === 403) {
-                  tryFallback();
-                } else {
-                  hls.startLoad();
-                }
+                hls.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 hls.recoverMediaError();
@@ -175,7 +178,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     } else {
       if (videoRef.current) { 
         videoRef.current.src = processedUrl; 
-        videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); };
+        videoRef.current.onloadeddata = () => { 
+          videoRef.current?.play().catch(() => {
+            if (videoRef.current) videoRef.current.muted = true;
+            videoRef.current?.play();
+          }); 
+          setLoading(false); 
+        };
         videoRef.current.onerror = () => tryFallback();
       }
     }
@@ -226,7 +235,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls={!isFullscreen} 
-          crossOrigin="anonymous" 
         />
       )}
 

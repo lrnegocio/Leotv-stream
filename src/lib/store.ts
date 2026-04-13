@@ -334,7 +334,6 @@ export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const shortPin = pin.substring(0, 8); // Para apps de 8 dígitos
   
   return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* 
 
@@ -350,7 +349,6 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 ➡️ *SMART TVS (SAMSUNG / LG):*
 1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
 2️⃣ Use seu Usuário e Senha acima.
-3️⃣ Caso peça código: \`${shortPin}\`
 
 ➡️ *SMART TV ROKU:*
 1️⃣ Procure por: *IPTV SMARTERS*

@@ -34,20 +34,20 @@ export default function NewContentPage() {
 
   const addEpisode = () => {
     const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
-    setEpisodes([...episodes, newEp])
+    setEpisodes(prev => [...prev, newEp])
   }
 
-  const removeEpisode = (id: string) => setEpisodes(episodes.filter(e => e.id !== id))
+  const removeEpisode = (id: string) => setEpisodes(prev => prev.filter(e => e.id !== id))
 
   const addSeason = () => {
     const newSeason: Season = { id: 'sea_' + Date.now(), number: seasons.length + 1, episodes: [] }
-    setSeasons([...seasons, newSeason])
+    setSeasons(prev => [...prev, newSeason])
   }
 
-  const removeSeason = (id: string) => setSeasons(seasons.filter(s => s.id !== id))
+  const removeSeason = (id: string) => setSeasons(prev => prev.filter(s => s.id !== id))
 
   const addEpisodeToSeason = (sId: string) => {
-    setSeasons(seasons.map(s => {
+    setSeasons(prev => prev.map(s => {
       if (s.id === sId) {
         const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '' }
         return { ...s, episodes: [...s.episodes, newEp] }
@@ -61,7 +61,7 @@ export default function NewContentPage() {
     if (!formData.title) return;
     setLoading(true)
     
-    const isSeries = formData.type === 'series' || formData.type === 'multi-season'
+    const isSeriesMode = formData.type === 'series' || formData.type === 'multi-season'
     
     const success = await saveContent({
       title: cleanName(formData.title),
@@ -69,10 +69,10 @@ export default function NewContentPage() {
       genre: formData.genre.toUpperCase(),
       description: formData.description,
       isRestricted: !!formData.isRestricted,
-      streamUrl: isSeries ? "" : formData.streamUrl,
+      streamUrl: isSeriesMode ? "" : formData.streamUrl,
       imageUrl: formData.imageUrl,
-      episodes: formData.type === 'series' ? episodes : null,
-      seasons: formData.type === 'multi-season' ? seasons : null,
+      episodes: formData.type === 'series' ? episodes : [],
+      seasons: formData.type === 'multi-season' ? seasons : [],
     })
 
     if (success) {
