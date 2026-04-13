@@ -192,11 +192,6 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 🔹 Baixe o App: *IPTV SMARTERS*
 ✅ Adicione sua lista com Servidor e PIN acima.
 
-⚠️ *TVs ANTIGAS (App STB ou SMART UP):*
-1️⃣ Vá em Configurações de Rede da TV.
-2️⃣ Mude o DNS para: \`5.161.46.209\`
-3️⃣ Abra o app e use seu PIN como Usuário e Senha.
-
 📡 *LINK DIRETO (LISTA M3U):*
 🔗 http://${domain}/api/playlist?username=${pin}&password=${pin}
 
@@ -217,6 +212,8 @@ export async function getTotalContentCount() { try { const { count } = await sup
 export async function getContentById(id: string) { try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; } }
 export async function removeUser(id: string) { await supabase.from('users').delete().eq('id', id); return true; }
 export async function removeContent(id: string) { await supabase.from('content').delete().eq('id', id); return true; }
+export async function removeReseller(id: string) { await supabase.from('resellers').delete().eq('id', id); return true; }
+export async function removeGame(id: string) { await supabase.from('content').delete().eq('id', id); return true; }
 export async function bulkRemoveContent(ids: string[]) { await supabase.from('content').delete().in('id', ids); return true; }
 export async function bulkUpdateContent(ids: string[], updates: any) { await supabase.from('content').update(updates).in('id', ids); return true; }
 export async function getGameRankings() { return []; }

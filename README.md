@@ -3,24 +3,16 @@
 
 Seu sistema está pronto. Siga os passos abaixo no seu Putty para colocar o site no ar AGORA:
 
-### 🛠️ 1. Correção e Instalação (Copie e cole no Putty):
-
+### 🛠️ 1. Abertura de Firewall (IMPORTANTE PARA O SITE ABRIR):
 ```bash
-# Mate processos travados do instalador
-rm -f /var/run/dnf.pid
-
-# Reinstale o Node.js e NPM de forma limpa
-dnf clean all
-dnf install -y nodejs npm git
-
-# Instale o Vigilante Soberano (PM2) globalmente
-npm install -g pm2
+# Permite que o site seja visto no seu IP
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
 ```
 
-### 📦 2. Ativação do Sistema (IMPORTANTE):
-
+### 📦 2. Ativação do Sistema:
 ```bash
-# Entre na pasta do projeto (Você já clonou, agora precisa entrar nela)
+# Entre na pasta do projeto
 cd ~/leotv
 
 # Dê permissão e rode o deploy
