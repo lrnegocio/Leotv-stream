@@ -13,17 +13,12 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
-/**
- * PLAYER SOBERANO v175 - MOTOR COM FAILOVER AUTOMÁTICO
- * Se o link expirar, ele avisa o cliente de forma profissional.
- */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<{type: string, msg: string} | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
-  const [showControls, setShowControls] = React.useState(true)
   const hlsRef = React.useRef<any>(null)
 
   const cleanup = React.useCallback(() => {
@@ -48,38 +43,35 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // TÚNEL MASTER OBRIGATÓRIO PARA PROTEÇÃO E BYPASS
-    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('.ts') || lowerUrl.includes('blinder')) {
+    // TÚNEL MASTER OBRIGATÓRIO (O Segredo para links HTTP e Bloqueios de CORS)
+    // Se for HTTP, .ts, Xvideos ou Archive.org, passamos pelo Proxy
+    if (
+      finalUrl.startsWith('http:') || 
+      lowerUrl.includes('.ts') || 
+      lowerUrl.includes('xvideos') || 
+      lowerUrl.includes('archive.org') ||
+      lowerUrl.includes('blinder')
+    ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist')
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts')
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
     try {
-      // Verificação de expiração via Proxy
-      if (finalUrl.startsWith('/api/proxy')) {
-        const check = await fetch(finalUrl, { method: 'HEAD' });
-        if (check.status === 401 || check.status === 403) {
-          setError({ type: 'EXPIRED', msg: 'Sinal em Manutenção Técnica. Por favor, tente outro canal ou aguarde a recalibragem.' });
-          setLoading(false);
-          return;
-        }
-      }
-
       if (isYouTube) {
         setLoading(false)
         return 
       }
 
+      // Lógica HLS.js (Exatamente como no seu código Canva)
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 90,
             autoStartLoad: true,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
@@ -95,7 +87,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           })
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) hls.recoverMediaError();
-            if (data.response?.code === 401) setError({ type: 'EXPIRED', msg: 'Acesso à fonte expirou.' });
           })
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
@@ -107,10 +98,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
         }
       } else {
+        // Fallback para Iframe (Embeds)
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'FATAL', msg: "Falha ao sintonizar sinal." })
+      setError({ type: 'FATAL', msg: "Erro ao sintonizar o sinal." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -133,7 +125,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div 
       ref={containerRef}
-      onMouseMove={() => { setShowControls(true); }}
       className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen z-[9999]' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
@@ -145,8 +136,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
-          {error.type === 'EXPIRED' ? <ShieldAlert className="h-16 w-16 text-amber-500 mb-6 animate-bounce" /> : <AlertCircle className="h-16 w-16 text-destructive mb-6" />}
-          <h3 className="text-white font-black uppercase italic text-xl mb-4">{error.type === 'EXPIRED' ? 'MANUTENÇÃO DE SINAL' : 'ERRO DE SINTONIA'}</h3>
+          <AlertCircle className="h-16 w-16 text-destructive mb-6" />
+          <h3 className="text-white font-black uppercase italic text-xl mb-4">ERRO DE SINTONIA</h3>
           <p className="text-zinc-400 font-bold uppercase text-[10px] mb-8 max-w-xs mx-auto leading-relaxed">{error.msg}</p>
           <div className="flex gap-4">
              <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-8 h-12 rounded-xl">RECONECTAR</Button>
@@ -169,18 +160,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {(onNext || onPrev) && !error && (
-        <div className={`absolute inset-0 z-40 flex items-center justify-between px-6 pointer-events-none transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
+        <div className="absolute inset-0 z-40 flex items-center justify-between px-6 pointer-events-none group">
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100">
             <ChevronLeft className="h-7 w-7 text-white" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100">
             <ChevronRight className="h-7 w-7 text-white" />
           </button>
         </div>
       )}
 
-      <div className={`absolute bottom-6 right-6 z-40 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
+      <div className="absolute bottom-6 right-6 z-40">
+        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
           {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>
       </div>
