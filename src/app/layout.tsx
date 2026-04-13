@@ -26,7 +26,6 @@ export const metadata: Metadata = {
     'application-name': 'Léo TV',
     'msapplication-TileColor': '#6D2DCC',
     'theme-color': '#6D2DCC',
-    // Metas específicas para Smart TVs
     'tv-app-capable': 'yes',
     'handheldfriendly': 'true',
   }
@@ -54,9 +53,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          iframe {
-            pointer-events: auto !important;
-          }
+          iframe { pointer-events: auto !important; }
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
             display: none !important;
@@ -71,7 +68,9 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
+        {/* MOTORES DE VÍDEO MASTER: HLS para M3U8 e MPEGTS para .TS (Segredo Blinder) */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
+        <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>
     </html>
   );
@@ -83,17 +82,10 @@ function SecurityBlocker() {
       (function() {
         const isLocal = window.location.hostname === 'localhost' || 
                         window.location.hostname === '127.0.0.1';
-        
         if (isLocal) return;
-
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
-          if (
-            e.key === 'F12' || 
-            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
-            (e.ctrlKey && e.key === 'u') ||
-            (e.metaKey && e.altKey && e.key === 'i')
-          ) {
+          if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
             e.preventDefault();
             return false;
           }

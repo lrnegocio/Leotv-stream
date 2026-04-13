@@ -20,11 +20,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [error, setError] = React.useState<{type: string, msg: string} | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const hlsRef = React.useRef<any>(null)
+  const mpegtsRef = React.useRef<any>(null)
 
   const cleanup = React.useCallback(() => {
     if (hlsRef.current) {
       hlsRef.current.destroy()
       hlsRef.current = null
+    }
+    if (mpegtsRef.current) {
+      mpegtsRef.current.destroy()
+      mpegtsRef.current = null
     }
     const v = videoRef.current
     if (v) {
@@ -43,22 +48,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // MOTOR SOBERANO v192: Detecção agressiva de links que exigem bypass via VPS
+    // MOTOR SOBERANO v193: Bypass agressivo para Blinder/Contfree
     const isHttp = finalUrl.startsWith('http:');
-    const isProblematicDomain = 
+    const isTSFile = lowerUrl.includes('.ts');
+    const isProblematic = 
       lowerUrl.includes('contfree.shop') || 
       lowerUrl.includes('blinder.space') || 
       lowerUrl.includes('archive.org') ||
-      lowerUrl.includes('xvideos') ||
       lowerUrl.includes('reidoscanais') ||
-      lowerUrl.includes('.ts');
+      lowerUrl.includes('xvideos');
 
-    // Se for HTTP ou de um domínio conhecido por bloquear navegadores, passa pelo nosso Proxy
-    if ((isHttp || isProblematicDomain) && !finalUrl.includes('/api/proxy')) {
+    if ((isHttp || isProblematic || isTSFile) && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || finalUrl.includes('proxy') || finalUrl.includes('playlist.m3u8');
+    const isHLS = lowerUrl.includes('.m3u8') || finalUrl.includes('playlist.m3u8');
+    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('.ts') || (finalUrl.includes('proxy') && isTSFile);
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
@@ -68,17 +73,36 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return 
       }
 
+      // LÓGICA DE PLAYER BLINDER (.TS)
+      if (isMPEGTS) {
+        const mpegts = (window as any).mpegts;
+        if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
+          const player = mpegts.createPlayer({
+            type: 'mse',
+            isLive: true,
+            url: finalUrl
+          }, {
+            enableWorker: true,
+            stashInitialSize: 128,
+            enableStashBuffer: false
+          });
+          player.attachMediaElement(videoRef.current!);
+          player.load();
+          player.play();
+          mpegtsRef.current = player;
+          setLoading(false);
+          return;
+        }
+      }
+
+      // LÓGICA HLS (.M3U8)
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            autoStartLoad: true,
-            backBufferLength: 90,
-            xhrSetup: (xhr: any) => { 
-              xhr.withCredentials = false;
-            }
+            backBufferLength: 60
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current!)
@@ -90,14 +114,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             })
             setLoading(false)
           })
-          hls.on(Hls.Events.ERROR, (_: any, data: any) => {
-            if (data.fatal) hls.recoverMediaError();
-          })
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
-        } else {
-          setLoading(false)
         }
       } else if (isMP4) {
         if (videoRef.current) {
@@ -108,7 +127,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. O servidor de origem pode estar offline." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal Blinder. Tentando reconectar..." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -124,9 +143,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     else document.exitFullscreen()
   }
 
-  const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be')
-  const isXVideos = url.toLowerCase().includes('xvideos.com')
-  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || isYouTube || isXVideos
+  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || url.includes('youtube') || url.includes('xvideos')
 
   return (
     <div 
@@ -155,7 +172,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isIframe && !error ? (
         <iframe 
           key={url}
-          src={isYouTube ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : isXVideos ? `https://www.xvideos.com/embedframe/${url.match(/video\.([^/]+)/)?.[1] || url.match(/video(\d+)/)?.[1]}` : url}
+          src={url.includes('youtube') ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : url}
           className="w-full h-full border-0 z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
