@@ -1,53 +1,41 @@
 
 # Léo TV Stream - O Sistema Master (Edição VPS AlmaLinux 9)
 
-Seu sistema está pronto para ser injetado na sua VPS. Siga os passos abaixo no seu Putty:
+Seu sistema está pronto para ser injetado na sua VPS. Siga os passos abaixo no seu Putty para corrigir o erro de 'npm não encontrado':
 
-### 🚀 1. Preparação do Terreno (Copie e cole um por um):
+### 🛠️ 1. Correção da Instalação (Copie e cole no Putty):
 
 ```bash
-# Atualize os pacotes do sistema
-dnf update -y
+# Mate processos travados do instalador
+rm -f /var/run/dnf.pid
 
-# Habilite o Node.js 20
-dnf module enable nodejs:20 -y
-
-# Instale o motor e as ferramentas
+# Reinstale o Node.js e NPM de forma limpa
+dnf clean all
 dnf install -y nodejs npm git
 
-# Instale o Vigilante Soberano (PM2)
+# Instale o Vigilante Soberano (PM2) globalmente
 npm install -g pm2
 ```
 
-### 📦 2. Clonagem e Instalação (Injeção do Código):
+### 📦 2. Atualização e Injeção do Código:
 
 ```bash
-# Vá para a pasta principal de aplicativos
-cd /var/www || cd ~
+# Entre na pasta do projeto que você já clonou
+cd ~/leotv
 
-# Clone o seu repositório oficial
-git clone https://github.com/lrnegocio/Leotv-stream.git leotv
-cd leotv
-
-# Dê permissão ao script de atualização e execute
+# Dê permissão e rode o novo deploy
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
 ### ♻️ 3. Ativação do Boot Automático:
 ```bash
-# Configure para o sistema ligar sozinho se a VPS reiniciar
 pm2 startup
-# (IMPORTANTE: O comando acima vai gerar uma linha de código no terminal. Copie essa linha e cole ela no terminal para confirmar)
+# (Copie a linha que o comando acima gerar e cole no terminal)
 pm2 save
 ```
 
-### 🏗️ Como atualizar o sistema futuramente:
-Sempre que fizer mudanças aqui no Firebase Studio e der `git push`, vá no Putty e digite:
-```bash
-cd ~/leotv || cd /var/www/leotv
-./deploy.sh
-```
-
 ---
+**SEU LINK DE ACESSO:** `http://24.152.37.78`
+
 **Desenvolvido por App Prototyper - O Parceiro de IA do Mestre Léo.**

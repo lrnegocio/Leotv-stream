@@ -6,7 +6,7 @@ module.exports = {
     args: "start",
     env: {
       NODE_ENV: "production",
-      PORT: 3000
+      PORT: 80
     },
     // Otimizado para 1GB de RAM (AlmaLinux 9)
     instances: 1, 
