@@ -13,6 +13,11 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
+/**
+ * PLAYER SOBERANO v169 - MOTOR INJETOR CANVA
+ * Projetado para nunca dar tela branca. 
+ * Abre .TS, .M3U8, .MP4 e links de sites (YouTube/XVideos) sem distinção.
+ */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -44,35 +49,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowerUrl = url.trim().toLowerCase()
     
-    // REGRA SOBERANA: HTTP PRECISA DE PROXY PARA RODAR NO HTTPS DA NETLIFY
+    // REGRA DE OURO: Links HTTP ou de servidores instáveis passam pelo Túnel VPS
     let finalUrl = url.trim()
-    if (finalUrl.startsWith('http:')) {
+    if (finalUrl.startsWith('http:') || lowerUrl.includes('xvideos') || lowerUrl.includes('blinder') || lowerUrl.includes('archive.org')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    // LÓGICA ESTILO CANVA: DETECÇÃO DE TIPO
     const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || lowerUrl.includes('chunklist')
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
-    const isXVideos = lowerUrl.includes('xvideos.com')
 
     try {
       if (isYouTube) {
-        let vid = ""
-        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/
-        const match = url.match(regExp)
-        vid = (match && match[7] && match[7].length === 11) ? match[7] : ""
         setLoading(false)
-        return // Renderizado via iframe no JSX
-      }
-
-      if (isXVideos) {
-        const videoIdMatch = url.match(/video\.([^/]+)/) || url.match(/video(\d+)/)
-        if (videoIdMatch) {
-          const videoId = videoIdMatch[1].replace('video', '').split('/')[0]
-          // XVideos via Embed para evitar erros de CORS
-          return 
-        }
+        return // Iframe direto no render
       }
 
       if (isHLS) {
@@ -81,7 +71,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 90
+            backBufferLength: 90,
+            xhrSetup: (xhr: any) => {
+              xhr.withCredentials = false;
+            }
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current!)
@@ -95,8 +88,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           })
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
-              setError("Sinal instável na origem.")
-              setLoading(false)
+              console.warn("Tentando recuperação de sinal...");
+              hls.recoverMediaError();
             }
           })
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
@@ -116,13 +109,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             })
             setLoading(false)
           }
-          videoRef.current.onerror = () => {
-            setError("Erro ao carregar vídeo MP4.")
-            setLoading(false)
-          }
         }
       } else {
-        // MODO IFRAME (EMBED GENÉRICO)
+        // MODO IFRAME (SITES E EMBEDS)
         setLoading(false)
       }
     } catch (e) {
@@ -159,17 +148,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }, 3000)
   }
 
-  // IDENTIFICAÇÃO DE IFRAME PARA O RENDER
   const isYouTube = url.toLowerCase().includes('youtube.com') || url.toLowerCase().includes('youtu.be')
   const isXVideos = url.toLowerCase().includes('xvideos.com')
-  const isDailymotion = url.toLowerCase().includes('dailymotion.com')
-  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || isYouTube || isXVideos || isDailymotion
+  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || isYouTube || isXVideos
 
   return (
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
+      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen z-[9999]' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">

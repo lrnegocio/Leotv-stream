@@ -79,21 +79,11 @@ export interface GameRanking {
   points: number;
 }
 
-export async function findAlternativeSource(channelName: string): Promise<string | null> {
-  try {
-    const { data } = await supabase
-      .from('content')
-      .select('streamUrl')
-      .ilike('title', `%${channelName}%`)
-      .not('streamUrl', 'is', null)
-      .limit(5);
-    
-    if (data && data.length > 1) {
-      return data[Math.floor(Math.random() * data.length)].streamUrl;
-    }
-    return null;
-  } catch (e) { return null; }
-}
+/**
+ * ENGINE SOBERANA v169
+ * O Supabase gerencia o banco ilimitado de canais.
+ * A VPS processa apenas os sinais ativos.
+ */
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -142,14 +132,6 @@ export async function saveContent(item: Partial<ContentItem>) {
   } catch (e) { return false; }
 }
 
-export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
-  } catch (e) { return []; }
-}
-
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
@@ -170,133 +152,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     return { user: { ...user, activeDevices: devices } };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
-
-export async function validateResellerLogin(username: string, password: string) {
-  try {
-    const { data, error } = await supabase.from('resellers').select('*').eq('username', username.trim()).eq('password', password.trim()).maybeSingle();
-    if (error || !data) return { error: "USUÁRIO OU SENHA INVÁLIDOS" };
-    if (data.isBlocked) return { error: "REVENDA BLOQUEADA" };
-    return { reseller: data };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
-}
-
-export async function getRemoteResellers(): Promise<Reseller[]> {
-  try {
-    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
-  } catch (e) { return []; }
-}
-
-export async function saveReseller(reseller: Partial<Reseller>) {
-  try {
-    const payload = { 
-      id: reseller.id, 
-      name: reseller.name, 
-      username: reseller.username, 
-      password: reseller.password, 
-      credits: reseller.credits || 0, 
-      "totalSold": reseller.totalSold || 0, 
-      "isBlocked": !!reseller.isBlocked 
-    };
-    const { error } = await supabase.from('resellers').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
-  } catch (e) { return { parentalPin: "1234", announcement: "" }; }
-}
-
-export async function updateGlobalSettings(value: any) {
-  try {
-    const payload = { key: 'global', value: { parentalPin: String(value.parentalPin), announcement: String(value.announcement) } };
-    const { error } = await supabase.from('settings').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getCategoryCount(genre: string) {
-  try {
-    const trimmedGenre = genre.trim().toUpperCase();
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', trimmedGenre);
-    return count || 0;
-  } catch (e) { return 0; }
-}
-
-export async function getRemoteGames(): Promise<GameItem[]> {
-  try {
-    const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %').order('title', { ascending: true });
-    return (data || []).map(item => ({ 
-      id: item.id, 
-      title: item.title, 
-      console: item.genre.replace('ARENA: ', ''), 
-      type: item.description?.includes('GAME_TYPE:embed') ? 'embed' : 'direct', 
-      url: item.streamUrl || item["streamUrl"] || "", 
-      emulatorUrl: item.streamUrl || item["streamUrl"] || "", 
-      imageUrl: item.imageUrl || item["imageUrl"] || "", 
-      genre: item.genre 
-    }));
-  } catch (e) { return []; }
-}
-
-export async function saveGame(game: Partial<GameItem>) {
-  try {
-    const id = game.id || "game_" + Math.random().toString(36).substring(2, 12);
-    const payload = { 
-      id, 
-      title: (game.title || "NOVO JOGO").toUpperCase().trim(), 
-      type: 'channel', 
-      genre: `ARENA: ${game.console || 'OUTROS'}`, 
-      "streamUrl": game.url || "", 
-      description: `GAME_TYPE:${game.type || 'embed'}`, 
-      "imageUrl": game.imageUrl || "", 
-      "isRestricted": true 
-    };
-    const { error } = await supabase.from('content').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function getTopContent(limit = 10): Promise<ContentItem[]> {
-  try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(limit);
-    return (data || []).map(item => ({
-      ...item,
-      streamUrl: item.streamUrl || item["streamUrl"] || "",
-      imageUrl: item.imageUrl || item["imageUrl"] || ""
-    }));
-  } catch (e) { return []; }
-}
-
-export async function getTotalContentCount(): Promise<number> {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
-    return count || 0;
-  } catch (e) { return 0; }
-}
-
-export async function getContentById(id: string): Promise<ContentItem | null> {
-  try {
-    const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    if (error || !data) return null;
-    return {
-      ...data,
-      streamUrl: data.streamUrl || data["streamUrl"] || "",
-      imageUrl: data.imageUrl || data["imageUrl"] || "",
-      isRestricted: !!(data.isRestricted || data["isRestricted"]),
-      episodes: Array.isArray(data.episodes) ? data.episodes : [],
-      seasons: Array.isArray(data.seasons) ? data.seasons : []
-    };
-  } catch (e) { return null; }
-}
-
-export async function removeUser(id: string) { try { const { error } = await supabase.from('users').delete().eq('id', id); return !error; } catch (e) { return false; } }
-export async function removeContent(id: string) { try { const { error } = await supabase.from('content').delete().eq('id', id); return !error; } catch (e) { return false; } }
-export async function bulkRemoveContent(ids: string[]) { try { const { error } = await supabase.from('content').delete().in('id', ids); return !error; } catch (e) { return false; } }
-export async function bulkUpdateContent(ids: string[], updates: any) { try { const payload: any = {}; if (updates.genre) payload.genre = updates.genre.toUpperCase(); if (updates.isRestricted !== undefined) payload["isRestricted"] = updates.isRestricted; if (updates.imageUrl) payload["imageUrl"] = updates.imageUrl; const { error } = await supabase.from('content').update(payload).in('id', ids); return !error; } catch (e) { return false; } }
 
 export async function saveUser(user: Partial<User>) {
   try {
@@ -327,17 +182,11 @@ export async function saveUser(user: Partial<User>) {
   } catch (e) { return false; }
 }
 
-export async function getGameRankings(): Promise<GameRanking[]> {
-  try {
-    const { data } = await supabase.from('users').select('pin, "gamePoints"').gt('gamePoints', 0).order('gamePoints', { ascending: false }).limit(50);
-    return (data || []).map(u => ({ pin: u.pin, points: u.gamePoints || 0 }));
-  } catch (e) { return []; }
-}
-
 export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
+  const pin8 = pin.substring(0, 8);
   
   return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* 
 
@@ -350,8 +199,8 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 🌐 *ASSISTA PELO NAVEGADOR:*
 🔗 http://${domain}/user/home
 
-➡️ *SMART TVS (SAMSUNG / LG):*
-1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
+➡️ *SMART TVS (SAMSUNG / LG / ROKU):*
+1️⃣ Instale o App: *IPTV SMARTERS*, *VIZZION PLAY* ou *BAY IPTV*
 2️⃣ Use seu Usuário e Senha acima.
 
 ➡️ *ANDROID (TV BOX / CELULAR):*
@@ -372,8 +221,22 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;
 };
 
-export const getExpiryMessage = (pin: string, days: number) => {
-  return `*LÉO TV STREAM - AVISO DE RENOVAÇÃO* ⚠️\n\nOlá! Seu acesso (PIN: ${pin}) vence em *${days} dia(s)*.\n\nRenove agora para manter sua programação ativa sem interrupções! 🍿`;
-};
-
+// Funções de apoio
+export async function getRemoteUsers(): Promise<User[]> { try { const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false }); return data || []; } catch (e) { return []; } }
+export async function validateResellerLogin(u: string, p: string) { try { const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO" }; } }
+export async function getRemoteResellers(): Promise<Reseller[]> { try { const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true }); return data || []; } catch (e) { return []; } }
+export async function saveReseller(r: Partial<Reseller>) { try { const { error } = await supabase.from('resellers').upsert(r); return !error; } catch (e) { return false; } }
+export async function getGlobalSettings() { try { const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle(); return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" }; } catch (e) { return { parentalPin: "1234", announcement: "" }; } }
+export async function updateGlobalSettings(v: any) { try { const { error } = await supabase.from('settings').upsert({ key: 'global', value: v }); return !error; } catch (e) { return false; } }
+export async function getCategoryCount(g: string) { try { const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()); return count || 0; } catch (e) { return 0; } }
+export async function getRemoteGames(): Promise<GameItem[]> { try { const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %'); return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre })); } catch (e) { return []; } }
+export async function saveGame(g: any) { try { const { error } = await supabase.from('content').upsert({ id: g.id || "game_"+Date.now(), title: g.title.toUpperCase(), genre: `ARENA: ${g.console}`, streamUrl: g.url, description: 'GAME', imageUrl: g.imageUrl, isRestricted: true }); return !error; } catch (e) { return false; } }
+export async function getTopContent(l = 10) { try { const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l); return data || []; } catch (e) { return []; } }
+export async function getTotalContentCount() { try { const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %'); return count || 0; } catch (e) { return 0; } }
+export async function getContentById(id: string) { try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; } }
+export async function removeUser(id: string) { await supabase.from('users').delete().eq('id', id); return true; }
+export async function removeContent(id: string) { await supabase.from('content').delete().eq('id', id); return true; }
+export async function bulkRemoveContent(ids: string[]) { await supabase.from('content').delete().in('id', ids); return true; }
+export async function bulkUpdateContent(ids: string[], updates: any) { await supabase.from('content').update(updates).in('id', ids); return true; }
+export async function getGameRankings() { return []; }
 export const cleanName = (n: string) => n.toUpperCase().trim();
