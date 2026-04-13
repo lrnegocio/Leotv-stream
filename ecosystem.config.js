@@ -8,10 +8,10 @@ module.exports = {
       NODE_ENV: "production",
       PORT: 3000
     },
-    // Otimizado para 1 Core e 1GB de RAM (Configuração de Entrada)
+    // Otimizado para 1GB de RAM (AlmaLinux 9)
     instances: 1, 
     exec_mode: "fork",
-    max_memory_restart: "450M", // Reinicia se passar de 450MB para garantir que a VPS de 1GB não trave
+    max_memory_restart: "400M", // Reinicia se passar de 400MB para evitar travamento total da VPS
     autorestart: true,
     watch: false,
     exp_backoff_restart_delay: 100

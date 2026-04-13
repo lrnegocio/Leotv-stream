@@ -1,44 +1,51 @@
 
-# Léo TV Stream - O Sistema Master
+# Léo TV Stream - O Sistema Master (Edição VPS AlmaLinux 9)
 
-Seu sistema está pronto para dominar o mercado de IPTV na sua VPS Alma Linux 9.
+Seu sistema está pronto para ser injetado na sua VPS. Siga os passos abaixo no seu Putty:
 
-### 🚀 Guia de Instalação (Copie e cole no Putty):
+### 🚀 1. Preparação do Terreno (Copie e cole um por um):
 
-1. **Atualize o Sistema e Instale o motor (Node.js 20):**
-   ```bash
-   sudo dnf update -y
-   sudo dnf module enable nodejs:20 -y
-   sudo dnf install -y nodejs npm git
-   ```
-
-2. **Instale o Vigilante Soberano (PM2):**
-   ```bash
-   sudo npm install -g pm2
-   ```
-
-3. **Clone o seu Código do GitHub:**
-   ```bash
-   git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
-   cd SEU_REPOSITORIO
-   ```
-
-4. **Dê permissão ao script de atualização e execute:**
-   ```bash
-   chmod +x deploy.sh
-   ./deploy.sh
-   ```
-
-5. **Configure para o sistema ligar sozinho se a VPS reiniciar:**
-   ```bash
-   pm2 startup
-   # (Copie e cole a linha que o comando acima gerar)
-   pm2 save
-   ```
-
-### ♻️ Como atualizar o sistema:
-Sempre que fizer mudanças aqui no Firebase Studio e der `git push`, vá no Putty e digite:
 ```bash
+# Atualize os pacotes do sistema
+dnf update -y
+
+# Habilite o Node.js 20
+dnf module enable nodejs:20 -y
+
+# Instale o motor e as ferramentas
+dnf install -y nodejs npm git
+
+# Instale o Vigilante Soberano (PM2)
+npm install -g pm2
+```
+
+### 📦 2. Clonagem e Instalação (Injeção do Código):
+
+```bash
+# Vá para a pasta principal
+cd /var/www || cd ~
+
+# Clone o seu repositório (Substitua pelo seu link do GitHub)
+git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git leotv
+cd leotv
+
+# Dê permissão ao script de atualização e execute
+chmod +x deploy.sh
+./deploy.sh
+```
+
+### ♻️ 3. Ativação do Boot Automático:
+```bash
+# Configure para o sistema ligar sozinho se a VPS reiniciar
+pm2 startup
+# (IMPORTANTE: O comando acima vai gerar uma linha de código. Copie essa linha e cole ela no terminal)
+pm2 save
+```
+
+### 🏗️ Como atualizar o sistema futuramente:
+Sempre que fizer mudanças no Firebase Studio e der `git push`, vá no Putty e digite:
+```bash
+cd ~/leotv
 ./deploy.sh
 ```
 
