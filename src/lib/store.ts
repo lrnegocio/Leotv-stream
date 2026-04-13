@@ -74,17 +74,6 @@ export interface User {
   created_at?: string;
 }
 
-export interface GameRanking {
-  pin: string;
-  points: number;
-}
-
-/**
- * ENGINE SOBERANA v170 - VPS READY
- * O Supabase gerencia o banco ilimitado de canais.
- * A VPS processa os fluxos de vídeo em tempo real.
- */
-
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -177,7 +166,6 @@ export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const pin8 = pin.substring(0, 8);
   
   return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* 
 
@@ -197,15 +185,15 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 ✅ Senha: \`${pin}\`
 
 ➡️ *SMART TVS (SAMSUNG / LG / ROKU):*
-1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
+1️⃣ Instale o App: *BAY IPTV* ou *VIZZION PLAY*
 2️⃣ Use seu Usuário e Senha acima.
 
 ⚠️ *TVs ANTIGAS (STB / SMART UP):*
 1️⃣ Vá em Configurações de Rede da sua TV.
 2️⃣ Mude o DNS para: \`5.161.46.209\`
-3️⃣ Abra o app e use seu PIN: \`${pin}\`
+3️⃣ Abra o app e use seu PIN como Usuário e Senha.
 
-📡 *LINKS DIRETOS (M3U):*
+📡 *LINK DIRETO (M3U):*
 🔗 http://${domain}/api/playlist?username=${pin}&password=${pin}
 
 🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;

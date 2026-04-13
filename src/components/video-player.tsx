@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, ShieldAlert } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -43,14 +43,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // TÚNEL MASTER OBRIGATÓRIO (O Segredo para links HTTP e Bloqueios de CORS)
-    // Se for HTTP, .ts, Xvideos ou Archive.org, passamos pelo Proxy
+    // TÚNEL MASTER SOBERANO (Segredo do Canva para links HTTP e CORS)
     if (
       finalUrl.startsWith('http:') || 
       lowerUrl.includes('.ts') || 
       lowerUrl.includes('xvideos') || 
       lowerUrl.includes('archive.org') ||
-      lowerUrl.includes('blinder')
+      lowerUrl.includes('contfree.shop') ||
+      lowerUrl.includes('blinder.space')
     ) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
@@ -65,7 +65,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return 
       }
 
-      // Lógica HLS.js (Exatamente como no seu código Canva)
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
@@ -91,6 +90,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
+        } else {
+          // Fallback se HLS falhar
+          setLoading(false)
         }
       } else if (isMP4) {
         if (videoRef.current) {
@@ -98,11 +100,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
         }
       } else {
-        // Fallback para Iframe (Embeds)
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'FATAL', msg: "Erro ao sintonizar o sinal." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar. Tente reconectar." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -130,14 +131,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Rede Léo TV...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Canal...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <h3 className="text-white font-black uppercase italic text-xl mb-4">ERRO DE SINTONIA</h3>
+          <h3 className="text-white font-black uppercase italic text-xl mb-4">SINAL OSCILOU</h3>
           <p className="text-zinc-400 font-bold uppercase text-[10px] mb-8 max-w-xs mx-auto leading-relaxed">{error.msg}</p>
           <div className="flex gap-4">
              <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-8 h-12 rounded-xl">RECONECTAR</Button>

@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL MASTER SOBERANO v176 - ENGINE DE FLUXO PURO
+ * TÚNEL MASTER SOBERANO v177 - O CANO DE ALTA PRESSÃO
  * Otimizado para .ts, .m3u8 e .mp4 (Bypass de CORS e Mixed Content)
+ * Suporte a Range Requests para carregamento fluido.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,13 +17,12 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range (Vital para MP4 e busca no vídeo)
+    // Suporte a Range (Vital para MP4 e busca no vídeo sem travar)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Finge ser um navegador comum para evitar bloqueios de CDNs (Xvideos/Archive)
+    // Finge ser um navegador real para evitar bloqueios de CDNs
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    requestHeaders.set('Referer', new URL(targetUrl).origin);
     requestHeaders.set('Accept', '*/*');
     
     const res = await fetch(targetUrl, { 
@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
       redirect: 'follow',
     });
     
-    // Detecta expiração da fonte
+    // Detecta expiração da fonte original (Blinder / XVideos / etc)
     if (res.status === 401 || res.status === 403) {
-      return NextResponse.json({ error: "SOURCE_EXPIRED" }, { status: 401 });
+      return new Response("SOURCE_EXPIRED", { status: 401 });
     }
 
     if (!res.ok && res.status !== 206) {
@@ -42,18 +42,18 @@ export async function GET(req: NextRequest) {
 
     const responseHeaders = new Headers();
     
-    // Copia cabeçalhos vitais da fonte original
+    // Copia cabeçalhos vitais da fonte
     const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
     res.headers.forEach((v, k) => {
       if (headersToCopy.includes(k.toLowerCase())) responseHeaders.set(k, v);
     });
 
-    // Força o tipo correto para arquivos .ts (O segredo do motor HLS)
-    if (targetUrl.toLowerCase().includes('.ts') || targetUrl.toLowerCase().includes('mpegts')) {
+    // Garante que arquivos .ts e .m3u8 sejam tratados como vídeo fluido
+    if (targetUrl.toLowerCase().includes('.ts')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
     }
 
-    // Liberação total de acesso
+    // Liberação total de CORS (Igual ao Canva)
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
 
