@@ -78,7 +78,7 @@ export interface User {
   created_at?: string;
 }
 
-// FUNÇÕES DE EXPORTAÇÃO MESTRA - RECALIBRAGEM v188
+// FUNÇÕES DE EXPORTAÇÃO MESTRA
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -264,5 +264,38 @@ export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENC
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* \n\n🚀 *DADOS DE ACESSO MASTER:*\n👤 *Usuário:* \`${pin}\`\n🔐 *Senha:* \`${pin}\`\n📅 *Plano:* ${tier.toUpperCase()}\n📱 *Telas:* ${screens}\n\n🌐 *ASSISTA NO NAVEGADOR:*\n🔗 http://${domain}\n\n➡️ *ANDROID (TV Box / Celular):*\n🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*\n✅ Servidor: \`http://${domain}\`\n\n➡️ *SMART TV (SAMSUNG / LG):*\n🔹 App: *BAY IPTV* ou *BAY TV*\n\n➡️ *ROKU:*\n🔹 App: *IPTV SMARTERS*\n\n🍿 *Instale o Web App no seu aparelho!*`;
+  const serverUrl = `http://${domain}`;
+  const m3uUrl = `${serverUrl}/api/playlist?pin=${pin}`;
+
+  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!*
+
+🚀 *DADOS DE ACESSO MASTER:*
+👤 *Usuário:* \`${pin}\`
+🔐 *Senha:* \`${pin}\`
+📅 *Plano:* ${tier.toUpperCase()}
+📱 *Telas:* ${screens}
+
+🔗 *SUA LISTA M3U (COLE NO APP):*
+\`${m3uUrl}\`
+
+🌐 *ASSISTA NO NAVEGADOR:*
+🔗 ${serverUrl}
+
+------------------------------------
+📺 *COMO INSTALAR NA SUA TV:*
+
+➡️ *ANDROID (TV Box / Celular):*
+🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*
+✅ Servidor: \`${serverUrl}\`
+
+➡️ *SMART TV (SAMSUNG / LG):*
+🔹 App: *BAY IPTV*, *BOB PLAYER* ou *DUPLEXPLAY*
+✅ Use sua Lista M3U acima.
+
+➡️ *ROKU:*
+🔹 App: *IPTV SMARTERS* ou *CLOUDDY*
+✅ Servidor: \`${serverUrl}\`
+✅ Usuário/Senha: \`${pin}\`
+
+🍿 *Instale o Web App no seu aparelho para acesso rápido!*`;
 };
