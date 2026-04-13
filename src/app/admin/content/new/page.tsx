@@ -154,11 +154,11 @@ export default function NewContentPage() {
             <div className="grid gap-6 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Link Master Soberano</h3>
-                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link (aceita .ts que converte para .m3u8)" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+                <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
               </div>
             </div>
           ) : (
-            <>
+            <div className="space-y-6">
               {formData.type === 'series' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -188,8 +188,8 @@ export default function NewContentPage() {
                           <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         <div className="space-y-2">
-                           <Label className="text-[8px] font-black uppercase opacity-40">Link Master do Episódio</Label>
-                           <Input value={ep.streamUrl} placeholder="Link Único do Episódio" onChange={e => {
+                           <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
+                           <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
                               const newEps = [...episodes]
                               newEps[idx].streamUrl = e.target.value
                               setEpisodes(newEps)
@@ -245,7 +245,7 @@ export default function NewContentPage() {
                                   }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
                                </div>
                                <div className="space-y-1">
-                                  <Input value={ep.streamUrl} placeholder="Link Master do Episódio" onChange={e => {
+                                  <Input value={ep.streamUrl} placeholder="Link do Episódio" onChange={e => {
                                      const newSeasons = [...seasons]
                                      newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
                                      setSeasons(newSeasons)
@@ -259,7 +259,7 @@ export default function NewContentPage() {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
 

@@ -79,7 +79,6 @@ export interface GameRanking {
   points: number;
 }
 
-// BUSCA DE CONTINGÊNCIA: Tenta achar uma fonte alternativa pública se a principal cair
 export async function findAlternativeSource(channelName: string): Promise<string | null> {
   try {
     const { data } = await supabase
@@ -335,57 +334,45 @@ export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const codeRP725 = pin.substring(0, 8); // 8 dígitos para o código de ativação
-  const shortCode = pin.substring(0, 6); // 6 dígitos para Vizzion
+  const shortPin = pin.substring(0, 8); // Para apps de 8 dígitos
   
-  return `🎬 *SEJA BEM-VINDO(A) AO LÉO TV STREAM!* 
+  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!* 
 
-🚀 *SEUS DADOS DE ACESSO MASTER:*
-👤 *Usuário:* \`${pin}\` (9 dígitos)
-🔐 *Senha:* \`${pin}\` (9 dígitos)
+🚀 *DADOS DE ACESSO MASTER:*
+👤 *Usuário:* \`${pin}\`
+🔐 *Senha:* \`${pin}\`
 📅 *Plano:* ${tier.toUpperCase()}
-📱 *Limite de Telas:* ${screens}
+📱 *Telas:* ${screens}
 
-🌍 *URLS OFICIAIS:*
-1️⃣ https://${domain}
-2️⃣ http://${domain}
-
-➡️ *SMART TVS (LG, SAMSUNG, ROKU):*
-📺 *App:* Vizzion Play
-✅ *Código:* \`${shortCode}\`
-✅ *Usuário:* \`${pin}\`
-✅ *Senha:* \`${pin}\`
-
-🔴 *App:* Play Sim / Assist Plus
-✅ *Código:* \`${shortCode}\`
-✅ *Usuário:* \`${pin}\`
-✅ *Senha:* \`${pin}\`
-
-➡️ *APLICATIVOS ANDROID (TV BOX E CELULAR):*
-
-🔷 *App:* VUSER
-👤 *Usuário:* \`${pin}\` (9 dígitos)
-🔐 *Senha:* \`${pin}\` (9 dígitos)
-
-🔶 *App:* RP725
-🔢 *CÓDIGO:* \`${codeRP725}\` (8 dígitos)
-👤 *Usuário:* \`${pin}\` (9 dígitos)
-🔐 *Senha:* \`${pin}\` (9 dígitos)
-
-➡️ *IPTV SMARTERS PLAYER:*
-✅ *Name:* Léo TV
-✅ *Usuário:* \`${pin}\`
-✅ *Senha:* \`${pin}\`
-✅ *URL:* http://${domain}
-
-🌐 *WEB PLAYER:*
+🌐 *ASSISTA PELO NAVEGADOR:*
 🔗 http://${domain}/user/home
 
-📡 *LINKS DIRETOS (M3U / HLS):*
+➡️ *SMART TVS (SAMSUNG / LG):*
+1️⃣ Instale o App: *VIZZION PLAY* ou *BAY IPTV*
+2️⃣ Use seu Usuário e Senha acima.
+3️⃣ Caso peça código: \`${shortPin}\`
+
+➡️ *SMART TV ROKU:*
+1️⃣ Procure por: *IPTV SMARTERS*
+2️⃣ URL: \`http://${domain}\`
+3️⃣ Usuário e Senha: \`${pin}\`
+
+➡️ *ANDROID (TV BOX / CELULAR):*
+🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*
+✅ URL: \`http://${domain}\`
+✅ Usuário: \`${pin}\`
+✅ Senha: \`${pin}\`
+
+⚠️ *TVs ANTIGAS (STB / SMART UP):*
+1️⃣ Vá em Configurações de Rede da sua TV.
+2️⃣ Mude o DNS para: \`5.161.46.209\`
+3️⃣ Abra o app e use seu PIN: \`${pin}\`
+
+📡 *LINKS DIRETOS:*
 🔹 *M3U:* http://${domain}/api/playlist?username=${pin}&password=${pin}
 🔹 *HLS:* http://${domain}/api/playlist?username=${pin}&password=${pin}&output=hls
 
-🍿 *Instale o Web App no seu navegador para a melhor experiência!*`;
+🍿 *Instale o Web App no seu aparelho para a melhor experiência!*`;
 };
 
 export const getExpiryMessage = (pin: string, days: number) => {
