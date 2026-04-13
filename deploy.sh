@@ -1,19 +1,15 @@
 
 #!/bin/bash
 
-echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v186..."
+echo "🚀 ATUALIZAÇÃO SOBERANA LÉO TV v187..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# DESBLOQUEIO MASTER: Descarta mudanças locais que travam o merge
-echo "🧹 LIMPANDO CONFLITOS LOCAIS..."
-git checkout .
-git clean -fd
-
-# Puxa as últimas mudanças do GitHub
-echo "📥 SINCRONIZANDO COM O NÚCLEO GITHUB..."
-git pull origin main
+# DESBLOQUEIO MASTER: Força a VPS a ficar idêntica ao GitHub
+echo "🧹 LIMPANDO CONFLITOS E FORÇANDO NÚCLEO..."
+git fetch origin main
+git reset --hard origin/main
 
 # Garante que o NPM e o PM2 estão no PATH
 export PATH=$PATH:/usr/local/bin:/usr/bin
