@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
+import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 
 const CATEGORIES = [
@@ -42,6 +43,8 @@ export default function HomeContent() {
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
+  const [showAcesso, setShowAcesso] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -94,11 +97,17 @@ export default function HomeContent() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast({ title: "LINK COPIADO!" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const getEpisodes = (item: ContentItem) => {
     const directEps = Array.isArray(item.episodes) ? item.episodes : [];
     const seasons = Array.isArray(item.seasons) ? item.seasons : [];
     const seasonEps = seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []);
-    
     const all = [...directEps, ...seasonEps];
     return all.sort((a, b) => a.number - b.number);
   };
@@ -114,17 +123,22 @@ export default function HomeContent() {
     }
   };
 
+  const m3uUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/playlist?pin=${user?.pin}` : '';
+
   if (loading && content.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
       <header className="h-20 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-colors"><ChevronLeft className="h-6 w-6" /></button>}
-          <span className="text-xl font-black text-primary uppercase italic">Léo TV Stream</span>
+          {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-all"><ChevronLeft className="h-6 w-6" /></button>}
+          <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
         </div>
-        <div className="flex-1 max-w-2xl mx-4"><VoiceSearch /></div>
-        <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12"><LogOut className="h-6 w-6" /></Button>
+        <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border-primary/20 text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
+        </div>
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto">
@@ -138,25 +152,25 @@ export default function HomeContent() {
                   setUnlockTarget(c.id === 'GAMES' ? 'GAMES' : 'ADULT');
                   setIsPinOpen(true);
                 } else setSelectedCat(c.id);
-              }} className="group relative h-40 rounded-3xl overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-sm">
+              }} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl hover:shadow-primary/10">
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className={`p-3.5 rounded-2xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-7 w-7" /></div>
-                  <span className="text-sm font-black uppercase tracking-tight">{c.name}</span>
-                  <span className="bg-muted px-3 py-0.5 rounded-full text-[8px] font-bold opacity-60">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
+                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
+                  <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
+                  <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
                 </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+            <h2 className="text-3xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {content.map((item) => (
-                <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-3xl overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-lg">
-                  {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-10 w-10" /></div>}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent p-4 flex flex-col justify-end">
-                    <h3 className="font-bold text-[11px] uppercase truncate text-white">{item.title}</h3>
-                    <p className="text-[8px] font-bold text-zinc-400 uppercase mt-0.5 truncate">{item.genre}</p>
+                <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-2xl">
+                  {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-12 w-12" /></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 flex flex-col justify-end">
+                    <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
+                    <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
                   </div>
                 </div>
               ))}
@@ -165,28 +179,58 @@ export default function HomeContent() {
         )}
       </main>
 
+      <Dialog open={showAcesso} onOpenChange={setShowAcesso}>
+        <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 border-primary/10">
+          <DialogHeader className="text-center space-y-2">
+            <div className="mx-auto bg-primary/10 p-4 rounded-3xl w-fit mb-2"><Zap className="h-8 w-8 text-primary" /></div>
+            <DialogTitle className="text-2xl font-black uppercase italic text-primary">Terminal de Acesso</DialogTitle>
+            <p className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Sincronize com seus Apps de IPTV</p>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase ml-2 opacity-60">Lista M3U Master</label>
+              <div className="flex gap-2">
+                <input readOnly value={m3uUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none" />
+                <Button onClick={() => copyToClipboard(m3uUrl)} className="h-12 rounded-xl bg-primary">{copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}</Button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-muted rounded-3xl border border-border space-y-4">
+              <h4 className="text-xs font-black uppercase italic text-primary">Dados Xtream Codes</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-40">Usuário</p><p className="font-mono font-black text-sm">{user?.pin}</p></div>
+                <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-40">Senha</p><p className="font-mono font-black text-sm">{user?.pin}</p></div>
+                <div className="col-span-2 space-y-1"><p className="text-[8px] font-black uppercase opacity-40">URL do Servidor</p><p className="font-mono font-black text-[10px] truncate">http://{typeof window !== 'undefined' ? window.location.host : ''}</p></div>
+              </div>
+            </div>
+          </div>
+          <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary rounded-2xl font-black uppercase shadow-xl shadow-primary/20">VOLTAR AO STREAMING</Button>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
-        <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-3xl overflow-hidden shadow-2xl">
+        <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
           {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
-        <DialogContent className="max-w-2xl bg-card rounded-3xl p-8 overflow-hidden">
+        <DialogContent className="max-w-2xl bg-card rounded-[2.5rem] p-8 overflow-hidden">
           {selectedSeries && (
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
-                <h3 className="text-xl font-black uppercase text-primary italic">{selectedSeries.title}</h3>
-                <span className="text-[10px] font-bold opacity-40 uppercase">{getEpisodes(selectedSeries).length} Episódios</span>
+                <h3 className="text-2xl font-black uppercase text-primary italic">{selectedSeries.title}</h3>
+                <span className="text-[10px] font-black opacity-40 uppercase bg-muted px-4 py-1 rounded-full">{getEpisodes(selectedSeries).length} Episódios</span>
               </div>
               <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                 {getEpisodes(selectedSeries).map(ep => (
-                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: getEpisodes(selectedSeries), index: getEpisodes(selectedSeries).indexOf(ep) })} className="h-14 justify-start bg-muted rounded-2xl border-border px-6 hover:border-primary transition-all">
-                    <span className="font-black uppercase text-[10px]">EP {ep.number} - {ep.title}</span>
-                    <Play className="ml-auto h-4 w-4 text-primary" />
+                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: getEpisodes(selectedSeries), index: getEpisodes(selectedSeries).indexOf(ep) })} className="h-16 justify-start bg-muted rounded-2xl border-border px-6 hover:border-primary transition-all group">
+                    <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || 'Sem Título'}</span>
+                    <Play className="ml-auto h-5 w-5 text-primary group-hover:scale-125 transition-transform" />
                   </Button>
                 ))}
-                {getEpisodes(selectedSeries).length === 0 && <div className="py-10 text-center opacity-20 uppercase font-black">Nenhum episódio disponível.</div>}
+                {getEpisodes(selectedSeries).length === 0 && <div className="py-20 text-center opacity-20 uppercase font-black">Nenhum episódio localizado.</div>}
               </div>
             </div>
           )}
@@ -194,30 +238,31 @@ export default function HomeContent() {
       </Dialog>
 
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
-        <DialogContent className="sm:max-w-md bg-card rounded-3xl p-10 text-center">
-          <Lock className="h-12 w-12 text-primary mx-auto mb-6" />
-          <div className="text-xl font-black uppercase italic mb-4">Área Restrita Master</div>
-          <input type="password" title="Senha" maxLength={4} className="h-16 w-48 bg-muted border-border text-center text-3xl font-black tracking-[0.5em] rounded-2xl outline-none focus:border-primary mb-6" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
-          <Button onClick={verifyPassword} className="w-full h-14 bg-primary text-sm font-black uppercase rounded-2xl">DESBLOQUEAR</Button>
+        <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center">
+          <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
+          <div className="text-2xl font-black uppercase italic mb-4 text-primary">Sinal Restrito</div>
+          <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha de 4 Dígitos do Mestre</p>
+          <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8 shadow-inner" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
+          <Button onClick={verifyPassword} className="w-full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">LIBERAR AGORA</Button>
         </DialogContent>
       </Dialog>
 
       <Dialog open={gamesMenuOpen} onOpenChange={() => setGamesMenuOpen(false)}>
-        <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[2.5rem] p-0 overflow-hidden flex flex-col">
-          <div className="h-16 bg-emerald-600/10 border-b border-border px-8 flex items-center justify-between">
-            <div className="flex items-center gap-3"><Gamepad2 className="h-6 w-6 text-emerald-600" /><h2 className="text-lg font-black uppercase text-emerald-600 italic">Léo Games Arena</h2></div>
-            <button onClick={() => setGamesMenuOpen(false)} className="h-8 w-8 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
+        <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[3rem] p-0 overflow-hidden flex flex-col border-emerald-500/20">
+          <div className="h-20 bg-emerald-600/10 border-b border-border px-10 flex items-center justify-between">
+            <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-600" /><h2 className="text-2xl font-black uppercase text-emerald-600 italic">Léo Games Arena</h2></div>
+            <button onClick={() => setGamesMenuOpen(false)} className="h-10 w-10 rounded-full hover:bg-muted transition-all flex items-center justify-center"><X className="h-6 w-6" /></button>
           </div>
           <div className="flex-1 flex overflow-hidden">
-            <div className="w-72 border-r border-border p-6 overflow-y-auto bg-black/5 custom-scroll scrollbar-visible">
+            <div className="w-80 border-r border-border p-8 overflow-y-auto bg-black/5 custom-scroll scrollbar-visible">
                {Array.from(new Set(games.map(g => g.console))).map(c => (
-                 <div key={c} className="mb-6"><div className="text-[10px] font-black uppercase opacity-40 px-2 mb-2 tracking-widest">{c}</div>
-                 {games.filter(g => g.console === c).map(g => <Button key={g.id} variant="ghost" onClick={() => setActiveGame(g)} className={`w-full justify-start h-10 rounded-xl text-[10px] font-bold uppercase ${activeGame?.id === g.id ? 'bg-emerald-500 text-white' : 'hover:bg-emerald-500/10'}`}>{g.title}</Button>)}
+                 <div key={c} className="mb-8"><div className="text-[11px] font-black uppercase opacity-40 px-3 mb-3 tracking-widest text-emerald-600">{c}</div>
+                 {games.filter(g => g.console === c).map(g => <Button key={g.id} variant="ghost" onClick={() => setActiveGame(g)} className={`w-full justify-start h-12 rounded-xl text-[11px] font-black uppercase mb-1 transition-all ${activeGame?.id === g.id ? 'bg-emerald-500 text-white shadow-lg' : 'hover:bg-emerald-500/10'}`}>{g.title}</Button>)}
                  </div>
                ))}
             </div>
-            <div className="flex-1 bg-black/90">
-               {activeGame ? <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen /> : <div className="flex flex-col items-center justify-center h-full opacity-20 text-white"><Trophy className="h-20 w-20 mb-4 animate-pulse" /><h3 className="text-xl font-black uppercase italic">Escolha um Combatente</h3></div>}
+            <div className="flex-1 bg-black/95 relative">
+               {activeGame ? <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen /> : <div className="flex flex-col items-center justify-center h-full opacity-30 text-white text-center p-10"><Trophy className="h-32 w-32 mb-6 animate-bounce" /><h3 className="text-3xl font-black uppercase italic">Escolha um Jogo para Iniciar o Combate</h3><p className="text-xs uppercase font-bold mt-4 tracking-widest">Arena Master Léo TV v2.0</p></div>}
             </div>
           </div>
         </DialogContent>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -43,19 +42,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // TÚNEL MASTER SOBERANO (Resolve links HTTP, Archive.org e Blinder)
-    if (
+    // MOTOR SOBERANO v189: Detecta links que precisam de bypass
+    const needsProxy = 
       finalUrl.startsWith('http:') || 
       lowerUrl.includes('.ts') || 
       lowerUrl.includes('xvideos') || 
       lowerUrl.includes('archive.org') ||
       lowerUrl.includes('contfree.shop') ||
-      lowerUrl.includes('blinder.space')
-    ) {
+      lowerUrl.includes('blinder.space') ||
+      lowerUrl.includes('reidoscanais');
+
+    if (needsProxy && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts')
+    const isHLS = lowerUrl.includes('.m3u8') || lowerUrl.includes('.ts') || finalUrl.includes('playlist.m3u8');
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
@@ -72,6 +73,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             enableWorker: true,
             lowLatencyMode: true,
             autoStartLoad: true,
+            backBufferLength: 90,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
           hls.loadSource(finalUrl)
@@ -103,7 +105,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. Tente novamente." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -126,23 +128,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen z-[9999]' : 'h-[85vh] aspect-video rounded-3xl border border-white/5 shadow-2xl'}`}
+      className={`relative w-full bg-black overflow-hidden flex items-center justify-center transition-all ${isFullscreen ? 'h-screen w-screen z-[9999]' : 'h-[85vh] aspect-video rounded-[3rem] border border-white/5 shadow-2xl'}`}
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando Sinal...</p>
+          <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
+          <p className="text-[12px] font-black uppercase text-primary animate-pulse tracking-[0.3em] italic">Sintonizando Rede Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
-          <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <h3 className="text-white font-black uppercase italic text-xl mb-4">SINAL OSCILOU</h3>
-          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-8 max-w-xs mx-auto leading-relaxed">{error.msg}</p>
+          <AlertCircle className="h-20 w-20 text-destructive mb-8 animate-pulse" />
+          <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Oscilou</h3>
+          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-10 max-w-xs mx-auto leading-relaxed tracking-widest">{error.msg}</p>
           <div className="flex gap-4">
-             <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-8 h-12 rounded-xl">RECONECTAR</Button>
-             {onNext && <Button onClick={onNext} className="bg-primary text-white uppercase font-black text-[10px] px-8 h-12 rounded-xl">PRÓXIMO CANAL</Button>}
+             <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl hover:bg-primary/10">RECONECTAR</Button>
+             {onNext && <Button onClick={onNext} className="bg-primary text-white uppercase font-black text-[10px] px-10 h-14 rounded-2xl shadow-xl shadow-primary/20">PRÓXIMO CANAL</Button>}
           </div>
         </div>
       )}
@@ -161,19 +163,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {(onNext || onPrev) && !error && (
-        <div className="absolute inset-0 z-40 flex items-center justify-between px-6 pointer-events-none group">
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100">
-            <ChevronLeft className="h-7 w-7 text-white" />
+        <div className="absolute inset-0 z-40 flex items-center justify-between px-8 pointer-events-none group">
+          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100 shadow-2xl">
+            <ChevronLeft className="h-8 w-8 text-white" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100">
-            <ChevronRight className="h-7 w-7 text-white" />
+          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100 shadow-2xl">
+            <ChevronRight className="h-8 w-8 text-white" />
           </button>
         </div>
       )}
 
-      <div className="absolute bottom-6 right-6 z-40">
-        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
-          {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
+      <div className="absolute bottom-8 right-8 z-40 flex gap-3">
+        <button onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
+          {isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}
         </button>
       </div>
     </div>
