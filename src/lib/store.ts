@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -78,8 +79,8 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v203 - REGRA DE OURO DO MESTRE LÉO
- * YouTube e .MP4 -> Originais (Velocidade Máxima)
+ * HELPER SOBERANO v205 - REGRA DE OURO DO MESTRE LÉO
+ * YouTube, XVideos e .MP4 -> Originais (Velocidade Máxima)
  * O RESTO -> Proxy Master (Segurança e Bypass CORS)
  */
 export const formatMasterLink = (url: string) => {
@@ -92,11 +93,12 @@ export const formatMasterLink = (url: string) => {
   const isMP4 = lower.endsWith('.mp4') || lower.includes('.mp4?');
   const isAlreadyProxy = cleanUrl.includes('/api/proxy');
 
-  // YouTube, XVideos e .MP4 não passam pelo Proxy para manter performance nativa
+  // Mantém original conforme ordem do Mestre
   if (isYouTube || isXVideos || isMP4 || isAlreadyProxy) {
     return cleanUrl;
   }
 
+  // Tunela todo o resto (Canais .ts, .m3u8, etc)
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
