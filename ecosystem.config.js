@@ -1,4 +1,3 @@
-
 module.exports = {
   apps : [{
     name: "leotv-master",
@@ -11,7 +10,7 @@ module.exports = {
     },
     instances: 1, 
     exec_mode: "fork",
-    max_memory_restart: "450M",
+    max_memory_restart: "400M",
     autorestart: true,
     watch: false,
     exp_backoff_restart_delay: 100
