@@ -40,7 +40,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [])
 
   const initPlayer = React.useCallback(async () => {
-    if (!url) return
+    if (!url || !videoRef.current) return
     cleanup()
     setError(null)
     setLoading(true)
@@ -48,22 +48,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // MOTOR SOBERANO v193: Bypass agressivo para Blinder/Contfree
+    // MOTOR SOBERANO v194: Bypass agressivo para canais que travam no carregamento
     const isHttp = finalUrl.startsWith('http:');
     const isTSFile = lowerUrl.includes('.ts');
     const isProblematic = 
-      lowerUrl.includes('contfree.shop') || 
-      lowerUrl.includes('blinder.space') || 
+      lowerUrl.includes('contfree') || 
+      lowerUrl.includes('blinder') || 
       lowerUrl.includes('archive.org') ||
-      lowerUrl.includes('reidoscanais') ||
-      lowerUrl.includes('xvideos');
+      lowerUrl.includes('reidoscanais');
 
     if ((isHttp || isProblematic || isTSFile) && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
     const isHLS = lowerUrl.includes('.m3u8') || finalUrl.includes('playlist.m3u8');
-    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('.ts') || (finalUrl.includes('proxy') && isTSFile);
+    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('.ts') || finalUrl.includes('video/mp2t');
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
     const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
@@ -73,8 +72,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return 
       }
 
-      // LÓGICA DE PLAYER BLINDER (.TS)
-      if (isMPEGTS) {
+      // LÓGICA DE PLAYER MPEG-TS (.TS) - O SEGREDO DO SUPREMO
+      if (isMPEGTS || isTSFile) {
         const mpegts = (window as any).mpegts;
         if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
           const player = mpegts.createPlayer({
@@ -83,12 +82,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             url: finalUrl
           }, {
             enableWorker: true,
+            enableStashBuffer: false,
             stashInitialSize: 128,
-            enableStashBuffer: false
+            lazyLoad: false,
+            liveBufferLatencyChasing: true, // Força o play mesmo se o buffer for curto
+            liveBufferLatencyMaxLatency: 3,
+            liveBufferLatencyMinRemaining: 0.2
           });
-          player.attachMediaElement(videoRef.current!);
+          player.attachMediaElement(videoRef.current);
           player.load();
-          player.play();
+          const playPromise = player.play();
+          if (playPromise) {
+            playPromise.catch(() => {
+              if (videoRef.current) videoRef.current.muted = true;
+              player.play();
+            });
+          }
           mpegtsRef.current = player;
           setLoading(false);
           return;
@@ -102,10 +111,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 60
+            backBufferLength: 30,
+            maxBufferLength: 10
           })
           hls.loadSource(finalUrl)
-          hls.attachMedia(videoRef.current!)
+          hls.attachMedia(videoRef.current)
           hlsRef.current = hls
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             videoRef.current?.play().catch(() => {
@@ -114,20 +124,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             })
             setLoading(false)
           })
-        } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
+        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
       } else if (isMP4) {
-        if (videoRef.current) {
-          videoRef.current.src = finalUrl
-          videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
-        }
+        videoRef.current.src = finalUrl
+        videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
       } else {
+        // Fallback para qualquer outro link
+        videoRef.current.src = finalUrl
+        videoRef.current.play().catch(() => {});
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal Blinder. Tentando reconectar..." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal dinâmico. Tentando reconectar..." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -143,7 +154,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     else document.exitFullscreen()
   }
 
-  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || url.includes('youtube') || url.includes('xvideos')
+  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || url.includes('youtube')
 
   return (
     <div 
