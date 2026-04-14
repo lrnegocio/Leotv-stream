@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -48,23 +48,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowerUrl = url.trim().toLowerCase()
     let finalUrl = url.trim()
 
-    // MOTOR SOBERANO v194: Bypass agressivo para canais que travam no carregamento
-    const isHttp = finalUrl.startsWith('http:');
-    const isTSFile = lowerUrl.includes('.ts');
-    const isProblematic = 
-      lowerUrl.includes('contfree') || 
+    // LÓGICA DE PROXY INTELIGENTE v195
+    const needsProxy = 
+      finalUrl.startsWith('http:') || 
+      lowerUrl.includes('.ts') || 
       lowerUrl.includes('blinder') || 
-      lowerUrl.includes('archive.org') ||
-      lowerUrl.includes('reidoscanais');
+      lowerUrl.includes('contfree') || 
+      lowerUrl.includes('reidoscanais') ||
+      lowerUrl.includes('archive.org');
 
-    if ((isHttp || isProblematic || isTSFile) && !finalUrl.includes('/api/proxy')) {
+    if (needsProxy && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || finalUrl.includes('playlist.m3u8');
-    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('.ts') || finalUrl.includes('video/mp2t');
+    const isHLS = lowerUrl.includes('.m3u8') || finalUrl.includes('m3u8');
+    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('video/mp2t');
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
-    const isMP4 = lowerUrl.includes('.mp4') || lowerUrl.includes('.mov')
 
     try {
       if (isYouTube) {
@@ -72,8 +71,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return 
       }
 
-      // LÓGICA DE PLAYER MPEG-TS (.TS) - O SEGREDO DO SUPREMO
-      if (isMPEGTS || isTSFile) {
+      // MOTOR MPEG-TS (.TS) - TECNOLOGIA SUPREMO
+      if (isMPEGTS) {
         const mpegts = (window as any).mpegts;
         if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
           const player = mpegts.createPlayer({
@@ -84,35 +83,32 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             enableWorker: true,
             enableStashBuffer: false,
             stashInitialSize: 128,
-            lazyLoad: false,
-            liveBufferLatencyChasing: true, // Força o play mesmo se o buffer for curto
-            liveBufferLatencyMaxLatency: 3,
-            liveBufferLatencyMinRemaining: 0.2
+            liveBufferLatencyChasing: true,
+            liveBufferLatencyMaxLatency: 2,
+            liveBufferLatencyMinRemaining: 0.1
           });
           player.attachMediaElement(videoRef.current);
           player.load();
-          const playPromise = player.play();
-          if (playPromise) {
-            playPromise.catch(() => {
-              if (videoRef.current) videoRef.current.muted = true;
-              player.play();
-            });
-          }
+          player.play().catch(() => {
+            if (videoRef.current) videoRef.current.muted = true;
+            player.play();
+          });
           mpegtsRef.current = player;
           setLoading(false);
           return;
         }
       }
 
-      // LÓGICA HLS (.M3U8)
+      // MOTOR HLS (.M3U8)
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 30,
-            maxBufferLength: 10
+            backBufferLength: 60,
+            manifestLoadingMaxRetry: 10,
+            levelLoadingMaxRetry: 10
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current)
@@ -124,21 +120,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             })
             setLoading(false)
           })
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) {
+               console.error("HLS Fatal Error, tentando fallback nativo...");
+               videoRef.current!.src = finalUrl;
+            }
+          });
         } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
-      } else if (isMP4) {
-        videoRef.current.src = finalUrl
-        videoRef.current.onloadeddata = () => { videoRef.current?.play().catch(() => {}); setLoading(false); }
       } else {
-        // Fallback para qualquer outro link
+        // FALLBACK PARA MP4 OU LINKS DIRETOS
         videoRef.current.src = finalUrl
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => {
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            videoRef.current.play();
+          }
+        });
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal dinâmico. Tentando reconectar..." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. Tente recarregar o sinal mestre." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -173,10 +177,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <AlertCircle className="h-20 w-20 text-destructive mb-8 animate-pulse" />
           <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Oscilou</h3>
           <p className="text-zinc-400 font-bold uppercase text-[10px] mb-10 max-w-xs mx-auto leading-relaxed tracking-widest">{error.msg}</p>
-          <div className="flex gap-4">
-             <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl hover:bg-primary/10">RECONECTAR</Button>
-             {onNext && <Button onClick={onNext} className="bg-primary text-white uppercase font-black text-[10px] px-10 h-14 rounded-2xl shadow-xl shadow-primary/20">PRÓXIMO CANAL</Button>}
-          </div>
+          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl">RECONECTAR SINAL</Button>
         </div>
       )}
       
@@ -193,18 +194,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         !error && <video key={url} ref={videoRef} className="w-full h-full object-contain z-10" autoPlay playsInline controls={!isFullscreen} />
       )}
 
-      {(onNext || onPrev) && !error && (
-        <div className="absolute inset-0 z-40 flex items-center justify-between px-8 pointer-events-none group">
-          <button onClick={(e) => { e.stopPropagation(); onPrev?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100 shadow-2xl">
-            <ChevronLeft className="h-8 w-8 text-white" />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onNext?.(); }} className="pointer-events-auto h-16 w-16 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-primary transition-all opacity-0 group-hover:opacity-100 shadow-2xl">
-            <ChevronRight className="h-8 w-8 text-white" />
-          </button>
-        </div>
-      )}
-
       <div className="absolute bottom-8 right-8 z-40 flex gap-3">
+        <button onClick={initPlayer} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
+          <RefreshCw className="h-5 w-5 text-white" />
+        </button>
         <button onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
           {isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}
         </button>
