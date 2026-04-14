@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2 } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -123,7 +123,7 @@ export default function HomeContent() {
     }
   };
 
-  const m3uUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/playlist?pin=${user?.pin}` : '';
+  const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}` : '';
 
   if (loading && content.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
@@ -183,26 +183,25 @@ export default function HomeContent() {
         <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 border-primary/10">
           <DialogHeader className="text-center space-y-2">
             <div className="mx-auto bg-primary/10 p-4 rounded-3xl w-fit mb-2"><Zap className="h-8 w-8 text-primary" /></div>
-            <DialogTitle className="text-2xl font-black uppercase italic text-primary">Terminal de Acesso</DialogTitle>
-            <p className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Sincronize com seus Apps de IPTV</p>
+            <DialogTitle className="text-2xl font-black uppercase italic text-primary">Acesso ao Sistema</DialogTitle>
+            <p className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Seu Link Oficial Léo TV</p>
           </DialogHeader>
           
-          <div className="space-y-6 py-6">
+          <div className="space-y-6 py-6 text-center">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase ml-2 opacity-60">Lista M3U Master</label>
+              <label className="text-[10px] font-black uppercase ml-2 opacity-60">Link de Streaming</label>
               <div className="flex gap-2">
-                <input readOnly value={m3uUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none" />
-                <Button onClick={() => copyToClipboard(m3uUrl)} className="h-12 rounded-xl bg-primary">{copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}</Button>
+                <input readOnly value={siteUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none text-center" />
+                <Button onClick={() => copyToClipboard(siteUrl)} className="h-12 rounded-xl bg-primary">{copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}</Button>
               </div>
             </div>
 
-            <div className="p-6 bg-muted rounded-3xl border border-border space-y-4">
-              <h4 className="text-xs font-black uppercase italic text-primary">Dados Xtream Codes</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-40">Usuário</p><p className="font-mono font-black text-sm">{user?.pin}</p></div>
-                <div className="space-y-1"><p className="text-[8px] font-black uppercase opacity-40">Senha</p><p className="font-mono font-black text-sm">{user?.pin}</p></div>
-                <div className="col-span-2 space-y-1"><p className="text-[8px] font-black uppercase opacity-40">URL do Servidor</p><p className="font-mono font-black text-[10px] truncate">http://{typeof window !== 'undefined' ? window.location.host : ''}</p></div>
-              </div>
+            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 space-y-4">
+              <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto"><Smartphone className="h-6 w-6 text-primary" /></div>
+              <h4 className="text-xs font-black uppercase italic text-primary">Dica de Instalação</h4>
+              <p className="text-[10px] font-bold uppercase leading-relaxed opacity-70">
+                Ao abrir o link acima, clique nos 3 pontos do navegador e selecione <span className="text-primary">"Adicionar à Tela Inicial"</span>. O Léo TV funcionará como um Aplicativo nativo em seu aparelho!
+              </p>
             </div>
           </div>
           <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary rounded-2xl font-black uppercase shadow-xl shadow-primary/20">VOLTAR AO STREAMING</Button>

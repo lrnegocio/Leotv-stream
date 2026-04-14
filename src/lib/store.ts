@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -265,7 +264,6 @@ export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENC
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
   const serverUrl = `http://${domain}`;
-  const m3uUrl = `${serverUrl}/api/playlist?pin=${pin}`;
 
   return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!*
 
@@ -275,27 +273,11 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 📅 *Plano:* ${tier.toUpperCase()}
 📱 *Telas:* ${screens}
 
-🔗 *SUA LISTA M3U (COLE NO APP):*
-\`${m3uUrl}\`
-
-🌐 *ASSISTA NO NAVEGADOR:*
+🌐 *LINK PARA ASSISTIR:*
 🔗 ${serverUrl}
 
-------------------------------------
-📺 *COMO INSTALAR NA SUA TV:*
+📲 *INSTALE O SEU APP:*
+Abra o link acima no seu celular ou Smart TV e selecione "Instalar Aplicativo" ou "Adicionar à Tela Inicial" para usar o Léo TV como um App oficial!
 
-➡️ *ANDROID (TV Box / Celular):*
-🔹 App: *IPTV SMARTERS PRO* ou *XCIPTV*
-✅ Servidor: \`${serverUrl}\`
-
-➡️ *SMART TV (SAMSUNG / LG):*
-🔹 App: *BAY IPTV*, *BOB PLAYER* ou *DUPLEXPLAY*
-✅ Use sua Lista M3U acima.
-
-➡️ *ROKU:*
-🔹 App: *IPTV SMARTERS* ou *CLOUDDY*
-✅ Servidor: \`${serverUrl}\`
-✅ Usuário/Senha: \`${pin}\`
-
-🍿 *Instale o Web App no seu aparelho para acesso rápido!*`;
+🍿 *Divirta-se com o melhor conteúdo!*`;
 };

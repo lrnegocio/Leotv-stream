@@ -63,8 +63,7 @@ export default function RootLayout({
           }
         `}} />
       </head>
-      <body className="font-body antialiased bg-background text-foreground select-none overflow-x-hidden">
-        <SecurityBlocker />
+      <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
         {children}
         <Toaster />
         <OfflineIndicator />
@@ -73,24 +72,5 @@ export default function RootLayout({
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>
     </html>
-  );
-}
-
-function SecurityBlocker() {
-  return (
-    <script dangerouslySetInnerHTML={{ __html: `
-      (function() {
-        const isLocal = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1';
-        if (isLocal) return;
-        document.addEventListener('contextmenu', e => e.preventDefault());
-        document.addEventListener('keydown', e => {
-          if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
-            e.preventDefault();
-            return false;
-          }
-        });
-      })();
-    `}} />
   );
 }
