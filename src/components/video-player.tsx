@@ -4,6 +4,7 @@
 import * as React from "react"
 import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { formatMasterLink } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -45,27 +46,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setError(null)
     setLoading(true)
 
-    let finalUrl = url.trim();
-    // LIMPEZA DE URL: Remove erros comuns de cópia de link
-    finalUrl = finalUrl.replace('.mpegts.js', '').replace('.js', '');
-
-    const lowerUrl = finalUrl.toLowerCase()
-
-    // LÓGICA DE PROXY BYPASS v197
-    const needsProxy = 
-      finalUrl.startsWith('http:') || 
-      lowerUrl.includes('.ts') || 
-      lowerUrl.includes('contfree') || 
-      lowerUrl.includes('blinder') ||
-      lowerUrl.includes('archive.org');
-
-    if (needsProxy && !finalUrl.includes('/api/proxy')) {
-      finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
-    }
+    // APLICAÇÃO DO TÚNEL MASTER AUTOMÁTICO
+    let finalUrl = formatMasterLink(url);
+    const lowerUrl = finalUrl.toLowerCase();
 
     const isHLS = lowerUrl.includes('.m3u8');
     const isMPEGTS = lowerUrl.includes('.ts') || lowerUrl.includes('video/mp2t');
-    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
+    const isMP4 = lowerUrl.includes('.mp4');
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
 
     try {
       if (isYouTube) {
@@ -84,7 +72,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           }, {
             enableWorker: true,
             lazyLoad: false,
-            stashInitialSize: 128
+            stashInitialSize: 128,
+            liveBufferLatencyChasing: true
           });
           player.attachMediaElement(videoRef.current);
           player.load();
@@ -117,7 +106,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
-      } else {
+      } 
+      // MOTOR MP4 OU NATIVO
+      else {
         videoRef.current.src = finalUrl
         videoRef.current.play().catch(() => {
           if (videoRef.current) videoRef.current.muted = true;
@@ -142,7 +133,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     else document.exitFullscreen()
   }
 
-  const isIframe = (!url.toLowerCase().includes('.m3u8') && !url.toLowerCase().includes('.ts') && !url.toLowerCase().includes('.mp4')) || url.includes('youtube')
+  const isIframe = (!isHLS && !isMPEGTS && !isMP4) || url.includes('youtube')
 
   return (
     <div 

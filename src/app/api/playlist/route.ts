@@ -1,12 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRemoteContent } from '@/lib/store';
+import { getRemoteContent, formatMasterLink } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR DE PLAYLIST M3U SOBERANO v191
- * Suporte a episódios de séries expandidos para compatibilidade total.
+ * MOTOR DE PLAYLIST M3U SOBERANO v199
+ * Aplica o túnel de proxy automaticamente para todos os links necessários.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -28,14 +28,17 @@ export async function GET(req: NextRequest) {
       if (item.type === 'channel' || item.type === 'movie') {
         let streamUrl = item.streamUrl || "";
         if (streamUrl) {
-          if (streamUrl.startsWith('http:') || streamUrl.includes('archive.org') || streamUrl.includes('blinder')) {
-            streamUrl = `${baseUrl}/api/proxy?url=${encodeURIComponent(streamUrl)}`;
+          // Aplica o formatMasterLink mas garante que o link seja absoluto para o M3U
+          let finalUrl = formatMasterLink(streamUrl);
+          if (finalUrl.startsWith('/api/proxy')) {
+            finalUrl = `${baseUrl}${finalUrl}`;
           }
+          
           m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${item.title}\n`;
-          m3u += `${streamUrl}\n`;
+          m3u += `${finalUrl}\n`;
         }
       } 
-      // Séries (Expande episódios no M3U para aparecer em todos os apps)
+      // Séries
       else if (item.type === 'series' || item.type === 'multi-season') {
         const episodes: any[] = [];
         
@@ -50,12 +53,13 @@ export async function GET(req: NextRequest) {
         episodes.forEach(ep => {
           let epUrl = ep.streamUrl || "";
           if (epUrl) {
-            if (epUrl.startsWith('http:') || epUrl.includes('archive.org') || epUrl.includes('blinder')) {
-              epUrl = `${baseUrl}/api/proxy?url=${encodeURIComponent(epUrl)}`;
+            let finalEpUrl = formatMasterLink(epUrl);
+            if (finalEpUrl.startsWith('/api/proxy')) {
+              finalEpUrl = `${baseUrl}${finalEpUrl}`;
             }
             const epTitle = `${item.title} - S${String(ep.seasonNum).padStart(2, '0')}E${String(ep.number).padStart(2, '0')} ${ep.title || ''}`;
             m3u += `#EXTINF:-1 tvg-logo="${logo}" group-title="${category}",${epTitle}\n`;
-            m3u += `${epUrl}\n`;
+            m3u += `${finalEpUrl}\n`;
           }
         });
       }

@@ -77,6 +77,33 @@ export interface User {
   created_at?: string;
 }
 
+// HELPER SOBERANO: Formata o link para passar pelo Proxy se necessário
+export const formatMasterLink = (url: string) => {
+  if (!url) return "";
+  const cleanUrl = url.trim().replace('.mpegts.js', '').replace('.js', '');
+  const lower = cleanUrl.toLowerCase();
+  
+  // Se já for proxy ou youtube, não mexe
+  if (cleanUrl.includes('/api/proxy') || cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+    return cleanUrl;
+  }
+
+  // Links que PRECISAM de Proxy para funcionar sempre
+  const needsProxy = 
+    cleanUrl.startsWith('http:') || 
+    lower.includes('.ts') || 
+    lower.includes('.mp4') ||
+    lower.includes('blinder') || 
+    lower.includes('contfree') || 
+    lower.includes('archive.org');
+
+  if (needsProxy) {
+    return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
+  }
+  
+  return cleanUrl;
+};
+
 // FUNÇÕES DE EXPORTAÇÃO MESTRA
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -100,6 +127,14 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const finalId = item.id || "str_" + Math.random().toString(36).substring(2, 12);
+    
+    // Tratamento automático de links ao salvar
+    let finalStreamUrl = item.streamUrl || "";
+    if (finalStreamUrl && !finalStreamUrl.includes('/api/proxy') && (finalStreamUrl.includes('.mp4') || finalStreamUrl.includes('.ts') || finalStreamUrl.includes('blinder'))) {
+       // Opcional: Você pode escolher salvar o link original e o player decide, 
+       // mas aqui vamos salvar o link puro e deixar o VideoPlayer e o M3U aplicarem o proxy.
+    }
+
     const payload: any = {
       id: finalId, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
@@ -108,7 +143,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Sinal Master Léo Tv",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
-      streamUrl: item.streamUrl || "",
+      streamUrl: finalStreamUrl,
       episodes: (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
@@ -268,16 +303,15 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
   return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!*
 
 🚀 *DADOS DE ACESSO MASTER:*
-👤 *Usuário:* \`${pin}\`
+👤 *Acesso:* \`${pin}\`
 🔐 *Senha:* \`${pin}\`
 📅 *Plano:* ${tier.toUpperCase()}
-📱 *Telas:* ${screens}
 
 🌐 *LINK PARA ASSISTIR:*
 🔗 ${serverUrl}
 
 📲 *INSTALE O SEU APP:*
-Abra o link acima no seu celular ou Smart TV e selecione "Instalar Aplicativo" ou "Adicionar à Tela Inicial" para usar o Léo TV como um App oficial!
+Abra o link acima no seu navegador e selecione "Adicionar à Tela Inicial" para usar o Léo TV como um App oficial!
 
-🍿 *Divirta-se com o melhor conteúdo!*`;
+🍿 *Divirta-se!*`;
 };
