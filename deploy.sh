@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v205..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v206..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"

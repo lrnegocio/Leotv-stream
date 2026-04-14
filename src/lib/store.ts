@@ -79,26 +79,32 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v205 - REGRA DE OURO DO MESTRE LÉO
- * YouTube, XVideos e .MP4 -> Originais (Velocidade Máxima)
- * O RESTO -> Proxy Master (Segurança e Bypass CORS)
+ * HELPER SOBERANO v206 - REGRA DEFINITIVA DO MESTRE LÉO
+ * TUDO PASSA PELO PROXY (MP4, TS, M3U8, XVIDEOS, SITES)
+ * EXCETO: YouTube e Dailymotion (Rodam direto)
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  const cleanUrl = url.trim();
+  let cleanUrl = url.trim();
+
+  // Se for um Iframe completo, extrai o SRC
+  if (cleanUrl.includes('<iframe')) {
+    const srcMatch = cleanUrl.match(/src="([^"]+)"/);
+    if (srcMatch) cleanUrl = srcMatch[1];
+  }
+
   const lower = cleanUrl.toLowerCase();
   
+  // EXCEÇÕES MASTER: Apenas YouTube e Dailymotion rodam fora do túnel
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
-  const isXVideos = lower.includes('xvideos.com');
-  const isMP4 = lower.endsWith('.mp4') || lower.includes('.mp4?');
+  const isDailymotion = lower.includes('dailymotion.com') || lower.includes('dai.ly');
   const isAlreadyProxy = cleanUrl.includes('/api/proxy');
 
-  // Mantém original conforme ordem do Mestre
-  if (isYouTube || isXVideos || isMP4 || isAlreadyProxy) {
+  if (isYouTube || isDailymotion || isAlreadyProxy) {
     return cleanUrl;
   }
 
-  // Tunela todo o resto (Canais .ts, .m3u8, etc)
+  // TUNELA TUDO O RESTO
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 

@@ -4,7 +4,6 @@
 import * as React from "react"
 import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { formatMasterLink } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -24,6 +23,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
+
+  // Extrai a URL original de dentro do Proxy para saber o motor
+  const getOriginalUrl = (proxyUrl: string) => {
+    if (proxyUrl.startsWith('/api/proxy?url=')) {
+      try {
+        return decodeURIComponent(proxyUrl.split('url=')[1]);
+      } catch(e) { return proxyUrl; }
+    }
+    return proxyUrl;
+  }
 
   React.useEffect(() => {
     setIsClient(true)
@@ -46,14 +55,22 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setError(false)
     setLoading(true)
 
-    const finalUrl = formatMasterLink(url)
-    const testUrl = url.toLowerCase()
+    const originalUrl = getOriginalUrl(url).toLowerCase();
     
-    const isHLS = testUrl.includes('.m3u8')
-    const isMPEGTS = testUrl.includes('.ts')
-    const isIframe = testUrl.includes('youtube.com') || testUrl.includes('youtu.be') || testUrl.includes('xvideos.com')
+    const isHLS = originalUrl.includes('.m3u8');
+    const isMPEGTS = originalUrl.includes('.ts');
+    const isMP4 = originalUrl.includes('.mp4');
+    const isDirectVideo = isHLS || isMPEGTS || isMP4;
+    
+    // Identifica se é YouTube ou XVideos para usar Iframe
+    const isIframeTarget = originalUrl.includes('youtube.com') || 
+                           originalUrl.includes('youtu.be') || 
+                           originalUrl.includes('dailymotion.com') ||
+                           originalUrl.includes('dai.ly') ||
+                           originalUrl.includes('.html') ||
+                           !isDirectVideo;
 
-    if (isIframe) {
+    if (isIframeTarget) {
       setLoading(false)
       return 
     }
@@ -63,7 +80,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
-          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: finalUrl }, { enableWorker: true, liveBufferLatencyChasing: true })
+          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url }, { enableWorker: true, liveBufferLatencyChasing: true })
           player.attachMediaElement(videoRef.current)
           player.load()
           player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
@@ -78,7 +95,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls({ enableWorker: true })
-          hls.loadSource(finalUrl)
+          hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -89,8 +106,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       } 
       
-      // FALLBACK DIRETO (MP4)
-      videoRef.current.src = finalUrl
+      // FALLBACK DIRETO (.MP4 VIA PROXY)
+      videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
         videoRef.current?.play()
@@ -121,15 +138,21 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   if (!isClient) return null
 
-  const testUrl = url.toLowerCase()
-  const isIframe = testUrl.includes('youtube.com') || testUrl.includes('youtu.be') || testUrl.includes('xvideos.com')
+  const originalUrl = getOriginalUrl(url).toLowerCase();
+  const isDirectVideo = originalUrl.includes('.m3u8') || originalUrl.includes('.ts') || originalUrl.includes('.mp4');
+  const isIframeTarget = originalUrl.includes('youtube.com') || 
+                         originalUrl.includes('youtu.be') || 
+                         originalUrl.includes('dailymotion.com') ||
+                         originalUrl.includes('dai.ly') ||
+                         originalUrl.includes('.html') ||
+                         !isDirectVideo;
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse">Sintonizando Canal...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse">Sintonizando Túnel Master...</p>
         </div>
       )}
 
@@ -140,8 +163,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         </div>
       )}
       
-      {isIframe ? (
-        <iframe key={url} src={testUrl.includes('youtube') ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : url} className="w-full h-full border-0" allowFullScreen allow="autoplay; encrypted-media; fullscreen" onLoad={() => setLoading(false)} />
+      {isIframeTarget ? (
+        <iframe 
+          key={url} 
+          src={originalUrl.includes('youtube') ? `https://www.youtube.com/embed/${originalUrl.split('v=')[1] || originalUrl.split('/').pop()}?autoplay=1` : url} 
+          className="w-full h-full border-0" 
+          allowFullScreen 
+          allow="autoplay; encrypted-media; fullscreen" 
+          onLoad={() => setLoading(false)} 
+        />
       ) : (
         <video key={url} ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
       )}
