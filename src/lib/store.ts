@@ -77,29 +77,23 @@ export interface User {
   created_at?: string;
 }
 
-// HELPER SOBERANO: Formata o link para passar pelo Proxy se necessário
+// HELPER SOBERANO v201: Formata o link para passar pelo Proxy seguindo as regras do Mestre Léo
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  const cleanUrl = url.trim().replace('.mpegts.js', '').replace('.js', '');
+  const cleanUrl = url.trim();
   const lower = cleanUrl.toLowerCase();
   
-  if (cleanUrl.includes('/api/proxy') || cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
+  // REGRA DE EXCEÇÃO MESTRE: YouTube e .MP4 NÃO passam pelo proxy
+  const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
+  const isMP4 = lower.includes('.mp4');
+  const isAlreadyProxy = cleanUrl.includes('/api/proxy');
+
+  if (isYouTube || isMP4 || isAlreadyProxy) {
     return cleanUrl;
   }
 
-  const needsProxy = 
-    cleanUrl.startsWith('http:') || 
-    lower.includes('.ts') || 
-    lower.includes('.mp4') ||
-    lower.includes('blinder') || 
-    lower.includes('contfree') || 
-    lower.includes('archive.org');
-
-  if (needsProxy) {
-    return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
-  }
-  
-  return cleanUrl;
+  // TUDO O MAIS (XVideos, .TS, .M3U8, Contfree, Blinder) passa pelo Túnel do Servidor
+  return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

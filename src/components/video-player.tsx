@@ -51,15 +51,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     try {
       const finalUrl = formatMasterLink(url)
-      const testUrl = finalUrl.toLowerCase()
+      const testUrl = url.toLowerCase() // Analisamos a URL original para detectar o tipo
       
-      // Detecção de tipo considerando o proxy
       const isHLS = testUrl.includes('.m3u8')
       const isMPEGTS = testUrl.includes('.ts') || testUrl.includes('video/mp2t')
       const isMP4 = testUrl.includes('.mp4')
       const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
+      const isXVideos = testUrl.includes('xvideos.com')
 
-      if (isYouTube) {
+      // DETECÇÃO DE IFRAME (YouTube e XVideos)
+      if (isYouTube || isXVideos) {
         setLoading(false)
         return 
       }
@@ -68,25 +69,29 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (isMPEGTS) {
         const mpegts = (window as any).mpegts
         if (mpegts && mpegts.getFeatureList && mpegts.getFeatureList().mseLivePlayback) {
-          const player = mpegts.createPlayer({
-            type: 'mse',
-            isLive: true,
-            url: finalUrl
-          }, {
-            enableWorker: true,
-            lazyLoad: false,
-            stashInitialSize: 128,
-            liveBufferLatencyChasing: true
-          })
-          player.attachMediaElement(videoRef.current)
-          player.load()
-          player.play().catch(() => {
-            if (videoRef.current) videoRef.current.muted = true
-            player.play()
-          })
-          mpegtsRef.current = player
-          setLoading(false)
-          return
+          try {
+            const player = mpegts.createPlayer({
+              type: 'mse',
+              isLive: true,
+              url: finalUrl
+            }, {
+              enableWorker: true,
+              lazyLoad: false,
+              stashInitialSize: 128,
+              liveBufferLatencyChasing: true
+            })
+            player.attachMediaElement(videoRef.current)
+            player.load()
+            player.play().catch(() => {
+              if (videoRef.current) videoRef.current.muted = true
+              player.play()
+            })
+            mpegtsRef.current = player
+            setLoading(false)
+            return
+          } catch (err) {
+            console.error("MPEGTS Fallback", err)
+          }
         }
       }
 
@@ -130,10 +135,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   }, [url, cleanup])
 
   React.useEffect(() => {
-    // Pequeno delay para garantir que os scripts globais (mpegts/hls) existam
     const timer = setTimeout(() => {
       initPlayer()
-    }, 100)
+    }, 200)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -158,7 +162,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   }, [])
 
   const testUrl = url.toLowerCase()
-  const isIframe = (!testUrl.includes('.m3u8') && !testUrl.includes('.ts') && !testUrl.includes('.mp4')) || url.includes('youtube')
+  const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
+  const isXVideos = testUrl.includes('xvideos.com')
+  const isIframe = isYouTube || isXVideos || (!testUrl.includes('.m3u8') && !testUrl.includes('.ts') && !testUrl.includes('.mp4'))
 
   return (
     <div 
@@ -183,7 +189,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {isIframe && !error ? (
         <iframe 
           key={url}
-          src={url.includes('youtube') ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : url}
+          src={isYouTube ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : url}
           className="w-full h-full border-0 z-10" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
