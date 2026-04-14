@@ -19,8 +19,21 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<{type: string, msg: string} | null>(null)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const [enginesReady, setEnginesReady] = React.useState(false)
+  
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
+
+  // Verifica se os scripts externos (HLS e MPEGTS) foram carregados no window
+  React.useEffect(() => {
+    const checkEngines = setInterval(() => {
+      if ((window as any).Hls && (window as any).mpegts) {
+        setEnginesReady(true)
+        clearInterval(checkEngines)
+      }
+    }, 500)
+    return () => clearInterval(checkEngines)
+  }, [])
 
   const cleanup = React.useCallback(() => {
     try {
@@ -39,12 +52,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         v.load()
       }
     } catch (e) {
-      console.warn("Player Cleanup error ignored", e)
+      // Erro silencioso no cleanup para evitar crash
     }
   }, [])
 
   const initPlayer = React.useCallback(async () => {
-    if (!url || !videoRef.current) return
+    if (!url || !videoRef.current || !enginesReady) return
+    
     cleanup()
     setError(null)
     setLoading(true)
@@ -58,43 +72,39 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
       const isXVideos = testUrl.includes('xvideos.com')
 
-      // MODO XVIDEOS / YOUTUBE
+      // MODO IFRAME (YOUTUBE / XVIDEOS)
       if (isYouTube || isXVideos) {
         setLoading(false)
         return 
       }
 
-      // MOTOR MPEG-TS
+      // MOTOR MPEG-TS (.TS)
       if (isMPEGTS) {
         const mpegts = (window as any).mpegts
-        if (mpegts && mpegts.getFeatureList && mpegts.getFeatureList().mseLivePlayback) {
-          try {
-            const player = mpegts.createPlayer({
-              type: 'mse',
-              isLive: true,
-              url: finalUrl
-            }, {
-              enableWorker: true,
-              lazyLoad: false,
-              stashInitialSize: 128,
-              liveBufferLatencyChasing: true
-            })
-            player.attachMediaElement(videoRef.current)
-            player.load()
-            player.play().catch(() => {
-              if (videoRef.current) videoRef.current.muted = true
-              player.play()
-            })
-            mpegtsRef.current = player
-            setLoading(false)
-            return
-          } catch (err) {
-            console.error("MPEGTS Error", err)
-          }
+        if (mpegts && mpegts.isSupported()) {
+          const player = mpegts.createPlayer({
+            type: 'mse',
+            isLive: true,
+            url: finalUrl
+          }, {
+            enableWorker: true,
+            lazyLoad: false,
+            stashInitialSize: 128,
+            liveBufferLatencyChasing: true
+          })
+          player.attachMediaElement(videoRef.current)
+          player.load()
+          player.play().catch(() => {
+            if (videoRef.current) videoRef.current.muted = true
+            player.play()
+          })
+          mpegtsRef.current = player
+          setLoading(false)
+          return
         }
       }
 
-      // MOTOR HLS
+      // MOTOR HLS (.M3U8)
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
@@ -110,7 +120,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) setError({ type: 'SINAL', msg: "Falha HLS fatal." })
+            if (data.fatal) setError({ type: 'SINAL', msg: "Falha na conexão HLS." })
           })
         } else {
           videoRef.current.src = finalUrl
@@ -127,20 +137,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         setLoading(false)
       }
     } catch (e) {
-      console.error("Player Init Error:", e)
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal." })
       setLoading(false)
     }
-  }, [url, cleanup])
+  }, [url, enginesReady, cleanup])
 
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      initPlayer()
-    }, 250)
-    return () => {
-      clearTimeout(timer)
-      cleanup()
-    }
+    initPlayer()
+    return () => cleanup()
   }, [initPlayer, cleanup])
 
   const toggleFullscreen = () => {
@@ -154,10 +158,19 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   }
 
-  const testUrl = url.toLowerCase()
+  const testUrl = (url || "").toLowerCase()
   const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
   const isXVideos = testUrl.includes('xvideos.com')
   const isIframe = isYouTube || isXVideos
+
+  if (!enginesReady && !isIframe) {
+    return (
+      <div className="relative w-full h-[85vh] bg-black flex flex-col items-center justify-center rounded-[3rem] border border-white/5">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-[10px] font-black uppercase text-primary tracking-[0.2em] italic">Iniciando Motores Master...</p>
+      </div>
+    )
+  }
 
   return (
     <div 
@@ -174,7 +187,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6 animate-pulse" />
-          <h3 className="text-white font-black uppercase italic text-xl mb-4">Sinal Bloqueado</h3>
+          <h3 className="text-white font-black uppercase italic text-xl mb-4">Sinal Bloqueado pela Fonte</h3>
           <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[9px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}

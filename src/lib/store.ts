@@ -78,9 +78,9 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v202 - REGRA DE OURO DO MESTRE LÉO
- * YouTube e .MP4 -> Originais
- * O RESTO -> Proxy / Tunelado
+ * HELPER SOBERANO v203 - REGRA DE OURO DO MESTRE LÉO
+ * YouTube e .MP4 -> Originais (Velocidade Máxima)
+ * O RESTO -> Proxy Master (Segurança e Bypass CORS)
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -88,10 +88,12 @@ export const formatMasterLink = (url: string) => {
   const lower = cleanUrl.toLowerCase();
   
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
+  const isXVideos = lower.includes('xvideos.com');
   const isMP4 = lower.endsWith('.mp4') || lower.includes('.mp4?');
   const isAlreadyProxy = cleanUrl.includes('/api/proxy');
 
-  if (isYouTube || isMP4 || isAlreadyProxy) {
+  // YouTube, XVideos e .MP4 não passam pelo Proxy para manter performance nativa
+  if (isYouTube || isXVideos || isMP4 || isAlreadyProxy) {
     return cleanUrl;
   }
 
