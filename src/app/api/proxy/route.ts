@@ -1,12 +1,11 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v197 - BYPASS SUPREMO
- * Otimizado para vencer o erro USER_DISALLOW_EXT e bloqueios de User-Agent.
+ * TÚNEL MASTER SOBERANO v200 - BYPASS SUPREMO MP4/TS
+ * Otimizado para vencer o erro USER_DISALLOW_EXT e garantir stream fluido.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,11 +19,11 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // Suporte a Range para Filmes e Séries (Essencial para não travar)
+    // Suporte a Range para Filmes e Séries (Essencial para não travar MP4)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // IDENTIDADE CAMALEÃO v197: Finge ser o App Oficial IPTV Smarters Pro
+    // IDENTIDADE CAMALEÃO v200: Finge ser o App Oficial IPTV Smarters Pro
     requestHeaders.set('User-Agent', 'IPTVSmartersPro/3.0.0 (Linux;Android 11) Mobile');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
@@ -40,8 +39,11 @@ export async function GET(req: NextRequest) {
       redirect: 'follow',
     });
     
+    // Se a fonte responder com erro, tentamos sem os headers extras
     if (!res.ok && res.status !== 206) {
-      return new Response("Sinal Bloqueado na Fonte", { status: res.status });
+       const resRetry = await fetch(targetUrl, { redirect: 'follow' });
+       if (!resRetry.ok) return new Response("Sinal Bloqueado na Fonte", { status: resRetry.status });
+       return new Response(resRetry.body, { headers: { 'Content-Type': resRetry.headers.get('content-type') || 'video/mp4' } });
     }
 
     const responseHeaders = new Headers();
@@ -52,9 +54,12 @@ export async function GET(req: NextRequest) {
       if (copyHeaders.includes(k.toLowerCase())) responseHeaders.set(k, v);
     });
 
-    // Força o Mime-Type correto para arquivos .ts
-    if (targetUrl.toLowerCase().includes('.ts') || !responseHeaders.get('content-type')) {
+    // Força o Mime-Type correto se necessário
+    const contentType = responseHeaders.get('content-type');
+    if (targetUrl.toLowerCase().includes('.ts') || (contentType && contentType.includes('mpegts'))) {
       responseHeaders.set('Content-Type', 'video/mp2t');
+    } else if (targetUrl.toLowerCase().includes('.mp4')) {
+      responseHeaders.set('Content-Type', 'video/mp4');
     }
 
     // Liberação Total de Acesso (CORS Bypass)
@@ -67,6 +72,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
+    console.error("Proxy Error:", error);
     return new Response(null, { status: 500 });
   }
 }

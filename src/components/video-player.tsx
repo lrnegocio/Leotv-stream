@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -24,19 +23,23 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const mpegtsRef = React.useRef<any>(null)
 
   const cleanup = React.useCallback(() => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
-    if (mpegtsRef.current) {
-      mpegtsRef.current.destroy()
-      mpegtsRef.current = null
-    }
-    const v = videoRef.current
-    if (v) {
-      v.pause()
-      v.removeAttribute('src')
-      v.load()
+    try {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+      if (mpegtsRef.current) {
+        mpegtsRef.current.destroy()
+        mpegtsRef.current = null
+      }
+      const v = videoRef.current
+      if (v) {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      }
+    } catch (e) {
+      console.warn("Player Cleanup error ignored", e)
     }
   }, [])
 
@@ -46,16 +49,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setError(null)
     setLoading(true)
 
-    // APLICAÇÃO DO TÚNEL MASTER AUTOMÁTICO
-    let finalUrl = formatMasterLink(url);
-    const lowerUrl = finalUrl.toLowerCase();
-
-    const isHLS = lowerUrl.includes('.m3u8');
-    const isMPEGTS = lowerUrl.includes('.ts') || lowerUrl.includes('video/mp2t');
-    const isMP4 = lowerUrl.includes('.mp4');
-    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
-
     try {
+      const finalUrl = formatMasterLink(url)
+      const testUrl = finalUrl.toLowerCase()
+      
+      // Detecção de tipo considerando o proxy
+      const isHLS = testUrl.includes('.m3u8')
+      const isMPEGTS = testUrl.includes('.ts') || testUrl.includes('video/mp2t')
+      const isMP4 = testUrl.includes('.mp4')
+      const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
+
       if (isYouTube) {
         setLoading(false)
         return 
@@ -63,8 +66,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
       // MOTOR MPEG-TS (.TS)
       if (isMPEGTS) {
-        const mpegts = (window as any).mpegts;
-        if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
+        const mpegts = (window as any).mpegts
+        if (mpegts && mpegts.getFeatureList && mpegts.getFeatureList().mseLivePlayback) {
           const player = mpegts.createPlayer({
             type: 'mse',
             isLive: true,
@@ -74,16 +77,16 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             lazyLoad: false,
             stashInitialSize: 128,
             liveBufferLatencyChasing: true
-          });
-          player.attachMediaElement(videoRef.current);
-          player.load();
+          })
+          player.attachMediaElement(videoRef.current)
+          player.load()
           player.play().catch(() => {
-            if (videoRef.current) videoRef.current.muted = true;
-            player.play();
-          });
-          mpegtsRef.current = player;
-          setLoading(false);
-          return;
+            if (videoRef.current) videoRef.current.muted = true
+            player.play()
+          })
+          mpegtsRef.current = player
+          setLoading(false)
+          return
         }
       }
 
@@ -91,7 +94,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true })
+          const hls = new Hls({ enableWorker: true, manifestLoadingTimeOut: 10000 })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -102,6 +105,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             })
             setLoading(false)
           })
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) setError({ type: 'SINAL', msg: "Falha crítica no HLS." })
+          })
         } else {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
@@ -111,29 +117,48 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       else {
         videoRef.current.src = finalUrl
         videoRef.current.play().catch(() => {
-          if (videoRef.current) videoRef.current.muted = true;
-          videoRef.current.play();
-        });
+          if (videoRef.current) videoRef.current.muted = true
+          videoRef.current.play()
+        })
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar." })
+      console.error("Player Init Error:", e)
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal." })
       setLoading(false)
     }
   }, [url, cleanup])
 
   React.useEffect(() => {
-    initPlayer()
-    return () => cleanup()
+    // Pequeno delay para garantir que os scripts globais (mpegts/hls) existam
+    const timer = setTimeout(() => {
+      initPlayer()
+    }, 100)
+    return () => {
+      clearTimeout(timer)
+      cleanup()
+    }
   }, [initPlayer, cleanup])
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
-    if (!document.fullscreenElement) containerRef.current.requestFullscreen()
-    else document.exitFullscreen()
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {})
+      setIsFullscreen(true)
+    } else {
+      document.exitFullscreen().catch(() => {})
+      setIsFullscreen(false)
+    }
   }
 
-  const isIframe = (!isHLS && !isMPEGTS && !isMP4) || url.includes('youtube')
+  React.useEffect(() => {
+    const fsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', fsChange)
+    return () => document.removeEventListener('fullscreenchange', fsChange)
+  }, [])
+
+  const testUrl = url.toLowerCase()
+  const isIframe = (!testUrl.includes('.m3u8') && !testUrl.includes('.ts') && !testUrl.includes('.mp4')) || url.includes('youtube')
 
   return (
     <div 

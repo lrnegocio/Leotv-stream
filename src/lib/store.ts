@@ -83,12 +83,10 @@ export const formatMasterLink = (url: string) => {
   const cleanUrl = url.trim().replace('.mpegts.js', '').replace('.js', '');
   const lower = cleanUrl.toLowerCase();
   
-  // Se já for proxy ou youtube, não mexe
   if (cleanUrl.includes('/api/proxy') || cleanUrl.includes('youtube.com') || cleanUrl.includes('youtu.be')) {
     return cleanUrl;
   }
 
-  // Links que PRECISAM de Proxy para funcionar sempre
   const needsProxy = 
     cleanUrl.startsWith('http:') || 
     lower.includes('.ts') || 
@@ -104,7 +102,6 @@ export const formatMasterLink = (url: string) => {
   return cleanUrl;
 };
 
-// FUNÇÕES DE EXPORTAÇÃO MESTRA
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
@@ -127,14 +124,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const finalId = item.id || "str_" + Math.random().toString(36).substring(2, 12);
-    
-    // Tratamento automático de links ao salvar
-    let finalStreamUrl = item.streamUrl || "";
-    if (finalStreamUrl && !finalStreamUrl.includes('/api/proxy') && (finalStreamUrl.includes('.mp4') || finalStreamUrl.includes('.ts') || finalStreamUrl.includes('blinder'))) {
-       // Opcional: Você pode escolher salvar o link original e o player decide, 
-       // mas aqui vamos salvar o link puro e deixar o VideoPlayer e o M3U aplicarem o proxy.
-    }
-
     const payload: any = {
       id: finalId, 
       title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
@@ -143,7 +132,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       description: item.description || "Sinal Master Léo Tv",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
-      streamUrl: finalStreamUrl,
+      streamUrl: item.streamUrl || "",
       episodes: (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
