@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -13,7 +13,7 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
-export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
+export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
@@ -45,10 +45,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(null)
     setLoading(true)
 
-    const lowerUrl = url.trim().toLowerCase()
-    let finalUrl = url.trim()
+    let finalUrl = url.trim();
+    // Limpa erro de extensão de biblioteca se houver
+    finalUrl = finalUrl.replace('.mpegts.js', '');
 
-    // LÓGICA DE PROXY INTELIGENTE v195
+    const lowerUrl = finalUrl.toLowerCase()
+
+    // LÓGICA DE PROXY BYPASS v196 (XUI ONE READY)
     const needsProxy = 
       finalUrl.startsWith('http:') || 
       lowerUrl.includes('.ts') || 
@@ -71,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         return 
       }
 
-      // MOTOR MPEG-TS (.TS) - TECNOLOGIA SUPREMO
+      // MOTOR MPEG-TS (.TS) - TECNOLOGIA SOBERANA
       if (isMPEGTS) {
         const mpegts = (window as any).mpegts;
         if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
@@ -84,8 +87,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             enableStashBuffer: false,
             stashInitialSize: 128,
             liveBufferLatencyChasing: true,
-            liveBufferLatencyMaxLatency: 2,
-            liveBufferLatencyMinRemaining: 0.1
+            liveBufferLatencyMaxLatency: 2
           });
           player.attachMediaElement(videoRef.current);
           player.load();
@@ -107,8 +109,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 60,
-            manifestLoadingMaxRetry: 10,
-            levelLoadingMaxRetry: 10
+            manifestLoadingMaxRetry: 10
           })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current)
@@ -120,18 +121,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             })
             setLoading(false)
           })
-          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) {
-               console.error("HLS Fatal Error, tentando fallback nativo...");
-               videoRef.current!.src = finalUrl;
-            }
-          });
         } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
       } else {
-        // FALLBACK PARA MP4 OU LINKS DIRETOS
         videoRef.current.src = finalUrl
         videoRef.current.play().catch(() => {
           if (videoRef.current) {
@@ -175,9 +169,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-20 w-20 text-destructive mb-8 animate-pulse" />
-          <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Oscilou</h3>
-          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-10 max-w-xs mx-auto leading-relaxed tracking-widest">{error.msg}</p>
-          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl">RECONECTAR SINAL</Button>
+          <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Bloqueado</h3>
+          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-10 max-w-xs mx-auto leading-relaxed tracking-widest">O servidor de origem (Contfree/Blinder) recusou a conexão do site. Tente recarregar.</p>
+          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
