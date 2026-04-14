@@ -77,22 +77,24 @@ export interface User {
   created_at?: string;
 }
 
-// HELPER SOBERANO v201: Formata o link para passar pelo Proxy seguindo as regras do Mestre Léo
+/**
+ * HELPER SOBERANO v202 - REGRA DE OURO DO MESTRE LÉO
+ * YouTube e .MP4 -> Originais
+ * O RESTO -> Proxy / Tunelado
+ */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   const cleanUrl = url.trim();
   const lower = cleanUrl.toLowerCase();
   
-  // REGRA DE EXCEÇÃO MESTRE: YouTube e .MP4 NÃO passam pelo proxy
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
-  const isMP4 = lower.includes('.mp4');
+  const isMP4 = lower.endsWith('.mp4') || lower.includes('.mp4?');
   const isAlreadyProxy = cleanUrl.includes('/api/proxy');
 
   if (isYouTube || isMP4 || isAlreadyProxy) {
     return cleanUrl;
   }
 
-  // TUDO O MAIS (XVideos, .TS, .M3U8, Contfree, Blinder) passa pelo Túnel do Servidor
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
@@ -287,7 +289,6 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 
 🚀 *DADOS DE ACESSO MASTER:*
 👤 *Acesso:* \`${pin}\`
-🔐 *Senha:* \`${pin}\`
 📅 *Plano:* ${tier.toUpperCase()}
 
 🌐 *LINK PARA ASSISTIR:*

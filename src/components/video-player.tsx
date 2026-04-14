@@ -51,21 +51,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
     try {
       const finalUrl = formatMasterLink(url)
-      const testUrl = url.toLowerCase() // Analisamos a URL original para detectar o tipo
+      const testUrl = url.toLowerCase()
       
       const isHLS = testUrl.includes('.m3u8')
       const isMPEGTS = testUrl.includes('.ts') || testUrl.includes('video/mp2t')
-      const isMP4 = testUrl.includes('.mp4')
       const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
       const isXVideos = testUrl.includes('xvideos.com')
 
-      // DETECÇÃO DE IFRAME (YouTube e XVideos)
+      // MODO XVIDEOS / YOUTUBE
       if (isYouTube || isXVideos) {
         setLoading(false)
         return 
       }
 
-      // MOTOR MPEG-TS (.TS)
+      // MOTOR MPEG-TS
       if (isMPEGTS) {
         const mpegts = (window as any).mpegts
         if (mpegts && mpegts.getFeatureList && mpegts.getFeatureList().mseLivePlayback) {
@@ -90,12 +89,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             setLoading(false)
             return
           } catch (err) {
-            console.error("MPEGTS Fallback", err)
+            console.error("MPEGTS Error", err)
           }
         }
       }
 
-      // MOTOR HLS (.M3U8)
+      // MOTOR HLS
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
@@ -111,14 +110,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) setError({ type: 'SINAL', msg: "Falha crítica no HLS." })
+            if (data.fatal) setError({ type: 'SINAL', msg: "Falha HLS fatal." })
           })
         } else {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
       } 
-      // MOTOR MP4 OU NATIVO
+      // MOTOR DIRETO (.MP4)
       else {
         videoRef.current.src = finalUrl
         videoRef.current.play().catch(() => {
@@ -129,7 +128,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       }
     } catch (e) {
       console.error("Player Init Error:", e)
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -137,7 +136,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       initPlayer()
-    }, 200)
+    }, 250)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -155,16 +154,10 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   }
 
-  React.useEffect(() => {
-    const fsChange = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', fsChange)
-    return () => document.removeEventListener('fullscreenchange', fsChange)
-  }, [])
-
   const testUrl = url.toLowerCase()
   const isYouTube = testUrl.includes('youtube.com') || testUrl.includes('youtu.be')
   const isXVideos = testUrl.includes('xvideos.com')
-  const isIframe = isYouTube || isXVideos || (!testUrl.includes('.m3u8') && !testUrl.includes('.ts') && !testUrl.includes('.mp4'))
+  const isIframe = isYouTube || isXVideos
 
   return (
     <div 
@@ -173,20 +166,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     >
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
-          <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
-          <p className="text-[12px] font-black uppercase text-primary animate-pulse tracking-[0.3em] italic">Sintonizando Rede Master...</p>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-[0.2em] italic">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
-          <AlertCircle className="h-20 w-20 text-destructive mb-8 animate-pulse" />
-          <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Bloqueado</h3>
-          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl">RECONECTAR AGORA</Button>
+          <AlertCircle className="h-16 w-16 text-destructive mb-6 animate-pulse" />
+          <h3 className="text-white font-black uppercase italic text-xl mb-4">Sinal Bloqueado</h3>
+          <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[9px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
-      {isIframe && !error ? (
+      {isIframe ? (
         <iframe 
           key={url}
           src={isYouTube ? `https://www.youtube.com/embed/${url.split('v=')[1] || url.split('/').pop()}?autoplay=1` : url}
@@ -196,15 +189,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
           onLoad={() => setLoading(false)} 
         />
       ) : (
-        !error && <video key={url} ref={videoRef} className="w-full h-full object-contain z-10" autoPlay playsInline controls={!isFullscreen} />
+        !error && <video key={url} ref={videoRef} className="w-full h-full object-contain z-10" autoPlay playsInline controls />
       )}
 
-      <div className="absolute bottom-8 right-8 z-40 flex gap-3">
-        <button onClick={initPlayer} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
-          <RefreshCw className="h-5 w-5 text-white" />
+      <div className="absolute bottom-6 right-6 z-40 flex gap-2">
+        <button onClick={initPlayer} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
+          <RefreshCw className="h-4 w-4 text-white" />
         </button>
-        <button onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-xl flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
-          {isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}
+        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all opacity-40 hover:opacity-100">
+          {isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}
         </button>
       </div>
     </div>
