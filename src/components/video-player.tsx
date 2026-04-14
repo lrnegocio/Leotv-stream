@@ -46,26 +46,25 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setLoading(true)
 
     let finalUrl = url.trim();
-    // Limpa erro de extensão de biblioteca se houver
-    finalUrl = finalUrl.replace('.mpegts.js', '');
+    // LIMPEZA DE URL: Remove erros comuns de cópia de link
+    finalUrl = finalUrl.replace('.mpegts.js', '').replace('.js', '');
 
     const lowerUrl = finalUrl.toLowerCase()
 
-    // LÓGICA DE PROXY BYPASS v196 (XUI ONE READY)
+    // LÓGICA DE PROXY BYPASS v197
     const needsProxy = 
       finalUrl.startsWith('http:') || 
       lowerUrl.includes('.ts') || 
-      lowerUrl.includes('blinder') || 
       lowerUrl.includes('contfree') || 
-      lowerUrl.includes('reidoscanais') ||
+      lowerUrl.includes('blinder') ||
       lowerUrl.includes('archive.org');
 
     if (needsProxy && !finalUrl.includes('/api/proxy')) {
       finalUrl = `/api/proxy?url=${encodeURIComponent(finalUrl)}`
     }
 
-    const isHLS = lowerUrl.includes('.m3u8') || finalUrl.includes('m3u8');
-    const isMPEGTS = lowerUrl.includes('.ts') || finalUrl.includes('video/mp2t');
+    const isHLS = lowerUrl.includes('.m3u8');
+    const isMPEGTS = lowerUrl.includes('.ts') || lowerUrl.includes('video/mp2t');
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')
 
     try {
@@ -74,7 +73,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         return 
       }
 
-      // MOTOR MPEG-TS (.TS) - TECNOLOGIA SOBERANA
+      // MOTOR MPEG-TS (.TS)
       if (isMPEGTS) {
         const mpegts = (window as any).mpegts;
         if (mpegts && mpegts.getFeatureList().mseLivePlayback) {
@@ -84,10 +83,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             url: finalUrl
           }, {
             enableWorker: true,
-            enableStashBuffer: false,
-            stashInitialSize: 128,
-            liveBufferLatencyChasing: true,
-            liveBufferLatencyMaxLatency: 2
+            lazyLoad: false,
+            stashInitialSize: 128
           });
           player.attachMediaElement(videoRef.current);
           player.load();
@@ -105,12 +102,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (isHLS) {
         const Hls = (window as any).Hls
         if (Hls && Hls.isSupported()) {
-          const hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 60,
-            manifestLoadingMaxRetry: 10
-          })
+          const hls = new Hls({ enableWorker: true })
           hls.loadSource(finalUrl)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -121,22 +113,20 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
             })
             setLoading(false)
           })
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        } else {
           videoRef.current.src = finalUrl
           videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); setLoading(false); }
         }
       } else {
         videoRef.current.src = finalUrl
         videoRef.current.play().catch(() => {
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play();
-          }
+          if (videoRef.current) videoRef.current.muted = true;
+          videoRef.current.play();
         });
         setLoading(false)
       }
     } catch (e) {
-      setError({ type: 'SINAL', msg: "Erro ao sintonizar sinal. Tente recarregar o sinal mestre." })
+      setError({ type: 'SINAL', msg: "Erro ao sintonizar." })
       setLoading(false)
     }
   }, [url, cleanup])
@@ -170,7 +160,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-20 w-20 text-destructive mb-8 animate-pulse" />
           <h3 className="text-white font-black uppercase italic text-2xl mb-4 tracking-tighter">Sinal Bloqueado</h3>
-          <p className="text-zinc-400 font-bold uppercase text-[10px] mb-10 max-w-xs mx-auto leading-relaxed tracking-widest">O servidor de origem (Contfree/Blinder) recusou a conexão do site. Tente recarregar.</p>
           <Button onClick={initPlayer} variant="outline" className="border-primary/40 text-primary uppercase font-black text-[10px] px-10 h-14 rounded-2xl">RECONECTAR AGORA</Button>
         </div>
       )}
