@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -91,12 +91,18 @@ export default function HomeContent() {
 
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
-    setActiveVideo({ ...activeVideo, index: (activeVideo.index + 1) % activeVideo.items.length });
+    setActiveVideo(prev => {
+      if (!prev) return null;
+      return { ...prev, index: (prev.index + 1) % prev.items.length };
+    });
   };
 
   const handlePrev = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
-    setActiveVideo({ ...activeVideo, index: (activeVideo.index - 1 + activeVideo.items.length) % activeVideo.items.length });
+    setActiveVideo(prev => {
+      if (!prev) return null;
+      return { ...prev, index: (prev.index - 1 + prev.items.length) % prev.items.length };
+    });
   };
 
   const verifyPassword = async () => {
@@ -149,11 +155,14 @@ export default function HomeContent() {
     }
   };
 
-  if (!isMounted) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-    </div>
-  );
+  const playEpisode = (episodeList: any[], episode: any) => {
+    const idx = episodeList.findIndex(e => e.id === episode.id);
+    if (idx !== -1) {
+      setActiveVideo({ items: episodeList, index: idx });
+    }
+  };
+
+  if (!isMounted) return null;
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
@@ -262,12 +271,20 @@ export default function HomeContent() {
                 <span className="text-[10px] font-black opacity-40 uppercase bg-muted px-4 py-1 rounded-full">{getEpisodes(selectedSeries).length} Episódios</span>
               </div>
               <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
-                {getEpisodes(selectedSeries).map(ep => (
-                  <Button key={ep.id} variant="outline" onClick={() => setActiveVideo({ items: getEpisodes(selectedSeries), index: getEpisodes(selectedSeries).indexOf(ep) })} className="h-16 justify-start bg-muted rounded-2xl border-border px-6 hover:border-primary transition-all group">
-                    <span className="font-black uppercase text-xs">EP {ep.number} - {ep.title || 'Sem Título'}</span>
-                    <Play className="ml-auto h-5 w-5 text-primary group-hover:scale-125 transition-transform" />
-                  </Button>
-                ))}
+                {(() => {
+                   const episodes = getEpisodes(selectedSeries);
+                   return episodes.map(ep => (
+                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-2 rounded-2xl border border-border group hover:border-primary transition-all">
+                       <div className="flex-1 pl-4">
+                          <span className="font-black uppercase text-[10px] text-muted-foreground">EP {ep.number}</span>
+                          <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
+                       </div>
+                       <Button size="icon" onClick={() => playEpisode(episodes, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                          <PlayCircle className="h-6 w-6 text-white" />
+                       </Button>
+                    </div>
+                  ));
+                })()}
                 {getEpisodes(selectedSeries).length === 0 && <div className="py-20 text-center opacity-20 uppercase font-black">Nenhum episódio localizado.</div>}
               </div>
             </div>

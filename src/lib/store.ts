@@ -79,25 +79,24 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v212
- * Gera o link de proxy oficial da VPS para ocultar a fonte original no F12.
- * YouTube e Dailymotion permanecem originais para manter funcionalidades.
+ * MOTOR DE LINKS MASTER v214
+ * Garante que o Proxy seja exibido no F12 para tudo, exceto YouTube/Dailymotion.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let cleanUrl = url.trim();
 
   const lower = cleanUrl.toLowerCase();
-  const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
-  const isDailymotion = lower.includes('dailymotion.com') || lower.includes('dai.ly');
-
-  // YouTube e Dailymotion rodam direto para não perder o player nativo
-  if (isYouTube || isDailymotion) return cleanUrl;
+  
+  // YouTube e Dailymotion permanecem originais por conta dos players nativos
+  if (lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('dailymotion.com') || lower.includes('dai.ly')) {
+    return cleanUrl;
+  }
   
   // Se já for proxy, não duplica
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
-  // Tudo o resto (XVideos, Contfree, Blinder, Canais) vira link da sua VPS
+  // Tudo o resto (Canais, XVideos, Filmes, .ts, .mp4, .m3u8) vira seu Proxy Master
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 

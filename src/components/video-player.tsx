@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -13,7 +13,7 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
-export function VideoPlayer({ url, title }: VideoPlayerProps) {
+export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
@@ -189,9 +189,15 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         <video key={url} ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
       )}
 
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
+         <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
+      </div>
+
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
+        {onPrev && <button onClick={onPrev} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         <button onClick={initPlayer} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
         <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
+        {onNext && <button onClick={onNext} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>
   )
