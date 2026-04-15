@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v208 - MODO FLUXO CONTÍNUO
+ * TÚNEL MASTER SOBERANO v212 - MODO FLUXO CONTÍNUO
  * Repasse de sinais (.ts, .m3u8, .mp4, html) sem processamento intermediário.
  */
 export async function GET(req: NextRequest) {

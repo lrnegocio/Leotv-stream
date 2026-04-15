@@ -27,7 +27,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const getOriginalUrl = (inputUrl: string) => {
     if (inputUrl.includes('/api/proxy?url=')) {
       try {
-        return decodeURIComponent(inputUrl.split('url=')[1]);
+        const decoded = decodeURIComponent(inputUrl.split('url=')[1]);
+        return decoded;
       } catch(e) { return inputUrl; }
     }
     return inputUrl;

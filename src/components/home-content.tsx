@@ -10,7 +10,6 @@ import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
-import { Card, CardContent } from "@/components/ui/card"
 import Image from "next/image"
 
 const CATEGORIES = [
@@ -46,6 +45,8 @@ export default function HomeContent() {
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
+  const [siteUrl, setSiteUrl] = React.useState('')
+  const [isMounted, setIsMounted] = React.useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -73,7 +74,11 @@ export default function HomeContent() {
     } catch (err) { } finally { setLoading(false); }
   }, [router, games.length]);
 
-  React.useEffect(() => { loadData(q, selectedCat) }, [q, selectedCat, loadData]);
+  React.useEffect(() => {
+    setIsMounted(true);
+    setSiteUrl(window.location.origin);
+    loadData(q, selectedCat);
+  }, [q, selectedCat, loadData]);
 
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
@@ -123,23 +128,22 @@ export default function HomeContent() {
       setSelectedSeries(deepItem || item);
       setLoading(false);
     } else {
-      // Tunela o link antes de passar pro player
+      const idx = content.findIndex(i => i.id === item.id);
       const proxiedContent = content.map(i => ({
         ...i,
         streamUrl: formatMasterLink(i.streamUrl)
       }));
-      const idx = content.findIndex(i => i.id === item.id);
       setActiveVideo({ items: proxiedContent, index: idx });
     }
   };
 
-  const siteUrl = typeof window !== 'undefined' ? `${window.location.origin}` : '';
+  if (!isMounted) return null;
 
   if (loading && content.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
-      <header className="h-20 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
+      <header className="h-20 border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-all"><ChevronLeft className="h-6 w-6" /></button>}
           <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
