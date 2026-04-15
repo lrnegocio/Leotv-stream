@@ -79,9 +79,9 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v210 - REGRA DO MESTRE LÉO
- * TUDO (TS, M3U8, XVIDEOS, SITES) MOSTRA O PROXY DA VPS NO F12.
- * EXCETO: YouTube e Dailymotion (originais).
+ * HELPER SOBERANO v211
+ * Gera o link de proxy oficial da VPS para aparecer no F12.
+ * YouTube e Dailymotion permanecem originais.
  */
 export const formatMasterLink = (url: string, baseUrl?: string) => {
   if (!url) return "";
@@ -99,7 +99,8 @@ export const formatMasterLink = (url: string, baseUrl?: string) => {
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
   const proxiedPath = `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
-  return baseUrl ? `${baseUrl}${proxiedPath}` : proxiedPath;
+  // Retorna link relativo para o player ou absoluto se necessário
+  return proxiedPath;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

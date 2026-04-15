@@ -19,12 +19,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
-  const [isClient, setIsClient] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
   
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY (Indispensável para detecção de tipo)
+  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY
   const getOriginalUrl = (inputUrl: string) => {
     if (inputUrl.includes('/api/proxy?url=')) {
       try {
@@ -34,7 +34,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return inputUrl;
   }
 
-  // EXTRATORES DE ID PROFISSIONAIS
+  // DETECTORES DE YOUTUBE E DAILYMOTION
   const getYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
@@ -50,7 +50,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   };
 
   React.useEffect(() => {
-    setIsClient(true)
+    setIsMounted(true)
+    return () => cleanup()
   }, [])
 
   const cleanup = React.useCallback(() => {
@@ -64,7 +65,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   }, [])
 
   const initPlayer = React.useCallback(async () => {
-    if (!isClient || !url || !videoRef.current) return
+    if (!isMounted || !url || !videoRef.current) return
     
     cleanup()
     setError(false)
@@ -73,14 +74,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
+    // Identifica o formato real, mesmo dentro do Proxy
     const isHLS = lowUrl.includes('.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
     const isMP4 = lowUrl.includes('.mp4');
-    const isDirectVideo = isHLS || isMPEGTS || isMP4;
     
-    const isYouTube = !!getYouTubeId(originalUrl);
-    const isDailymotion = !!getDailymotionId(originalUrl);
-    const isIframeTarget = isYouTube || isDailymotion || lowUrl.includes('.html') || (!isDirectVideo && !url.includes('proxy'));
+    const ytId = getYouTubeId(originalUrl);
+    const dmId = getDailymotionId(originalUrl);
+    const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
 
     if (isIframeTarget) {
       setLoading(false)
@@ -88,7 +89,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR MPEG-TS (.TS) - SOBERANO
+      // MOTOR MPEG-TS (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -118,7 +119,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       } 
       
-      // FALLBACK DIRETO (MP4 OU OUTROS)
+      // FALLBACK DIRETO (MP4)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -129,12 +130,14 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       setError(true)
       setLoading(false)
     }
-  }, [url, isClient, cleanup])
+  }, [url, isMounted, cleanup])
 
   React.useEffect(() => {
-    const timer = setTimeout(initPlayer, 300)
-    return () => { clearTimeout(timer); cleanup(); }
-  }, [initPlayer, cleanup])
+    if (isMounted) {
+      const timer = setTimeout(initPlayer, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [initPlayer, isMounted])
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -147,7 +150,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
   }
 
-  if (!isClient) return null
+  if (!isMounted) return null
 
   const originalUrl = getOriginalUrl(url);
   const ytId = getYouTubeId(originalUrl);
@@ -165,7 +168,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master...</p>
         </div>
       )}
 

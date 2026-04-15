@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v206..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v211..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -26,8 +26,8 @@ export PATH=$PATH:/usr/local/bin:/usr/bin
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
 npm install --no-audit --no-fund --prefer-offline
 
-# Build ultra-otimizado para 1GB de RAM (Limita o Garbage Collector do Node)
-echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV (MÁXIMA ECONOMIA)..."
+# Build ultra-otimizado para 1GB de RAM
+echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
 export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
 
@@ -36,6 +36,7 @@ if [ $? -eq 0 ]; then
     echo "✅ BUILD CONCLUÍDO COM SUCESSO!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
+    pm2 start ecosystem.config.js
     exit 1
 fi
 
