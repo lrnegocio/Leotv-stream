@@ -79,16 +79,13 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v208 - REGRA DEFINITIVA DO MESTRE LÉO
- * TUDO PASSA PELO PROXY (MP4, TS, M3U8, XVIDEOS, SITES)
- * EXCETO: YouTube e Dailymotion
+ * HELPER SOBERANO v210 - REGRA DO MESTRE LÉO
+ * TUDO (TS, M3U8, XVIDEOS, SITES) MOSTRA O PROXY DA VPS NO F12.
+ * EXCETO: YouTube e Dailymotion (originais).
  */
 export const formatMasterLink = (url: string, baseUrl?: string) => {
   if (!url) return "";
   let cleanUrl = url.trim();
-
-  // Se já for um link de proxy, não duplica
-  if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
   const lower = cleanUrl.toLowerCase();
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
@@ -97,6 +94,9 @@ export const formatMasterLink = (url: string, baseUrl?: string) => {
   if (isYouTube || isDailymotion) {
     return cleanUrl;
   }
+
+  // Se já for proxy, não duplica
+  if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
   const proxiedPath = `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
   return baseUrl ? `${baseUrl}${proxiedPath}` : proxiedPath;

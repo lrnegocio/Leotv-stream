@@ -24,9 +24,9 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY
+  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY (Indispensável para detecção de tipo)
   const getOriginalUrl = (inputUrl: string) => {
-    if (inputUrl.startsWith('/api/proxy?url=')) {
+    if (inputUrl.includes('/api/proxy?url=')) {
       try {
         return decodeURIComponent(inputUrl.split('url=')[1]);
       } catch(e) { return inputUrl; }
@@ -34,14 +34,13 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return inputUrl;
   }
 
-  // EXTRATOR DE ID DO YOUTUBE PROFISSIONAL
+  // EXTRATORES DE ID PROFISSIONAIS
   const getYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // EXTRATOR DE ID DO DAILYMOTION
   const getDailymotionId = (url: string) => {
     const m = url.match(/^.+dailymotion.com\/(video|hub)\/([^_]+)[^#]*$/);
     if (m) return m[2];
@@ -79,8 +78,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const isMP4 = lowUrl.includes('.mp4');
     const isDirectVideo = isHLS || isMPEGTS || isMP4;
     
-    const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-    const isDailymotion = lowUrl.includes('dailymotion.com') || lowUrl.includes('dai.ly');
+    const isYouTube = !!getYouTubeId(originalUrl);
+    const isDailymotion = !!getDailymotionId(originalUrl);
     const isIframeTarget = isYouTube || isDailymotion || lowUrl.includes('.html') || (!isDirectVideo && !url.includes('proxy'));
 
     if (isIframeTarget) {
@@ -89,7 +88,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR MPEG-TS (.TS)
+      // MOTOR MPEG-TS (.TS) - SOBERANO
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -119,7 +118,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       } 
       
-      // FALLBACK DIRETO (.MP4 VIA PROXY)
+      // FALLBACK DIRETO (MP4 OU OUTROS)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -151,13 +150,11 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   if (!isClient) return null
 
   const originalUrl = getOriginalUrl(url);
-  const lowUrl = originalUrl.toLowerCase();
-  
   const ytId = getYouTubeId(originalUrl);
   const dmId = getDailymotionId(originalUrl);
   
-  const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
-  const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isDirectVideo && !url.includes('proxy'));
+  const isDirectVideo = originalUrl.toLowerCase().includes('.m3u8') || originalUrl.toLowerCase().includes('.ts') || originalUrl.toLowerCase().includes('.mp4');
+  const isIframeTarget = !!ytId || !!dmId || originalUrl.toLowerCase().includes('.html') || (!isDirectVideo && !url.includes('proxy'));
 
   let iframeSrc = originalUrl;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
