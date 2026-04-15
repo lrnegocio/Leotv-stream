@@ -45,7 +45,6 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
-  const [copied, setCopied] = React.useState(false)
   const [siteUrl, setSiteUrl] = React.useState('')
   const [isMounted, setIsMounted] = React.useState(false)
   
@@ -93,16 +92,16 @@ export default function HomeContent() {
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
     setActiveVideo(prev => {
-      if (!prev || !prev.items[prev.index + 1]) return prev;
-      return { ...prev, index: (prev.index + 1) % prev.items.length };
+      if (!prev || prev.index >= prev.items.length - 1) return prev;
+      return { ...prev, index: prev.index + 1 };
     });
   };
 
   const handlePrev = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
     setActiveVideo(prev => {
-      if (!prev) return null;
-      return { ...prev, index: (prev.index - 1 + prev.items.length) % prev.items.length };
+      if (!prev || prev.index <= 0) return prev;
+      return { ...prev, index: prev.index - 1 };
     });
   };
 
@@ -128,11 +127,13 @@ export default function HomeContent() {
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       if (idx === -1) return;
-      const proxiedContent = content.map(i => ({
+      
+      const proxiedItems = content.map(i => ({
         ...i,
         streamUrl: formatMasterLink(i.streamUrl)
       }));
-      setActiveVideo({ items: proxiedContent, index: idx });
+      
+      setActiveVideo({ items: proxiedItems, index: idx });
     }
   };
 
@@ -141,6 +142,7 @@ export default function HomeContent() {
     if (item.type === 'series' && item.episodes) {
       allEpisodes = [...item.episodes].sort((a,b) => a.number - b.number);
     } else if (item.type === 'multi-season' && item.seasons) {
+      // Isolar episódios por temporada para o player
       allEpisodes = item.seasons.sort((a,b) => a.number - b.number).flatMap(s => 
         s.episodes.sort((a,b) => a.number - b.number).map(ep => ({ 
           ...ep, 
@@ -163,9 +165,7 @@ export default function HomeContent() {
   const copyToClipboard = (text: string) => {
     if (typeof navigator !== 'undefined') {
       navigator.clipboard.writeText(text);
-      setCopied(true);
       toast({ title: "LINK COPIADO!" });
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -238,13 +238,8 @@ export default function HomeContent() {
               <label className="text-[10px] font-black uppercase ml-2 opacity-60">Link Oficial Léo TV</label>
               <div className="flex gap-2">
                 <input readOnly value={siteUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none text-center" />
-                <Button onClick={() => copyToClipboard(siteUrl)} className="h-12 rounded-xl bg-primary">{copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}</Button>
+                <Button onClick={() => copyToClipboard(siteUrl)} className="h-12 rounded-xl bg-primary"><Copy className="h-5 w-5" /></Button>
               </div>
-            </div>
-            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10">
-              <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />
-              <h4 className="text-xs font-black uppercase italic text-primary">Instalação Smart TV & Celular</h4>
-              <p className="text-[10px] font-bold uppercase leading-relaxed opacity-70 mt-2">Clique em "Adicionar à Tela Inicial" no menu do seu navegador para transformar o Léo TV em um Aplicativo nativo.</p>
             </div>
           </div>
           <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary rounded-2xl font-black uppercase shadow-xl">VOLTAR AO STREAMING</Button>
@@ -279,7 +274,7 @@ export default function HomeContent() {
                   {selectedSeries.seasons.map(s => (
                     <TabsContent key={s.id} value={s.id} className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                       {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border hover:border-primary transition-all">
+                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
                            <div className="flex-1 pl-4">
                               <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
@@ -295,7 +290,7 @@ export default function HomeContent() {
               ) : (
                 <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                   {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
-                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border hover:border-primary transition-all">
+                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
                        <div className="flex-1 pl-4">
                           <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>

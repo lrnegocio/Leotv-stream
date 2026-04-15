@@ -24,6 +24,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
+  // Extrai a URL original de dentro do Proxy para saber qual motor usar
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -115,6 +116,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
             setLoading(false)
           })
+          hls.on(Hls.Events.ERROR, (event:any, data:any) => {
+            if (data.fatal) setError(true);
+          });
           return
         }
       } 
@@ -127,7 +131,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       })
       setLoading(false)
     } catch (e) {
-      console.error("Player Error:", e);
       setError(true)
       setLoading(false)
     }
@@ -138,7 +141,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const timer = setTimeout(initPlayer, 600)
       return () => clearTimeout(timer)
     }
-  }, [initPlayer, isMounted])
+  }, [initPlayer, isMounted, url]) // Re-inicia o player sempre que a URL mudar
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -169,7 +172,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master Léo TV...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master...</p>
         </div>
       )}
 
