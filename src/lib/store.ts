@@ -79,9 +79,9 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v212
- * Gera o link de proxy oficial da VPS.
- * YouTube e Dailymotion permanecem originais.
+ * MOTOR DE LINKS MASTER v212
+ * Gera o link de proxy oficial da VPS para ocultar a fonte original no F12.
+ * YouTube e Dailymotion permanecem originais para manter funcionalidades.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -91,9 +91,13 @@ export const formatMasterLink = (url: string) => {
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
   const isDailymotion = lower.includes('dailymotion.com') || lower.includes('dai.ly');
 
+  // YouTube e Dailymotion rodam direto para não perder o player nativo
   if (isYouTube || isDailymotion) return cleanUrl;
+  
+  // Se já for proxy, não duplica
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
+  // Tudo o resto (XVideos, Contfree, Blinder, Canais) vira link da sua VPS
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
@@ -292,9 +296,6 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
 
 🌐 *LINK PARA ASSISTIR:*
 🔗 ${serverUrl}
-
-📲 *INSTALE O SEU APP:*
-Abra o link acima no seu navegador e selecione "Adicionar à Tela Inicial" para usar o Léo TV como um App oficial!
 
 🍿 *Divirta-se!*`;
 };

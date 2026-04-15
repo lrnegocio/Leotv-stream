@@ -52,14 +52,22 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
 
+  // BLINDAGEM v212: Inicialização exclusiva de cliente para evitar Application Error
+  React.useEffect(() => {
+    setIsMounted(true);
+    setSiteUrl(window.location.origin);
+    
+    const session = localStorage.getItem("user_session");
+    if (session) {
+      setUser(JSON.parse(session));
+    } else {
+      router.push("/login");
+    }
+  }, [router]);
+
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     setLoading(true);
     try {
-      const session = localStorage.getItem("user_session");
-      if (!session) { router.push("/login"); return; }
-      const currentUser = JSON.parse(session);
-      setUser(currentUser);
-      
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
       const genreToFilter = categoryObj?.genre || "";
       const data = await getRemoteContent(false, queryStr, genreToFilter);
@@ -72,13 +80,13 @@ export default function HomeContent() {
       }
       if (games.length === 0) setGames(await getRemoteGames());
     } catch (err) { } finally { setLoading(false); }
-  }, [router, games.length]);
+  }, [games.length]);
 
   React.useEffect(() => {
-    setIsMounted(true);
-    setSiteUrl(window.location.origin);
-    loadData(q, selectedCat);
-  }, [q, selectedCat, loadData]);
+    if (isMounted) {
+      loadData(q, selectedCat);
+    }
+  }, [q, selectedCat, loadData, isMounted]);
 
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
@@ -129,6 +137,7 @@ export default function HomeContent() {
       setLoading(false);
     } else {
       const idx = content.findIndex(i => i.id === item.id);
+      // TUNEL v212: Aplica proxy em tempo real para exibir link oficial no F12
       const proxiedContent = content.map(i => ({
         ...i,
         streamUrl: formatMasterLink(i.streamUrl)
@@ -138,8 +147,6 @@ export default function HomeContent() {
   };
 
   if (!isMounted) return null;
-
-  if (loading && content.length === 0) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
@@ -178,17 +185,21 @@ export default function HomeContent() {
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <h2 className="text-3xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
-            <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {content.map((item) => (
-                <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-2xl">
-                  {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-12 w-12" /></div>}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 flex flex-col justify-end">
-                    <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
-                    <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+            ) : (
+              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {content.map((item) => (
+                  <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-2xl">
+                    {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-12 w-12" /></div>}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 flex flex-col justify-end">
+                      <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
+                      <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

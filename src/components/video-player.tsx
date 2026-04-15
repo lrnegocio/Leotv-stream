@@ -24,6 +24,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
+  // BLINDAGEM v212: Extrai o link real de dentro do proxy para saber o que tocar
   const getOriginalUrl = (inputUrl: string) => {
     if (inputUrl.includes('/api/proxy?url=')) {
       try {
@@ -79,6 +80,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     
     const ytId = getYouTubeId(originalUrl);
     const dmId = getDailymotionId(originalUrl);
+    
+    // IFRAME MASTER: Sites de canais, XVideos e YouTube rodam via Iframe
     const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
 
     if (isIframeTarget) {
@@ -87,6 +90,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     try {
+      // MOTOR SOBERANO .TS
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -100,6 +104,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       }
 
+      // MOTOR SOBERANO .M3U8
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -115,6 +120,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       } 
       
+      // FALLBACK MP4 / DIRETOS
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
