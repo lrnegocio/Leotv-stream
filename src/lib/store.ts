@@ -79,23 +79,20 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v206 - REGRA DEFINITIVA DO MESTRE LÉO
+ * HELPER SOBERANO v207 - REGRA DEFINITIVA DO MESTRE LÉO
  * TUDO PASSA PELO PROXY (MP4, TS, M3U8, XVIDEOS, SITES)
- * EXCETO: YouTube e Dailymotion (Rodam direto)
+ * EXCETO: YouTube e Dailymotion
  */
-export const formatMasterLink = (url: string) => {
+export const formatMasterLink = (url: string, baseUrl?: string) => {
   if (!url) return "";
   let cleanUrl = url.trim();
 
-  // Se for um Iframe completo, extrai o SRC
   if (cleanUrl.includes('<iframe')) {
     const srcMatch = cleanUrl.match(/src="([^"]+)"/);
     if (srcMatch) cleanUrl = srcMatch[1];
   }
 
   const lower = cleanUrl.toLowerCase();
-  
-  // EXCEÇÕES MASTER: Apenas YouTube e Dailymotion rodam fora do túnel
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
   const isDailymotion = lower.includes('dailymotion.com') || lower.includes('dai.ly');
   const isAlreadyProxy = cleanUrl.includes('/api/proxy');
@@ -104,8 +101,8 @@ export const formatMasterLink = (url: string) => {
     return cleanUrl;
   }
 
-  // TUNELA TUDO O RESTO
-  return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
+  const proxiedPath = `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
+  return baseUrl ? `${baseUrl}${proxiedPath}` : proxiedPath;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

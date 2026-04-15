@@ -1,12 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getRemoteContent, validateDeviceLogin, getContentById } from '@/lib/store';
+import { getRemoteContent, validateDeviceLogin, getContentById, formatMasterLink } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * XTREAM CODES API SOBERANA v195
- * IDs Estáveis para evitar canais sumindo e suporte total a Séries.
+ * XTREAM CODES API SOBERANA v207
+ * IDs Estáveis e links tunelados via Proxy Master.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
   const baseUrl = req.nextUrl.origin;
   const allItems = await getRemoteContent();
 
-  // Helper para gerar ID numérico estável a partir de string
   const getStableId = (str: string) => {
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
@@ -55,14 +54,12 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // --- CATEGORIAS ---
   if (action === 'get_live_categories' || action === 'get_vod_categories' || action === 'get_series_categories') {
     const filterType = action === 'get_live_categories' ? 'channel' : action === 'get_vod_categories' ? 'movie' : 'series';
     const genres = Array.from(new Set(allItems.filter(i => filterType === 'series' ? (i.type === 'series' || i.type === 'multi-season') : i.type === filterType).map(i => i.genre))).sort();
     return NextResponse.json(genres.map(g => ({ category_id: getStableId(g), category_name: g, parent_id: 0 })));
   }
 
-  // --- STREAMS ---
   if (action === 'get_live_streams' || action === 'get_vod_streams') {
     const catId = searchParams.get('category_id');
     const type = action === 'get_live_streams' ? 'channel' : 'movie';
@@ -76,7 +73,8 @@ export async function GET(req: NextRequest) {
       stream_id: i.id,
       stream_icon: i.imageUrl || "",
       category_id: getStableId(i.genre),
-      direct_source: i.streamUrl,
+      // Tunela o link para os Apps de TV
+      direct_source: formatMasterLink(i.streamUrl, baseUrl),
       added: "1600000000",
       container_extension: type === 'movie' ? "mp4" : null
     })));
@@ -108,26 +106,22 @@ export async function GET(req: NextRequest) {
     if (!series) return NextResponse.json({});
 
     const formattedEpisodes: any = {};
+    const processEp = (ep: any, sNum: number) => ({
+      id: ep.id,
+      episode_num: ep.number,
+      title: ep.title || `Episódio ${ep.number}`,
+      container_extension: "mp4",
+      season: sNum,
+      // Tunela o link do episódio via Proxy
+      direct_source: formatMasterLink(ep.streamUrl, baseUrl)
+    });
+
     if (series.type === 'multi-season' && series.seasons) {
       series.seasons.forEach((s: any) => {
-        formattedEpisodes[String(s.number)] = (s.episodes || []).map((ep: any) => ({
-          id: ep.id,
-          episode_num: ep.number,
-          title: ep.title || `Episódio ${ep.number}`,
-          container_extension: "mp4",
-          season: s.number,
-          direct_source: ep.streamUrl
-        }));
+        formattedEpisodes[String(s.number)] = (s.episodes || []).map((ep: any) => processEp(ep, s.number));
       });
     } else if (series.type === 'series' && series.episodes) {
-      formattedEpisodes["1"] = series.episodes.map((ep: any) => ({
-        id: ep.id,
-        episode_num: ep.number,
-        title: ep.title || `Episódio ${ep.number}`,
-        container_extension: "mp4",
-        season: 1,
-        direct_source: ep.streamUrl
-      }));
+      formattedEpisodes["1"] = series.episodes.map((ep: any) => processEp(ep, 1));
     }
 
     return NextResponse.json({

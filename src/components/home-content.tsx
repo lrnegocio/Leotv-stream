@@ -1,10 +1,11 @@
+
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
@@ -109,7 +110,10 @@ export default function HomeContent() {
     const seasons = Array.isArray(item.seasons) ? item.seasons : [];
     const seasonEps = seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []);
     const all = [...directEps, ...seasonEps];
-    return all.sort((a, b) => a.number - b.number);
+    return all.sort((a, b) => a.number - b.number).map(ep => ({
+      ...ep,
+      streamUrl: formatMasterLink(ep.streamUrl)
+    }));
   };
 
   const openItem = async (item: ContentItem) => {
@@ -119,7 +123,13 @@ export default function HomeContent() {
       setSelectedSeries(deepItem || item);
       setLoading(false);
     } else {
-      setActiveVideo({ items: content, index: content.indexOf(item) });
+      // Tunela o link antes de passar pro player
+      const proxiedContent = content.map(i => ({
+        ...i,
+        streamUrl: formatMasterLink(i.streamUrl)
+      }));
+      const idx = content.findIndex(i => i.id === item.id);
+      setActiveVideo({ items: proxiedContent, index: idx });
     }
   };
 
@@ -210,7 +220,7 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-          {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl || ""} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
         </DialogContent>
       </Dialog>
 
