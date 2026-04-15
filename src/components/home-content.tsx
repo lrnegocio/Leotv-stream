@@ -52,20 +52,21 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const q = searchParams.get('q') || ""
 
-  // BLINDAGEM v212: Inicialização exclusiva de cliente para evitar Application Error
   React.useEffect(() => {
     setIsMounted(true);
-    setSiteUrl(window.location.origin);
-    
-    const session = localStorage.getItem("user_session");
-    if (session) {
-      setUser(JSON.parse(session));
-    } else {
-      router.push("/login");
+    if (typeof window !== 'undefined') {
+      setSiteUrl(window.location.origin);
+      const session = localStorage.getItem("user_session");
+      if (session) {
+        setUser(JSON.parse(session));
+      } else {
+        router.push("/login");
+      }
     }
   }, [router]);
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
+    if (!isMounted) return;
     setLoading(true);
     try {
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
@@ -80,7 +81,7 @@ export default function HomeContent() {
       }
       if (games.length === 0) setGames(await getRemoteGames());
     } catch (err) { } finally { setLoading(false); }
-  }, [games.length]);
+  }, [games.length, isMounted]);
 
   React.useEffect(() => {
     if (isMounted) {
@@ -112,10 +113,12 @@ export default function HomeContent() {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast({ title: "LINK COPIADO!" });
-    setTimeout(() => setCopied(false), 2000);
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast({ title: "LINK COPIADO!" });
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const getEpisodes = (item: ContentItem) => {
@@ -137,7 +140,7 @@ export default function HomeContent() {
       setLoading(false);
     } else {
       const idx = content.findIndex(i => i.id === item.id);
-      // TUNEL v212: Aplica proxy em tempo real para exibir link oficial no F12
+      if (idx === -1) return;
       const proxiedContent = content.map(i => ({
         ...i,
         streamUrl: formatMasterLink(i.streamUrl)
@@ -146,7 +149,11 @@ export default function HomeContent() {
     }
   };
 
-  if (!isMounted) return null;
+  if (!isMounted) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
@@ -235,7 +242,14 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-          {activeVideo && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl} title={activeVideo.items[activeVideo.index].title} onNext={handleNext} onPrev={handlePrev} />}
+          {activeVideo && activeVideo.items[activeVideo.index] && (
+            <VideoPlayer 
+              url={activeVideo.items[activeVideo.index].streamUrl} 
+              title={activeVideo.items[activeVideo.index].title} 
+              onNext={handleNext} 
+              onPrev={handlePrev} 
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -271,7 +285,7 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={gamesMenuOpen} onOpenChange={() => setGamesMenuOpen(false)}>
+      <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
         <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[3rem] p-0 overflow-hidden flex flex-col border-emerald-500/20">
           <div className="h-20 bg-emerald-600/10 border-b border-border px-10 flex items-center justify-between">
             <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-600" /><h2 className="text-2xl font-black uppercase text-emerald-600 italic">Léo Games Arena</h2></div>
