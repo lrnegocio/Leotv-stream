@@ -5,11 +5,12 @@ import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 
 const CATEGORIES = [
@@ -127,17 +128,6 @@ export default function HomeContent() {
     }
   };
 
-  const getEpisodes = (item: ContentItem) => {
-    const directEps = Array.isArray(item.episodes) ? item.episodes : [];
-    const seasons = Array.isArray(item.seasons) ? item.seasons : [];
-    const seasonEps = seasons.flatMap(s => Array.isArray(s.episodes) ? s.episodes : []);
-    const all = [...directEps, ...seasonEps];
-    return all.sort((a, b) => a.number - b.number).map(ep => ({
-      ...ep,
-      streamUrl: formatMasterLink(ep.streamUrl)
-    }));
-  };
-
   const openItem = async (item: ContentItem) => {
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);
@@ -155,10 +145,24 @@ export default function HomeContent() {
     }
   };
 
-  const playEpisode = (episodeList: any[], episode: any) => {
-    const idx = episodeList.findIndex(e => e.id === episode.id);
+  const playEpisode = (item: ContentItem, episode: Episode) => {
+    let allEpisodes: any[] = [];
+    if (item.type === 'series' && item.episodes) {
+      allEpisodes = item.episodes.sort((a,b) => a.number - b.number);
+    } else if (item.type === 'multi-season' && item.seasons) {
+      allEpisodes = item.seasons.sort((a,b) => a.number - b.number).flatMap(s => 
+        s.episodes.sort((a,b) => a.number - b.number).map(ep => ({ ...ep, title: `T${s.number} EP${ep.number} - ${ep.title}` }))
+      );
+    }
+
+    const proxiedList = allEpisodes.map(ep => ({
+      ...ep,
+      streamUrl: formatMasterLink(ep.streamUrl)
+    }));
+
+    const idx = proxiedList.findIndex(e => e.id === episode.id);
     if (idx !== -1) {
-      setActiveVideo({ items: episodeList, index: idx });
+      setActiveVideo({ items: proxiedList, index: idx });
     }
   };
 
@@ -268,25 +272,46 @@ export default function HomeContent() {
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <h3 className="text-2xl font-black uppercase text-primary italic">{selectedSeries.title}</h3>
-                <span className="text-[10px] font-black opacity-40 uppercase bg-muted px-4 py-1 rounded-full">{getEpisodes(selectedSeries).length} Episódios</span>
               </div>
-              <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
-                {(() => {
-                   const episodes = getEpisodes(selectedSeries);
-                   return episodes.map(ep => (
+              
+              {selectedSeries.type === 'multi-season' && selectedSeries.seasons ? (
+                <Tabs defaultValue={selectedSeries.seasons[0]?.id} className="w-full">
+                  <TabsList className="bg-muted p-1 rounded-2xl mb-6 flex overflow-x-auto custom-scroll">
+                    {selectedSeries.seasons.sort((a,b) => a.number - b.number).map(s => (
+                      <TabsTrigger key={s.id} value={s.id} className="rounded-xl font-black uppercase text-[10px] px-6">Temp {s.number}</TabsTrigger>
+                    ))}
+                  </TabsList>
+                  {selectedSeries.seasons.map(s => (
+                    <TabsContent key={s.id} value={s.id} className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
+                      {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
+                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-2 rounded-2xl border border-border group hover:border-primary transition-all">
+                           <div className="flex-1 pl-4">
+                              <span className="font-black uppercase text-[10px] text-muted-foreground">EP {ep.number}</span>
+                              <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
+                           </div>
+                           <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                              <PlayCircle className="h-6 w-6 text-white" />
+                           </Button>
+                        </div>
+                      ))}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              ) : (
+                <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
+                  {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
                     <div key={ep.id} className="flex gap-2 items-center bg-muted p-2 rounded-2xl border border-border group hover:border-primary transition-all">
                        <div className="flex-1 pl-4">
                           <span className="font-black uppercase text-[10px] text-muted-foreground">EP {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
-                       <Button size="icon" onClick={() => playEpisode(episodes, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                       <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                           <PlayCircle className="h-6 w-6 text-white" />
                        </Button>
                     </div>
-                  ));
-                })()}
-                {getEpisodes(selectedSeries).length === 0 && <div className="py-20 text-center opacity-20 uppercase font-black">Nenhum episódio localizado.</div>}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
