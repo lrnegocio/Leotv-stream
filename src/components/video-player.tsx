@@ -24,15 +24,31 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // Extrai a URL original de dentro do Proxy para saber o motor
-  const getOriginalUrl = (proxyUrl: string) => {
-    if (proxyUrl.startsWith('/api/proxy?url=')) {
+  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY
+  const getOriginalUrl = (inputUrl: string) => {
+    if (inputUrl.startsWith('/api/proxy?url=')) {
       try {
-        return decodeURIComponent(proxyUrl.split('url=')[1]);
-      } catch(e) { return proxyUrl; }
+        return decodeURIComponent(inputUrl.split('url=')[1]);
+      } catch(e) { return inputUrl; }
     }
-    return proxyUrl;
+    return inputUrl;
   }
+
+  // EXTRATOR DE ID DO YOUTUBE PROFISSIONAL
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // EXTRATOR DE ID DO DAILYMOTION
+  const getDailymotionId = (url: string) => {
+    const m = url.match(/^.+dailymotion.com\/(video|hub)\/([^_]+)[^#]*$/);
+    if (m) return m[2];
+    const m2 = url.match(/^.+dai.ly\/([^_]+)[^#]*$/);
+    if (m2) return m2[1];
+    return null;
+  };
 
   React.useEffect(() => {
     setIsClient(true)
@@ -55,19 +71,17 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     setError(false)
     setLoading(true)
 
-    const originalUrl = getOriginalUrl(url).toLowerCase();
+    const originalUrl = getOriginalUrl(url);
+    const lowUrl = originalUrl.toLowerCase();
     
-    const isHLS = originalUrl.includes('.m3u8');
-    const isMPEGTS = originalUrl.includes('.ts');
-    const isMP4 = originalUrl.includes('.mp4');
+    const isHLS = lowUrl.includes('.m3u8');
+    const isMPEGTS = lowUrl.includes('.ts');
+    const isMP4 = lowUrl.includes('.mp4');
     const isDirectVideo = isHLS || isMPEGTS || isMP4;
     
-    const isIframeTarget = originalUrl.includes('youtube.com') || 
-                           originalUrl.includes('youtu.be') || 
-                           originalUrl.includes('dailymotion.com') ||
-                           originalUrl.includes('dai.ly') ||
-                           originalUrl.includes('.html') ||
-                           (!isDirectVideo && !originalUrl.includes('proxy'));
+    const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+    const isDailymotion = lowUrl.includes('dailymotion.com') || lowUrl.includes('dai.ly');
+    const isIframeTarget = isYouTube || isDailymotion || lowUrl.includes('.html') || (!isDirectVideo && !url.includes('proxy'));
 
     if (isIframeTarget) {
       setLoading(false)
@@ -113,7 +127,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       })
       setLoading(false)
     } catch (e) {
-      console.error("Player Error:", e)
       setError(true)
       setLoading(false)
     }
@@ -137,21 +150,25 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
 
   if (!isClient) return null
 
-  const originalUrl = getOriginalUrl(url).toLowerCase();
-  const isDirectVideo = originalUrl.includes('.m3u8') || originalUrl.includes('.ts') || originalUrl.includes('.mp4');
-  const isIframeTarget = originalUrl.includes('youtube.com') || 
-                         originalUrl.includes('youtu.be') || 
-                         originalUrl.includes('dailymotion.com') ||
-                         originalUrl.includes('dai.ly') ||
-                         originalUrl.includes('.html') ||
-                         (!isDirectVideo && !url.includes('proxy'));
+  const originalUrl = getOriginalUrl(url);
+  const lowUrl = originalUrl.toLowerCase();
+  
+  const ytId = getYouTubeId(originalUrl);
+  const dmId = getDailymotionId(originalUrl);
+  
+  const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
+  const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isDirectVideo && !url.includes('proxy'));
+
+  let iframeSrc = originalUrl;
+  if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+  if (dmId) iframeSrc = `https://www.dailymotion.com/embed/video/${dmId}?autoplay=1`;
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse">Sintonizando Túnel Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse">Sintonizando Sinal Master...</p>
         </div>
       )}
 
@@ -164,8 +181,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       
       {isIframeTarget ? (
         <iframe 
-          key={url} 
-          src={originalUrl.includes('youtube') ? `https://www.youtube.com/embed/${originalUrl.split('v=')[1] || originalUrl.split('/').pop()}?autoplay=1` : url} 
+          key={iframeSrc} 
+          src={iframeSrc} 
           className="w-full h-full border-0" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
@@ -176,8 +193,8 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       )}
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
-        <button onClick={initPlayer} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
-        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
+        <button onClick={initPlayer} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
+        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
       </div>
     </div>
   )
