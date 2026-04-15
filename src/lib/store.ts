@@ -37,9 +37,7 @@ export interface GameItem {
   console: string;
   type: 'embed' | 'direct';
   url: string;
-  emulatorUrl?: string;
   imageUrl?: string;
-  created_at?: string;
   genre: string;
 }
 
@@ -79,8 +77,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v214
- * Garante que o Proxy seja exibido no F12 para tudo, exceto YouTube/Dailymotion.
+ * MOTOR DE LINKS MASTER v216
+ * Garante que o Proxy da VPS apareça no F12 para tudo, exceto YouTube/Dailymotion.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -88,7 +86,7 @@ export const formatMasterLink = (url: string) => {
 
   const lower = cleanUrl.toLowerCase();
   
-  // YouTube e Dailymotion permanecem originais por conta dos players nativos
+  // YouTube e Dailymotion permanecem originais
   if (lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('dailymotion.com') || lower.includes('dai.ly')) {
     return cleanUrl;
   }
@@ -96,7 +94,7 @@ export const formatMasterLink = (url: string) => {
   // Se já for proxy, não duplica
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
-  // Tudo o resto (Canais, XVideos, Filmes, .ts, .mp4, .m3u8) vira seu Proxy Master
+  // Tudo o resto (.ts, .mp4, .m3u8, XVideos) vira seu Proxy Master
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
@@ -131,7 +129,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
-      episodes: (item.type === 'series' || item.type === 'multi-season') ? (item.episodes || []) : [],
+      episodes: (item.type === 'series') ? (item.episodes || []) : [],
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
     const { error } = await supabase.from('content').upsert(payload);
@@ -139,19 +137,16 @@ export async function saveContent(item: Partial<ContentItem>) {
   } catch (e) { return false; }
 }
 
-export async function removeContent(id: string) { 
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
-
-export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
-}
-
-export async function bulkUpdateContent(ids: string[], updates: any) {
-  const { error } = await supabase.from('content').update(updates).in('id', ids);
-  return !error;
+export async function getContentById(id: string) {
+  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+  if (data) {
+    return {
+      ...data,
+      episodes: Array.isArray(data.episodes) ? data.episodes : [],
+      seasons: Array.isArray(data.seasons) ? data.seasons : []
+    };
+  }
+  return null;
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -273,9 +268,19 @@ export async function getTotalContentCount() {
   return count || 0;
 }
 
-export async function getContentById(id: string) {
-  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-  return data;
+export async function removeContent(id: string) { 
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
+}
+
+export async function bulkRemoveContent(ids: string[]) {
+  const { error } = await supabase.from('content').delete().in('id', ids);
+  return !error;
+}
+
+export async function bulkUpdateContent(ids: string[], updates: any) {
+  const { error } = await supabase.from('content').update(updates).in('id', ids);
+  return !error;
 }
 
 export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');

@@ -89,6 +89,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
+      // MOTOR IPTV MASTER (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -102,6 +103,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
+      // MOTOR HLS MASTER (.M3U8)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -117,6 +119,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
+      // MOTOR NATIVO (.MP4 / PROXY)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -124,6 +127,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       })
       setLoading(false)
     } catch (e) {
+      console.error("Player Error:", e);
       setError(true)
       setLoading(false)
     }
@@ -131,7 +135,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     if (isMounted) {
-      const timer = setTimeout(initPlayer, 500)
+      const timer = setTimeout(initPlayer, 600)
       return () => clearTimeout(timer)
     }
   }, [initPlayer, isMounted])
@@ -161,18 +165,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   if (dmId) iframeSrc = `https://www.dailymotion.com/embed/video/${dmId}?autoplay=1`;
 
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
+    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master Léo TV...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <Button onClick={initPlayer} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR SINAL</Button>
+          <p className="text-white font-black uppercase mb-6">Falha ao sintonizar sinal.</p>
+          <Button onClick={initPlayer} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       

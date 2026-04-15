@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * CONEXÃO MASTER LÉO TV v213
+ * CONEXÃO MASTER LÉO TV v216
  * Chaves fixas soldadas no núcleo para garantir sincronização entre Local e VPS.
  */
 const supabaseUrl = 'https://veilblctswnnyzidirrf.supabase.co'; 

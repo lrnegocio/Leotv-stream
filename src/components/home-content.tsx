@@ -93,7 +93,7 @@ export default function HomeContent() {
   const handleNext = () => {
     if (!activeVideo || activeVideo.items.length <= 1) return;
     setActiveVideo(prev => {
-      if (!prev) return null;
+      if (!prev || !prev.items[prev.index + 1]) return prev;
       return { ...prev, index: (prev.index + 1) % prev.items.length };
     });
   };
@@ -119,15 +119,6 @@ export default function HomeContent() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast({ title: "LINK COPIADO!" });
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   const openItem = async (item: ContentItem) => {
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);
@@ -148,10 +139,13 @@ export default function HomeContent() {
   const playEpisode = (item: ContentItem, episode: Episode) => {
     let allEpisodes: any[] = [];
     if (item.type === 'series' && item.episodes) {
-      allEpisodes = item.episodes.sort((a,b) => a.number - b.number);
+      allEpisodes = [...item.episodes].sort((a,b) => a.number - b.number);
     } else if (item.type === 'multi-season' && item.seasons) {
       allEpisodes = item.seasons.sort((a,b) => a.number - b.number).flatMap(s => 
-        s.episodes.sort((a,b) => a.number - b.number).map(ep => ({ ...ep, title: `T${s.number} EP${ep.number} - ${ep.title}` }))
+        s.episodes.sort((a,b) => a.number - b.number).map(ep => ({ 
+          ...ep, 
+          title: `T${s.number} EP${ep.number} - ${ep.title || item.title}` 
+        }))
       );
     }
 
@@ -163,6 +157,15 @@ export default function HomeContent() {
     const idx = proxiedList.findIndex(e => e.id === episode.id);
     if (idx !== -1) {
       setActiveVideo({ items: proxiedList, index: idx });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast({ title: "LINK COPIADO!" });
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -229,27 +232,22 @@ export default function HomeContent() {
           <DialogHeader className="text-center space-y-2">
             <div className="mx-auto bg-primary/10 p-4 rounded-3xl w-fit mb-2"><Zap className="h-8 w-8 text-primary" /></div>
             <DialogTitle className="text-2xl font-black uppercase italic text-primary">Acesso ao Sistema</DialogTitle>
-            <p className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Seu Link Oficial Léo TV</p>
           </DialogHeader>
-          
           <div className="space-y-6 py-6 text-center">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase ml-2 opacity-60">Link de Streaming</label>
+              <label className="text-[10px] font-black uppercase ml-2 opacity-60">Link Oficial Léo TV</label>
               <div className="flex gap-2">
                 <input readOnly value={siteUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none text-center" />
                 <Button onClick={() => copyToClipboard(siteUrl)} className="h-12 rounded-xl bg-primary">{copied ? <CheckCircle2 className="h-5 w-5" /> : <Copy className="h-5 w-5" />}</Button>
               </div>
             </div>
-
-            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10 space-y-4">
-              <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto"><Smartphone className="h-6 w-6 text-primary" /></div>
-              <h4 className="text-xs font-black uppercase italic text-primary">Dica de Instalação</h4>
-              <p className="text-[10px] font-bold uppercase leading-relaxed opacity-70">
-                Ao abrir o link acima, clique nos 3 pontos do navegador e selecione <span className="text-primary">"Adicionar à Tela Inicial"</span>. O Léo TV funcionará como um Aplicativo nativo em seu aparelho!
-              </p>
+            <div className="p-6 bg-primary/5 rounded-3xl border border-primary/10">
+              <Smartphone className="h-6 w-6 text-primary mx-auto mb-2" />
+              <h4 className="text-xs font-black uppercase italic text-primary">Instalação Smart TV & Celular</h4>
+              <p className="text-[10px] font-bold uppercase leading-relaxed opacity-70 mt-2">Clique em "Adicionar à Tela Inicial" no menu do seu navegador para transformar o Léo TV em um Aplicativo nativo.</p>
             </div>
           </div>
-          <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary rounded-2xl font-black uppercase shadow-xl shadow-primary/20">VOLTAR AO STREAMING</Button>
+          <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary rounded-2xl font-black uppercase shadow-xl">VOLTAR AO STREAMING</Button>
         </DialogContent>
       </Dialog>
 
@@ -270,23 +268,20 @@ export default function HomeContent() {
         <DialogContent className="max-w-2xl bg-card rounded-[2.5rem] p-8 overflow-hidden">
           {selectedSeries && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-border pb-4">
-                <h3 className="text-2xl font-black uppercase text-primary italic">{selectedSeries.title}</h3>
-              </div>
-              
+              <h3 className="text-2xl font-black uppercase text-primary italic border-b border-border pb-4">{selectedSeries.title}</h3>
               {selectedSeries.type === 'multi-season' && selectedSeries.seasons ? (
                 <Tabs defaultValue={selectedSeries.seasons[0]?.id} className="w-full">
                   <TabsList className="bg-muted p-1 rounded-2xl mb-6 flex overflow-x-auto custom-scroll">
                     {selectedSeries.seasons.sort((a,b) => a.number - b.number).map(s => (
-                      <TabsTrigger key={s.id} value={s.id} className="rounded-xl font-black uppercase text-[10px] px-6">Temp {s.number}</TabsTrigger>
+                      <TabsTrigger key={s.id} value={s.id} className="rounded-xl font-black uppercase text-[10px] px-6">Temporada {s.number}</TabsTrigger>
                     ))}
                   </TabsList>
                   {selectedSeries.seasons.map(s => (
                     <TabsContent key={s.id} value={s.id} className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                       {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-2 rounded-2xl border border-border group hover:border-primary transition-all">
+                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border hover:border-primary transition-all">
                            <div className="flex-1 pl-4">
-                              <span className="font-black uppercase text-[10px] text-muted-foreground">EP {ep.number}</span>
+                              <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
                            <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
@@ -300,9 +295,9 @@ export default function HomeContent() {
               ) : (
                 <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                   {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
-                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-2 rounded-2xl border border-border group hover:border-primary transition-all">
+                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border hover:border-primary transition-all">
                        <div className="flex-1 pl-4">
-                          <span className="font-black uppercase text-[10px] text-muted-foreground">EP {ep.number}</span>
+                          <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
                        <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
@@ -321,7 +316,7 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic mb-4 text-primary">Sinal Restrito</div>
-          <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha de 4 Dígitos do Mestre</p>
+          <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha Parental do Mestre</p>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8 shadow-inner" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
           <Button onClick={verifyPassword} className="w-full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">LIBERAR AGORA</Button>
         </DialogContent>
@@ -342,7 +337,7 @@ export default function HomeContent() {
                ))}
             </div>
             <div className="flex-1 bg-black/95 relative">
-               {activeGame ? <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen /> : <div className="flex flex-col items-center justify-center h-full opacity-30 text-white text-center p-10"><Trophy className="h-32 w-32 mb-6 animate-bounce" /><h3 className="text-3xl font-black uppercase italic">Escolha um Jogo para Iniciar o Combate</h3><p className="text-xs uppercase font-bold mt-4 tracking-widest">Arena Master Léo TV v2.0</p></div>}
+               {activeGame ? <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen /> : <div className="flex flex-col items-center justify-center h-full opacity-30 text-white text-center p-10"><Trophy className="h-32 w-32 mb-6 animate-bounce" /><h3 className="text-3xl font-black uppercase italic">Escolha um Jogo Master</h3></div>}
             </div>
           </div>
         </DialogContent>
