@@ -79,11 +79,11 @@ export interface User {
 }
 
 /**
- * HELPER SOBERANO v211
- * Gera o link de proxy oficial da VPS para aparecer no F12.
+ * HELPER SOBERANO v212
+ * Gera o link de proxy oficial da VPS.
  * YouTube e Dailymotion permanecem originais.
  */
-export const formatMasterLink = (url: string, baseUrl?: string) => {
+export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let cleanUrl = url.trim();
 
@@ -91,16 +91,10 @@ export const formatMasterLink = (url: string, baseUrl?: string) => {
   const isYouTube = lower.includes('youtube.com') || lower.includes('youtu.be');
   const isDailymotion = lower.includes('dailymotion.com') || lower.includes('dai.ly');
 
-  if (isYouTube || isDailymotion) {
-    return cleanUrl;
-  }
-
-  // Se já for proxy, não duplica
+  if (isYouTube || isDailymotion) return cleanUrl;
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
-  const proxiedPath = `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
-  // Retorna link relativo para o player ou absoluto se necessário
-  return proxiedPath;
+  return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

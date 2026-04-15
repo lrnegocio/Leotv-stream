@@ -2,11 +2,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * CONEXÃO MASTER LÉO TV v154.0
- * Chaves blindadas para garantir que o Supabase funcione na VPS e Localmente.
+ * CONEXÃO MASTER LÉO TV v212
+ * Chaves fixas para garantir sincronização entre Local e VPS sem depender de .env.
  */
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://veilblctswnnyzidirrf.supabase.co'; 
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_OCkZfnj39jlsA7vwFukuEA_QV3xHRU-'; 
+const supabaseUrl = 'https://veilblctswnnyzidirrf.supabase.co'; 
+const supabaseAnonKey = 'sb_publishable_OCkZfnj39jlsA7vwFukuEA_QV3xHRU-'; 
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

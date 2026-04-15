@@ -24,7 +24,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // HELPER PARA EXTRAIR URL ORIGINAL DO PROXY
   const getOriginalUrl = (inputUrl: string) => {
     if (inputUrl.includes('/api/proxy?url=')) {
       try {
@@ -34,7 +33,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     return inputUrl;
   }
 
-  // DETECTORES DE YOUTUBE E DAILYMOTION
   const getYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
@@ -74,7 +72,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
-    // Identifica o formato real, mesmo dentro do Proxy
     const isHLS = lowUrl.includes('.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
     const isMP4 = lowUrl.includes('.mp4');
@@ -89,7 +86,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR MPEG-TS (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -103,7 +99,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR HLS (.M3U8)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -119,7 +114,6 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
         }
       } 
       
-      // FALLBACK DIRETO (MP4)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
