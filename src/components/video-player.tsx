@@ -62,13 +62,12 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
     const isMP4 = originalUrl.includes('.mp4');
     const isDirectVideo = isHLS || isMPEGTS || isMP4;
     
-    // Identifica se é YouTube ou XVideos para usar Iframe
     const isIframeTarget = originalUrl.includes('youtube.com') || 
                            originalUrl.includes('youtu.be') || 
                            originalUrl.includes('dailymotion.com') ||
                            originalUrl.includes('dai.ly') ||
                            originalUrl.includes('.html') ||
-                           !isDirectVideo;
+                           (!isDirectVideo && !originalUrl.includes('proxy'));
 
     if (isIframeTarget) {
       setLoading(false)
@@ -94,7 +93,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true })
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -145,7 +144,7 @@ export function VideoPlayer({ url, title }: VideoPlayerProps) {
                          originalUrl.includes('dailymotion.com') ||
                          originalUrl.includes('dai.ly') ||
                          originalUrl.includes('.html') ||
-                         !isDirectVideo;
+                         (!isDirectVideo && !url.includes('proxy'));
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl'}`}>

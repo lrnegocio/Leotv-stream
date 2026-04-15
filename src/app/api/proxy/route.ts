@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v206 - MODO TUDO OU NADA
- * Repasse de sinais (.ts, .m3u8, .mp4, html) com suporte total a Range e Bypass.
+ * TÚNEL MASTER SOBERANO v208 - MODO FLUXO CONTÍNUO
+ * Repasse de sinais (.ts, .m3u8, .mp4, html) sem processamento intermediário.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
-  // Limpeza de segurança XUI e extensões duplicadas
+  // Limpeza de segurança XUI
   targetUrl = targetUrl.replace('.mpegts.js', '').replace('.js', '');
 
   try {
@@ -33,7 +33,6 @@ export async function GET(req: NextRequest) {
       redirect: 'follow',
     });
     
-    // Fallback agressivo para links bloqueados
     if (!res.ok && res.status !== 206) {
        const resRetry = await fetch(targetUrl, { 
          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
@@ -44,7 +43,6 @@ export async function GET(req: NextRequest) {
     }
 
     const responseHeaders = new Headers();
-    // Cabeçalhos Vitais para Vídeo e Range
     const copyHeaders = [
       'content-type', 
       'content-length', 
@@ -57,7 +55,6 @@ export async function GET(req: NextRequest) {
       if (copyHeaders.includes(k.toLowerCase())) responseHeaders.set(k, v);
     });
 
-    // Forçar Mime-Types se o servidor original omitir
     const lowerUrl = targetUrl.toLowerCase();
     if (lowerUrl.includes('.ts')) responseHeaders.set('Content-Type', 'video/mp2t');
     if (lowerUrl.includes('.m3u8')) responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
