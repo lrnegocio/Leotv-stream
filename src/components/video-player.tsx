@@ -23,7 +23,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // DETECTOR DE ESSÊNCIA: Descobre o formato real mesmo dentro do Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -59,11 +58,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [])
 
-  React.useEffect(() => {
-    setIsMounted(true)
-    return () => cleanup()
-  }, [cleanup])
-
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
@@ -74,12 +68,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
-    // FORMATOS MASTER
     const isHLS = lowUrl.includes('.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
     const isMP4 = lowUrl.includes('.mp4');
     
-    // IFRAMES EXTERNOS
     const ytId = getYouTubeId(originalUrl);
     const dmId = getDailymotionId(originalUrl);
     const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
@@ -90,11 +82,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR IPTV MASTER (.TS) - Sincronização Especial
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
-          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url }, { enableWorker: true, liveBufferLatencyChasing: true })
+          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url }, { 
+            enableWorker: true, 
+            liveBufferLatencyChasing: true,
+            stashInitialSize: 128
+          })
           player.attachMediaElement(videoRef.current)
           player.load()
           player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
@@ -104,11 +99,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR HLS MASTER (.M3U8) - Inteligência Soberana
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 90 })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -126,7 +120,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
-      // MOTOR NATIVO (.MP4 / PROXY)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -140,11 +133,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url, isMounted, cleanup, getOriginalUrl])
 
   React.useEffect(() => {
-    if (isMounted) {
-      const timer = setTimeout(initPlayer, 500)
-      return () => clearTimeout(timer)
+    setIsMounted(true)
+    const timer = setTimeout(initPlayer, 300)
+    return () => {
+      clearTimeout(timer)
+      cleanup()
     }
-  }, [initPlayer, isMounted, url])
+  }, [initPlayer, cleanup, url])
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -197,7 +192,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           onLoad={() => setLoading(false)} 
         />
       ) : (
-        <video key={url} ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
+        <video 
+          key={url} 
+          ref={videoRef} 
+          className="w-full h-full object-contain" 
+          autoPlay 
+          playsInline 
+          controls 
+          crossOrigin="anonymous"
+        />
       )}
 
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">

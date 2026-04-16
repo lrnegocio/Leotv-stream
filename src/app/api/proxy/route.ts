@@ -4,8 +4,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v218 - MODO CAMALEÃO CDNs
+ * TÚNEL MASTER SOBERANO v219 - MODO CAMALEÃO CDNs
  * Finge ser um navegador real para abrir sinais da XVideos, Blinder e Contfree.
+ * Força o Content-Type correto para evitar o NotSupportedError no navegador.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,7 +21,6 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
 
-    // IDENTIDADE CAMALEÃO: Finge ser o Chrome mais recente em Windows 10
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok && res.status !== 206) {
-       // RECOVERY MOBILE: Tenta como Android se o desktop falhar
        const resMobile = await fetch(targetUrl, {
          headers: {
            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
@@ -49,17 +48,17 @@ export async function GET(req: NextRequest) {
     }
 
     const responseHeaders = new Headers();
-    const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+    const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding'];
     headersToCopy.forEach(h => {
       const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);
     });
 
-    // CORREÇÃO DE TIPO: Garante que o Player saiba o que está recebendo
+    // BLINDAGEM DE TIPO: Força o navegador a entender o fluxo IPTV
     const lowerUrl = targetUrl.toLowerCase();
     if (lowerUrl.includes('.ts')) responseHeaders.set('Content-Type', 'video/mp2t');
-    if (lowerUrl.includes('.m3u8')) responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-    if (lowerUrl.includes('.mp4')) responseHeaders.set('Content-Type', 'video/mp4');
+    else if (lowerUrl.includes('.m3u8')) responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+    else if (lowerUrl.includes('.mp4')) responseHeaders.set('Content-Type', 'video/mp4');
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');

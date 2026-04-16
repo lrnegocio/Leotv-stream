@@ -120,10 +120,15 @@ export default function HomeContent() {
     }
   };
 
-  const playEpisode = (item: ContentItem, episode: Episode, list: any[]) => {
-    const proxiedList = list.map(ep => ({ ...ep, streamUrl: formatMasterLink(ep.streamUrl) }));
+  const playEpisode = (episode: Episode, fullList: Episode[]) => {
+    const proxiedList = fullList.map(ep => ({ 
+      ...ep, 
+      streamUrl: formatMasterLink(ep.streamUrl) 
+    }));
     const idx = proxiedList.findIndex(e => e.id === episode.id);
-    if (idx !== -1) setActiveVideo({ items: proxiedList, index: idx });
+    if (idx !== -1) {
+      setActiveVideo({ items: proxiedList, index: idx });
+    }
   };
 
   if (!isMounted) return null;
@@ -236,7 +241,7 @@ export default function HomeContent() {
                               <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
-                           <Button size="icon" onClick={() => playEpisode(selectedSeries, ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                           <Button size="icon" onClick={() => playEpisode(ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                               <PlayCircle className="h-6 w-6 text-white" />
                            </Button>
                         </div>
@@ -252,7 +257,7 @@ export default function HomeContent() {
                           <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
-                       <Button size="icon" onClick={() => playEpisode(selectedSeries, ep, selectedSeries.episodes || [])} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                       <Button size="icon" onClick={() => playEpisode(ep, selectedSeries.episodes || [])} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                           <PlayCircle className="h-6 w-6 text-white" />
                        </Button>
                     </div>
