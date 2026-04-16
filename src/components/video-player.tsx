@@ -51,27 +51,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const ytId = getYouTubeId(url);
     
     // DETECÇÃO DE FORMATOS DIRETOS (USAM TAG VIDEO)
-    // Excluímos sites conhecidos que podem ter as extensões no meio da URL mas precisam de Iframe
-    const isDirectVideo = (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4')) && 
-                          !lowUrl.includes('mercadolivre') && 
-                          !lowUrl.includes('mercadoplay') &&
-                          !lowUrl.includes('xvideos.com/video.');
+    // Sinais que NUNCA devem ser tratados como vídeo direto por terem players próprios
+    const isIframeDomain = lowUrl.includes('mercadolivre') || 
+                           lowUrl.includes('mercadoplay') || 
+                           lowUrl.includes('visioncine') || 
+                           lowUrl.includes('reidoscanais') || 
+                           lowUrl.includes('rdcanais') || 
+                           lowUrl.includes('redecanaistv') ||
+                           lowUrl.includes('tvacabo.top') ||
+                           lowUrl.includes('playcnvs.stream') ||
+                           lowUrl.includes('xvideos.com') ||
+                           lowUrl.includes('player?') ||
+                           lowUrl.includes('/s/') ||
+                           lowUrl.includes('.html');
 
-    // DETECÇÃO DE IFRAME (SITES OU TAGS IFRAME)
+    const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
+
+    // SE NÃO FOR VÍDEO DIRETO, É IFRAME
     const isIframe = !isDirectVideo && (
       !!ytId || 
       url.trim().startsWith('<iframe') ||
-      lowUrl.includes('.html') || 
-      lowUrl.includes('visioncine') || 
-      lowUrl.includes('mercadoplay') || 
-      lowUrl.includes('mercadolivre') ||
-      lowUrl.includes('reidoscanais') || 
-      lowUrl.includes('redecanaistv') ||
-      lowUrl.includes('rdcanais') ||
-      lowUrl.includes('tvacabo.top') ||
-      lowUrl.includes('playcnvs.stream') ||
-      lowUrl.includes('xvideos.com') ||
-      lowUrl.includes('/s/') ||
+      isIframeDomain ||
       lowUrl.includes('embed')
     );
 
@@ -158,25 +158,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = url.toLowerCase();
   const ytId = getYouTubeId(url);
   
-  const isDirectVideo = (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4')) && 
-                        !lowUrl.includes('mercadolivre') && 
-                        !lowUrl.includes('mercadoplay') &&
-                        !lowUrl.includes('xvideos.com/video.');
+  const isIframeDomain = lowUrl.includes('mercadolivre') || 
+                         lowUrl.includes('mercadoplay') || 
+                         lowUrl.includes('visioncine') || 
+                         lowUrl.includes('reidoscanais') || 
+                         lowUrl.includes('rdcanais') || 
+                         lowUrl.includes('redecanaistv') ||
+                         lowUrl.includes('tvacabo.top') ||
+                         lowUrl.includes('playcnvs.stream') ||
+                         lowUrl.includes('xvideos.com') ||
+                         lowUrl.includes('player?') ||
+                         lowUrl.includes('/s/') ||
+                         lowUrl.includes('.html');
+
+  const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
   const isIframe = !isDirectVideo && (
     !!ytId || 
     url.trim().startsWith('<iframe') ||
-    lowUrl.includes('.html') || 
-    lowUrl.includes('visioncine') || 
-    lowUrl.includes('mercadoplay') || 
-    lowUrl.includes('mercadolivre') ||
-    lowUrl.includes('reidoscanais') || 
-    lowUrl.includes('redecanaistv') ||
-    lowUrl.includes('rdcanais') ||
-    lowUrl.includes('tvacabo.top') ||
-    lowUrl.includes('playcnvs.stream') ||
-    lowUrl.includes('xvideos.com') ||
-    lowUrl.includes('/s/') ||
+    isIframeDomain ||
     lowUrl.includes('embed')
   );
 
@@ -189,7 +189,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   } else if (ytId) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
   } else if (url.includes('xvideos.com/video.')) {
-    // CONVERSÃO SOBERANA: Página do vídeo -> Embed Iframe
     const xvMatch = url.match(/video\.([a-z0-9]+)/);
     if (xvMatch) {
       finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
@@ -219,7 +218,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={finalIframeSrc} 
           className="w-full h-full border-0" 
           allowFullScreen 
-          allow="autoplay; encrypted-media; fullscreen" 
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
           onLoad={() => setLoading(false)} 
         />
       ) : (
