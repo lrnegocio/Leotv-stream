@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, CheckCircle2, Smartphone, PlayCircle } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -57,11 +56,8 @@ export default function HomeContent() {
     if (typeof window !== 'undefined') {
       setSiteUrl(window.location.origin);
       const session = localStorage.getItem("user_session");
-      if (session) {
-        setUser(JSON.parse(session));
-      } else {
-        router.push("/login");
-      }
+      if (session) setUser(JSON.parse(session));
+      else router.push("/login");
     }
   }, [router]);
 
@@ -84,25 +80,17 @@ export default function HomeContent() {
   }, [games.length, isMounted]);
 
   React.useEffect(() => {
-    if (isMounted) {
-      loadData(q, selectedCat);
-    }
+    if (isMounted) loadData(q, selectedCat);
   }, [q, selectedCat, loadData, isMounted]);
 
   const handleNext = () => {
-    if (!activeVideo || activeVideo.items.length <= 1) return;
-    setActiveVideo(prev => {
-      if (!prev || prev.index >= prev.items.length - 1) return prev;
-      return { ...prev, index: prev.index + 1 };
-    });
+    if (!activeVideo || activeVideo.index >= activeVideo.items.length - 1) return;
+    setActiveVideo(prev => prev ? { ...prev, index: prev.index + 1 } : null);
   };
 
   const handlePrev = () => {
-    if (!activeVideo || activeVideo.items.length <= 1) return;
-    setActiveVideo(prev => {
-      if (!prev || prev.index <= 0) return prev;
-      return { ...prev, index: prev.index - 1 };
-    });
+    if (!activeVideo || activeVideo.index <= 0) return;
+    setActiveVideo(prev => prev ? { ...prev, index: prev.index - 1 } : null);
   };
 
   const verifyPassword = async () => {
@@ -127,46 +115,15 @@ export default function HomeContent() {
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       if (idx === -1) return;
-      
-      const proxiedItems = content.map(i => ({
-        ...i,
-        streamUrl: formatMasterLink(i.streamUrl)
-      }));
-      
-      setActiveVideo({ items: proxiedItems, index: idx });
+      const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
+      setActiveVideo({ items: list, index: idx });
     }
   };
 
-  const playEpisode = (item: ContentItem, episode: Episode) => {
-    let allEpisodes: any[] = [];
-    if (item.type === 'series' && item.episodes) {
-      allEpisodes = [...item.episodes].sort((a,b) => a.number - b.number);
-    } else if (item.type === 'multi-season' && item.seasons) {
-      // Isolar episódios por temporada para o player
-      allEpisodes = item.seasons.sort((a,b) => a.number - b.number).flatMap(s => 
-        s.episodes.sort((a,b) => a.number - b.number).map(ep => ({ 
-          ...ep, 
-          title: `T${s.number} EP${ep.number} - ${ep.title || item.title}` 
-        }))
-      );
-    }
-
-    const proxiedList = allEpisodes.map(ep => ({
-      ...ep,
-      streamUrl: formatMasterLink(ep.streamUrl)
-    }));
-
+  const playEpisode = (item: ContentItem, episode: Episode, list: any[]) => {
+    const proxiedList = list.map(ep => ({ ...ep, streamUrl: formatMasterLink(ep.streamUrl) }));
     const idx = proxiedList.findIndex(e => e.id === episode.id);
-    if (idx !== -1) {
-      setActiveVideo({ items: proxiedList, index: idx });
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(text);
-      toast({ title: "LINK COPIADO!" });
-    }
+    if (idx !== -1) setActiveVideo({ items: proxiedList, index: idx });
   };
 
   if (!isMounted) return null;
@@ -180,7 +137,7 @@ export default function HomeContent() {
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border-primary/20 text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></Button>
+          <Button variant="outline" size="icon" onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border-primary/20 text-primary hover:bg-primary/10 transition-all shadow-sm"><Info className="h-6 w-6" /></Button>
           <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
         </div>
       </header>
@@ -193,7 +150,7 @@ export default function HomeContent() {
                 if (c.special === 'games' || c.restricted) {
                   if (c.special === 'games' && !user?.isGamesEnabled) return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
                   if (c.restricted && !user?.isAdultEnabled) return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
-                  setUnlockTarget(c.id === 'GAMES' ? 'GAMES' : 'ADULT');
+                  setUnlockTarget(c.id as any);
                   setIsPinOpen(true);
                 } else setSelectedCat(c.id);
               }} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl hover:shadow-primary/10">
@@ -238,7 +195,7 @@ export default function HomeContent() {
               <label className="text-[10px] font-black uppercase ml-2 opacity-60">Link Oficial Léo TV</label>
               <div className="flex gap-2">
                 <input readOnly value={siteUrl} className="flex-1 bg-muted h-12 rounded-xl px-4 text-[10px] font-mono border-border outline-none text-center" />
-                <Button onClick={() => copyToClipboard(siteUrl)} className="h-12 rounded-xl bg-primary"><Copy className="h-5 w-5" /></Button>
+                <Button onClick={() => { if(typeof navigator !== 'undefined'){ navigator.clipboard.writeText(siteUrl); toast({ title: "COPIADO!" }); } }} className="h-12 rounded-xl bg-primary shadow-lg"><Copy className="h-5 w-5" /></Button>
               </div>
             </div>
           </div>
@@ -260,13 +217,13 @@ export default function HomeContent() {
       </Dialog>
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
-        <DialogContent className="max-w-2xl bg-card rounded-[2.5rem] p-8 overflow-hidden">
+        <DialogContent className="max-w-2xl bg-card rounded-[2.5rem] p-8 overflow-hidden shadow-2xl">
           {selectedSeries && (
             <div className="space-y-6">
               <h3 className="text-2xl font-black uppercase text-primary italic border-b border-border pb-4">{selectedSeries.title}</h3>
               {selectedSeries.type === 'multi-season' && selectedSeries.seasons ? (
                 <Tabs defaultValue={selectedSeries.seasons[0]?.id} className="w-full">
-                  <TabsList className="bg-muted p-1 rounded-2xl mb-6 flex overflow-x-auto custom-scroll">
+                  <TabsList className="bg-muted p-1 rounded-2xl mb-6 flex overflow-x-auto custom-scroll shadow-inner">
                     {selectedSeries.seasons.sort((a,b) => a.number - b.number).map(s => (
                       <TabsTrigger key={s.id} value={s.id} className="rounded-xl font-black uppercase text-[10px] px-6">Temporada {s.number}</TabsTrigger>
                     ))}
@@ -279,7 +236,7 @@ export default function HomeContent() {
                               <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
-                           <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                           <Button size="icon" onClick={() => playEpisode(selectedSeries, ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                               <PlayCircle className="h-6 w-6 text-white" />
                            </Button>
                         </div>
@@ -295,7 +252,7 @@ export default function HomeContent() {
                           <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
-                       <Button size="icon" onClick={() => playEpisode(selectedSeries, ep)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
+                       <Button size="icon" onClick={() => playEpisode(selectedSeries, ep, selectedSeries.episodes || [])} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                           <PlayCircle className="h-6 w-6 text-white" />
                        </Button>
                     </div>
@@ -308,7 +265,7 @@ export default function HomeContent() {
       </Dialog>
 
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
-        <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center">
+        <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic mb-4 text-primary">Sinal Restrito</div>
           <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha Parental do Mestre</p>
@@ -318,7 +275,7 @@ export default function HomeContent() {
       </Dialog>
 
       <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
-        <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[3rem] p-0 overflow-hidden flex flex-col border-emerald-500/20">
+        <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[3rem] p-0 overflow-hidden flex flex-col border-emerald-500/20 shadow-2xl">
           <div className="h-20 bg-emerald-600/10 border-b border-border px-10 flex items-center justify-between">
             <div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-600" /><h2 className="text-2xl font-black uppercase text-emerald-600 italic">Léo Games Arena</h2></div>
             <button onClick={() => setGamesMenuOpen(false)} className="h-10 w-10 rounded-full hover:bg-muted transition-all flex items-center justify-center"><X className="h-6 w-6" /></button>

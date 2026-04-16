@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -24,7 +23,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // Extrai a URL original de dentro do Proxy para saber qual motor usar
+  // DETECTOR DE ESSÊNCIA: Descobre o formato real mesmo dentro do Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -75,13 +74,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
+    // FORMATOS MASTER
     const isHLS = lowUrl.includes('.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
     const isMP4 = lowUrl.includes('.mp4');
     
+    // IFRAMES EXTERNOS
     const ytId = getYouTubeId(originalUrl);
     const dmId = getDailymotionId(originalUrl);
-    
     const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
 
     if (isIframeTarget) {
@@ -90,7 +90,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR IPTV MASTER (.TS)
+      // MOTOR IPTV MASTER (.TS) - Sincronização Especial
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -104,7 +104,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR HLS MASTER (.M3U8)
+      // MOTOR HLS MASTER (.M3U8) - Inteligência Soberana
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -117,7 +117,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event:any, data:any) => {
-            if (data.fatal) setError(true);
+            if (data.fatal) {
+               console.error("HLS Fatal Error", data);
+               setError(true);
+            }
           });
           return
         }
@@ -138,10 +141,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     if (isMounted) {
-      const timer = setTimeout(initPlayer, 600)
+      const timer = setTimeout(initPlayer, 500)
       return () => clearTimeout(timer)
     }
-  }, [initPlayer, isMounted, url]) // Re-inicia o player sempre que a URL mudar
+  }, [initPlayer, isMounted, url])
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -172,14 +175,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary">Sincronizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sincronizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6">Falha ao sintonizar sinal.</p>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Falha ao sintonizar sinal.</p>
           <Button onClick={initPlayer} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
@@ -202,10 +205,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       </div>
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
-        {onPrev && <button onClick={onPrev} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
-        <button onClick={initPlayer} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
-        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
-        {onNext && <button onClick={onNext} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
+        {onPrev && <button onClick={onPrev} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-4 w-4 text-white" /></button>}
+        <button onClick={initPlayer} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
+        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
+        {onNext && <button onClick={onNext} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>
   )

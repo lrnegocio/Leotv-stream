@@ -1,16 +1,15 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v217 - MODO IDENTIDADE GLOBAL
- * Finge ser um navegador real para burlar bloqueios de CDNs (XVideos, Blinder, etc).
+ * TÚNEL MASTER SOBERANO v218 - MODO CAMALEÃO CDNs
+ * Finge ser um navegador real para abrir sinais da XVideos, Blinder e Contfree.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  let targetUrl = searchParams.get('url');
+  const targetUrl = searchParams.get('url');
 
   if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
@@ -19,47 +18,44 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // IDENTIDADE CAMALEÃO: Finge ser um Navegador Chrome em Windows (Aceito por quase todas as CDNs)
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    const urlObj = new URL(targetUrl);
+
+    // IDENTIDADE CAMALEÃO: Finge ser o Chrome mais recente em Windows 10
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
-    requestHeaders.set('Connection', 'keep-alive');
-    requestHeaders.set('Origin', new URL(targetUrl).origin);
-    requestHeaders.set('Referer', new URL(targetUrl).origin + '/');
-    
+    requestHeaders.set('Origin', urlObj.origin);
+    requestHeaders.set('Referer', urlObj.origin + '/');
+    requestHeaders.set('Sec-Fetch-Dest', 'video');
+    requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
+    requestHeaders.set('Sec-Fetch-Site', 'cross-site');
+
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
       redirect: 'follow',
     });
-    
-    // RECOVERY MODE: Se o primeiro falhar, tenta com identidade mobile
+
     if (!res.ok && res.status !== 206) {
-       const resRetry = await fetch(targetUrl, { 
-         headers: { 
-           'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-           'Accept': '*/*'
-         },
-         redirect: 'follow' 
+       // RECOVERY MOBILE: Tenta como Android se o desktop falhar
+       const resMobile = await fetch(targetUrl, {
+         headers: {
+           'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
+           'Referer': urlObj.origin + '/'
+         }
        });
-       if (!resRetry.ok) return new Response(null, { status: resRetry.status });
-       return new Response(resRetry.body, { headers: { 'Content-Type': resRetry.headers.get('content-type') || 'video/mp4', 'Access-Control-Allow-Origin': '*' } });
+       if (!resMobile.ok) return new Response(null, { status: resMobile.status });
+       return new Response(resMobile.body, { headers: { 'Content-Type': resMobile.headers.get('content-type') || 'video/mp4', 'Access-Control-Allow-Origin': '*' } });
     }
 
     const responseHeaders = new Headers();
-    const copyHeaders = [
-      'content-type', 
-      'content-length', 
-      'content-range', 
-      'accept-ranges',
-      'cache-control'
-    ];
-    
-    res.headers.forEach((v, k) => {
-      if (copyHeaders.includes(k.toLowerCase())) responseHeaders.set(k, v);
+    const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+    headersToCopy.forEach(h => {
+      const val = res.headers.get(h);
+      if (val) responseHeaders.set(h, val);
     });
 
-    // Força o tipo de conteúdo se necessário para o player não bugar
+    // CORREÇÃO DE TIPO: Garante que o Player saiba o que está recebendo
     const lowerUrl = targetUrl.toLowerCase();
     if (lowerUrl.includes('.ts')) responseHeaders.set('Content-Type', 'video/mp2t');
     if (lowerUrl.includes('.m3u8')) responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
@@ -73,7 +69,7 @@ export async function GET(req: NextRequest) {
       headers: responseHeaders,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     return new Response(null, { status: 500 });
   }
 }
