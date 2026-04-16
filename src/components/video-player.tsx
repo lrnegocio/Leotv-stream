@@ -51,9 +51,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const ytId = getYouTubeId(url);
     
     // DETECÇÃO DE FORMATOS DIRETOS (USAM TAG VIDEO)
+    // Excluímos sites conhecidos que podem ter as extensões no meio da URL mas precisam de Iframe
     const isDirectVideo = (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4')) && 
                           !lowUrl.includes('mercadolivre') && 
-                          !lowUrl.includes('mercadoplay');
+                          !lowUrl.includes('mercadoplay') &&
+                          !lowUrl.includes('xvideos.com/video.');
 
     // DETECÇÃO DE IFRAME (SITES OU TAGS IFRAME)
     const isIframe = !isDirectVideo && (
@@ -107,17 +109,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           })
           hls.on(Hls.Events.ERROR, (_: any, data: any) => {
             if (data.fatal) {
-              // Tentativa de recuperação automática
               switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  hls.startLoad();
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  setError(true);
-                  break;
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: setError(true); break;
               }
             }
           })
@@ -165,7 +160,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const isDirectVideo = (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4')) && 
                         !lowUrl.includes('mercadolivre') && 
-                        !lowUrl.includes('mercadoplay');
+                        !lowUrl.includes('mercadoplay') &&
+                        !lowUrl.includes('xvideos.com/video.');
 
   const isIframe = !isDirectVideo && (
     !!ytId || 
@@ -192,6 +188,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
+  } else if (url.includes('xvideos.com/video.')) {
+    // CONVERSÃO SOBERANA: Página do vídeo -> Embed Iframe
+    const xvMatch = url.match(/video\.([a-z0-9]+)/);
+    if (xvMatch) {
+      finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
+    }
   }
 
   return (
