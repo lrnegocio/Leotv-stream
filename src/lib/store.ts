@@ -77,30 +77,26 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v221
- * Garante que o Proxy da VPS apareça no F12 para tudo, exceto players de Iframe restritos.
+ * MOTOR DE LINKS MASTER v223
+ * Garante que o Proxy apareça no F12 para tudo, exceto players de Iframe oficiais.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let cleanUrl = url.trim();
   const lower = cleanUrl.toLowerCase();
   
-  // EXCEÇÕES DE IFRAME: Devem rodar originais para não quebrar o player externo
-  const isIframeSource = 
+  // EXCEÇÕES DE IFRAME ORIGINAIS: Mantêm o player nativo para não quebrar
+  const isOriginalIframe = 
     lower.includes('youtube.com') || 
     lower.includes('youtu.be') || 
     lower.includes('dailymotion.com') || 
-    lower.includes('dai.ly') ||
-    lower.includes('visioncine') ||
-    lower.includes('mercadoplay') ||
-    lower.includes('plutotv') ||
-    lower.includes('reidoscanais') ||
-    lower.includes('tvacabo.top');
+    lower.includes('dai.ly');
 
-  if (isIframeSource) return cleanUrl;
+  if (isOriginalIframe) return cleanUrl;
   if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
 
-  // SINAIS IPTV E FILMES: Passam pelo Proxy Soberano
+  // SINAIS IPTV, FILMES E SITES DE PLAYER (XVideos, PlayCNVS, Rei dos Canais, etc): 
+  // Passam pelo Proxy Soberano para esconder a fonte no F12
   return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
 };
 

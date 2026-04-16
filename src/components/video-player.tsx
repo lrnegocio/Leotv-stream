@@ -24,6 +24,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
+  // AJUSTE DE PRECISÃO: Extrai a alma do sinal mesmo dentro do Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -61,17 +62,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
-    const isHLS = lowUrl.includes('.m3u8');
+    const isHLS = lowUrl.includes('.m3u8') || lowUrl.includes('playlist.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
-    const isMP4 = lowUrl.includes('.mp4');
     
     const ytId = getYouTubeId(originalUrl);
+    // LISTA DE SITES QUE SÃO IFRAME (Soberania Universal)
     const isIframeTarget = !!ytId || 
       lowUrl.includes('.html') || 
       lowUrl.includes('visioncine') || 
       lowUrl.includes('mercadoplay') || 
       lowUrl.includes('reidoscanais') || 
-      lowUrl.includes('tvacabo.top');
+      lowUrl.includes('tvacabo.top') ||
+      lowUrl.includes('playcnvs.stream') ||
+      lowUrl.includes('/s/') || // Padrão de portais de canais
+      lowUrl.includes('embed');
 
     if (isIframeTarget) {
       setLoading(false)
@@ -79,6 +83,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
+      // MOTOR IPTV (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -96,15 +101,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
+      // MOTOR STREAMING (M3U8)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls({ 
             enableWorker: true, 
             lowLatencyMode: true,
-            xhrSetup: (xhr: any) => {
-              xhr.withCredentials = false;
-            }
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
@@ -124,6 +128,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
+      // MOTOR NATIVO (MP4 / OUTROS)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -166,7 +171,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     lowUrl.includes('visioncine') || 
     lowUrl.includes('mercadoplay') || 
     lowUrl.includes('reidoscanais') || 
-    lowUrl.includes('tvacabo.top');
+    lowUrl.includes('tvacabo.top') ||
+    lowUrl.includes('playcnvs.stream') ||
+    lowUrl.includes('/s/') ||
+    lowUrl.includes('embed');
 
   let iframeSrc = originalUrl;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
@@ -176,7 +184,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sincronizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando Sinal Master...</p>
         </div>
       )}
 
