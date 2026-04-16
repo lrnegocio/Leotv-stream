@@ -203,7 +203,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
           referrerPolicy="no-referrer"
-          sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
           onLoad={() => setLoading(false)} 
         />
       ) : (
