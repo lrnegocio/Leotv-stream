@@ -55,11 +55,12 @@ export default function RootLayout({
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
           iframe { pointer-events: auto !important; }
-          /* BLOQUEADOR DE ENTULHO v2.5 - MASTER */
+          /* BLOQUEADOR DE ENTULHO v2.6 - MASTER */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box,
-          .announcement, .social-share, .recommended-videos {
+          .announcement, .social-share, .recommended-videos,
+          .player-overlay-ad, .sidebar-ad, .header-ad {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
