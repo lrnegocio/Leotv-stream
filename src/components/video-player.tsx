@@ -24,7 +24,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // DETECTOR DE ESSÊNCIA: Descobre o formato real escondido no Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -67,14 +66,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isMP4 = lowUrl.includes('.mp4');
     
     const ytId = getYouTubeId(originalUrl);
-    // Lista de sites que rodam via Iframe direto
     const isIframeTarget = !!ytId || 
       lowUrl.includes('.html') || 
       lowUrl.includes('visioncine') || 
       lowUrl.includes('mercadoplay') || 
       lowUrl.includes('reidoscanais') || 
-      lowUrl.includes('tvacabo.top') ||
-      (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
+      lowUrl.includes('tvacabo.top');
 
     if (isIframeTarget) {
       setLoading(false)
@@ -82,7 +79,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR MPEGTS (.TS IPTV)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -100,11 +96,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR HLS (.M3U8 / XVideos / Pluto)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
+          const hls = new Hls({ 
+            enableWorker: true, 
+            lowLatencyMode: true,
+            xhrSetup: (xhr: any) => {
+              xhr.withCredentials = false;
+            }
+          })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -113,13 +114,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event:any, data:any) => {
-            if (data.fatal) { setError(true); setLoading(false); }
+            if (data.fatal) { 
+              console.error("HLS Fatal Error:", data);
+              setError(true); 
+              setLoading(false); 
+            }
           });
           return
         }
       } 
       
-      // MOTOR NATIVO (.MP4)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -162,8 +166,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     lowUrl.includes('visioncine') || 
     lowUrl.includes('mercadoplay') || 
     lowUrl.includes('reidoscanais') || 
-    lowUrl.includes('tvacabo.top') ||
-    (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && !url.includes('proxy'));
+    lowUrl.includes('tvacabo.top');
 
   let iframeSrc = originalUrl;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;

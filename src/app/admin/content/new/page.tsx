@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { saveContent, ContentType, cleanName, Episode, Season } from "@/lib/store"
+import { saveContent, ContentType, cleanName, Episode, Season, formatMasterLink } from "@/lib/store"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -159,7 +159,7 @@ export default function NewContentPage() {
                 <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Link Master Soberano</h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
-                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formData.streamUrl, title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
+                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
               </div>
             </div>
@@ -201,7 +201,7 @@ export default function NewContentPage() {
                                 newEps[idx].streamUrl = e.target.value
                                 setEpisodes(newEps)
                               }} className="h-10 bg-black/40 font-mono text-[9px] flex-1" />
-                             <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4" /></Button>
+                             <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4 text-white" /></Button>
                            </div>
                         </div>
                       </div>
@@ -247,7 +247,7 @@ export default function NewContentPage() {
                                      newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                      setSeasons(newSeasons)
                                   }} className="flex-1 h-8 bg-black/40 text-[10px]" />
-                                  <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
+                                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                                   <Button type="button" variant="ghost" size="icon" onClick={() => {
                                     const newSeasons = [...seasons]
                                     newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
@@ -302,7 +302,7 @@ export default function NewContentPage() {
       </form>
 
       <Dialog open={!!testVideo} onOpenChange={() => setTestVideo(null)}>
-        <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[2.5rem] shadow-2xl">
+        <DialogContent className="max-w-5xl bg-black border-white/10 p-0 overflow-hidden rounded-[3rem] shadow-2xl">
           <DialogHeader className="sr-only"><DialogTitle>Teste de Sinal</DialogTitle></DialogHeader>
           {testVideo && <VideoPlayer url={testVideo.url} title={testVideo.title} />}
         </DialogContent>

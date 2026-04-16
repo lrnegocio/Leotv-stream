@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v221 - MODO CAMALEÃO CDNs
+ * TÚNEL MASTER SOBERANO v222 - PROTOCOLO CAMALEÃO ULTRA
  * Finge ser uma Smart TV oficial para abrir sinais IPTV e Filmes.
- * Força o Content-Type correto para evitar o NotSupportedError no navegador.
+ * Agora suporta Range Requests para evitar carregamento infinito.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,21 +16,20 @@ export async function GET(req: NextRequest) {
   if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
   try {
+    const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
+    
+    // Encaminha o Range (Vital para vídeos longos e .mp4)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    const urlObj = new URL(targetUrl);
-
-    // MÁSCARA SOBERANA: Simula um navegador de Smart TV de elite
+    // MÁSCARA SOBERANA: Identidade de Smart TV de Elite
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.0 Chrome/87.0.4280.141 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Origin', urlObj.origin);
     requestHeaders.set('Referer', urlObj.origin + '/');
-    requestHeaders.set('Sec-Fetch-Dest', 'video');
-    requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
-    requestHeaders.set('Sec-Fetch-Site', 'cross-site');
+    requestHeaders.set('Connection', 'keep-alive');
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
@@ -39,7 +38,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok && res.status !== 206) {
-       // RECOVERY MODE: Tenta via Mobile se o primeiro falhar
+       // RECOVERY MODE: Tentativa via Mobile se a TV falhar
        const resMobile = await fetch(targetUrl, {
          headers: {
            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
@@ -57,15 +56,12 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // BLINDAGEM DE TIPO (FIM DO NotSupportedError): 
-    // Força o navegador a entender o fluxo IPTV através do Proxy.
+    // Força tipos conhecidos se o servidor omitir
     const lowerUrl = targetUrl.toLowerCase();
     if (lowerUrl.includes('.ts')) {
       responseHeaders.set('Content-Type', 'video/mp2t');
     } else if (lowerUrl.includes('.m3u8')) {
       responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-    } else if (lowerUrl.includes('.mp4')) {
-      responseHeaders.set('Content-Type', 'video/mp4');
     }
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
