@@ -120,6 +120,7 @@ export default function HomeContent() {
     }
   };
 
+  // LÓGICA DE ELITE: Toca o episódio isolado na temporada
   const playEpisode = (episode: Episode, fullList: Episode[]) => {
     const proxiedList = fullList.map(ep => ({ 
       ...ep, 
@@ -227,7 +228,7 @@ export default function HomeContent() {
             <div className="space-y-6">
               <h3 className="text-2xl font-black uppercase text-primary italic border-b border-border pb-4">{selectedSeries.title}</h3>
               {selectedSeries.type === 'multi-season' && selectedSeries.seasons ? (
-                <Tabs defaultValue={selectedSeries.seasons[0]?.id} className="w-full">
+                <Tabs defaultValue={selectedSeries.seasons.sort((a,b) => a.number - b.number)[0]?.id} className="w-full">
                   <TabsList className="bg-muted p-1 rounded-2xl mb-6 flex overflow-x-auto custom-scroll shadow-inner">
                     {selectedSeries.seasons.sort((a,b) => a.number - b.number).map(s => (
                       <TabsTrigger key={s.id} value={s.id} className="rounded-xl font-black uppercase text-[10px] px-6">Temporada {s.number}</TabsTrigger>
@@ -238,9 +239,10 @@ export default function HomeContent() {
                       {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
                         <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
                            <div className="flex-1 pl-4">
-                              <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
+                              <span className="font-black uppercase text-[10px] text-primary/60">EPISÓDIO {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
+                           {/* BOTÃO DE PLAY DEDICADO: Garante que a lista enviada ao player seja apenas desta temporada */}
                            <Button size="icon" onClick={() => playEpisode(ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                               <PlayCircle className="h-6 w-6 text-white" />
                            </Button>
@@ -254,7 +256,7 @@ export default function HomeContent() {
                   {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
                     <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
                        <div className="flex-1 pl-4">
-                          <span className="font-black uppercase text-[10px] text-primary/60">EP {ep.number}</span>
+                          <span className="font-black uppercase text-[10px] text-primary/60">EPISÓDIO {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
                        <Button size="icon" onClick={() => playEpisode(ep, selectedSeries.episodes || [])} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">

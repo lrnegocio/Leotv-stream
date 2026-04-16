@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v219 - MODO CAMALEÃO CDNs
- * Finge ser um navegador real para abrir sinais da XVideos, Blinder e Contfree.
+ * TÚNEL MASTER SOBERANO v220 - MODO CAMALEÃO CDNs
+ * Finge ser uma Smart TV oficial para abrir sinais IPTV e Filmes.
  * Força o Content-Type correto para evitar o NotSupportedError no navegador.
  */
 export async function GET(req: NextRequest) {
@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     
     const urlObj = new URL(targetUrl);
 
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+    // MÁSCARA SOBERANA: Simula um navegador de Smart TV de elite
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.0 Chrome/87.0.4280.141 TV Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Origin', urlObj.origin);
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!res.ok && res.status !== 206) {
+       // RECOVERY MODE: Tenta via Mobile se o primeiro falhar
        const resMobile = await fetch(targetUrl, {
          headers: {
            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
@@ -54,11 +56,16 @@ export async function GET(req: NextRequest) {
       if (val) responseHeaders.set(h, val);
     });
 
-    // BLINDAGEM DE TIPO: Força o navegador a entender o fluxo IPTV
+    // BLINDAGEM DE TIPO (FIM DO NotSupportedError): 
+    // Força o navegador a entender o fluxo IPTV através do Proxy.
     const lowerUrl = targetUrl.toLowerCase();
-    if (lowerUrl.includes('.ts')) responseHeaders.set('Content-Type', 'video/mp2t');
-    else if (lowerUrl.includes('.m3u8')) responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-    else if (lowerUrl.includes('.mp4')) responseHeaders.set('Content-Type', 'video/mp4');
+    if (lowerUrl.includes('.ts')) {
+      responseHeaders.set('Content-Type', 'video/mp2t');
+    } else if (lowerUrl.includes('.m3u8')) {
+      responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+    } else if (lowerUrl.includes('.mp4')) {
+      responseHeaders.set('Content-Type', 'video/mp4');
+    }
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');

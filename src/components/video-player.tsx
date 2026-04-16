@@ -23,6 +23,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
+  // DETECTOR DE ESSÊNCIA: Descobre o formato real escondido no Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -38,14 +39,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
-  };
-
-  const getDailymotionId = (url: string) => {
-    const m = url.match(/^.+dailymotion.com\/(video|hub)\/([^_]+)[^#]*$/);
-    if (m) return m[2];
-    const m2 = url.match(/^.+dai.ly\/([^_]+)[^#]*$/);
-    if (m2) return m2[1];
-    return null;
   };
 
   const cleanup = React.useCallback(() => {
@@ -73,8 +66,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isMP4 = lowUrl.includes('.mp4');
     
     const ytId = getYouTubeId(originalUrl);
-    const dmId = getDailymotionId(originalUrl);
-    const isIframeTarget = !!ytId || !!dmId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
+    const isIframeTarget = !!ytId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
 
     if (isIframeTarget) {
       setLoading(false)
@@ -82,6 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
+      // MOTOR MPEGTS (.TS IPTV)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -99,10 +92,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
+      // MOTOR HLS (.M3U8 / XVideos)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true, backBufferLength: 90 })
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -111,15 +105,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event:any, data:any) => {
-            if (data.fatal) {
-               console.error("HLS Fatal Error", data);
-               setError(true);
-            }
+            if (data.fatal) { setError(true); setLoading(false); }
           });
           return
         }
       } 
       
+      // MOTOR NATIVO (.MP4)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -156,14 +148,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const originalUrl = getOriginalUrl(url);
   const ytId = getYouTubeId(originalUrl);
-  const dmId = getDailymotionId(originalUrl);
-  
-  const isDirectVideo = originalUrl.toLowerCase().includes('.m3u8') || originalUrl.toLowerCase().includes('.ts') || originalUrl.toLowerCase().includes('.mp4');
-  const isIframeTarget = !!ytId || !!dmId || originalUrl.toLowerCase().includes('.html') || (!isDirectVideo && !url.includes('proxy'));
+  const isIframeTarget = !!ytId || originalUrl.toLowerCase().includes('.html') || (!originalUrl.toLowerCase().includes('.m3u8') && !originalUrl.toLowerCase().includes('.ts') && !originalUrl.toLowerCase().includes('.mp4') && !url.includes('proxy'));
 
   let iframeSrc = originalUrl;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
-  if (dmId) iframeSrc = `https://www.dailymotion.com/embed/video/${dmId}?autoplay=1`;
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
