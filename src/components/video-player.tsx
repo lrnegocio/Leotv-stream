@@ -24,7 +24,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  // AJUSTE DE PRECISÃO: Extrai a alma do sinal mesmo dentro do Proxy
   const getOriginalUrl = React.useCallback((inputUrl: string) => {
     if (!inputUrl) return "";
     if (inputUrl.includes('/api/proxy?url=')) {
@@ -62,11 +61,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const originalUrl = getOriginalUrl(url);
     const lowUrl = originalUrl.toLowerCase();
     
-    const isHLS = lowUrl.includes('.m3u8') || lowUrl.includes('playlist.m3u8');
+    const isHLS = lowUrl.includes('.m3u8') || lowUrl.includes('playlist.m3u8') || lowUrl.includes('master.m3u8');
     const isMPEGTS = lowUrl.includes('.ts');
     
     const ytId = getYouTubeId(originalUrl);
-    // LISTA DE SITES QUE SÃO IFRAME (Soberania Universal)
     const isIframeTarget = !!ytId || 
       lowUrl.includes('.html') || 
       lowUrl.includes('visioncine') || 
@@ -74,7 +72,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       lowUrl.includes('reidoscanais') || 
       lowUrl.includes('tvacabo.top') ||
       lowUrl.includes('playcnvs.stream') ||
-      lowUrl.includes('/s/') || // Padrão de portais de canais
+      lowUrl.includes('/s/') ||
       lowUrl.includes('embed');
 
     if (isIframeTarget) {
@@ -83,7 +81,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      // MOTOR IPTV (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -101,34 +98,45 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR STREAMING (M3U8)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls({ 
             enableWorker: true, 
             lowLatencyMode: true,
+            backBufferLength: 60,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
+          
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
             setLoading(false)
           })
-          hls.on(Hls.Events.ERROR, (event:any, data:any) => {
-            if (data.fatal) { 
-              console.error("HLS Fatal Error:", data);
-              setError(true); 
-              setLoading(false); 
+
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  hls.startLoad();
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  hls.recoverMediaError();
+                  break;
+                default:
+                  setError(true);
+                  setLoading(false);
+                  hls.destroy();
+                  break;
+              }
             }
           });
           return
         }
       } 
       
-      // MOTOR NATIVO (MP4 / OUTROS)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
