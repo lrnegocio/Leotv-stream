@@ -51,7 +51,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const ytId = getYouTubeId(url);
     
     // DETECÇÃO DE FORMATOS DIRETOS (USAM TAG VIDEO)
-    // Sinais que NUNCA devem ser tratados como vídeo direto por terem players próprios
     const isIframeDomain = lowUrl.includes('mercadolivre') || 
                            lowUrl.includes('mercadoplay') || 
                            lowUrl.includes('visioncine') || 
@@ -63,25 +62,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                            lowUrl.includes('xvideos.com') ||
                            lowUrl.includes('player?') ||
                            lowUrl.includes('/s/') ||
+                           lowUrl.includes('/player3/') ||
+                           lowUrl.includes('.php?') ||
                            lowUrl.includes('.html');
 
     const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
-    // SE NÃO FOR VÍDEO DIRETO, É IFRAME
-    const isIframe = !isDirectVideo && (
-      !!ytId || 
-      url.trim().startsWith('<iframe') ||
-      isIframeDomain ||
-      lowUrl.includes('embed')
-    );
-
-    if (isIframe) {
+    if (!isDirectVideo && (ytId || url.trim().startsWith('<') || isIframeDomain)) {
       setLoading(false)
       return 
     }
 
     try {
-      // MOTOR IPTV (.TS)
       if (lowUrl.includes('.ts') && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -95,7 +87,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR STREAMING (.M3U8)
       if (lowUrl.includes('.m3u8') && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -120,7 +111,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
-      // MOTOR NATIVO (.MP4 e outros)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -169,20 +159,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                          lowUrl.includes('xvideos.com') ||
                          lowUrl.includes('player?') ||
                          lowUrl.includes('/s/') ||
+                         lowUrl.includes('/player3/') ||
+                         lowUrl.includes('.php?') ||
                          lowUrl.includes('.html');
 
   const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
-  const isIframe = !isDirectVideo && (
-    !!ytId || 
-    url.trim().startsWith('<iframe') ||
-    isIframeDomain ||
-    lowUrl.includes('embed')
-  );
-
   let finalIframeSrc = url;
-
-  // Extração inteligente de SRC se o usuário colar uma tag <iframe> inteira
   const iframeMatch = url.trim().match(/src=["'](.*?)["']/);
   if (iframeMatch) {
     finalIframeSrc = iframeMatch[1];
@@ -190,10 +173,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
   } else if (url.includes('xvideos.com/video.')) {
     const xvMatch = url.match(/video\.([a-z0-9]+)/);
-    if (xvMatch) {
-      finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
-    }
+    if (xvMatch) finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
   }
+
+  const isIframe = !isDirectVideo && (ytId || url.trim().startsWith('<') || isIframeDomain);
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
@@ -219,6 +202,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="w-full h-full border-0" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+          referrerPolicy="no-referrer"
+          sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
           onLoad={() => setLoading(false)} 
         />
       ) : (
