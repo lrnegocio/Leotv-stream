@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -66,7 +67,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const isMP4 = lowUrl.includes('.mp4');
     
     const ytId = getYouTubeId(originalUrl);
-    const isIframeTarget = !!ytId || lowUrl.includes('.html') || (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
+    // Lista de sites que rodam via Iframe direto
+    const isIframeTarget = !!ytId || 
+      lowUrl.includes('.html') || 
+      lowUrl.includes('visioncine') || 
+      lowUrl.includes('mercadoplay') || 
+      lowUrl.includes('reidoscanais') || 
+      lowUrl.includes('tvacabo.top') ||
+      (!isHLS && !isMPEGTS && !isMP4 && !url.includes('proxy'));
 
     if (isIframeTarget) {
       setLoading(false)
@@ -92,7 +100,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // MOTOR HLS (.M3U8 / XVideos)
+      // MOTOR HLS (.M3U8 / XVideos / Pluto)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -147,8 +155,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   if (!isMounted) return null
 
   const originalUrl = getOriginalUrl(url);
+  const lowUrl = originalUrl.toLowerCase();
   const ytId = getYouTubeId(originalUrl);
-  const isIframeTarget = !!ytId || originalUrl.toLowerCase().includes('.html') || (!originalUrl.toLowerCase().includes('.m3u8') && !originalUrl.toLowerCase().includes('.ts') && !originalUrl.toLowerCase().includes('.mp4') && !url.includes('proxy'));
+  const isIframeTarget = !!ytId || 
+    lowUrl.includes('.html') || 
+    lowUrl.includes('visioncine') || 
+    lowUrl.includes('mercadoplay') || 
+    lowUrl.includes('reidoscanais') || 
+    lowUrl.includes('tvacabo.top') ||
+    (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && !url.includes('proxy'));
 
   let iframeSrc = originalUrl;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -115,6 +116,7 @@ export default function HomeContent() {
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       if (idx === -1) return;
+      // Garante que o player use os links formatados
       const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       setActiveVideo({ items: list, index: idx });
     }
@@ -242,7 +244,6 @@ export default function HomeContent() {
                               <span className="font-black uppercase text-[10px] text-primary/60">EPISÓDIO {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
-                           {/* BOTÃO DE PLAY DEDICADO: Garante que a lista enviada ao player seja apenas desta temporada */}
                            <Button size="icon" onClick={() => playEpisode(ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
                               <PlayCircle className="h-6 w-6 text-white" />
                            </Button>

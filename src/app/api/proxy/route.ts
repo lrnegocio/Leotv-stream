@@ -1,10 +1,11 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v220 - MODO CAMALEÃO CDNs
+ * TÚNEL MASTER SOBERANO v221 - MODO CAMALEÃO CDNs
  * Finge ser uma Smart TV oficial para abrir sinais IPTV e Filmes.
  * Força o Content-Type correto para evitar o NotSupportedError no navegador.
  */
