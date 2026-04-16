@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -54,12 +55,15 @@ export default function RootLayout({
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
           iframe { pointer-events: auto !important; }
+          /* BLOQUEADOR DE ENTULHO: Tenta esconder propagandas comuns de players gratuitos */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
-          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads {
+          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
+          .video-ads, .banner-ads, .mgid-ad {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             opacity: 0 !important;
+            pointer-events: none !important;
           }
         `}} />
       </head>
@@ -67,7 +71,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
-        {/* MOTORES DE VÍDEO MASTER: HLS para M3U8 e MPEGTS para .TS (Segredo Blinder) */}
+        {/* MOTORES DE VÍDEO UNIVERSAIS */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="beforeInteractive" />
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="beforeInteractive" />
       </body>

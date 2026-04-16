@@ -77,27 +77,13 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v223
- * Garante que o Proxy apareça no F12 para tudo, exceto players de Iframe oficiais.
+ * MOTOR DE LINKS MASTER v225 - MODO DIRETO
+ * O Proxy foi desativado para permitir que o F12 veja os sinais reais
+ * e para evitar bloqueios de CDNs rígidas.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  let cleanUrl = url.trim();
-  const lower = cleanUrl.toLowerCase();
-  
-  // EXCEÇÕES DE IFRAME ORIGINAIS: Mantêm o player nativo para não quebrar
-  const isOriginalIframe = 
-    lower.includes('youtube.com') || 
-    lower.includes('youtu.be') || 
-    lower.includes('dailymotion.com') || 
-    lower.includes('dai.ly');
-
-  if (isOriginalIframe) return cleanUrl;
-  if (cleanUrl.includes('/api/proxy?url=')) return cleanUrl;
-
-  // SINAIS IPTV, FILMES E SITES DE PLAYER (XVideos, PlayCNVS, Rei dos Canais, etc): 
-  // Passam pelo Proxy Soberano para esconder a fonte no F12
-  return `/api/proxy?url=${encodeURIComponent(cleanUrl)}`;
+  return url.trim(); // Retorna o link puro conforme solicitado pelo Mestre
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

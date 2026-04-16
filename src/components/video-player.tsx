@@ -24,23 +24,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
 
-  const getOriginalUrl = React.useCallback((inputUrl: string) => {
-    if (!inputUrl) return "";
-    if (inputUrl.includes('/api/proxy?url=')) {
-      try {
-        const decoded = decodeURIComponent(inputUrl.split('url=')[1]);
-        return decoded;
-      } catch(e) { return inputUrl; }
-    }
-    return inputUrl;
-  }, []);
-
-  const getYouTubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-
   const cleanup = React.useCallback(() => {
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (mpegtsRef.current) { mpegtsRef.current.destroy(); mpegtsRef.current = null; }
@@ -51,6 +34,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [])
 
+  const getYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
@@ -58,14 +47,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false)
     setLoading(true)
 
-    const originalUrl = getOriginalUrl(url);
-    const lowUrl = originalUrl.toLowerCase();
+    const lowUrl = url.toLowerCase();
+    const ytId = getYouTubeId(url);
     
-    const isHLS = lowUrl.includes('.m3u8') || lowUrl.includes('playlist.m3u8') || lowUrl.includes('master.m3u8');
-    const isMPEGTS = lowUrl.includes('.ts');
-    
-    const ytId = getYouTubeId(originalUrl);
-    const isIframeTarget = !!ytId || 
+    // DETECÇÃO DE IFRAME (Sites como PlayCNVS, VisionCine, MercadoPlay)
+    const isIframe = !!ytId || 
       lowUrl.includes('.html') || 
       lowUrl.includes('visioncine') || 
       lowUrl.includes('mercadoplay') || 
@@ -75,20 +61,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       lowUrl.includes('/s/') ||
       lowUrl.includes('embed');
 
-    if (isIframeTarget) {
+    if (isIframe) {
       setLoading(false)
       return 
     }
 
+    // DETECÇÃO DE FORMATOS DIRETOS
+    const isHLS = lowUrl.includes('.m3u8');
+    const isMPEGTS = lowUrl.includes('.ts');
+
     try {
+      // MOTOR IPTV (.TS)
       if (isMPEGTS && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
-          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url }, { 
-            enableWorker: true, 
-            liveBufferLatencyChasing: true,
-            stashInitialSize: 128
-          })
+          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url })
           player.attachMediaElement(videoRef.current)
           player.load()
           player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
@@ -98,45 +85,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
+      // MOTOR STREAMING (.M3U8)
       if (isHLS && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ 
-            enableWorker: true, 
-            lowLatencyMode: true,
-            backBufferLength: 60,
-            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-          })
+          const hls = new Hls()
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
-          
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
             setLoading(false)
           })
-
-          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  hls.startLoad();
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  hls.recoverMediaError();
-                  break;
-                default:
-                  setError(true);
-                  setLoading(false);
-                  hls.destroy();
-                  break;
-              }
-            }
-          });
+          hls.on(Hls.Events.ERROR, () => { /* Auto-recovery */ })
           return
         }
       } 
       
+      // MOTOR NATIVO (.MP4 e outros)
       videoRef.current.src = url
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
@@ -147,7 +113,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       setError(true)
       setLoading(false)
     }
-  }, [url, isMounted, cleanup, getOriginalUrl])
+  }, [url, isMounted, cleanup])
 
   React.useEffect(() => {
     setIsMounted(true)
@@ -171,10 +137,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
-  const originalUrl = getOriginalUrl(url);
-  const lowUrl = originalUrl.toLowerCase();
-  const ytId = getYouTubeId(originalUrl);
-  const isIframeTarget = !!ytId || 
+  const lowUrl = url.toLowerCase();
+  const ytId = getYouTubeId(url);
+  const isIframe = !!ytId || 
     lowUrl.includes('.html') || 
     lowUrl.includes('visioncine') || 
     lowUrl.includes('mercadoplay') || 
@@ -184,7 +149,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     lowUrl.includes('/s/') ||
     lowUrl.includes('embed');
 
-  let iframeSrc = originalUrl;
+  let iframeSrc = url;
   if (ytId) iframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1`;
 
   return (
@@ -204,7 +169,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
       
-      {isIframeTarget ? (
+      {isIframe ? (
         <iframe 
           key={iframeSrc} 
           src={iframeSrc} 
