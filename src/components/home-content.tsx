@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -50,15 +49,23 @@ export default function HomeContent() {
   
   const router = useRouter()
   const searchParams = useSearchParams()
-  const q = searchParams.get('q') || ""
+  const q = searchParams ? searchParams.get('q') || "" : ""
 
   React.useEffect(() => {
     setIsMounted(true);
     if (typeof window !== 'undefined') {
       setSiteUrl(window.location.origin);
       const session = localStorage.getItem("user_session");
-      if (session) setUser(JSON.parse(session));
-      else router.push("/login");
+      if (session) {
+        try {
+          setUser(JSON.parse(session));
+        } catch (e) {
+          localStorage.removeItem("user_session");
+          router.push("/login");
+        }
+      } else {
+        router.push("/login");
+      }
     }
   }, [router]);
 
@@ -116,13 +123,11 @@ export default function HomeContent() {
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       if (idx === -1) return;
-      // Garante que o player use os links formatados
       const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       setActiveVideo({ items: list, index: idx });
     }
   };
 
-  // LÓGICA DE ELITE: Toca o episódio isolado na temporada
   const playEpisode = (episode: Episode, fullList: Episode[]) => {
     const proxiedList = fullList.map(ep => ({ 
       ...ep, 
@@ -134,7 +139,11 @@ export default function HomeContent() {
     }
   };
 
-  if (!isMounted) return null;
+  if (!isMounted) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">

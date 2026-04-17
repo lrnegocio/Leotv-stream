@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -34,9 +33,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [])
 
-  const getYouTubeId = (url: string) => {
+  const getYouTubeId = (videoUrl: string) => {
+    if (!videoUrl) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|\/v\/|shorts\/)([^#\&\?]*).*/;
-    const match = url.match(regExp);
+    const match = videoUrl.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
@@ -50,7 +50,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowUrl = url.toLowerCase();
     const ytId = getYouTubeId(url);
     
-    // DETECÇÃO DE SITES (IFRAME)
     const isIframeDomain = lowUrl.includes('mercadolivre') || 
                            lowUrl.includes('mercadoplay') || 
                            lowUrl.includes('visioncine') || 
@@ -75,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      if (lowUrl.includes('.ts') && (window as any).mpegts) {
+      if (lowUrl.includes('.ts') && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
           const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url })
@@ -88,7 +87,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      if (lowUrl.includes('.m3u8') && (window as any).Hls) {
+      if (lowUrl.includes('.m3u8') && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls()
@@ -127,7 +126,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const toggleFullscreen = () => {
     if (!containerRef.current) return
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {})
+      containerRef.current.requestFullscreen().catch(() => {
+        // Fallback para TVs LG/Samsung antigas
+        const el = containerRef.current as any;
+        if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+        else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      })
       setIsFullscreen(true)
     } else {
       document.exitFullscreen().catch(() => {})
@@ -137,7 +142,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
-  const lowUrl = url.toLowerCase();
+  const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
   
   const isIframeDomain = lowUrl.includes('mercadolivre') || 
@@ -159,27 +164,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
   let finalIframeSrc = url;
-  const iframeMatch = url.trim().match(/src=["'](.*?)["']/);
+  const trimmedUrl = (url || "").trim();
+  const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
   
   if (iframeMatch) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
-    // Adicionado origin para evitar erro 153 em alguns navegadores
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&origin=${origin}`;
-  } else if (url.includes('xvideos.com/video.')) {
-    const xvMatch = url.match(/video\.([a-z0-9]+)/);
+  } else if (trimmedUrl.includes('xvideos.com/video.')) {
+    const xvMatch = trimmedUrl.match(/video\.([a-z0-9]+)/);
     if (xvMatch) finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
   }
 
-  const isIframe = !isDirectVideo && (ytId || url.trim().startsWith('<') || isIframeDomain);
-
-  // BLINDAGEM DE IDENTIDADE CONDICIONAL
-  // YouTube precisa de referer para evitar Erro 153.
-  // Rede Canais/Rei dos Canais precisa de No-Referer para abrir o sinal.
-  const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+  const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs');
-  
   const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : "strict-origin-when-cross-origin";
 
   return (
