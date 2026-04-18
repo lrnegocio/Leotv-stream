@@ -98,6 +98,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
             setLoading(false)
           })
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+             if (data.fatal) {
+                switch(data.type) {
+                   case Hls.ErrorTypes.NETWORK_ERROR:
+                      hls.startLoad();
+                      break;
+                   case Hls.ErrorTypes.MEDIA_ERROR:
+                      hls.recoverMediaError();
+                      break;
+                   default:
+                      cleanup();
+                      setError(true);
+                      break;
+                }
+             }
+          });
           return
         }
       } 
@@ -171,7 +187,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   if (iframeMatch) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
-    // BLINDAGEM YOUTUBE MASTER: Força origin e headers de sintonização
+    // BLINDAGEM YOUTUBE MASTER v234: Identidade forçada para liberar vídeos bloqueados na VPS
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   } else if (trimmedUrl.includes('xvideos.com/video.')) {
@@ -181,7 +197,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
   
-  // POLÍTICA DE REFERER MASTER: YouTube precisa de identidade, IPTV precisa se esconder.
+  // POLÍTICA DE REFERER MASTER: YouTube precisa de identidade v234
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs') || lowUrl.includes('be/player');
   const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
 

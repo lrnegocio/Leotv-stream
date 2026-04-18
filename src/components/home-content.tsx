@@ -41,6 +41,7 @@ export default function HomeContent() {
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
+  const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
@@ -104,8 +105,15 @@ export default function HomeContent() {
   const verifyPassword = async () => {
     const settings = await getGlobalSettings();
     if (pinInput === settings.parentalPin) {
-      if (unlockTarget === 'GAMES') setGamesMenuOpen(true);
-      else setSelectedCat(unlockTarget);
+      if (unlockTargetItem) {
+        const item = unlockTargetItem;
+        setUnlockTargetItem(null);
+        openItem(item, true);
+      } else if (unlockTarget === 'GAMES') {
+        setGamesMenuOpen(true);
+      } else {
+        setSelectedCat(unlockTarget);
+      }
       setIsPinOpen(false);
       setPinInput("");
     } else {
@@ -114,7 +122,14 @@ export default function HomeContent() {
     }
   };
 
-  const openItem = async (item: ContentItem) => {
+  const openItem = async (item: ContentItem, bypassPin = false) => {
+    // BLINDAGEM MESTRE: Bloqueio Parental em canal manual independente da categoria
+    if (!bypassPin && item.isRestricted) {
+      setUnlockTargetItem(item);
+      setIsPinOpen(true);
+      return;
+    }
+
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);
       const deepItem = await getContentById(item.id);
@@ -169,6 +184,7 @@ export default function HomeContent() {
                   if (c.special === 'games' && !user?.isGamesEnabled) return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
                   if (c.restricted && !user?.isAdultEnabled) return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
                   setUnlockTarget(c.id as any);
+                  setUnlockTargetItem(null);
                   setIsPinOpen(true);
                 } else setSelectedCat(c.id);
               }} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl hover:shadow-primary/10">
@@ -194,6 +210,7 @@ export default function HomeContent() {
                       <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
                       <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
                     </div>
+                    {item.isRestricted && <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full border border-white/10"><Lock className="h-4 w-4 text-primary" /></div>}
                   </div>
                 ))}
               </div>
