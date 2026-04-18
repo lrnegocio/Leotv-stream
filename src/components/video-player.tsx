@@ -134,7 +134,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       })
       setIsFullscreen(true)
     } else {
-      document.exitFullscreen().catch(() => {})
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {})
+      }
       setIsFullscreen(false)
     }
   }
@@ -169,9 +171,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   if (iframeMatch) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
-    // BLINDAGEM YOUTUBE VPS: Adiciona origin e hl para evitar bloqueios de embed
+    // BLINDAGEM YOUTUBE MASTER: Força origin e headers de sintonização
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}`;
+    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   } else if (trimmedUrl.includes('xvideos.com/video.')) {
     const xvMatch = trimmedUrl.match(/video\.([a-z0-9]+)/);
     if (xvMatch) finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
@@ -179,9 +181,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
   
-  // POLÍTICA DE REFERER INTELIGENTE: YouTube precisa de referer, Portais de IPTV NÃO.
+  // POLÍTICA DE REFERER MASTER: YouTube precisa de identidade, IPTV precisa se esconder.
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs') || lowUrl.includes('be/player');
-  const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "strict-origin-when-cross-origin" : "no-referrer");
+  const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>

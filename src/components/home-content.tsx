@@ -226,7 +226,7 @@ export default function HomeContent() {
           {activeVideo && activeVideo.items[activeVideo.index] && (
             <VideoPlayer 
               url={activeVideo.items[activeVideo.index].streamUrl} 
-              title={activeVideo.items[activeVideo.index].title} 
+              title={activeVideo.items[activeVideo.index].title || activeVideo.items[activeVideo.index].name} 
               onNext={handleNext} 
               onPrev={handlePrev} 
             />
