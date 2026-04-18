@@ -40,7 +40,7 @@ export default function HomeContent() {
   const [pinInput, setPinInput] = React.useState("")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
-  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | null>(null)
+  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | 'ITEM' | null>(null)
   const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
@@ -105,14 +105,17 @@ export default function HomeContent() {
   const verifyPassword = async () => {
     const settings = await getGlobalSettings();
     if (pinInput === settings.parentalPin) {
-      if (unlockTargetItem) {
+      if (unlockTarget === 'ITEM' && unlockTargetItem) {
         const item = unlockTargetItem;
         setUnlockTargetItem(null);
+        setUnlockTarget(null);
         openItem(item, true);
       } else if (unlockTarget === 'GAMES') {
+        setUnlockTarget(null);
         setGamesMenuOpen(true);
-      } else {
+      } else if (unlockTarget) {
         setSelectedCat(unlockTarget);
+        setUnlockTarget(null);
       }
       setIsPinOpen(false);
       setPinInput("");
@@ -123,8 +126,9 @@ export default function HomeContent() {
   };
 
   const openItem = async (item: ContentItem, bypassPin = false) => {
-    // BLINDAGEM MESTRE: Bloqueio Parental em canal manual independente da categoria
+    // BLINDAGEM MESTRE: Bloqueio Parental Individual
     if (!bypassPin && item.isRestricted) {
+      setUnlockTarget('ITEM');
       setUnlockTargetItem(item);
       setIsPinOpen(true);
       return;
@@ -137,7 +141,11 @@ export default function HomeContent() {
       setLoading(false);
     } else {
       const idx = content.findIndex(i => i.id === item.id);
-      if (idx === -1) return;
+      if (idx === -1) {
+        // Se for um item avulso fora da lista atual (ex: busca ou série)
+        setActiveVideo({ items: [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }], index: 0 });
+        return;
+      }
       // NAVEGAÇÃO GLOBAL: Passa a lista inteira visível para o player
       const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       setActiveVideo({ items: list, index: idx });
