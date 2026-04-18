@@ -123,13 +123,14 @@ export default function HomeContent() {
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       if (idx === -1) return;
+      // NAVEGAÇÃO GLOBAL: Passa a lista inteira visível para o player
       const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       setActiveVideo({ items: list, index: idx });
     }
   };
 
   const playEpisode = (episode: Episode, fullList: Episode[]) => {
-    const proxiedList = fullList.map(ep => ({ 
+    const proxiedList = fullList.sort((a,b) => a.number - b.number).map(ep => ({ 
       ...ep, 
       streamUrl: formatMasterLink(ep.streamUrl) 
     }));
@@ -248,15 +249,15 @@ export default function HomeContent() {
                   {selectedSeries.seasons.map(s => (
                     <TabsContent key={s.id} value={s.id} className="grid gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                       {s.episodes.sort((a,b) => a.number - b.number).map(ep => (
-                        <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
-                           <div className="flex-1 pl-4">
-                              <span className="font-black uppercase text-[10px] text-primary/60">EPISÓDIO {ep.number}</span>
+                        <button key={ep.id} onClick={() => playEpisode(ep, s.episodes)} className="w-full flex gap-2 items-center bg-muted p-4 rounded-2xl border border-border group hover:border-primary transition-all text-left">
+                           <div className="flex-1 pl-2">
+                              <span className="font-black uppercase text-[9px] text-primary/60">EPISÓDIO {ep.number}</span>
                               <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                            </div>
-                           <Button size="icon" onClick={() => playEpisode(ep, s.episodes)} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
-                              <PlayCircle className="h-6 w-6 text-white" />
-                           </Button>
-                        </div>
+                           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                              <PlayCircle className="h-5 w-5 text-primary group-hover:text-white" />
+                           </div>
+                        </button>
                       ))}
                     </TabsContent>
                   ))}
@@ -264,15 +265,15 @@ export default function HomeContent() {
               ) : (
                 <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scroll scrollbar-visible">
                   {selectedSeries.episodes?.sort((a,b) => a.number - b.number).map(ep => (
-                    <div key={ep.id} className="flex gap-2 items-center bg-muted p-3 rounded-2xl border border-border group hover:border-primary transition-all">
-                       <div className="flex-1 pl-4">
-                          <span className="font-black uppercase text-[10px] text-primary/60">EPISÓDIO {ep.number}</span>
+                    <button key={ep.id} onClick={() => playEpisode(ep, selectedSeries.episodes || [])} className="w-full flex gap-2 items-center bg-muted p-4 rounded-2xl border border-border group hover:border-primary transition-all text-left">
+                       <div className="flex-1 pl-2">
+                          <span className="font-black uppercase text-[9px] text-primary/60">EPISÓDIO {ep.number}</span>
                           <p className="font-bold uppercase text-xs truncate">{ep.title || 'Sinal Master'}</p>
                        </div>
-                       <Button size="icon" onClick={() => playEpisode(ep, selectedSeries.episodes || [])} className="h-12 w-12 rounded-xl bg-primary shadow-lg hover:scale-110 transition-transform">
-                          <PlayCircle className="h-6 w-6 text-white" />
-                       </Button>
-                    </div>
+                       <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                          <PlayCircle className="h-5 w-5 text-primary group-hover:text-white" />
+                       </div>
+                    </button>
                   ))}
                 </div>
               )}
