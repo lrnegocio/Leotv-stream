@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -50,7 +51,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const lowUrl = url.toLowerCase();
     const ytId = getYouTubeId(url);
     
-    const isIframeDomain = lowUrl.includes('mercadolivre') || 
+    // Lista de domínios que são sites (Iframes)
+    const isIframeDomain = (lowUrl.includes('mercadolivre') || 
                            lowUrl.includes('mercadoplay') || 
                            lowUrl.includes('visioncine') || 
                            lowUrl.includes('reidoscanais') || 
@@ -64,7 +66,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                            lowUrl.includes('/s/') ||
                            lowUrl.includes('/player3/') ||
                            lowUrl.includes('.php?') ||
-                           lowUrl.includes('.html');
+                           lowUrl.includes('.html')) && !lowUrl.includes('.mp4'); // Se tiver .mp4, prioriza vídeo direto
 
     const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
@@ -101,16 +103,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           hls.on(Hls.Events.ERROR, (event: any, data: any) => {
              if (data.fatal) {
                 switch(data.type) {
-                   case Hls.ErrorTypes.NETWORK_ERROR:
-                      hls.startLoad();
-                      break;
-                   case Hls.ErrorTypes.MEDIA_ERROR:
-                      hls.recoverMediaError();
-                      break;
-                   default:
-                      cleanup();
-                      setError(true);
-                      break;
+                   case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                   case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                   default: cleanup(); setError(true); break;
                 }
              }
           });
@@ -150,9 +145,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       })
       setIsFullscreen(true)
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {})
-      }
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       setIsFullscreen(false)
     }
   }
@@ -161,8 +154,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
+  const trimmedUrl = (url || "").trim();
   
-  const isIframeDomain = lowUrl.includes('mercadolivre') || 
+  const isIframeDomain = (lowUrl.includes('mercadolivre') || 
                          lowUrl.includes('mercadoplay') || 
                          lowUrl.includes('visioncine') || 
                          lowUrl.includes('reidoscanais') || 
@@ -176,18 +170,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                          lowUrl.includes('/s/') ||
                          lowUrl.includes('/player3/') ||
                          lowUrl.includes('.php?') ||
-                         lowUrl.includes('.html');
+                         lowUrl.includes('.html')) && !lowUrl.includes('.mp4');
 
   const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
 
   let finalIframeSrc = url;
-  const trimmedUrl = (url || "").trim();
   const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
   
   if (iframeMatch) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
-    // BLINDAGEM YOUTUBE MASTER v234: Identidade forçada para liberar vídeos bloqueados na VPS
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   } else if (trimmedUrl.includes('xvideos.com/video.')) {
@@ -196,8 +188,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
-  
-  // POLÍTICA DE REFERER MASTER: YouTube precisa de identidade v234
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs') || lowUrl.includes('be/player');
   const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
 

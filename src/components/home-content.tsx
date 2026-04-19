@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -126,7 +127,7 @@ export default function HomeContent() {
   };
 
   const openItem = async (item: ContentItem, bypassPin = false) => {
-    // BLINDAGEM MESTRE: Bloqueio Parental Individual
+    // PROTOCOLO v235: Bloqueio Parental Individual Master
     if (!bypassPin && item.isRestricted) {
       setUnlockTarget('ITEM');
       setUnlockTargetItem(item);
@@ -141,14 +142,9 @@ export default function HomeContent() {
       setLoading(false);
     } else {
       const idx = content.findIndex(i => i.id === item.id);
-      if (idx === -1) {
-        // Se for um item avulso fora da lista atual (ex: busca ou série)
-        setActiveVideo({ items: [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }], index: 0 });
-        return;
-      }
-      // NAVEGAÇÃO GLOBAL: Passa a lista inteira visível para o player
-      const list = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
-      setActiveVideo({ items: list, index: idx });
+      const list = content.length > 0 ? content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) })) : [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }];
+      const finalIdx = idx !== -1 ? idx : 0;
+      setActiveVideo({ items: list, index: finalIdx });
     }
   };
 
@@ -163,11 +159,7 @@ export default function HomeContent() {
     }
   };
 
-  if (!isMounted) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-    </div>
-  );
+  if (!isMounted) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">

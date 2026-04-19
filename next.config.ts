@@ -24,7 +24,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.redecanaistv.be' },
       { protocol: 'https', hostname: '**.redecanaistv.net' },
       { protocol: 'https', hostname: '**.mercadolivre.com.br' },
-      { protocol: 'https', hostname: '**.mercadopago.com' }
+      { protocol: 'https', hostname: '**.mercadopago.com' },
+      { protocol: 'https', hostname: '**.mlstatic.com' }
     ],
   },
 };
