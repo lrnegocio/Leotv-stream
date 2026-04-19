@@ -75,10 +75,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
-    // SINAL MASTER: Se for MP4 direto, não usamos scripts, deixamos o navegador carregar nativamente.
+    setError(false);
+    
+    // SINAL MASTER: Se for MP4 direto, deixamos o navegador carregar nativamente sem scripts.
     const isMP4 = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
     if (isMP4) {
-      setLoading(false); // O próprio evento do video tag cuidará disso
+      // O vídeo tag já tem o src, apenas forçamos o carregamento
+      videoRef.current.load();
       return;
     }
 
@@ -127,7 +130,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    const timer = setTimeout(initPlayer, 100)
+    const timer = setTimeout(initPlayer, 50)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -157,6 +160,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    // YouTube Master Sintonização: Força o reconhecimento da identidade da plataforma
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   } else if (trimmedUrl.includes('xvideos.com/video.')) {
     const xvMatch = trimmedUrl.match(/video\.([a-z0-9]+)/);
@@ -164,8 +168,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
-  const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs');
-  const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
+  
+  // YouTube precisa de referer para funcionar nas lives, sites de IPTV precisam de anonimato.
+  const finalReferrerPolicy = ytId ? "no-referrer-when-downgrade" : "no-referrer";
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
@@ -180,7 +185,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Falha ao sintonizar sinal.</p>
-          <Button onClick={() => { window.location.reload() }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
+          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
@@ -203,15 +208,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline 
           controls 
           preload="auto"
-          crossOrigin="anonymous"
           src={url}
           onCanPlay={() => setLoading(false)}
           onLoadStart={() => setLoading(true)}
           onLoadedData={() => setLoading(false)}
           onError={(e) => { 
             const target = e.target as HTMLVideoElement;
-            // Só dispara erro se for falha de rede ou link quebrado após tentar carregar
-            if (target.error && target.networkState === 3) {
+            // Só dispara erro se for falha de rede real ou link quebrado após tentativa
+            if (target.error) {
               setError(true);
               setLoading(false);
             }
