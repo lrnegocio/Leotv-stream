@@ -31,6 +31,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       videoRef.current.pause();
       videoRef.current.removeAttribute('src');
       videoRef.current.load();
+      // LIMPEZA ATÔMICA: Remove todos os filhos para resetar o estado do browser
+      while (videoRef.current.firstChild) {
+        videoRef.current.removeChild(videoRef.current.firstChild);
+      }
     }
   }, [])
 
@@ -44,6 +48,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
+    // Passo 1: Limpeza Total antes de sintonizar
     cleanup()
     setError(false)
     setLoading(true)
@@ -52,7 +57,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const ytId = getYouTubeId(url);
     const trimmedUrl = url.trim();
 
-    const isIframeDomain = (lowUrl.includes('mercadolivre') || 
+    // Domínios que DEVEM ser abertos em Iframe
+    const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
                            lowUrl.includes('mercadoplay') || 
                            lowUrl.includes('visioncine') || 
                            lowUrl.includes('reidoscanais') || 
@@ -60,25 +66,33 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                            lowUrl.includes('redecanaistv') ||
                            lowUrl.includes('tvacabo.top') ||
                            lowUrl.includes('playcnvs.stream') ||
-                           lowUrl.includes('xvideos.com') ||
                            lowUrl.includes('pluto.tv') ||
                            lowUrl.includes('player?') ||
                            lowUrl.includes('/s/') ||
                            lowUrl.includes('/player3/') ||
                            lowUrl.includes('.php?') ||
-                           lowUrl.includes('.html')) && !lowUrl.includes('.mp4') && !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts');
+                           lowUrl.includes('.html')) && 
+                           !lowUrl.includes('.mp4') && 
+                           !lowUrl.includes('.m3u8') && 
+                           !lowUrl.includes('.ts');
 
-    const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4') || lowUrl.includes('mlstatic.com'));
+    // Sinais que DEVEM ser abertos no Motor de Vídeo Nativo/MSE
+    const isDirectVideo = !isIframeDomain && (
+      lowUrl.includes('.m3u8') || 
+      lowUrl.includes('.ts') || 
+      lowUrl.includes('.mp4') || 
+      lowUrl.includes('mlstatic.com') ||
+      lowUrl.includes('archive.org')
+    );
 
-    // Modo Iframe (YouTube ou Portais)
+    // MODO IFRAME (YouTube, Mercado Play Site, Portais IPTV)
     if (!isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain)) {
-      // O YouTube será detectado aqui e tratado pelo JSX do Iframe abaixo
       return 
     }
 
-    // Modo Direto (.m3u8, .ts, .mp4)
+    // MODO MOTOR DE HARDWARE (M3U8, TS, MP4)
     try {
-      // 1. Suporte MPEG-TS
+      // 1. Motor MPEG-TS (Canais de Baixa Latência)
       if (lowUrl.includes('.ts') && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -91,11 +105,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // 2. Suporte HLS
+      // 2. Motor HLS (Sinais de Satélite/M3U8)
       if (lowUrl.includes('.m3u8') && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls()
+          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -115,13 +129,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
-      // 3. Suporte Nativo (MP4 / Outros)
+      // 3. Motor Nativo (MP4 / Archive.org / Mercado Livre CDN)
+      // Blinda contra o NotSupportedError garantindo que o src é setado por último
       videoRef.current.src = url
       videoRef.current.load()
-      videoRef.current.play().catch(() => {
-        if (videoRef.current) videoRef.current.muted = true
-        videoRef.current?.play()
-      })
+      // O play() é chamado automaticamente pelos eventos onCanPlay/onLoadedData no JSX
     } catch (e) {
       setError(true)
       setLoading(false)
@@ -159,7 +171,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const trimmedUrl = (url || "").trim();
   
-  const isIframeDomain = (lowUrl.includes('mercadolivre') || 
+  const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
                          lowUrl.includes('mercadoplay') || 
                          lowUrl.includes('visioncine') || 
                          lowUrl.includes('reidoscanais') || 
@@ -173,9 +185,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                          lowUrl.includes('/s/') ||
                          lowUrl.includes('/player3/') ||
                          lowUrl.includes('.php?') ||
-                         lowUrl.includes('.html')) && !lowUrl.includes('.mp4') && !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts');
+                         lowUrl.includes('.html')) && 
+                         !lowUrl.includes('.mp4') && 
+                         !lowUrl.includes('.m3u8') && 
+                         !lowUrl.includes('.ts');
 
-  const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4') || lowUrl.includes('mlstatic.com'));
+  const isDirectVideo = !isIframeDomain && (
+    lowUrl.includes('.m3u8') || 
+    lowUrl.includes('.ts') || 
+    lowUrl.includes('.mp4') || 
+    lowUrl.includes('mlstatic.com') ||
+    lowUrl.includes('archive.org')
+  );
 
   let finalIframeSrc = url;
   const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
@@ -184,6 +205,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    // REFORÇO v234/v238: Identidade completa para o YouTube
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   } else if (trimmedUrl.includes('xvideos.com/video.')) {
     const xvMatch = trimmedUrl.match(/video\.([a-z0-9]+)/);
@@ -193,7 +215,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs') || lowUrl.includes('be/player');
   
-  // POLÍTICA CONDICIONAL: YouTube precisa de identidade, IPTV precisa de ocultação.
   const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
 
   return (
@@ -234,7 +255,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           crossOrigin="anonymous"
           onCanPlay={() => setLoading(false)}
           onLoadedData={() => setLoading(false)}
-          onError={() => { setError(true); setLoading(false); }}
+          onError={(e) => { 
+            // Só dispara erro se realmente não houver sinal após o timeout
+            if (videoRef.current?.networkState === 3) {
+              setError(true); 
+              setLoading(false); 
+            }
+          }}
         />
       )}
 
