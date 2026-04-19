@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v247 - PROTOCOLO DE REESCRITA PROFUNDA 7.0
- * Atravessa bloqueios de CORS, Referer e VPS para Punycode ESPN, AgroPesca e CDNs rígidas.
+ * TÚNEL MASTER SOBERANO v248 - PROTOCOLO DE REESCRITA PROFUNDA 7.0
+ * Atravessa bloqueios de CORS, Referer e VPS para Punycode ESPN, AgroPesca, AcPlay e CDNs rígidas.
  * Suporta reescrita de Variantes, Segmentos e Chaves de Criptografia.
  */
 export async function GET(req: NextRequest) {
@@ -28,6 +28,14 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Origin', urlObj.origin);
     requestHeaders.set('Referer', urlObj.origin + '/');
     requestHeaders.set('Cache-Control', 'no-cache');
+
+    // BLINDAGEM ACPLAY DORAMAS: Simula o acesso nativo do site para desbloquear cadeados
+    if (targetUrl.includes('acplay.live')) {
+       requestHeaders.set('Referer', 'https://acplay.live/');
+       requestHeaders.set('Sec-Fetch-Dest', 'video');
+       requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
+       requestHeaders.set('Sec-Fetch-Site', 'cross-site');
+    }
 
     // Timeout de 15 segundos para evitar carregamento infinito em links mortos
     const controller = new AbortController();

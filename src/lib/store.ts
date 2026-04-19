@@ -77,8 +77,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v246 - PROTOCOLO DE TÚNEL SOBERANO
- * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs).
+ * MOTOR DE LINKS MASTER v248 - PROTOCOLO DE TÚNEL SOBERANO
+ * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs, AcPlay).
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -97,6 +97,7 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('archive.org') || 
     lowUrl.includes('mlstatic.com') || 
     lowUrl.includes('agropesca') ||
+    lowUrl.includes('acplay.live') || // Suporte Master AcPlay Doramas
     lowUrl.includes('xn--') || // Suporte Total Punycode ESPN/AdultSwim
     lowUrl.includes('redecanaistv');
 

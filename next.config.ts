@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'archive.org' },
       { protocol: 'https', hostname: '**.archive.org' },
       { protocol: 'https', hostname: 'agropesca.live' },
+      { protocol: 'https', hostname: 'acplay.live' },
+      { protocol: 'https', hostname: '**.acplay.live' },
       { protocol: 'https', hostname: '**.xn--*' }
     ],
   },

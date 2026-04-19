@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -5,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus } from "lucide-react"
-import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType } from "@/lib/store"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Trash2 } from "lucide-react"
+import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
+import { Label } from "@/components/ui/label"
 
 export default function SettingsPage() {
   const [parentalPin, setParentalPin] = React.useState("")
@@ -16,6 +18,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
   const [listText, setListText] = React.useState("")
+
+  // ESTADO DORAMA MASTER
+  const [doramaTitle, setDoramaDitle] = React.useState("")
+  const [doramaId, setDoramaId] = React.useState("")
+  const [doramaEps, setDoramaEps] = React.useState(1)
 
   React.useEffect(() => {
     const load = async () => {
@@ -42,6 +49,42 @@ export default function SettingsPage() {
     } finally { setSaving(false) }
   }
 
+  const handleInjectDorama = async () => {
+    if (!doramaTitle || !doramaId || doramaEps < 1) {
+      toast({ variant: "destructive", title: "CAMPOS OBRIGATÓRIOS" });
+      return;
+    }
+    setIsProcessing(true);
+    
+    const episodes: Episode[] = [];
+    for (let i = 1; i <= doramaEps; i++) {
+      episodes.push({
+        id: `ep_${doramaId}_${i}_${Date.now()}`,
+        title: `EPISÓDIO ${i}`,
+        number: i,
+        streamUrl: `https://acplay.live/shortseries/${doramaId}/${doramaId}${i}.mp4`
+      });
+    }
+
+    const success = await saveContent({
+      title: doramaTitle,
+      type: 'series',
+      genre: 'LÉO TV DORAMAS',
+      description: 'Sinal Master - Short Series Dorama',
+      isRestricted: false,
+      imageUrl: "",
+      episodes: episodes
+    });
+
+    if (success) {
+      toast({ title: "DORAMA INJETADO NA REDE!", description: `${doramaEps} episódios liberados.` });
+      setDoramaDitle(""); setDoramaId(""); setDoramaEps(1);
+    } else {
+      toast({ variant: "destructive", title: "FALHA NA INJEÇÃO" });
+    }
+    setIsProcessing(false);
+  }
+
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
@@ -64,7 +107,6 @@ export default function SettingsPage() {
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
           
-          // EXTRAÇÃO INTELIGENTE: Pega o link mesmo se estiver colado no nome
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i) || rawName.match(/(https?:\/\/[^\s,]+)$/i);
           let extractedUrl = inlineUrlMatch ? inlineUrlMatch[0] : "";
           
@@ -75,7 +117,6 @@ export default function SettingsPage() {
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
 
-          // Mapeamento Soberano de Pastas
           if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW') || groupStr.includes('TIM')) {
             targetGenre = "LÉO TV SÉRIES";
             targetType = 'multi-season';
@@ -173,6 +214,34 @@ export default function SettingsPage() {
 
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
+          <Card className="bg-emerald-500/5 border border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="bg-emerald-500/10 border-b border-emerald-500/10 p-6">
+              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2">
+                <Sparkles className="h-5 w-5" /> Injetor de Doramas (AcPlay)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-4">
+              <div className="space-y-2">
+                <Label className="uppercase text-[10px] font-black opacity-60">Título da Série</Label>
+                <Input value={doramaTitle} onChange={e => setDoramaDitle(e.target.value)} placeholder="Ex: A IMPERATRIZ" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="uppercase text-[10px] font-black opacity-60">ID no Link (Sufixo)</Label>
+                  <Input value={doramaId} onChange={e => setDoramaId(e.target.value)} placeholder="Ex: AIMPERATRIZ" className="h-12 bg-black/40 border-white/5 font-mono" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="uppercase text-[10px] font-black opacity-60">Total de Episódios</Label>
+                  <Input type="number" value={doramaEps} onChange={e => setDoramaEps(parseInt(e.target.value) || 1)} className="h-12 bg-black/40 border-white/5 font-black text-center" />
+                </div>
+              </div>
+              <Button onClick={handleInjectDorama} disabled={isProcessing || !doramaId} className="w-full h-14 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
+                {isProcessing ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 h-5 w-5" /> INJETAR DORAMA AGORA</>}
+              </Button>
+              <p className="text-[8px] font-bold text-emerald-500/60 text-center uppercase">A série será adicionada em "LÉO TV DORAMAS" como Série Simples.</p>
+            </CardContent>
+          </Card>
+
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
               <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
