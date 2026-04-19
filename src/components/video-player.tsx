@@ -50,8 +50,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const lowUrl = url.toLowerCase();
     const ytId = getYouTubeId(url);
-    
-    // Lista de domínios que são sites (Iframes)
+    const trimmedUrl = url.trim();
+
     const isIframeDomain = (lowUrl.includes('mercadolivre') || 
                            lowUrl.includes('mercadoplay') || 
                            lowUrl.includes('visioncine') || 
@@ -66,16 +66,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                            lowUrl.includes('/s/') ||
                            lowUrl.includes('/player3/') ||
                            lowUrl.includes('.php?') ||
-                           lowUrl.includes('.html')) && !lowUrl.includes('.mp4'); // Se tiver .mp4, prioriza vídeo direto
+                           lowUrl.includes('.html')) && !lowUrl.includes('.mp4') && !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts');
 
-    const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
+    const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4') || lowUrl.includes('mlstatic.com'));
 
-    if (!isDirectVideo && (ytId || url.trim().startsWith('<') || isIframeDomain)) {
-      setLoading(false)
+    // Modo Iframe (YouTube ou Portais)
+    if (!isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain)) {
+      // O YouTube será detectado aqui e tratado pelo JSX do Iframe abaixo
       return 
     }
 
+    // Modo Direto (.m3u8, .ts, .mp4)
     try {
+      // 1. Suporte MPEG-TS
       if (lowUrl.includes('.ts') && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -84,11 +87,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           player.load()
           player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
           mpegtsRef.current = player
-          setLoading(false)
           return
         }
       }
 
+      // 2. Suporte HLS
       if (lowUrl.includes('.m3u8') && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -98,7 +101,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           hlsRef.current = hls
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
-            setLoading(false)
           })
           hls.on(Hls.Events.ERROR, (event: any, data: any) => {
              if (data.fatal) {
@@ -113,12 +115,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       } 
       
+      // 3. Suporte Nativo (MP4 / Outros)
       videoRef.current.src = url
+      videoRef.current.load()
       videoRef.current.play().catch(() => {
         if (videoRef.current) videoRef.current.muted = true
         videoRef.current?.play()
       })
-      setLoading(false)
     } catch (e) {
       setError(true)
       setLoading(false)
@@ -170,9 +173,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                          lowUrl.includes('/s/') ||
                          lowUrl.includes('/player3/') ||
                          lowUrl.includes('.php?') ||
-                         lowUrl.includes('.html')) && !lowUrl.includes('.mp4');
+                         lowUrl.includes('.html')) && !lowUrl.includes('.mp4') && !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts');
 
-  const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4'));
+  const isDirectVideo = !isIframeDomain && (lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4') || lowUrl.includes('mlstatic.com'));
 
   let finalIframeSrc = url;
   const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
@@ -189,6 +192,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
   const isIPTVPortal = lowUrl.includes('rdcanais') || lowUrl.includes('reidoscanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('playcnvs') || lowUrl.includes('be/player');
+  
+  // POLÍTICA CONDICIONAL: YouTube precisa de identidade, IPTV precisa de ocultação.
   const finalReferrerPolicy = isIPTVPortal ? "no-referrer" : (ytId ? "no-referrer-when-downgrade" : "no-referrer");
 
   return (
@@ -227,6 +232,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline 
           controls 
           crossOrigin="anonymous"
+          onCanPlay={() => setLoading(false)}
+          onLoadedData={() => setLoading(false)}
+          onError={() => { setError(true); setLoading(false); }}
         />
       )}
 
