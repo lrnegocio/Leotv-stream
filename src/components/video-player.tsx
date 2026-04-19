@@ -77,10 +77,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     setError(false);
     
-    // SINAL MASTER: Se for MP4 direto, deixamos o navegador carregar nativamente sem scripts.
-    const isMP4 = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-    if (isMP4) {
-      // O vídeo tag já tem o src, apenas forçamos o carregamento
+    // PROTOCOLO v243: Resposta Imediata para VOD e MP4
+    const isNativeFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
+    if (isNativeFile) {
+      setLoading(false); // Esconde o spinner na hora para evitar travamento visual
       videoRef.current.load();
       return;
     }
@@ -95,6 +95,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           player.load()
           player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
           mpegtsRef.current = player
+          setLoading(false);
           return
         }
       }
@@ -108,6 +109,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setLoading(false);
             videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
           })
           hls.on(Hls.Events.ERROR, (event: any, data: any) => {
@@ -115,7 +117,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                 switch(data.type) {
                    case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                    case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                   default: setError(true); break;
+                   default: setError(true); setLoading(false); break;
                 }
              }
           });
@@ -160,16 +162,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = iframeMatch[1];
   } else if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    // YouTube Master Sintonização: Força o reconhecimento da identidade da plataforma
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
-  } else if (trimmedUrl.includes('xvideos.com/video.')) {
-    const xvMatch = trimmedUrl.match(/video\.([a-z0-9]+)/);
-    if (xvMatch) finalIframeSrc = `https://www.xvideos.com/embedframe/${xvMatch[1]}`;
   }
 
   const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
-  
-  // YouTube precisa de referer para funcionar nas lives, sites de IPTV precisam de anonimato.
   const finalReferrerPolicy = ytId ? "no-referrer-when-downgrade" : "no-referrer";
 
   return (
@@ -209,13 +205,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           controls 
           preload="auto"
           src={url}
+          referrerPolicy="no-referrer"
           onCanPlay={() => setLoading(false)}
-          onLoadStart={() => setLoading(true)}
+          onLoadStart={() => { if (!lowUrl.includes('.mp4')) setLoading(true); }}
           onLoadedData={() => setLoading(false)}
           onError={(e) => { 
             const target = e.target as HTMLVideoElement;
-            // Só dispara erro se for falha de rede real ou link quebrado após tentativa
-            if (target.error) {
+            if (target.error && !lowUrl.includes('.mp4')) {
               setError(true);
               setLoading(false);
             }
