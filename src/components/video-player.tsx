@@ -75,13 +75,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
-    cleanup()
-    setError(false)
-    setLoading(true)
-
-    // Se não for sinal de vídeo direto (M3U8/TS), não precisamos de motores JS
-    if (!isDirectVideo) {
-      setLoading(false);
+    // SINAL MASTER: Se for MP4 direto, não usamos scripts, deixamos o navegador carregar nativamente.
+    const isMP4 = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
+    if (isMP4) {
+      setLoading(false); // O próprio evento do video tag cuidará disso
       return;
     }
 
@@ -122,21 +119,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           return
         }
       } 
-      
-      // 3. Motor Nativo (MP4 / Archive.org / ML CDN)
-      // O segredo é que o key={url} no JSX já reseta o elemento.
-      // Aqui apenas reforçamos o carregamento para evitar o erro de sintonização.
-      videoRef.current.src = url;
-      videoRef.current.load();
     } catch (e) {
       setError(true);
       setLoading(false);
     }
-  }, [url, isMounted, cleanup, isDirectVideo, lowUrl])
+  }, [url, isMounted, lowUrl])
 
   React.useEffect(() => {
     setIsMounted(true)
-    const timer = setTimeout(initPlayer, 200)
+    const timer = setTimeout(initPlayer, 100)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -189,7 +180,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Falha ao sintonizar sinal.</p>
-          <Button onClick={() => { initPlayer() }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
+          <Button onClick={() => { window.location.reload() }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
@@ -211,14 +202,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls 
+          preload="auto"
           crossOrigin="anonymous"
           src={url}
           onCanPlay={() => setLoading(false)}
+          onLoadStart={() => setLoading(true)}
           onLoadedData={() => setLoading(false)}
           onError={(e) => { 
-            // Só exibe erro se o navegador realmente desistir do arquivo
             const target = e.target as HTMLVideoElement;
-            if (target.networkState === 3 || target.error) {
+            // Só dispara erro se for falha de rede ou link quebrado após tentar carregar
+            if (target.error && target.networkState === 3) {
               setError(true);
               setLoading(false);
             }
@@ -232,7 +225,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-4 w-4 text-white" /></button>}
-        <button onClick={initPlayer} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
+        <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
         <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
         {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
