@@ -77,13 +77,37 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v225 - MODO DIRETO
- * O Proxy foi desativado para permitir que o F12 veja os sinais reais
- * e para evitar bloqueios de CDNs rígidas.
+ * MOTOR DE LINKS MASTER v245 - PROTOCOLO DE TÚNEL SOBERANO
+ * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs).
+ * YouTube e links conhecidos como estáveis permanecem diretos.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  return url.trim(); // Retorna o link puro conforme solicitado pelo Mestre
+  const lowUrl = url.toLowerCase();
+  
+  // YouTube e Iframes de busca não usam proxy
+  if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
+    return url.trim();
+  }
+
+  // Links que precisam do Túnel Master para evitar bloqueios de CORS/Referer/VPS
+  const needsProxy = 
+    lowUrl.includes('.m3u8') || 
+    lowUrl.includes('.ts') || 
+    lowUrl.includes('.mp4') ||
+    lowUrl.includes('archive.org') || 
+    lowUrl.includes('mlstatic.com') || 
+    lowUrl.includes('agropesca') ||
+    lowUrl.includes('xn--') || // Domínios Punycode
+    lowUrl.includes('redecanaistv');
+
+  if (needsProxy) {
+    // Evita duplicar o proxy se o link já estiver formatado
+    if (url.includes('/api/proxy')) return url.trim();
+    return `/api/proxy?url=${encodeURIComponent(url.trim())}`;
+  }
+  
+  return url.trim();
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {

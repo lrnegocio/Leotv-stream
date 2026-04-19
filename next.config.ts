@@ -27,7 +27,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.mercadopago.com' },
       { protocol: 'https', hostname: '**.mlstatic.com' },
       { protocol: 'https', hostname: 'archive.org' },
-      { protocol: 'https', hostname: '**.archive.org' }
+      { protocol: 'https', hostname: '**.archive.org' },
+      { protocol: 'https', hostname: 'agropesca.live' },
+      { protocol: 'https', hostname: '**.xn--*' }
     ],
   },
 };

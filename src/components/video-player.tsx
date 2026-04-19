@@ -44,9 +44,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
   
-  // PROTOCOLO SUPREMO v244: Identificação imediata de fluxo
+  // PROTOCOLO SUPREMO v245: Identificação de fluxo com suporte a Proxy
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-  const isHls = lowUrl.includes('.m3u8');
+  const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('proxy?url=');
   const isTs = lowUrl.includes('.ts');
   const isIframe = !isDirectFile && !isHls && !isTs && (ytId || url.includes('http'));
 
@@ -55,8 +55,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     setError(false);
     
-    // MODO SUPREMO: Libera a tela IMEDIATAMENTE para arquivos VOD
-    if (isDirectFile) {
+    // MODO VOD: Arquivos MP4 carregam nativamente e liberam a tela na hora
+    if (isDirectFile && !url.includes('.m3u8')) {
       setLoading(false);
       if (videoRef.current) {
         videoRef.current.src = url;
@@ -69,6 +69,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!videoRef.current) return;
 
     try {
+      // Motor MPEG-TS (Canais brutos)
       if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -82,10 +83,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
+      // Motor HLS (Canais de Satélite e AgroPesca/Punycode via Proxy)
       if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
+          const hls = new Hls({ 
+            enableWorker: true, 
+            lowLatencyMode: true,
+            backBufferLength: 60,
+            maxMaxBufferLength: 30
+          })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
           hlsRef.current = hls
@@ -106,7 +113,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
       
-      // Fallback nativo
+      // Fallback nativo (Smart TVs modernas)
       if (isHls && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = url;
         setLoading(false);
@@ -144,7 +151,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
-  // SINTONIZAÇÃO YOUTUBE MASTER v244 (VPS SHIELD)
   let finalIframeSrc = url;
   if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -154,11 +160,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
       
-      {/* SINTONIZADOR v244: O loader nunca bloqueia o clique ou a visão (pointer-events-none) */}
       {loading && !isIframe && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando Sinal Master...</p>
         </div>
       )}
 
@@ -166,7 +171,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Erro de Sintonização.</p>
-          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR</Button>
+          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
@@ -193,12 +198,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {/* Identificação de Sinal */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
-      {/* Navegação Master */}
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
