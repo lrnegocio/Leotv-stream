@@ -5,9 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v245 - PROTOCOLO DE REESCRITA DE MANIFESTO 6.0
- * Atravessa bloqueios de CORS, Referer e VPS.
- * Se o link for um M3U8, reescreve as rotas internas para que os segmentos também passem pelo proxy.
+ * TÚNEL MASTER SOBERANO v246 - PROTOCOLO DE REESCRITA DE MANIFESTO 6.5
+ * Atravessa bloqueios de CORS, Referer e VPS para links Punycode, AgroPesca e CDNs rígidas.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,7 +18,7 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // Encaminha o Range (Obrigatório para HLS, MP4 e CDNs VOD)
+    // Encaminha o Range (Obrigatório para HLS, MP4 e CDNs VOD como Mercado Livre)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
@@ -43,16 +42,17 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const isM3u8 = targetUrl.toLowerCase().includes('.m3u8') || contentType.includes('mpegurl');
 
-    // REESCRITA MASTER DE MANIFESTO: Se for M3U8, ajustamos os links dos segmentos (.ts)
+    // REESCRITA MASTER DE MANIFESTO 6.5: Suporte a Tokens e Punycode
     if (isM3u8) {
       const manifestText = await res.text();
-      const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+      // Calcula a Base URL ignorando query params para reconstrução de segmentos
+      const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
       
       const rewrittenManifest = manifestText.split('\n').map(line => {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith('#')) {
-          // Se for um link relativo ou absoluto de outra origem, roteamos pelo proxy
           try {
+            // Se o segmento for um link absoluto, usa direto. Se for relativo, combina com a baseUrl.
             const absoluteUrl = new URL(trimmed, baseUrl).href;
             return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
           } catch (e) {
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fluxo normal para Vídeos (.mp4) ou Segmentos (.ts)
+    // Fluxo normal para Vídeos (.mp4), Segmentos (.ts) ou Outros
     const responseHeaders = new Headers();
     const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding'];
     headersToCopy.forEach(h => {

@@ -13,6 +13,10 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
+/**
+ * PLAYER MASTER SOBERANO v246 - MODO SUPREMO SEM BLOQUEIO
+ * Suporte a Punycode ESPN, AgroPesca, MP4 Archive e YouTube Master Fix.
+ */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -44,24 +48,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
   
-  // PROTOCOLO SUPREMO v245: Identificação de fluxo com suporte a Proxy
+  // PROTOCOLO SUPREMO v246: Identificação de fluxo com suporte a Túnel Master
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-  const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('proxy?url=');
-  const isTs = lowUrl.includes('.ts');
+  const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
+  const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
   const isIframe = !isDirectFile && !isHls && !isTs && (ytId || url.includes('http'));
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
     
     setError(false);
+    setLoading(true);
     
-    // MODO VOD: Arquivos MP4 carregam nativamente e liberam a tela na hora
+    // MODO VOD MP4: Passagem Direta de Hardware (v244 Fix)
     if (isDirectFile && !url.includes('.m3u8')) {
-      setLoading(false);
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
         videoRef.current.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); });
+        setLoading(false);
       }
       return;
     }
@@ -69,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!videoRef.current) return;
 
     try {
-      // Motor MPEG-TS (Canais brutos)
+      // Motor MPEG-TS (v215 Protocol)
       if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -83,15 +88,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // Motor HLS (Canais de Satélite e AgroPesca/Punycode via Proxy)
+      // Motor HLS Master (Punycode / AgroPesca / Proxy)
       if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls({ 
             enableWorker: true, 
             lowLatencyMode: true,
-            backBufferLength: 60,
-            maxMaxBufferLength: 30
+            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           })
           hls.loadSource(url)
           hls.attachMedia(videoRef.current)
@@ -113,8 +117,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
       
-      // Fallback nativo (Smart TVs modernas)
-      if (isHls && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+      // Fallback nativo
+      if (videoRef.current.canPlayType('application/vnd.apple.mpegurl') || isDirectFile) {
         videoRef.current.src = url;
         setLoading(false);
       }
@@ -140,7 +144,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       containerRef.current.requestFullscreen().catch(() => {
         const el = containerRef.current as any;
         if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-        else if (el.msRequestFullscreen) el.msRequestFullscreen();
       })
       setIsFullscreen(true)
     } else {
@@ -151,26 +154,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
+  // SINTONIZAÇÃO YOUTUBE MASTER FIX (v246)
   let finalIframeSrc = url;
   if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
+    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}`;
   }
 
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
+    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
+      {/* MODO SUPREMO: Sem overlay bloqueando o player */}
       {loading && !isIframe && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando Sinal Master...</p>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/20 pointer-events-none">
+          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Erro de Sintonização.</p>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível.</p>
           <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
@@ -181,7 +185,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={finalIframeSrc} 
           className="w-full h-full border-0 relative z-20" 
           allowFullScreen 
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+          allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)} 
         />
       ) : (
@@ -203,10 +207,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       </div>
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
-        {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-4 w-4 text-white" /></button>}
-        <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
-        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
-        {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronRight className="h-4 w-4 text-white" /></button>}
+        {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
+        <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
+        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
+        {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>
   )
