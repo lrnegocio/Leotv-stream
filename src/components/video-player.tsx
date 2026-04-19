@@ -44,24 +44,32 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
   
-  // PROTOCOLO SUPREMO: Detecção direta de arquivos
-  const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
+  // PROTOCOLO SUPREMO v244: Identificação imediata de fluxo
+  const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
+  const isHls = lowUrl.includes('.m3u8');
+  const isTs = lowUrl.includes('.ts');
+  const isIframe = !isDirectFile && !isHls && !isTs && (ytId || url.includes('http'));
 
   const initPlayer = React.useCallback(async () => {
-    if (!isMounted || !url || !videoRef.current) return
+    if (!isMounted || !url) return
     
     setError(false);
     
-    // Para MP4 e arquivos brutos, liberamos a tela IMEDIATAMENTE (Modo Blinder)
-    if (lowUrl.includes('.mp4') || lowUrl.includes('archive.org')) {
+    // MODO SUPREMO: Libera a tela IMEDIATAMENTE para arquivos VOD
+    if (isDirectFile) {
       setLoading(false);
-      videoRef.current.src = url;
-      videoRef.current.load();
+      if (videoRef.current) {
+        videoRef.current.src = url;
+        videoRef.current.load();
+        videoRef.current.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); });
+      }
       return;
     }
 
+    if (!videoRef.current) return;
+
     try {
-      if (lowUrl.includes('.ts') && typeof window !== 'undefined' && (window as any).mpegts) {
+      if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
           const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url })
@@ -74,7 +82,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      if (lowUrl.includes('.m3u8') && typeof window !== 'undefined' && (window as any).Hls) {
+      if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
           const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
@@ -96,16 +104,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           });
           return
         }
-      } 
+      }
+      
+      // Fallback nativo
+      if (isHls && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        videoRef.current.src = url;
+        setLoading(false);
+      }
+
     } catch (e) {
       setError(true);
       setLoading(false);
     }
-  }, [url, isMounted, lowUrl])
+  }, [url, isMounted, isDirectFile, isHls, isTs])
 
   React.useEffect(() => {
     setIsMounted(true)
-    const timer = setTimeout(initPlayer, 50)
+    const timer = setTimeout(initPlayer, 10)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -136,25 +151,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   }
 
-  // Se não for arquivo direto e tiver indícios de portal ou YouTube, usa Iframe
-  const isIframe = !isDirectFile && (ytId || url.includes('http'));
-
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
       
-      {/* O Loader agora NÃO bloqueia os controles do player (z-index menor) */}
-      {loading && (
+      {/* SINTONIZADOR v244: O loader nunca bloqueia o clique ou a visão (pointer-events-none) */}
+      {loading && !isIframe && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal fora de alcance.</p>
-          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Erro de Sintonização.</p>
+          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR</Button>
         </div>
       )}
       
@@ -177,7 +189,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           controls 
           preload="auto"
           onLoadedData={() => setLoading(false)}
-          onError={() => { if(!lowUrl.includes('.mp4')) setError(true); }}
+          onError={() => { if(!isDirectFile) setError(true); }}
         />
       )}
 
