@@ -42,51 +42,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   };
 
   const lowUrl = (url || "").toLowerCase();
-  const trimmedUrl = (url || "").trim();
   const ytId = getYouTubeId(url);
   
-  const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
-                         lowUrl.includes('mercadoplay') || 
-                         lowUrl.includes('visioncine') || 
-                         lowUrl.includes('reidoscanais') || 
-                         lowUrl.includes('rdcanais') || 
-                         lowUrl.includes('redecanaistv') ||
-                         lowUrl.includes('tvacabo.top') ||
-                         lowUrl.includes('playcnvs.stream') ||
-                         lowUrl.includes('xvideos.com') ||
-                         lowUrl.includes('pluto.tv') ||
-                         lowUrl.includes('player?') ||
-                         lowUrl.includes('/s/') ||
-                         lowUrl.includes('/player3/') ||
-                         lowUrl.includes('.php?') ||
-                         lowUrl.includes('.html')) && 
-                         !lowUrl.includes('.mp4') && 
-                         !lowUrl.includes('.m3u8') && 
-                         !lowUrl.includes('.ts');
-
-  const isDirectVideo = !isIframeDomain && (
-    lowUrl.includes('.m3u8') || 
-    lowUrl.includes('.ts') || 
-    lowUrl.includes('.mp4') || 
-    lowUrl.includes('mlstatic.com') ||
-    lowUrl.includes('archive.org')
-  );
+  // PROTOCOLO SUPREMO: Detecção direta de arquivos
+  const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
     setError(false);
     
-    // PROTOCOLO v243: Resposta Imediata para VOD e MP4
-    const isNativeFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-    if (isNativeFile) {
-      setLoading(false); // Esconde o spinner na hora para evitar travamento visual
+    // Para MP4 e arquivos brutos, liberamos a tela IMEDIATAMENTE (Modo Blinder)
+    if (lowUrl.includes('.mp4') || lowUrl.includes('archive.org')) {
+      setLoading(false);
+      videoRef.current.src = url;
       videoRef.current.load();
       return;
     }
 
     try {
-      // 1. Motor MPEG-TS
       if (lowUrl.includes('.ts') && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts
         if (mpegts.isSupported()) {
@@ -100,7 +74,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // 2. Motor HLS
       if (lowUrl.includes('.m3u8') && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls
         if (Hls.isSupported()) {
@@ -156,22 +129,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
+  // SINTONIZAÇÃO YOUTUBE MASTER v244 (VPS SHIELD)
   let finalIframeSrc = url;
-  const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
-  if (iframeMatch) {
-    finalIframeSrc = iframeMatch[1];
-  } else if (ytId) {
+  if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}&hl=pt`;
   }
 
-  const isIframe = !isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain);
-  const finalReferrerPolicy = ytId ? "no-referrer-when-downgrade" : "no-referrer";
+  // Se não for arquivo direto e tiver indícios de portal ou YouTube, usa Iframe
+  const isIframe = !isDirectFile && (ytId || url.includes('http'));
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl'}`}>
+      
+      {/* O Loader agora NÃO bloqueia os controles do player (z-index menor) */}
       {loading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <p className="text-[10px] font-black uppercase italic animate-pulse text-primary tracking-widest">Sintonizando Sinal Master...</p>
         </div>
@@ -180,49 +153,40 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Falha ao sintonizar sinal.</p>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal fora de alcance.</p>
           <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
         </div>
       )}
       
       {isIframe ? (
         <iframe 
-          key={finalIframeSrc} 
+          key={url} 
           src={finalIframeSrc} 
-          className="w-full h-full border-0" 
+          className="w-full h-full border-0 relative z-20" 
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
-          referrerPolicy={finalReferrerPolicy}
           onLoad={() => setLoading(false)} 
         />
       ) : (
         <video 
           key={url} 
           ref={videoRef} 
-          className="w-full h-full object-contain" 
+          className="w-full h-full object-contain relative z-20" 
           autoPlay 
           playsInline 
           controls 
           preload="auto"
-          src={url}
-          referrerPolicy="no-referrer"
-          onCanPlay={() => setLoading(false)}
-          onLoadStart={() => { if (!lowUrl.includes('.mp4')) setLoading(true); }}
           onLoadedData={() => setLoading(false)}
-          onError={(e) => { 
-            const target = e.target as HTMLVideoElement;
-            if (target.error && !lowUrl.includes('.mp4')) {
-              setError(true);
-              setLoading(false);
-            }
-          }}
+          onError={() => { if(!lowUrl.includes('.mp4')) setError(true); }}
         />
       )}
 
+      {/* Identificação de Sinal */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
+      {/* Navegação Master */}
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><RefreshCw className="h-4 w-4 text-white" /></button>
