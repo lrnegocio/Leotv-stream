@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v248 - PROTOCOLO DE REESCRITA PROFUNDA 7.0
- * Atravessa bloqueios de CORS, Referer e VPS para Punycode ESPN, AgroPesca, AcPlay e CDNs rígidas.
+ * TÚNEL MASTER SOBERANO v249 - PROTOCOLO DE CAMUFLAGEM TOTAL
+ * Atravessa bloqueios de CORS, Referer e cadeados de Doramas (AcPlay).
  * Suporta reescrita de Variantes, Segmentos e Chaves de Criptografia.
  */
 export async function GET(req: NextRequest) {
@@ -23,18 +23,25 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
+    // Identidade Padrão Master
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Origin', urlObj.origin);
     requestHeaders.set('Referer', urlObj.origin + '/');
     requestHeaders.set('Cache-Control', 'no-cache');
 
-    // BLINDAGEM ACPLAY DORAMAS: Simula o acesso nativo do site para desbloquear cadeados
+    /**
+     * BLINDAGEM ACPLAY DORAMAS (BYPASS DE CADEADO)
+     * Simula um dispositivo Android oficial acessando o site para liberar conteúdos bloqueados.
+     */
     if (targetUrl.includes('acplay.live')) {
+       requestHeaders.set('Origin', 'https://acplay.live');
        requestHeaders.set('Referer', 'https://acplay.live/');
+       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36');
        requestHeaders.set('Sec-Fetch-Dest', 'video');
        requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
        requestHeaders.set('Sec-Fetch-Site', 'cross-site');
+       requestHeaders.set('Accept', 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5');
     }
 
     // Timeout de 15 segundos para evitar carregamento infinito em links mortos
@@ -57,17 +64,15 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const isM3u8 = targetUrl.toLowerCase().includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
 
-    // REESCRITA PROFUNDA 7.0: Suporte a Variantes de Qualidade e Chaves de Segurança
+    // REESCRITA PROFUNDA: Suporte a Variantes de Qualidade e Chaves de Segurança (ESPN Punycode)
     if (isM3u8) {
       const manifestText = await res.text();
-      // Calcula a Base URL correta para reconstrução de caminhos relativos
       const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
       
       const rewrittenManifest = manifestText.split('\n').map(line => {
         const trimmed = line.trim();
         if (!trimmed) return line;
 
-        // Caso 1: Linhas que são URLs diretas (Segmentos ou Variantes)
         if (!trimmed.startsWith('#')) {
           try {
             const absoluteUrl = new URL(trimmed, baseUrl).href;
@@ -77,7 +82,6 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        // Caso 2: Chaves de Criptografia (#EXT-X-KEY:URI="...")
         if (trimmed.startsWith('#EXT-X-KEY') || trimmed.startsWith('#EXT-X-MAP')) {
           return trimmed.replace(/URI="(.*?)"/, (match, uri) => {
             try {
@@ -101,7 +105,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fluxo normal para Segmentos de Vídeo (.ts), MP4 ou outros arquivos
+    // Fluxo normal para MP4 ou outros arquivos
     const responseHeaders = new Headers();
     const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding'];
     headersToCopy.forEach(h => {

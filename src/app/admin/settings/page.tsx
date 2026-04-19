@@ -57,27 +57,30 @@ export default function SettingsPage() {
     setIsProcessing(true);
     
     const episodes: Episode[] = [];
+    const cleanId = doramaId.trim().toUpperCase();
+
     for (let i = 1; i <= doramaEps; i++) {
       episodes.push({
-        id: `ep_${doramaId}_${i}_${Date.now()}`,
+        id: `ep_${cleanId}_${i}_${Date.now()}`,
         title: `EPISÓDIO ${i}`,
         number: i,
-        streamUrl: `https://acplay.live/shortseries/${doramaId}/${doramaId}${i}.mp4`
+        // Link Padrão AcPlay - Passará automaticamente pelo Túnel v249
+        streamUrl: `https://acplay.live/shortseries/${cleanId}/${cleanId}${i}.mp4`
       });
     }
 
     const success = await saveContent({
-      title: doramaTitle,
+      title: doramaTitle.toUpperCase(),
       type: 'series',
       genre: 'LÉO TV DORAMAS',
-      description: 'Sinal Master - Short Series Dorama',
+      description: 'Sinal Master - Short Series Dorama Desbloqueado',
       isRestricted: false,
       imageUrl: "",
       episodes: episodes
     });
 
     if (success) {
-      toast({ title: "DORAMA INJETADO NA REDE!", description: `${doramaEps} episódios liberados.` });
+      toast({ title: "DORAMA INJETADO E DESBLOQUEADO!", description: `${doramaEps} episódios prontos para o play.` });
       setDoramaDitle(""); setDoramaId(""); setDoramaEps(1);
     } else {
       toast({ variant: "destructive", title: "FALHA NA INJEÇÃO" });
@@ -217,18 +220,18 @@ export default function SettingsPage() {
           <Card className="bg-emerald-500/5 border border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-emerald-500/10 border-b border-emerald-500/10 p-6">
               <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2">
-                <Sparkles className="h-5 w-5" /> Injetor de Doramas (AcPlay)
+                <Sparkles className="h-5 w-5" /> Injetor de Doramas Master (Bypass)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-4">
               <div className="space-y-2">
                 <Label className="uppercase text-[10px] font-black opacity-60">Título da Série</Label>
-                <Input value={doramaTitle} onChange={e => setDoramaDitle(e.target.value)} placeholder="Ex: A IMPERATRIZ" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+                <Input value={doramaTitle} onChange={e => setDoramaDitle(e.target.value)} placeholder="Ex: O PREÇO DA VINGANÇA" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="uppercase text-[10px] font-black opacity-60">ID no Link (Sufixo)</Label>
-                  <Input value={doramaId} onChange={e => setDoramaId(e.target.value)} placeholder="Ex: AIMPERATRIZ" className="h-12 bg-black/40 border-white/5 font-mono" />
+                  <Label className="uppercase text-[10px] font-black opacity-60">ID no Link (Ex: OPRECODA)</Label>
+                  <Input value={doramaId} onChange={e => setDoramaId(e.target.value)} placeholder="Ex: OPRECODA" className="h-12 bg-black/40 border-white/5 font-mono" />
                 </div>
                 <div className="space-y-2">
                   <Label className="uppercase text-[10px] font-black opacity-60">Total de Episódios</Label>
@@ -236,9 +239,9 @@ export default function SettingsPage() {
                 </div>
               </div>
               <Button onClick={handleInjectDorama} disabled={isProcessing || !doramaId} className="w-full h-14 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
-                {isProcessing ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 h-5 w-5" /> INJETAR DORAMA AGORA</>}
+                {isProcessing ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 h-5 w-5" /> INJETAR DORAMA E LIBERAR AGORA</>}
               </Button>
-              <p className="text-[8px] font-bold text-emerald-500/60 text-center uppercase">A série será adicionada em "LÉO TV DORAMAS" como Série Simples.</p>
+              <p className="text-[8px] font-bold text-emerald-500/60 text-center uppercase">Protocolo v249: Desbloqueio automático de cadeados ativo.</p>
             </CardContent>
           </Card>
 
