@@ -2,8 +2,9 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -14,8 +15,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v247 - MODO SUPREMO ANTI-CONGELAMENTO
- * Suporte nativo a HLS Proxy 7.0, MP4 Archive, AgroPesca e YouTube Master.
+ * PLAYER MASTER SOBERANO v250 - MODO SUPREMO ANTI-CONGELAMENTO + PUBLICIDADE
+ * Suporte nativo a HLS Proxy 7.0, MP4 Archive, AgroPesca, YouTube Master e Banners.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -24,6 +25,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [error, setError] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
+  const [settings, setSettings] = React.useState<any>(null)
   
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
@@ -58,6 +60,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     setError(false);
     setLoading(true);
+
+    const s = await getGlobalSettings();
+    setSettings(s);
     
     // MODO VOD MP4/Archive: Direto ao ponto
     if (isDirectFile && !url.includes('.m3u8')) {
@@ -172,7 +177,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {/* SINTONIZADOR MESTRE: Não bloqueia a visão, apenas indica progresso */}
       {loading && !isIframe && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/10 pointer-events-none">
           <Loader2 className="h-10 w-10 animate-spin text-primary opacity-30" />
@@ -214,6 +218,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
+
+      {settings?.bannerUrl && (
+        <div className="absolute top-6 right-6 z-40 hidden md:block">
+           <div className="bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 overflow-hidden cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
+              <div className="relative w-32 h-10">
+                 <img src={settings.bannerUrl} alt="Ad" className="w-full h-full object-cover rounded-lg" />
+                 <div className="absolute -top-1 -right-1 bg-primary p-0.5 rounded-full"><Zap className="h-2 w-2 text-white" /></div>
+              </div>
+           </div>
+        </div>
+      )}
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}

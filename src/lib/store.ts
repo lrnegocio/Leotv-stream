@@ -257,7 +257,12 @@ export async function removeGame(id: string) {
 
 export async function getGlobalSettings() {
   const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return { parentalPin: data?.value?.parentalPin || "1234", announcement: data?.value?.announcement || "" };
+  return { 
+    parentalPin: data?.value?.parentalPin || "1234", 
+    announcement: data?.value?.announcement || "",
+    bannerUrl: data?.value?.bannerUrl || "",
+    bannerLink: data?.value?.bannerLink || ""
+  };
 }
 
 export async function updateGlobalSettings(v: any) {

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -34,6 +34,7 @@ export default function HomeContent() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [games, setGames] = React.useState<GameItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
+  const [settings, setSettings] = React.useState<any>(null)
   const [activeVideo, setActiveVideo] = React.useState<{ items: any[], index: number } | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [selectedCat, setSelectedCat] = React.useState<string | null>(null)
@@ -75,6 +76,9 @@ export default function HomeContent() {
     if (!isMounted) return;
     setLoading(true);
     try {
+      const currentSettings = await getGlobalSettings();
+      setSettings(currentSettings);
+
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
       const genreToFilter = categoryObj?.genre || "";
       const data = await getRemoteContent(false, queryStr, genreToFilter);
@@ -104,8 +108,8 @@ export default function HomeContent() {
   };
 
   const verifyPassword = async () => {
-    const settings = await getGlobalSettings();
-    if (pinInput === settings.parentalPin) {
+    const globalSettings = await getGlobalSettings();
+    if (pinInput === globalSettings.parentalPin) {
       if (unlockTarget === 'ITEM' && unlockTargetItem) {
         const item = unlockTargetItem;
         setUnlockTargetItem(null);
@@ -127,7 +131,6 @@ export default function HomeContent() {
   };
 
   const openItem = async (item: ContentItem, bypassPin = false) => {
-    // PROTOCOLO v235: Bloqueio Parental Individual Master
     if (!bypassPin && item.isRestricted) {
       setUnlockTarget('ITEM');
       setUnlockTargetItem(item);
@@ -176,6 +179,19 @@ export default function HomeContent() {
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto">
+        {!selectedCat && !q && settings?.bannerUrl && (
+          <div className="mb-8 w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
+             <div className="relative aspect-[4/1] w-full rounded-[2rem] overflow-hidden border-4 border-primary/10 shadow-2xl shadow-primary/5 transition-transform hover:scale-[1.01] active:scale-[0.99]">
+                <Image src={settings.bannerUrl} alt="Publicidade Master" fill className="object-cover" unoptimized />
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+                   <Zap className="h-3 w-3 text-amber-400 animate-pulse" />
+                   <span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade Soberana</span>
+                   {settings.bannerLink && <ExternalLink className="h-3 w-3 text-white/40" />}
+                </div>
+             </div>
+          </div>
+        )}
+
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {CATEGORIES.map(c => (

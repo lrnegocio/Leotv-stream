@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Trash2 } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label"
 export default function SettingsPage() {
   const [parentalPin, setParentalPin] = React.useState("")
   const [announcement, setAnnouncement] = React.useState("")
+  const [bannerUrl, setBannerUrl] = React.useState("")
+  const [bannerLink, setBannerLink] = React.useState("")
   const [loading, setLoading] = React.useState(true)
   const [saving, setSaving] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
@@ -30,6 +32,8 @@ export default function SettingsPage() {
         const settings = await getGlobalSettings()
         setParentalPin(settings.parentalPin || "1234")
         setAnnouncement(settings.announcement || "")
+        setBannerUrl(settings.bannerUrl || "")
+        setBannerLink(settings.bannerLink || "")
       } catch (err) { } finally { setLoading(false) }
     }
     load()
@@ -42,8 +46,8 @@ export default function SettingsPage() {
     }
     setSaving(true)
     try {
-      if (await updateGlobalSettings({ parentalPin, announcement })) {
-        toast({ title: "SENHA E AVISO ATUALIZADOS!" })
+      if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
+        toast({ title: "CONFIGURAÇÕES SINCROZINADAS!" })
       }
     } catch (e) { toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
     } finally { setSaving(false) }
@@ -64,7 +68,6 @@ export default function SettingsPage() {
         id: `ep_${cleanId}_${i}_${Date.now()}`,
         title: `EPISÓDIO ${i}`,
         number: i,
-        // Link Padrão AcPlay - Passará automaticamente pelo Túnel v249
         streamUrl: `https://acplay.live/shortseries/${cleanId}/${cleanId}${i}.mp4`
       });
     }
@@ -211,12 +214,40 @@ export default function SettingsPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Segurança e Injeção de Sinais em Massa.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade e Injeção de Sinais em Massa.</p>
         </div>
+        <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
+          {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} SALVAR TUDO
+        </Button>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
+          <Card className="bg-primary/5 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
+             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6">
+                <CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2">
+                   <Megaphone className="h-5 w-5" /> Publicidade Master (Faturamento)
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-8 space-y-4">
+                <div className="space-y-2">
+                   <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem do Banner (1200x300)</Label>
+                   <div className="flex gap-2">
+                      <div className="bg-black/40 p-3 rounded-xl border border-white/5"><ImageIcon className="h-5 w-5 opacity-40" /></div>
+                      <Input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="https://site.com/anuncio.jpg" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+                   </div>
+                </div>
+                <div className="space-y-2">
+                   <Label className="uppercase text-[10px] font-black opacity-60">Link de Destino (WhatsApp/Site)</Label>
+                   <div className="flex gap-2">
+                      <div className="bg-black/40 p-3 rounded-xl border border-white/5"><LinkIcon className="h-5 w-5 opacity-40" /></div>
+                      <Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} placeholder="https://wa.me/seunumeroaqui" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
+                   </div>
+                </div>
+                <p className="text-[8px] font-bold text-primary/60 text-center uppercase">Dica: Venda este espaço para seus revendedores faturarem mais.</p>
+             </CardContent>
+          </Card>
+
           <Card className="bg-emerald-500/5 border border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-emerald-500/10 border-b border-emerald-500/10 p-6">
               <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2">
@@ -241,16 +272,6 @@ export default function SettingsPage() {
               <Button onClick={handleInjectDorama} disabled={isProcessing || !doramaId} className="w-full h-14 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
                 {isProcessing ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 h-5 w-5" /> INJETAR DORAMA E LIBERAR AGORA</>}
               </Button>
-              <p className="text-[8px] font-bold text-emerald-500/60 text-center uppercase">Protocolo v249: Desbloqueio automático de cadeados ativo.</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
-              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
             </CardContent>
           </Card>
 
@@ -261,7 +282,6 @@ export default function SettingsPage() {
             <CardContent className="p-8 space-y-6">
               <div className="flex gap-4">
                 <input title="PIN Parental" value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 w-full rounded-2xl border border-white/10 outline-none focus:border-primary" maxLength={4} />
-                <Button onClick={handleSaveSettings} disabled={saving} className="h-16 px-10 bg-primary font-black uppercase rounded-2xl shadow-xl">{saving ? <Loader2 className="animate-spin" /> : <Save />}</Button>
               </div>
             </CardContent>
           </Card>
@@ -273,8 +293,17 @@ export default function SettingsPage() {
               <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
-              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U. Suporta links na mesma linha ou abaixo." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
               <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
+              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
             </CardContent>
           </Card>
         </div>
