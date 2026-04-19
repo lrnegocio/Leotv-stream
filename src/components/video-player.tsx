@@ -41,6 +41,37 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  const lowUrl = (url || "").toLowerCase();
+  const trimmedUrl = (url || "").trim();
+  const ytId = getYouTubeId(url);
+  
+  const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
+                         lowUrl.includes('mercadoplay') || 
+                         lowUrl.includes('visioncine') || 
+                         lowUrl.includes('reidoscanais') || 
+                         lowUrl.includes('rdcanais') || 
+                         lowUrl.includes('redecanaistv') ||
+                         lowUrl.includes('tvacabo.top') ||
+                         lowUrl.includes('playcnvs.stream') ||
+                         lowUrl.includes('xvideos.com') ||
+                         lowUrl.includes('pluto.tv') ||
+                         lowUrl.includes('player?') ||
+                         lowUrl.includes('/s/') ||
+                         lowUrl.includes('/player3/') ||
+                         lowUrl.includes('.php?') ||
+                         lowUrl.includes('.html')) && 
+                         !lowUrl.includes('.mp4') && 
+                         !lowUrl.includes('.m3u8') && 
+                         !lowUrl.includes('.ts');
+
+  const isDirectVideo = !isIframeDomain && (
+    lowUrl.includes('.m3u8') || 
+    lowUrl.includes('.ts') || 
+    lowUrl.includes('.mp4') || 
+    lowUrl.includes('mlstatic.com') ||
+    lowUrl.includes('archive.org')
+  );
+
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url || !videoRef.current) return
     
@@ -48,38 +79,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false)
     setLoading(true)
 
-    const lowUrl = url.toLowerCase();
-    const trimmedUrl = url.trim();
-    const ytId = getYouTubeId(url);
-
-    // Domínios de Iframe
-    const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
-                           lowUrl.includes('mercadoplay') || 
-                           lowUrl.includes('visioncine') || 
-                           lowUrl.includes('reidoscanais') || 
-                           lowUrl.includes('rdcanais') || 
-                           lowUrl.includes('redecanaistv') ||
-                           lowUrl.includes('tvacabo.top') ||
-                           lowUrl.includes('playcnvs.stream') ||
-                           lowUrl.includes('pluto.tv') ||
-                           lowUrl.includes('player?') ||
-                           lowUrl.includes('/s/') ||
-                           lowUrl.includes('/player3/') ||
-                           lowUrl.includes('.php?') ||
-                           lowUrl.includes('.html')) && 
-                           !lowUrl.includes('.mp4') && 
-                           !lowUrl.includes('.m3u8') && 
-                           !lowUrl.includes('.ts');
-
-    const isDirectVideo = !isIframeDomain && (
-      lowUrl.includes('.m3u8') || 
-      lowUrl.includes('.ts') || 
-      lowUrl.includes('.mp4') || 
-      lowUrl.includes('mlstatic.com') ||
-      lowUrl.includes('archive.org')
-    );
-
-    if (!isDirectVideo && (ytId || trimmedUrl.startsWith('<') || isIframeDomain)) {
+    // Se não for sinal de vídeo direto (M3U8/TS), não precisamos de motores JS
+    if (!isDirectVideo) {
       setLoading(false);
       return;
     }
@@ -124,13 +125,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       
       // 3. Motor Nativo (MP4 / Archive.org / ML CDN)
       // O segredo é que o key={url} no JSX já reseta o elemento.
+      // Aqui apenas reforçamos o carregamento para evitar o erro de sintonização.
       videoRef.current.src = url;
       videoRef.current.load();
     } catch (e) {
       setError(true);
       setLoading(false);
     }
-  }, [url, isMounted, cleanup])
+  }, [url, isMounted, cleanup, isDirectVideo, lowUrl])
 
   React.useEffect(() => {
     setIsMounted(true)
@@ -157,37 +159,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   if (!isMounted) return null
-
-  const lowUrl = (url || "").toLowerCase();
-  const trimmedUrl = (url || "").trim();
-  const ytId = getYouTubeId(url);
-  
-  const isIframeDomain = (lowUrl.includes('mercadolivre.com.br/assistir') || 
-                         lowUrl.includes('mercadoplay') || 
-                         lowUrl.includes('visioncine') || 
-                         lowUrl.includes('reidoscanais') || 
-                         lowUrl.includes('rdcanais') || 
-                         lowUrl.includes('redecanaistv') ||
-                         lowUrl.includes('tvacabo.top') ||
-                         lowUrl.includes('playcnvs.stream') ||
-                         lowUrl.includes('xvideos.com') ||
-                         lowUrl.includes('pluto.tv') ||
-                         lowUrl.includes('player?') ||
-                         lowUrl.includes('/s/') ||
-                         lowUrl.includes('/player3/') ||
-                         lowUrl.includes('.php?') ||
-                         lowUrl.includes('.html')) && 
-                         !lowUrl.includes('.mp4') && 
-                         !lowUrl.includes('.m3u8') && 
-                         !lowUrl.includes('.ts');
-
-  const isDirectVideo = !isIframeDomain && (
-    lowUrl.includes('.m3u8') || 
-    lowUrl.includes('.ts') || 
-    lowUrl.includes('.mp4') || 
-    lowUrl.includes('mlstatic.com') ||
-    lowUrl.includes('archive.org')
-  );
 
   let finalIframeSrc = url;
   const iframeMatch = trimmedUrl.match(/src=["'](.*?)["']/);
@@ -241,11 +212,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline 
           controls 
           crossOrigin="anonymous"
+          src={url}
           onCanPlay={() => setLoading(false)}
           onLoadedData={() => setLoading(false)}
-          onError={() => { 
-            // Se o motor nativo falhar após a limpeza, exibe erro
-            if (videoRef.current && videoRef.current.networkState === 3) {
+          onError={(e) => { 
+            // Só exibe erro se o navegador realmente desistir do arquivo
+            const target = e.target as HTMLVideoElement;
+            if (target.networkState === 3 || target.error) {
               setError(true);
               setLoading(false);
             }
