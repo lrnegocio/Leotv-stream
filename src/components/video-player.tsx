@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v246 - MODO SUPREMO SEM BLOQUEIO
- * Suporte a Punycode ESPN, AgroPesca, MP4 Archive e YouTube Master Fix.
+ * PLAYER MASTER SOBERANO v247 - MODO SUPREMO ANTI-CONGELAMENTO
+ * Suporte nativo a HLS Proxy 7.0, MP4 Archive, AgroPesca e YouTube Master.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -48,7 +48,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
   
-  // PROTOCOLO SUPREMO v246: Identificação de fluxo com suporte a Túnel Master
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
   const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
   const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
@@ -60,12 +59,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false);
     setLoading(true);
     
-    // MODO VOD MP4: Passagem Direta de Hardware (v244 Fix)
+    // MODO VOD MP4/Archive: Direto ao ponto
     if (isDirectFile && !url.includes('.m3u8')) {
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
-        videoRef.current.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); });
+        videoRef.current.play().catch(() => { 
+          if (videoRef.current) videoRef.current.muted = true; 
+          videoRef.current?.play(); 
+        });
         setLoading(false);
       }
       return;
@@ -74,51 +76,57 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!videoRef.current) return;
 
     try {
-      // Motor MPEG-TS (v215 Protocol)
+      // Motor MPEG-TS (Baixa Latência)
       if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
-        const mpegts = (window as any).mpegts
+        const mpegts = (window as any).mpegts;
         if (mpegts.isSupported()) {
-          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url })
-          player.attachMediaElement(videoRef.current)
-          player.load()
-          player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); })
-          mpegtsRef.current = player
+          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url });
+          player.attachMediaElement(videoRef.current);
+          player.load();
+          player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); });
+          mpegtsRef.current = player;
           setLoading(false);
-          return
+          return;
         }
       }
 
-      // Motor HLS Master (Punycode / AgroPesca / Proxy)
+      // Motor HLS Master (Punycode / AgroPesca / Proxy 7.0)
       if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
-        const Hls = (window as any).Hls
+        const Hls = (window as any).Hls;
         if (Hls.isSupported()) {
           const hls = new Hls({ 
             enableWorker: true, 
             lowLatencyMode: true,
+            backBufferLength: 60,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-          })
-          hls.loadSource(url)
-          hls.attachMedia(videoRef.current)
-          hlsRef.current = hls
+          });
+          hls.loadSource(url);
+          hls.attachMedia(videoRef.current);
+          hlsRef.current = hls;
+          
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setLoading(false);
-            videoRef.current?.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; videoRef.current?.play(); })
-          })
-          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-             if (data.fatal) {
-                switch(data.type) {
-                   case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                   case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                   default: setError(true); setLoading(false); break;
-                }
-             }
+            videoRef.current?.play().catch(() => { 
+              if (videoRef.current) videoRef.current.muted = true; 
+              videoRef.current?.play(); 
+            });
           });
-          return
+
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) {
+              switch(data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                default: setError(true); setLoading(false); break;
+              }
+            }
+          });
+          return;
         }
       }
       
       // Fallback nativo
-      if (videoRef.current.canPlayType('application/vnd.apple.mpegurl') || isDirectFile) {
+      if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = url;
         setLoading(false);
       }
@@ -131,7 +139,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    const timer = setTimeout(initPlayer, 10)
+    const timer = setTimeout(initPlayer, 50)
     return () => {
       clearTimeout(timer)
       cleanup()
@@ -154,7 +162,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
-  // SINTONIZAÇÃO YOUTUBE MASTER FIX (v246)
+  // SINTONIZAÇÃO YOUTUBE MASTER FIX (v247)
   let finalIframeSrc = url;
   if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -164,18 +172,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {/* MODO SUPREMO: Sem overlay bloqueando o player */}
+      {/* SINTONIZADOR MESTRE: Não bloqueia a visão, apenas indica progresso */}
       {loading && !isIframe && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/20 pointer-events-none">
-          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/10 pointer-events-none">
+          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-30" />
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível.</p>
-          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">RECONECTAR AGORA</Button>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível ou Protegido.</p>
+          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">TENTAR RECONEXÃO</Button>
         </div>
       )}
       
@@ -198,6 +206,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           controls 
           preload="auto"
           onLoadedData={() => setLoading(false)}
+          onPlaying={() => setLoading(false)}
           onError={() => { if(!isDirectFile) setError(true); }}
         />
       )}
