@@ -15,7 +15,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v273 - COMANDO PLAY/PAUSE ULTRA
+ * PLAYER MASTER SOBERANO v274 - COMANDO PLAY/PAUSE ULTRA
  * Sintonização PlayCNVS e extermínio de propagandas na tela.
  * Controles Master com prioridade de tela (Z-Index Máximo: 150).
  */

@@ -55,7 +55,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v273 - EXTERMINADOR DE ANÚNCIOS MASTER */
+          /* PROTOCOLO BRAVE SUPREMO v274 - EXTERMINADOR DE ANÚNCIOS MASTER */
           iframe { pointer-events: auto !important; }
           
           /* EXTERMÍNIO DE OVERLAYS (SEM MATAR O PLAYER) */

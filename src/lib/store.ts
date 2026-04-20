@@ -78,7 +78,7 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v273 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
+ * MOTOR DE LINKS MASTER v274 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
