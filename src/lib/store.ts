@@ -78,14 +78,30 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v282 - PROTOCOLO DE AUTOPLAY SILENCIOSO
- * Injeta mute=1 para garantir que o sinal abra sem interação e sem abas de erro.
+ * MOTOR DE LINKS MASTER v284 - PROTOCOLO YOUTUBE & AUTOPLAY
+ * Converte automaticamente links do YouTube para formato EMBED e aplica Mute.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
+  // YOUTUBE MASTER SINTONIZADOR
+  if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
+    let videoId = "";
+    if (lowUrl.includes('watch?v=')) {
+      videoId = finalUrl.split('v=')[1]?.split('&')[0];
+    } else if (lowUrl.includes('youtu.be/')) {
+      videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+    } else if (lowUrl.includes('/embed/')) {
+      return finalUrl + (finalUrl.includes('?') ? '&' : '?') + "autoplay=1&mute=1";
+    }
+    
+    if (videoId) {
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
+    }
+  }
+
   // SPOTIFY MASTER
   if (lowUrl.includes('spotify.com')) {
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
@@ -95,8 +111,6 @@ export const formatMasterLink = (url: string) => {
 
   // IFRAME SITES AUTOPLAY & MUTE FORCED
   const isIframeSite = 
-    lowUrl.includes('youtube.com') || 
-    lowUrl.includes('youtu.be') || 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('reidoscanais') ||
@@ -105,7 +119,6 @@ export const formatMasterLink = (url: string) => {
 
   if (isIframeSite) {
     const separator = finalUrl.includes('?') ? '&' : '?';
-    // Injetamos obrigatoriamente mute=1 para que o Autoplay funcione sem interação
     if (!finalUrl.includes('autoplay=')) {
       finalUrl += `${separator}autoplay=1&mute=1`;
     } else if (!finalUrl.includes('mute=')) {

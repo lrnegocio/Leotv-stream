@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Settings } from "lucide-react"
+import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Settings, ShieldCheck, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -19,7 +20,6 @@ export function PwaInstall() {
     }
     window.addEventListener('beforeinstallprompt', handler)
     
-    // Verificação de Smart TV simples
     const ua = navigator.userAgent.toLowerCase()
     if (ua.includes('tizen') || ua.includes('webos') || ua.includes('smart-tv') || ua.includes('roku')) {
       setIsVisible(true)
@@ -75,27 +75,58 @@ export function PwaInstall() {
       </div>
 
       <Dialog open={showTVGuide} onOpenChange={setShowTVGuide}>
-        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+        <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-10 shadow-2xl overflow-y-auto max-h-[90vh] custom-scroll">
           <DialogHeader>
-            <DialogTitle className="uppercase font-black text-primary italic text-xl flex items-center gap-2">
-              <Monitor className="h-6 w-6" /> Instalar na Smart TV
+            <DialogTitle className="uppercase font-black text-primary italic text-2xl flex items-center gap-3">
+              <Monitor className="h-8 w-8" /> Guia de Sistemas Léo TV
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="p-4 bg-muted rounded-2xl border border-border">
-              <p className="text-xs font-bold uppercase text-primary mb-2">Para Samsung (Tizen) e LG (webOS):</p>
-              <ol className="text-[10px] space-y-2 opacity-80 list-decimal pl-4 font-bold uppercase">
-                <li>Abra o navegador da TV e acesse este site.</li>
-                <li>Clique no ícone de 3 pontos ou "Menu" no topo.</li>
-                <li>Selecione "Adicionar à Tela Inicial" ou "Fixar no Menu".</li>
-                <li>O Léo TV agora aparecerá junto com seus Apps (Netflix, YouTube).</li>
-              </ol>
+          <div className="space-y-8 py-6">
+            
+            <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-4">
+              <div className="flex items-center gap-3 text-primary font-black uppercase text-sm">
+                <ShieldCheck className="h-5 w-5" /> 1. O SEGREDO DO BRAVE (BLOQUEIO TOTAL)
+              </div>
+              <p className="text-[11px] font-bold uppercase opacity-80 leading-relaxed">
+                O Navegador Brave só pode ser instalado em:
+                <br /><span className="text-primary">• ANDROID TV (Sony, TCL, Philips)</span>
+                <br /><span className="text-primary">• FIRE TV STICK (Amazon)</span>
+                <br /><span className="text-primary">• TV BOXES ANDROID</span>
+                <br /><br />
+                <span className="text-emerald-500">DICA MESTRE:</span> Se a sua TV for Samsung ou LG, nosso sistema já vem com um "Bloqueador Brave" interno (CSS) que mata os anúncios no navegador padrão da TV!
+              </p>
             </div>
-            <div className="p-4 bg-muted rounded-2xl border border-border">
-              <p className="text-xs font-bold uppercase text-emerald-500 mb-2">Para Android TV e Roku:</p>
-              <p className="text-[10px] font-bold uppercase opacity-80">No Android TV, use o Google Chrome para instalar diretamente. No Roku, adicione este link como um "Favorito" no navegador.</p>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-5 bg-muted rounded-2xl border border-border">
+                <p className="text-xs font-black uppercase text-primary mb-3">SAMSUNG & LG</p>
+                <ol className="text-[10px] space-y-2 opacity-80 list-decimal pl-4 font-bold uppercase">
+                  <li>Abra o Navegador da TV.</li>
+                  <li>Acesse o link do painel.</li>
+                  <li>Menu > "Fixar na Home".</li>
+                  <li>Use o sinal livre de abas!</li>
+                </ol>
+              </div>
+              <div className="p-5 bg-muted rounded-2xl border border-border">
+                <p className="text-xs font-black uppercase text-orange-500 mb-3">ROKU & OUTRAS</p>
+                <p className="text-[10px] font-bold uppercase opacity-80">
+                  O sistema Roku não permite instalação de navegadores. 
+                  <br /><br />
+                  <span className="text-primary">SOLUÇÃO:</span> Use o espelhamento de tela (Cast) do seu celular ou conecte um Fire Stick para ter o sinal Master.
+                </p>
+              </div>
             </div>
-            <Button onClick={() => setShowTVGuide(false)} className="w-full h-14 bg-primary font-black uppercase rounded-xl">ENTENDI, MESTRE!</Button>
+
+            <div className="p-6 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20">
+               <div className="flex items-center gap-3 text-emerald-500 font-black uppercase text-sm mb-2">
+                 <Zap className="h-5 w-5" /> RECOMENDAÇÃO DO MESTRE
+               </div>
+               <p className="text-[10px] font-bold uppercase opacity-80">
+                 Para a melhor experiência sem travamentos e com 100% de bloqueio de anúncios, utilize uma **TV BOX ANDROID** ou **FIRE STICK** e instale o navegador Brave por lá.
+               </p>
+            </div>
+
+            <Button onClick={() => setShowTVGuide(false)} className="w-full h-16 bg-primary font-black uppercase text-lg rounded-2xl shadow-xl shadow-primary/20">ENTENDI TUDO, MESTRE!</Button>
           </div>
         </DialogContent>
       </Dialog>
