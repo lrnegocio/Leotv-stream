@@ -55,10 +55,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v265 - EXTERMINADOR DE REDIRECTS E AVISOS */
+          /* PROTOCOLO BRAVE SUPREMO v266 - EXTERMINADOR DE REDIRECTS E AVISOS */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde avisos de sandbox e bloqueios de anúncios de forma ultra-agressiva */
+          /* Manto de Invisibilidade: Apaga os avisos de sandbox e bloqueio do Rei dos Canais */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
           .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
@@ -94,8 +94,8 @@ export default function RootLayout({
             left: -9999px !important;
           }
 
-          /* Bloqueia botões de download de navegadores (Opera, etc) */
-          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"] {
+          /* Bloqueia botões de download de navegadores (Opera, etc) e redirecionamentos */
+          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"], a[target="_blank"] {
             display: none !important;
           }
 

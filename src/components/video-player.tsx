@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v265 - MODO BRAVE FINAL
- * Restauração do Sandbox para fechamento automático de redirecionamentos.
- * Blindagem total contra downloads do Opera e anúncios pop-up.
+ * PLAYER MASTER SOBERANO v266 - MODO BRAVE FINAL
+ * Sandbox de Captura: A aba abre e o navegador fecha em seguida.
+ * Camuflagem Anti-Detecção: Esconde o aviso de sandbox do Rei dos Canais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -179,9 +179,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   /**
-   * PROTOCOLO DE SANDBOX v265 - O EQUILÍBRIO SOBERANO
+   * PROTOCOLO DE SANDBOX v266 - O EQUILÍBRIO SOBERANO
    * A AUSÊNCIA de allow-popups força o navegador a fechar qualquer nova aba aberta.
-   * allow-scripts e allow-same-origin permitem o vídeo rodar.
+   * O layout.tsx esconde os avisos de "Acesso Bloqueado" do Rei dos Canais.
    */
   const sandboxFlags = isSpotify 
     ? undefined // Spotify precisa de cookies para música completa
