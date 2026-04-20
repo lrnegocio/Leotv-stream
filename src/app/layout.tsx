@@ -55,10 +55,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v259 - EXTERMÍNIO DE ANÚNCIOS (DETECÇÃO ZERO) */
+          /* PROTOCOLO BRAVE SUPREMO v260 - EXTERMÍNIO DE ANÚNCIOS E OVERLAYS */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde elementos de anúncios sem quebrar o player nativo */
+          /* Esconde elementos de anúncios e overlays de cliques do Rei dos Canais */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
@@ -66,7 +66,8 @@ export default function RootLayout({
           .reidoscanais-ads, .hidden-ads, #pop-under, #over-video,
           .reidoscanais-notice, #pre-player-ads, .fixed-ads,
           [class*="ReiDoCanais"], [id*="ReiDoCanais"],
-          .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta {
+          .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta,
+          #click-to-play-overlay, .video-overlay, .ad-overlay {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;

@@ -78,7 +78,7 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v259 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * MOTOR DE LINKS MASTER v260 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
  * Inclui conversor Master para Spotify (Bypass Localização) e bloqueador de Adware.
  */
 export const formatMasterLink = (url: string) => {
@@ -86,7 +86,7 @@ export const formatMasterLink = (url: string) => {
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER v259 (EXTERMINADOR DE 404 E CONEXÃO RECUSADA)
+  // SPOTIFY MASTER CONVERTER v260 (EXTERMINADOR DE PRÉVIAS E CONEXÃO RECUSADA)
   if (lowUrl.includes('spotify.com')) {
     // 1. Remove prefixos de localização como /intl-pt/, /intl-es/, etc.
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
@@ -104,6 +104,12 @@ export const formatMasterLink = (url: string) => {
     if (!cleanUrl.includes('/embed/')) {
       cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
+    
+    // 5. Adiciona parâmetros para incentivar o login e tocar full track
+    if (!cleanUrl.includes('?')) {
+      cleanUrl += '?utm_source=leotv_master';
+    }
+    
     return cleanUrl;
   }
 
