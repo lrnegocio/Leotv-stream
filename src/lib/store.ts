@@ -78,13 +78,21 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v286 - PROTOCOLO SINTONIZAÇÃO TOTAL
+ * MOTOR DE LINKS MASTER v287 - PROTOCOLO SINTONIZAÇÃO TOTAL
  * Converte YouTube, Spotify, Deezer e XVideos para formatos de ALTA PERFORMANCE.
- * Aplica Túnel de Proxy para RedeCanais e TV Acabo.
+ * Aplica Túnel de Proxy para RedeCanais, TV Acabo e rdcanais.
+ * Agora extrai automaticamente URLs de snippets de iframe.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
+
+  // EXTRAÇÃO DE IFRAME (Caso o mestre cole o código todo)
+  if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
+    const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
+    if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
+  }
+  
   const lowUrl = finalUrl.toLowerCase();
   
   // XVIDEOS MASTER SINTONIZADOR

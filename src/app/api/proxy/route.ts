@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v286 - PROTOCOLO DE CAMUFLAGEM UNIVERSAL
- * Adicionado suporte a RedeCanais, TV Acabo e XVideos.
+ * TÚNEL MASTER SOBERANO v287 - PROTOCOLO DE CAMUFLAGEM UNIVERSAL
+ * Suporte a RedeCanais, rdcanais, TV Acabo e XVideos.
+ * Injeta Tag Base em HTML para resolver links relativos e bypassar Referer.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Referer', urlObj.origin + '/');
 
     // BLINDAGEM ESPECÍFICA POR DOMÍNIO
-    if (targetUrl.includes('redecanaistv') || targetUrl.includes('reidoscanais')) {
+    if (targetUrl.includes('redecanaistv') || targetUrl.includes('reidoscanais') || targetUrl.includes('rdcanais')) {
        requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     }
     
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
 
     const contentType = res.headers.get('content-type') || '';
     const isM3u8 = targetUrl.toLowerCase().includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
+    const isHtml = contentType.includes('text/html');
 
     // REESCRITA HLS MASTER
     if (isM3u8) {
@@ -77,6 +79,18 @@ export async function GET(req: NextRequest) {
 
       return new Response(rewrittenManifest, {
         headers: { 'Content-Type': 'application/vnd.apple.mpegurl', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+
+    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcanais e outros)
+    if (isHtml) {
+      let htmlText = await res.text();
+      const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
+      // Injeta a tag base logo no início do head
+      htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
+      
+      return new Response(htmlText, {
+        headers: { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
