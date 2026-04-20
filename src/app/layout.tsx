@@ -54,43 +54,40 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v274 - EXTERMINADOR DE ANÚNCIOS MASTER */
-          iframe { pointer-events: auto !important; }
+          /* PROTOCOLO BRAVE SUPREMO v275 - EXTERMINADOR DE OVERLAYS */
           
-          /* EXTERMÍNIO DE OVERLAYS (SEM MATAR O PLAYER) */
+          /* Esconde avisos de sandbox e bloqueios do site original */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
-          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
-          .alert-sandbox, .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
-          .ad-layer, .click-to-play, #click-to-play-overlay,
-          [id*="ad-"], [class*="ad-"], .pop-under, .overlay-ads,
-          .mgid-ad, .ad-container, .reidoscanais-ads, 
-          .hidden-ads, #pop-under, #over-video, #play-overlay, .play-overlay {
+          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"] {
             display: none !important;
             visibility: hidden !important;
+            pointer-events: none !important;
+          }
+
+          /* Hole-punch em anúncios invisíveis de players como PlayCNVS */
+          .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
+          .ad-layer, .click-to-play, #click-to-play-overlay,
+          [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
+          .ad-container, .reidoscanais-ads, #over-video {
+            display: none !important;
             opacity: 0 !important;
-            height: 0 !important;
-            width: 0 !important;
-            position: absolute !important;
-            left: -9999px !important;
             pointer-events: none !important;
             z-index: -1 !important;
           }
 
-          /* GARANTE QUE O VÍDEO E O BOTÃO DE PLAY ORIGINAL APAREÇAM */
-          video, .vjs-tech, .vjs-big-play-button, .vjs-big-play-centered {
-            display: block !important;
-            opacity: 1 !important;
-            visibility: visible !important;
+          /* Garante que o botão de play original não bloqueie o nosso controle */
+          .vjs-big-play-button, .vjs-big-play-centered {
+            opacity: 0.1 !important;
+            pointer-events: none !important;
           }
 
-          /* Bloqueia botões de download e redirecionamentos externos */
-          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"] {
+          /* Bloqueio de redirecionamentos e downloads indesejados */
+          [href*="opera.com"], [href*="browser"], .download-button {
             display: none !important;
           }
 
           body { -webkit-tap-highlight-color: transparent; }
-          
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
           }

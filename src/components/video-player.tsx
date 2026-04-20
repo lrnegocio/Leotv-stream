@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Loader2, AlertCircle, Maximize, Minimize, Play, Pause, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -14,9 +13,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v274 - COMANDO PLAY/PAUSE ULTRA
- * Sintonização PlayCNVS e extermínio de propagandas na tela.
- * Controles Master com prioridade de tela (Z-Index Máximo: 150).
+ * PLAYER MASTER SOBERANO v275 - CONTROLE DE FLUXO TOTAL
+ * Sistema de interrupção real para Iframes e blindagem de redirects.
+ * Prioridade de tela máxima para controles Master.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -41,160 +40,104 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [])
 
-  const getYouTubeId = (videoUrl: string) => {
-    if (!videoUrl) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|\/v\/|shorts\/)([^#\&\?]*).*/;
-    const match = videoUrl.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-
   const lowUrl = (url || "").toLowerCase();
-  const ytId = getYouTubeId(url);
-  const isSpotify = lowUrl.includes('spotify.com');
   
   const isIframeSite = 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('tvacabo') || 
     lowUrl.includes('reidoscanais') || 
-    lowUrl.includes('retrogames.cc') ||
-    lowUrl.includes('playcnvs');
+    lowUrl.includes('playcnvs') ||
+    lowUrl.includes('youtube.com') ||
+    lowUrl.includes('youtu.be') ||
+    lowUrl.includes('spotify.com');
   
-  const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
-
+  const isIframe = isIframeSite || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http'));
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-  const isHls = !isIframe && (lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca'));
+  const isHls = !isIframe && (lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy'));
   const isTs = !isIframe && lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
-    
     setError(false);
     setLoading(true);
-    setIsPlaying(false);
 
-    if (isDirectFile && !url.includes('.m3u8')) {
+    if (isIframe) {
+      setLoading(false);
+      // O Iframe só inicia se playerKey > 0
+      return;
+    }
+
+    if (isDirectFile) {
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { 
-          if (videoRef.current) videoRef.current.muted = true; 
-          videoRef.current?.play(); 
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+          if (videoRef.current) videoRef.current.muted = true;
+          videoRef.current?.play();
           setIsPlaying(true);
         });
-        setLoading(false); 
+        setLoading(false);
       }
       return;
     }
 
-    if (!videoRef.current || isIframe) {
-       if(isIframe) {
-         setLoading(false);
-         setIsPlaying(true);
-       }
-       return;
-    }
-
     try {
-      if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
+      if (isTs && (window as any).mpegts) {
         const mpegts = (window as any).mpegts;
-        if (mpegts.isSupported()) {
-          const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url });
-          player.attachMediaElement(videoRef.current);
-          player.load();
-          player.play().then(() => setIsPlaying(true)).catch(() => { 
-            if (videoRef.current) videoRef.current.muted = true; 
-            player.play(); 
+        const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url });
+        player.attachMediaElement(videoRef.current);
+        player.load();
+        player.play().then(() => setIsPlaying(true)).catch(() => { 
+          if (videoRef.current) videoRef.current.muted = true; 
+          player.play(); 
+          setIsPlaying(true);
+        });
+        mpegtsRef.current = player;
+        setLoading(false);
+      } else if (isHls && (window as any).Hls) {
+        const Hls = (window as any).Hls;
+        const hls = new Hls({ enableWorker: true });
+        hls.loadSource(url);
+        hls.attachMedia(videoRef.current);
+        hlsRef.current = hls;
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setLoading(false);
+          videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => {
+            if (videoRef.current) videoRef.current.muted = true;
+            videoRef.current?.play();
             setIsPlaying(true);
           });
-          mpegtsRef.current = player;
-          setLoading(false);
-          return;
-        }
+        });
       }
-
-      if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
-        const Hls = (window as any).Hls;
-        if (Hls.isSupported()) {
-          const hls = new Hls({ 
-            enableWorker: true, 
-            lowLatencyMode: true,
-            xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
-          });
-          hls.loadSource(url);
-          hls.attachMedia(videoRef.current);
-          hlsRef.current = hls;
-          
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setLoading(false);
-            videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => { 
-              if (videoRef.current) videoRef.current.muted = true; 
-              videoRef.current?.play(); 
-              setIsPlaying(true);
-            });
-          });
-
-          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-            if (data.fatal) {
-              switch(data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                default: setError(true); setLoading(false); break;
-              }
-            }
-          });
-          return;
-        }
-      }
-      
-      if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        videoRef.current.src = url;
-        setLoading(false);
-      }
-
-    } catch (e) {
-      setError(true);
-      setLoading(false);
-    }
-  }, [url, isMounted, isDirectFile, isHls, isTs, isIframe])
+    } catch (e) { setError(true); setLoading(false); }
+  }, [url, isMounted, isDirectFile, isHls, isTs, isIframe]);
 
   React.useEffect(() => {
-    setIsMounted(true)
-    const timer = setTimeout(initPlayer, 50)
-    return () => {
-      clearTimeout(timer)
-      cleanup()
-    }
-  }, [initPlayer, cleanup, url, playerKey])
-
-  React.useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    v.addEventListener('play', onPlay);
-    v.addEventListener('pause', onPause);
-    return () => {
-      v.removeEventListener('play', onPlay);
-      v.removeEventListener('pause', onPause);
-    }
-  }, [isMounted, playerKey]);
+    setIsMounted(true);
+    initPlayer();
+    // Tenta autoplay inicial
+    if (isIframe) { setPlayerKey(Date.now()); setIsPlaying(true); }
+    return () => cleanup();
+  }, [initPlayer, cleanup, url]);
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // FORÇA BRUTA MASTER: Reseta o sintonizador do Iframe
-      setPlayerKey(prev => prev + 1);
-      setIsPlaying(true);
+      if (isPlaying) {
+        // PAUSA REAL: Desliga o Iframe
+        setPlayerKey(0);
+        setIsPlaying(false);
+      } else {
+        // PLAY REAL: Sintoniza o canal
+        setPlayerKey(Date.now());
+        setIsPlaying(true);
+      }
       return;
     }
 
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        videoRef.current.play().catch(() => {
-          videoRef.current!.muted = true;
-          videoRef.current!.play();
-        });
-        setIsPlaying(true);
+        videoRef.current.play().then(() => setIsPlaying(true));
       } else {
         videoRef.current.pause();
         setIsPlaying(false);
@@ -208,91 +151,91 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       containerRef.current.requestFullscreen().catch(() => {
         const el = containerRef.current as any;
         if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      })
+      });
       setIsFullscreen(true)
     } else {
       if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       setIsFullscreen(false)
     }
-  }
+  };
 
-  if (!isMounted) return null
+  if (!isMounted) return null;
 
+  // Montagem do Link de Iframe com Chave de Sintonização
   let finalIframeSrc = url;
-  if (ytId) {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
+  if (playerKey > 0) {
+    const separator = url.includes('?') ? '&' : '?';
+    finalIframeSrc = `${url}${separator}autoplay=1&mute=1&t=${playerKey}`;
   }
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {loading && !isIframe && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 pointer-events-none">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando Sinal Master...</p>
+          <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando...</p>
         </div>
       )}
 
       {error && (
         <div className="absolute inset-0 z-[140] flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível.</p>
-          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">TENTAR RECONEXÃO</Button>
+          <p className="text-white font-black uppercase text-xs">Sinal Master Indisponível.</p>
+          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="mt-4">TENTAR RECONEXÃO</Button>
         </div>
       )}
       
       {isIframe ? (
-        <div className="relative w-full h-full flex flex-col items-center justify-center">
-          <iframe 
-            key={`${url}_${playerKey}`} 
-            src={finalIframeSrc} 
-            className={`w-full h-full border-0 relative z-10`}
-            allowFullScreen 
-            allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
-            onLoad={() => setLoading(false)} 
-            referrerPolicy="no-referrer"
-            title="Player Blindado Léo TV"
-          />
+        <div className="relative w-full h-full">
+          {playerKey > 0 ? (
+            <iframe 
+              key={playerKey}
+              src={finalIframeSrc} 
+              className="w-full h-full border-0"
+              allow="autoplay; encrypted-media; fullscreen" 
+              sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+              onLoad={() => setLoading(false)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-black/60 backdrop-blur-sm">
+               <div className="text-center space-y-4">
+                  <Play className="h-20 w-20 text-primary/20 mx-auto" />
+                  <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Sinal em Pausa</p>
+               </div>
+            </div>
+          )}
         </div>
       ) : (
         <video 
-          key={`${url}_${playerKey}`} 
           ref={videoRef} 
-          className="w-full h-full object-contain relative z-10" 
-          autoPlay 
-          playsInline 
-          controls 
-          preload="auto"
-          onLoadedData={() => setLoading(false)}
-          onPlaying={() => { setLoading(false); setIsPlaying(true); }}
-          onError={() => { if(!isDirectFile) setError(true); }}
+          className="w-full h-full object-contain" 
+          autoPlay playsInline controls preload="auto"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
         />
       )}
 
-      {/* CONTROLES MASTER - PRIORIDADE ABSOLUTA (Z-INDEX 150) */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
+      {/* CONTROLES MASTER - SEMPRE NO TOPO (Z-INDEX 150) */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
-      <div className="absolute bottom-6 right-6 z-[150] flex gap-2 pointer-events-auto">
-        {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto"><ChevronLeft className="h-4 w-4 text-white" /></button>}
+      <div className="absolute bottom-6 right-6 z-[150] flex gap-2">
+        {onPrev && <button onClick={onPrev} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         
         <button 
-          onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }} 
-          title={isPlaying ? "Pausar/Sintonizar" : "Iniciar Sinal Master"} 
-          className="h-10 w-10 rounded-xl bg-primary backdrop-blur-md flex items-center justify-center border border-white/20 hover:scale-110 transition-all shadow-xl pointer-events-auto"
+          onClick={handleTogglePlay} 
+          className="h-12 w-12 rounded-2xl bg-primary shadow-xl flex items-center justify-center border border-white/20 hover:scale-110 active:scale-95 transition-all"
         >
-          {isPlaying && !isIframe ? (
-            <Pause className="h-5 w-5 text-white fill-white" />
-          ) : (
-            <Play className="h-5 w-5 text-white fill-white" />
-          )}
+          {isPlaying ? <Pause className="h-6 w-6 text-white fill-white" /> : <Play className="h-6 w-6 text-white fill-white" />}
         </button>
 
-        {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
+        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
+          {isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}
+        </button>
         
-        {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto"><ChevronRight className="h-4 w-4 text-white" /></button>}
+        {onNext && <button onClick={onNext} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>
   )

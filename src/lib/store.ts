@@ -78,53 +78,46 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v274 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
+ * MOTOR DE LINKS MASTER v275 - PROTOCOLO DE AUTOPLAY SILENCIOSO
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER
+  // SPOTIFY MASTER
   if (lowUrl.includes('spotify.com')) {
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
-    cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, "$1");
     if (!cleanUrl.includes('/embed/')) cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
-    if (!cleanUrl.includes('?')) cleanUrl += '?utm_source=leotv_master&autoplay=1';
-    else if (!cleanUrl.includes('autoplay=1')) cleanUrl += '&autoplay=1';
     return cleanUrl;
   }
 
-  // YOUTUBE & IFRAME SITES AUTO-PLAY INJECTOR
+  // IFRAME SITES AUTOPLAY FORCED
   const isIframeSite = 
     lowUrl.includes('youtube.com') || 
     lowUrl.includes('youtu.be') || 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
-    lowUrl.includes('tvacabo') || 
     lowUrl.includes('reidoscanais') ||
     lowUrl.includes('playcnvs');
 
   if (isIframeSite) {
-    if (!finalUrl.includes('autoplay=1')) {
-       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&mute=0';
-    }
+    const separator = finalUrl.includes('?') ? '&' : '?';
+    // Mute=1 é necessário para o autoplay funcionar em 90% dos navegadores
+    if (!finalUrl.includes('autoplay=')) finalUrl += `${separator}autoplay=1&mute=1`;
     return finalUrl;
   }
 
-  // Links que precisam de Bypass ou Proxy para funcionar na VPS
+  // PROXY TUNNEL
   const needsProxy = 
     lowUrl.includes('.m3u8') || 
     lowUrl.includes('.ts') || 
     lowUrl.includes('.mp4') ||
     lowUrl.includes('archive.org') || 
     lowUrl.includes('mlstatic.com') || 
-    lowUrl.includes('agropesca') ||
-    lowUrl.includes('acplay.live') || 
-    lowUrl.includes('xn--');
+    lowUrl.includes('acplay.live');
 
-  if (needsProxy) {
-    if (finalUrl.includes('/api/proxy')) return finalUrl;
+  if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
@@ -137,12 +130,6 @@ export const formatGameLink = (input: string) => {
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) url = srcMatch[1];
-  }
-  const lowUrl = url.toLowerCase();
-  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
-    if (url.includes('/psx-games/') || url.includes('/snes-games/') || url.includes('/n64-games/')) {
-        url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
-    }
   }
   return url;
 };
@@ -168,13 +155,12 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const finalId = item.id || "str_" + Math.random().toString(36).substring(2, 12);
     const payload: any = {
-      id: finalId, 
-      title: (item.title || "NOVO CONTEÚDO").toUpperCase().trim(),
+      id: item.id || "str_" + Math.random().toString(36).substring(2, 12), 
+      title: (item.title || "NOVO").toUpperCase().trim(),
       genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
       type: item.type || 'channel', 
-      description: item.description || "Sinal Master Léo Tv",
+      description: item.description || "Sinal Master",
       imageUrl: item.imageUrl || "", 
       isRestricted: !!item.isRestricted,
       streamUrl: item.streamUrl || "",
@@ -201,11 +187,10 @@ export async function getContentById(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
-    if (!cleanPin) return { error: "PIN INVÁLIDO" };
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
-    const { data: users, error } = await supabase.from('users').select('*').eq('pin', cleanPin);
+    const { data: users } = await supabase.from('users').select('*').eq('pin', cleanPin);
     const user = users?.[0];
-    if (error || !user) return { error: "PIN INVÁLIDO" };
+    if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
@@ -221,13 +206,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function saveUser(user: Partial<User>) {
   try {
-    let finalId = user.id;
-    if (user.pin && !finalId) {
-      const { data: existing } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
-      if (existing) finalId = existing.id;
-    }
     const payload = {
-      id: finalId || "user_" + Date.now() + Math.random().toString(36).substring(7),
+      id: user.id || "user_" + Date.now(),
       pin: user.pin?.trim().toUpperCase(),
       role: user.role || 'user',
       subscriptionTier: user.subscriptionTier || 'monthly',
@@ -286,27 +266,24 @@ export async function getRemoteGames(): Promise<GameItem[]> {
     type: 'embed', 
     url: i.streamUrl, 
     imageUrl: i.imageUrl, 
-    genre: i.genre,
-    emulatorUrl: i.description === 'GAME' ? '' : i.description
+    genre: i.genre
   }));
 }
 
 export async function saveGame(g: any) {
-  const cleanUrl = formatGameLink(g.url);
   const { error } = await supabase.from('content').upsert({ 
     id: g.id || "game_"+Date.now(), 
     title: g.title.toUpperCase(), 
     genre: `ARENA: ${g.console}`, 
-    streamUrl: cleanUrl, 
-    description: g.emulatorUrl || 'GAME', 
-    imageUrl: g.imageUrl, 
+    streamUrl: g.url, 
+    description: 'GAME', 
     isRestricted: true 
   });
   return !error;
 }
 
 export async function removeGame(id: string) {
-  const { error } = await supabase.from('content').delete().id === id;
+  const { error } = await supabase.from('content').delete().eq('id', id);
   return !error;
 }
 
@@ -358,20 +335,9 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
 export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function getGameRankings() { return []; }
-export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nOlá! Seu PIN *${p}* vence em *${d} dias*.\n\nPara não perder o sinal, realize a renovação agora! 📺`;
+export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nSeu PIN *${p}* vence em *${d} dias*.`;
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
   const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  const serverUrl = `http://${domain}`;
-
-  return `🎬 *BEM-VINDO(A) AO LÉO TV STREAM!*
-
-🚀 *DADOS DE ACESSO MASTER:*
-👤 *Acesso:* \`${pin}\`
-📅 *Plano:* ${tier.toUpperCase()}
-
-🌐 *LINK PARA ASSISTIR:*
-🔗 ${serverUrl}
-
-🍿 *Divirta-se!*`;
+  return `🎬 *LÉO TV STREAM!*\n👤 *PIN:* \`${pin}\`\n📅 *PLANO:* ${tier.toUpperCase()}\n🔗 http://${domain}`;
 };
