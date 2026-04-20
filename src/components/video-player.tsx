@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v261 - MODO SUPREMO ANTI-ADWARE (AUTO-PLAY BRAVE)
- * Suporte a Spotify Full Track, Auto-Play em Iframes e Extermínio de Overlays.
- * Bypass total do sandbox para garantir login no Spotify e Play sem travas.
+ * PLAYER MASTER SOBERANO v262 - MODO BRAVE v2 (AUTO-CLOSE POPUPS)
+ * Restaura o sandbox para capturar e fechar redirects automaticamente.
+ * Bypass inteligente para Spotify e Rei dos Canais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -52,6 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
+  // Domínios que detectam sandbox ou abrem muitos anúncios
   const isDetectorSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
   const isIframeSite = isDetectorSite || lowUrl.includes('retrogames.cc');
   
@@ -204,9 +205,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             allowFullScreen 
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
-            // BYPASS SOBERANO v261: Sandbox REMOVIDO para sites que detectam bloqueio e para o Spotify.
-            // Isso permite o login no Spotify para tocar a faixa completa e o autoplay sem erros.
-            {...(!isDetectorSite && !isSpotify ? { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation" } : {})}
+            /* 
+              RECALIBRAGEM v262: Sandbox re-introduzido sem "allow-popups".
+              Isso força a aba de anúncio a ser bloqueada ou fechada imediatamente pelo navegador.
+              Se o site detectar o sandbox e travar, o usuário precisará clicar no Play real exposto pelo Ad-Blocker.
+            */
+            sandbox={isDetectorSite ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined}
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />

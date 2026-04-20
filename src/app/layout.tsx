@@ -55,10 +55,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v261 - EXTERMÍNIO DE ANÚNCIOS E OVERLAYS */
+          /* PROTOCOLO BRAVE SUPREMO v262 - EXTERMÍNIO DE ANÚNCIOS E OVERLAYS */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde elementos de anúncios e overlays de cliques do Rei dos Canais */
+          /* Esconde elementos de anúncios e camadas de clique falsas */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
@@ -68,7 +68,8 @@ export default function RootLayout({
           [class*="ReiDoCanais"], [id*="ReiDoCanais"],
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta,
           #click-to-play-overlay, .video-overlay, .ad-overlay,
-          .player-poster, .vjs-big-play-button, .ad-layer {
+          .player-poster, .vjs-big-play-button, .ad-layer,
+          [onclick*="window.open"], .click-to-play {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
