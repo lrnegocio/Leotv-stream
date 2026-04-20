@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v278 - CONTROLE DE FLUXO E PERFORMANCE
- * Sistema de sintonização estabilizado para evitar reinícios e erro de sandbox.
+ * PLAYER MASTER SOBERANO v279 - EDIÇÃO SEM SANDBOX E ALTA PERFORMANCE
+ * Sistema recalibrado para ignorar detecções de bloqueio e garantir fluidez.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -46,9 +46,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isHls = !isIframe && (lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy'));
   const isTs = !isIframe && lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
 
-  // PROTOCOLO DE DESBLOQUEIO MESTRE: Remoção TOTAL do sandbox para evitar detecção
-  const needsSandboxRemoval = lowUrl.includes('reidoscanais') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv');
-
   const cleanup = React.useCallback(() => {
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (mpegtsRef.current) { mpegtsRef.current.destroy(); mpegtsRef.current = null; }
@@ -66,7 +63,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setLoading(false);
-      // Mantém a chave se ela já existir para evitar reinício ao despausar
       if (playerKey === 0) setPlayerKey(Date.now());
       setIsPlaying(true);
       return;
@@ -125,7 +121,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // Para Iframes, alternamos a visibilidade e o "play" visual sem destruir a sintonização
+      // Se estiver parado e clicarmos em Play, forçamos um refresh da sintonização
+      // para garantir que o canal abra sem travar no botão maior do player original.
+      if (!isPlaying) {
+        setPlayerKey(Date.now());
+      }
       setIsPlaying(!isPlaying);
       return;
     }
@@ -187,8 +187,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               src={finalIframeSrc} 
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; fullscreen" 
-              // BLINDAGEM MESTRE: Omissão total do sandbox para evitar qualquer detecção
-              sandbox={needsSandboxRemoval ? undefined : "allow-scripts allow-same-origin allow-forms allow-modals"}
+              // ATENÇÃO: SANDBOX REMOVIDO TOTALMENTE PARA EVITAR DETECÇÃO DO REI DOS CANAIS
               onLoad={() => setLoading(false)}
             />
           )}

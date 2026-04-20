@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -93,8 +92,14 @@ export default function HomeContent() {
     } catch (err) { } finally { setLoading(false); }
   }, [games.length, isMounted]);
 
+  // DEBOUNCE SOBERANO: Evita disparar buscas enquanto o usuário ainda está digitando.
+  // Isso resolve o travamento das letras na VPS.
   React.useEffect(() => {
-    if (isMounted) loadData(q, selectedCat);
+    if (!isMounted) return;
+    const delayDebounceFn = setTimeout(() => {
+      loadData(q, selectedCat);
+    }, 600);
+    return () => clearTimeout(delayDebounceFn);
   }, [q, selectedCat, loadData, isMounted]);
 
   const handleNext = () => {

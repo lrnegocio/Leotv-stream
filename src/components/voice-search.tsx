@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v278 - PERFORMANCE DE VPS
+ * BUSCA MASTER v279 - PERFORMANCE EXTREMA PARA VPS
  * Implementação de Debounce REAL para evitar lag ao digitar em conexões remotas.
  */
 function VoiceSearchContent() {
@@ -30,20 +30,22 @@ function VoiceSearchContent() {
   const triggerSearch = React.useCallback((value: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     
-    // DEBOUNCE MASTER: Só dispara a busca após 400ms de silêncio no teclado
+    // DEBOUNCE MASTER: Só dispara a busca após 600ms de silêncio no teclado
     // Isso é vital para a VPS não travar as letras digitadas.
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
       if (value) params.set('q', value)
       else params.delete('q')
       router.replace(`?${params.toString()}`, { scroll: false })
-    }, 400)
+    }, 600)
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    setQuery(val) // Atualiza o estado local IMEDIATAMENTE (sem lag na digitação)
-    triggerSearch(val) // Dispara a busca com o temporizador inteligente
+    // Atualiza o estado local IMEDIATAMENTE (sem lag na digitação)
+    setQuery(val) 
+    // Dispara a busca com o temporizador inteligente
+    triggerSearch(val) 
   }
 
   const startListening = () => {
