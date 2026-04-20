@@ -78,48 +78,27 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v271 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
- * Suporte nativo para PlayCNVS e extermínio de redirecionamentos.
+ * MOTOR DE LINKS MASTER v272 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER v261 (AUTO-LOGIN CAPABLE)
+  // SPOTIFY MASTER CONVERTER
   if (lowUrl.includes('spotify.com')) {
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
     cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, "$1");
-
-    if (cleanUrl.includes('/search/')) {
-      const searchTerm = cleanUrl.split('/search/')[1]?.split('?')[0] || "";
-      return `https://open.spotify.com/embed/search/${searchTerm}`;
-    }
-    
-    if (!cleanUrl.includes('/embed/')) {
-      cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
-    }
-    
-    if (!cleanUrl.includes('?')) {
-      cleanUrl += '?utm_source=leotv_master&autoplay=1';
-    } else {
-      cleanUrl += '&autoplay=1';
-    }
-    
+    if (!cleanUrl.includes('/embed/')) cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    if (!cleanUrl.includes('?')) cleanUrl += '?utm_source=leotv_master&autoplay=1';
+    else if (!cleanUrl.includes('autoplay=1')) cleanUrl += '&autoplay=1';
     return cleanUrl;
   }
 
-  // YOUTUBE AUTO-PLAY INJECTOR
-  if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
-    if (!finalUrl.includes('autoplay=1')) {
-       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&mute=0';
-    }
-    return finalUrl;
-  }
-
-  // DOMÍNIOS DE IFRAME DIRETO (SEM PROXY PARA EVITAR QUEBRA DE SCRIPTS)
-  // Adicionado playcnvs.stream para garantir autoplay e bypass de tela preta
+  // YOUTUBE & IFRAME SITES AUTO-PLAY INJECTOR
   const isIframeSite = 
+    lowUrl.includes('youtube.com') || 
+    lowUrl.includes('youtu.be') || 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('tvacabo') || 
@@ -128,7 +107,7 @@ export const formatMasterLink = (url: string) => {
 
   if (isIframeSite) {
     if (!finalUrl.includes('autoplay=1')) {
-       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1';
+       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&mute=0';
     }
     return finalUrl;
   }
@@ -152,27 +131,19 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-/**
- * CONVERSOR DE LINKS DE GAMES v253 - DESTILADOR DE MOTOR
- */
 export const formatGameLink = (input: string) => {
   if (!input) return "";
   let url = input.trim();
-
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
-    if (srcMatch && srcMatch[1]) {
-      url = srcMatch[1];
-    }
+    if (srcMatch && srcMatch[1]) url = srcMatch[1];
   }
-
   const lowUrl = url.toLowerCase();
   if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
-      if (url.includes('/psx-games/') || url.includes('/snes-games/') || url.includes('/n64-games/')) {
-          url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
-      }
+    if (url.includes('/psx-games/') || url.includes('/snes-games/') || url.includes('/n64-games/')) {
+        url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
+    }
   }
-
   return url;
 };
 

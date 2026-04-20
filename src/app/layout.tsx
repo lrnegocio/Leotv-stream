@@ -55,10 +55,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v271 - EXTERMINADOR DE ANÚNCIOS MASTER */
+          /* PROTOCOLO BRAVE SUPREMO v272 - EXTERMINADOR DE ANÚNCIOS MASTER */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde banners de anúncios e avisos de sandbox do Rei dos Canais e PlayCNVS */
+          /* EXTERMÍNIO DE OVERLAYS PLAYCNVS E REI DOS CANAIS */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
           .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
@@ -69,7 +69,8 @@ export default function RootLayout({
           [id*="ad-"], [class*="ad-"], .pop-under, .overlay-ads,
           .mgid-ad, .ad-container, .ads-wrapper, .reidoscanais-ads, 
           .hidden-ads, #pop-under, #over-video, [class*="ReiDoCanais"], 
-          [id*="ReiDoCanais"], [class*="playcnvs"], [id*="playcnvs"] {
+          [id*="ReiDoCanais"], [class*="playcnvs"], [id*="playcnvs"],
+          #play-overlay, .play-overlay, .vjs-big-play-centered {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -78,12 +79,14 @@ export default function RootLayout({
             position: absolute !important;
             left: -9999px !important;
             pointer-events: none !important;
+            z-index: -1 !important;
           }
 
-          /* Extermínio de botões de Play falsos que abrem anúncios no PlayCNVS */
-          [class*="play-button"], [id*="play-button"], .vjs-button, 
-          .vjs-control-bar, .vjs-big-play-centered, .ads-container {
-             /* Garante que o CSS não bloqueie controles legítimos, mas limpe o lixo */
+          /* GARANTE QUE O VÍDEO DO PLAYCNVS APAREÇA (REMOVE TELA PRETA) */
+          video, .vjs-tech {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
           }
 
           /* Bloqueia botões de download e redirecionamentos externos */

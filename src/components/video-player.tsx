@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v271 - COMANDO PLAY/PAUSE ULTRA
+ * PLAYER MASTER SOBERANO v272 - COMANDO PLAY/PAUSE ULTRA
  * Sintonização PlayCNVS e extermínio de propagandas na tela.
- * Controles Master com prioridade de tela (Z-Index Máximo).
+ * Controles Master com prioridade de tela (Z-Index Máximo: 150).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -54,7 +54,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // Lista de sites que rodam via Iframe e que possuem ads que precisamos filtrar
   const isIframeSite = 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
@@ -96,7 +95,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!videoRef.current || isIframe) {
        if(isIframe) {
          setLoading(false);
-         setIsPlaying(true); // Para iframe assumimos que está "ativo"
+         setIsPlaying(true);
        }
        return;
     }
@@ -188,7 +187,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // RESET SINTONIZADO: Força o Iframe a recarregar e tentar o autoplay
       setPlayerKey(prev => prev + 1);
       setIsPlaying(true);
       return;
@@ -241,9 +239,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {error && (
-        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 text-center p-10">
+        <div className="absolute inset-0 z-[140] flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
-          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível ou Protegido.</p>
+          <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível.</p>
           <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">TENTAR RECONEXÃO</Button>
         </div>
       )}
@@ -266,7 +264,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                   <Headphones className="h-3 w-3 text-emerald-500" />
                   <span className="text-[8px] font-black uppercase text-emerald-500 tracking-widest">Dica: Faça login para ouvir a música completa</span>
                </div>
-               <p className="text-[7px] font-black uppercase text-white/20 tracking-[0.2em]">Sem login, o Spotify limita a 30 segundos.</p>
             </div>
           )}
         </div>
@@ -285,40 +282,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {/* CONTROLES MASTER - SEMPRE NO TOPO (Z-INDEX 100+) */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[110] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
+      {/* CONTROLES MASTER - PRIORIDADE ABSOLUTA (Z-INDEX 150) */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
-      {settings?.bannerUrl && !isSpotify && (
-        <div className="absolute top-6 right-6 z-[110] hidden md:block">
-           <div className="bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 overflow-hidden cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
-              <div className="relative w-32 h-10">
-                 <img src={settings.bannerUrl} alt="Ad" className="w-full h-full object-cover rounded-lg" />
-                 <div className="absolute -top-1 -right-1 bg-primary p-0.5 rounded-full"><Zap className="h-2 w-2 text-white" /></div>
-              </div>
-           </div>
-        </div>
-      )}
-
-      <div className="absolute bottom-6 right-6 z-[110] flex gap-2">
-        {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
+      <div className="absolute bottom-6 right-6 z-[150] flex gap-2 pointer-events-auto">
+        {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         
         <button 
-          onClick={handleTogglePlay} 
-          title={isPlaying ? "Pausar/Resetar" : "Iniciar Sinal Master"} 
-          className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg group"
+          onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }} 
+          title={isPlaying ? "Pausar/Sintonizar" : "Iniciar Sinal Master"} 
+          className="h-10 w-10 rounded-xl bg-primary backdrop-blur-md flex items-center justify-center border border-white/20 hover:scale-110 transition-all shadow-xl pointer-events-auto"
         >
           {isPlaying && !isIframe ? (
-            <Pause className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+            <Pause className="h-5 w-5 text-white fill-white" />
           ) : (
-            <Play className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+            <Play className="h-5 w-5 text-white fill-white" />
           )}
         </button>
 
-        {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
+        {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
         
-        {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
+        {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all pointer-events-auto"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>
   )
