@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v287 - PROTOCOLO DE CAMUFLAGEM UNIVERSAL
- * Suporte a RedeCanais, rdcanais, TV Acabo e XVideos.
+ * TÚNEL MASTER SOBERANO v288 - PROTOCOLO DE CAMUFLAGEM UNIVERSAL
+ * Suporte a rdcplayer.online, rdcplayer.xyz, RedeCanais e rdcanais.
  * Injeta Tag Base em HTML para resolver links relativos e bypassar Referer.
+ * Remove bloqueios de segurança do navegador para evitar Conexão Recusada.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -32,6 +33,11 @@ export async function GET(req: NextRequest) {
        requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     }
     
+    if (targetUrl.includes('rdcplayer')) {
+       requestHeaders.set('Referer', 'https://rdcanais.com/');
+       requestHeaders.set('Origin', 'https://rdcanais.com');
+    }
+
     if (targetUrl.includes('tvacabo')) {
        requestHeaders.set('Referer', 'https://tvacabo.top/');
     }
@@ -78,19 +84,27 @@ export async function GET(req: NextRequest) {
       }).join('\n');
 
       return new Response(rewrittenManifest, {
-        headers: { 'Content-Type': 'application/vnd.apple.mpegurl', 'Access-Control-Allow-Origin': '*' }
+        headers: { 
+          'Content-Type': 'application/vnd.apple.mpegurl', 
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store'
+        }
       });
     }
 
-    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcanais e outros)
+    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcplayer e outros)
     if (isHtml) {
       let htmlText = await res.text();
       const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-      // Injeta a tag base logo no início do head
+      // Injeta a tag base logo no início do head e remove bloqueios de CSP e Frame
       htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
       
       return new Response(htmlText, {
-        headers: { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*' }
+        headers: { 
+          'Content-Type': 'text/html', 
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store'
+        }
       });
     }
 
@@ -102,6 +116,7 @@ export async function GET(req: NextRequest) {
     });
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
+    responseHeaders.set('Cache-Control', 'no-store');
 
     return new Response(res.body, {
       status: res.status,
