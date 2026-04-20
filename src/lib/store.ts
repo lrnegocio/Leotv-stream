@@ -78,48 +78,54 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v260 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
- * Inclui conversor Master para Spotify (Bypass Localização) e bloqueador de Adware.
+ * MOTOR DE LINKS MASTER v261 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
+ * Inclui conversor Master para Spotify e injeção de início automático.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER v260 (EXTERMINADOR DE PRÉVIAS E CONEXÃO RECUSADA)
+  // SPOTIFY MASTER CONVERTER v261 (AUTO-LOGIN CAPABLE)
   if (lowUrl.includes('spotify.com')) {
-    // 1. Remove prefixos de localização como /intl-pt/, /intl-es/, etc.
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
-    
-    // 2. Remove barras duplas residuais
     cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, "$1");
 
-    // 3. Caso seja busca, foca no motor de busca embed
     if (cleanUrl.includes('/search/')) {
       const searchTerm = cleanUrl.split('/search/')[1]?.split('?')[0] || "";
       return `https://open.spotify.com/embed/search/${searchTerm}`;
     }
     
-    // 4. Garante que o link use o endpoint /embed/ (Obrigatório pelo Spotify)
     if (!cleanUrl.includes('/embed/')) {
       cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
     
-    // 5. Adiciona parâmetros para incentivar o login e tocar full track
+    // Adiciona parâmetro para forçar tentativa de autoplay
     if (!cleanUrl.includes('?')) {
-      cleanUrl += '?utm_source=leotv_master';
+      cleanUrl += '?utm_source=leotv_master&autoplay=1';
+    } else {
+      cleanUrl += '&autoplay=1';
     }
     
     return cleanUrl;
   }
 
+  // YOUTUBE AUTO-PLAY INJECTOR
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
+    if (!finalUrl.includes('autoplay=1')) {
+       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1&mute=0';
+    }
     return finalUrl;
   }
 
   // DOMÍNIOS DE IFRAME DIRETO (SEM PROXY PARA EVITAR QUEBRA DE SCRIPTS)
   const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
-  if (isIframeSite) return finalUrl;
+  if (isIframeSite) {
+    if (!finalUrl.includes('autoplay=1')) {
+       finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1';
+    }
+    return finalUrl;
+  }
 
   // Links que precisam de Bypass ou Proxy para funcionar na VPS
   const needsProxy = 

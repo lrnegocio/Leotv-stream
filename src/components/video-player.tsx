@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft, Zap } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getGlobalSettings } from "@/lib/store"
 
@@ -15,10 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v260 - MODO SUPREMO ANTI-ADWARE (BRAVE ADAPTATIVO)
- * Suporte a Spotify Master, HLS Proxy 8.0 e Bypass de Detecção de Sandbox.
- * Remoção total do sandbox para domínios que bloqueiam o sinal (Rei dos Canais).
- * Escudo de Clique Master para prevenir popups em players de canais.
+ * PLAYER MASTER SOBERANO v261 - MODO SUPREMO ANTI-ADWARE (AUTO-PLAY BRAVE)
+ * Suporte a Spotify Full Track, Auto-Play em Iframes e Extermínio de Overlays.
+ * Bypass total do sandbox para garantir login no Spotify e Play sem travas.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -53,8 +52,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // DOMÍNIOS QUE DETECTAM SANDBOX E BLOQUEIAM (RDCanais e derivados)
-  // v260: Lista expandida para garantir bypass em todos os players do Rei
   const isDetectorSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
   const isIframeSite = isDetectorSite || lowUrl.includes('retrogames.cc');
   
@@ -207,14 +204,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             allowFullScreen 
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
-            // BYPASS SOBERANO v260: Remoção absoluta do atributo sandbox para sites que detectam o bloqueio.
-            // Para o Spotify, o sandbox impede o login, por isso foi removido para permitir sintonização completa.
+            // BYPASS SOBERANO v261: Sandbox REMOVIDO para sites que detectam bloqueio e para o Spotify.
+            // Isso permite o login no Spotify para tocar a faixa completa e o autoplay sem erros.
             {...(!isDetectorSite && !isSpotify ? { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation" } : {})}
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />
           {isSpotify && (
-            <p className="text-[8px] font-black uppercase text-white/20 mt-4 tracking-[0.2em]">Faça login no Spotify para ouvir a música completa.</p>
+            <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in duration-700">
+               <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
+                  <Headphones className="h-3 w-3 text-emerald-500" />
+                  <span className="text-[8px] font-black uppercase text-emerald-500 tracking-widest">Dica: Faça login para ouvir a música completa</span>
+               </div>
+               <p className="text-[7px] font-black uppercase text-white/20 tracking-[0.2em]">Sem login, o Spotify limita a 30 segundos.</p>
+            </div>
           )}
         </div>
       ) : (
