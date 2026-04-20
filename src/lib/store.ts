@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v252 - PROTOCOLO DE TÚNEL SOBERANO
- * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs, AcPlay).
+ * MOTOR DE LINKS MASTER v253 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * Identifica e limpa links com Adware (RDCanais, RedeCanaisTV, TvAcabo).
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -89,6 +89,7 @@ export const formatMasterLink = (url: string) => {
     return url.trim();
   }
 
+  // Links que precisam de Bypass ou Proxy para funcionar na VPS
   const needsProxy = 
     lowUrl.includes('.m3u8') || 
     lowUrl.includes('.ts') || 
@@ -98,7 +99,9 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('agropesca') ||
     lowUrl.includes('acplay.live') || 
     lowUrl.includes('xn--') || 
-    lowUrl.includes('redecanaistv');
+    lowUrl.includes('redecanaistv') ||
+    lowUrl.includes('rdcanais') ||
+    lowUrl.includes('tvacabo');
 
   if (needsProxy) {
     if (url.includes('/api/proxy')) return url.trim();
@@ -109,14 +112,14 @@ export const formatMasterLink = (url: string) => {
 };
 
 /**
- * CONVERSOR DE LINKS DE GAMES v252 - DESTILADOR DE MOTOR
- * Extrai o link real de Iframes e converte páginas do RetroGames em links de jogo puros.
+ * CONVERSOR DE LINKS DE GAMES v253 - DESTILADOR DE MOTOR
+ * Extrai o link real de Iframes e converte páginas de games em links puros.
  */
 export const formatGameLink = (input: string) => {
   if (!input) return "";
   let url = input.trim();
 
-  // DESTILAÇÃO DE IFRAME: Se colarem o código completo <iframe...>, extrai o src
+  // DESTILAÇÃO DE IFRAME: Extrai apenas o SRC se colarem o código completo
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) {
@@ -127,11 +130,8 @@ export const formatGameLink = (input: string) => {
   const lowUrl = url.toLowerCase();
 
   // CONVERSOR RETROGAMES: Transforma página comum em link de motor (Embed)
-  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/') && !lowUrl.includes('.html')) {
-     // Apenas retorna como está se for um link estranho
-  } else if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
-      // Tenta forçar a pasta /embed/ se o link terminar em .html mas não tiver a pasta
-      if (url.includes('/psx-games/') || url.includes('/snes-games/')) {
+  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
+      if (url.includes('/psx-games/') || url.includes('/snes-games/') || url.includes('/n64-games/')) {
           url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
       }
   }

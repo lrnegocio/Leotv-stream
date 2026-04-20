@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   },
   other: {
     'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
+    'apple-web-app-capable': 'yes',
     'application-name': 'Léo TV',
     'msapplication-TileColor': '#6D2DCC',
     'theme-color': '#6D2DCC',
@@ -56,14 +57,18 @@ export default function RootLayout({
           iframe { pointer-events: auto !important; }
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
-          .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box {
+          .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
+          .cl-close, .close-ad, .ad-container, .ads-wrapper {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
+            z-index: -999 !important;
           }
           body { -webkit-tap-highlight-color: transparent; }
+          /* Proteção contra bloqueio de cliques no player */
+          .relative.w-full.bg-black { pointer-events: auto !important; }
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">

@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v252 - MODO SUPREMO ANTI-CONGELAMENTO
- * Suporte a HLS Proxy 7.5, MP4 Archive, AcPlay Bypass e RetroGames Embed.
- * Destilação de motor nativa para evitar erros de sintonização.
+ * PLAYER MASTER SOBERANO v253 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
+ * Suporte a HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
+ * Bloqueia Redirects, Popups e Anúncios de sites externos automaticamente.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -54,7 +54,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
   const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
   const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
-  const isIframe = (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc');
+  const isIframe = (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
@@ -74,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           if (videoRef.current) videoRef.current.muted = true; 
           videoRef.current?.play(); 
         });
-        setLoading(false); // Libera a tela imediatamente para arquivos diretos
+        setLoading(false); 
       }
       return;
     }
@@ -85,7 +85,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     try {
-      // Motor MPEG-TS
       if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts;
         if (mpegts.isSupported()) {
@@ -99,7 +98,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // Motor HLS Master 7.5
       if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls;
         if (Hls.isSupported()) {
@@ -201,6 +199,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allowFullScreen 
           allow="autoplay; encrypted-media; fullscreen" 
           onLoad={() => setLoading(false)} 
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+          referrerPolicy="no-referrer"
+          title="Player Blindado Léo TV"
         />
       ) : (
         <video 
@@ -217,7 +218,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
