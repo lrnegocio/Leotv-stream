@@ -15,7 +15,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v272 - COMANDO PLAY/PAUSE ULTRA
+ * PLAYER MASTER SOBERANO v273 - COMANDO PLAY/PAUSE ULTRA
  * Sintonização PlayCNVS e extermínio de propagandas na tela.
  * Controles Master com prioridade de tela (Z-Index Máximo: 150).
  */
@@ -187,6 +187,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
+      // FORÇA BRUTA MASTER: Reseta o sintonizador do Iframe
       setPlayerKey(prev => prev + 1);
       setIsPlaying(true);
       return;

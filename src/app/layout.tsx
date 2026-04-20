@@ -55,22 +55,18 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v272 - EXTERMINADOR DE ANÚNCIOS MASTER */
+          /* PROTOCOLO BRAVE SUPREMO v273 - EXTERMINADOR DE ANÚNCIOS MASTER */
           iframe { pointer-events: auto !important; }
           
-          /* EXTERMÍNIO DE OVERLAYS PLAYCNVS E REI DOS CANAIS */
+          /* EXTERMÍNIO DE OVERLAYS (SEM MATAR O PLAYER) */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
           .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
-          .alert-sandbox, div[style*="background-color: rgb(255, 0, 0)"],
-          .reidoscanais-notice, .reidoscanais-premium-notice,
-          .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
-          .vjs-big-play-button, .ad-layer, .click-to-play, #click-to-play-overlay,
+          .alert-sandbox, .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
+          .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .overlay-ads,
-          .mgid-ad, .ad-container, .ads-wrapper, .reidoscanais-ads, 
-          .hidden-ads, #pop-under, #over-video, [class*="ReiDoCanais"], 
-          [id*="ReiDoCanais"], [class*="playcnvs"], [id*="playcnvs"],
-          #play-overlay, .play-overlay, .vjs-big-play-centered {
+          .mgid-ad, .ad-container, .reidoscanais-ads, 
+          .hidden-ads, #pop-under, #over-video, #play-overlay, .play-overlay {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -82,8 +78,8 @@ export default function RootLayout({
             z-index: -1 !important;
           }
 
-          /* GARANTE QUE O VÍDEO DO PLAYCNVS APAREÇA (REMOVE TELA PRETA) */
-          video, .vjs-tech {
+          /* GARANTE QUE O VÍDEO E O BOTÃO DE PLAY ORIGINAL APAREÇAM */
+          video, .vjs-tech, .vjs-big-play-button, .vjs-big-play-centered {
             display: block !important;
             opacity: 1 !important;
             visibility: visible !important;
