@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, Play, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, Play, Pause, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getGlobalSettings } from "@/lib/store"
 
@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v268 - COMANDO PLAY ATIVO
- * Atendimento ao Mestre: Botão Play agora dispara comandos reais de hardware e sintonização.
- * Sandbox removido para evitar detecção no Rei dos Canais.
+ * PLAYER MASTER SOBERANO v269 - COMANDO PLAY/PAUSE ATIVO
+ * Atendimento ao Mestre: Botão agora alterna entre Play e Pause e sincroniza com o hardware.
+ * Modo Refresh para Iframes e Controle Real para HLS/MP4.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -28,6 +28,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [settings, setSettings] = React.useState<any>(null)
   const [playerKey, setPlayerKey] = React.useState(0)
+  const [isPlaying, setIsPlaying] = React.useState(false)
   
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
@@ -66,6 +67,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     setError(false);
     setLoading(true);
+    setIsPlaying(false);
 
     const s = await getGlobalSettings();
     setSettings(s);
@@ -74,9 +76,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
-        videoRef.current.play().catch(() => { 
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => { 
           if (videoRef.current) videoRef.current.muted = true; 
           videoRef.current?.play(); 
+          setIsPlaying(true);
         });
         setLoading(false); 
       }
@@ -84,7 +87,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     if (!videoRef.current || isIframe) {
-       if(isIframe) setLoading(false);
+       if(isIframe) {
+         setLoading(false);
+         setIsPlaying(true); // Para iframe assumimos que está "ativo"
+       }
        return;
     }
 
@@ -95,7 +101,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           const player = mpegts.createPlayer({ type: 'mse', isLive: true, url: url });
           player.attachMediaElement(videoRef.current);
           player.load();
-          player.play().catch(() => { if (videoRef.current) videoRef.current.muted = true; player.play(); });
+          player.play().then(() => setIsPlaying(true)).catch(() => { 
+            if (videoRef.current) videoRef.current.muted = true; 
+            player.play(); 
+            setIsPlaying(true);
+          });
           mpegtsRef.current = player;
           setLoading(false);
           return;
@@ -116,9 +126,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setLoading(false);
-            videoRef.current?.play().catch(() => { 
+            videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => { 
               if (videoRef.current) videoRef.current.muted = true; 
               videoRef.current?.play(); 
+              setIsPlaying(true);
             });
           });
 
@@ -155,18 +166,40 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [initPlayer, cleanup, url, playerKey])
 
-  const handleForcePlay = () => {
-    // Ação 1: Tenta dar play no hardware de vídeo
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        if (videoRef.current) videoRef.current.muted = true;
-        videoRef.current?.play();
-      });
+  // Sensor de estado do vídeo para o botão alternar sozinho
+  React.useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', onPause);
+    return () => {
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', onPause);
     }
-    // Ação 2: Incrementa a chave para forçar re-render do Iframe/Player
-    setPlayerKey(prev => prev + 1);
-    // Ação 3: Re-inicializa a lógica do player
-    initPlayer();
+  }, [isMounted, playerKey]);
+
+  const handleTogglePlay = () => {
+    if (isIframe) {
+      // Se for Iframe, o "Play" funciona como um refresh de sintonização
+      setPlayerKey(prev => prev + 1);
+      setIsPlaying(true);
+      return;
+    }
+
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch(() => {
+          videoRef.current!.muted = true;
+          videoRef.current!.play();
+        });
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    }
   };
 
   const toggleFullscreen = () => {
@@ -241,7 +274,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           controls 
           preload="auto"
           onLoadedData={() => setLoading(false)}
-          onPlaying={() => setLoading(false)}
+          onPlaying={() => { setLoading(false); setIsPlaying(true); }}
           onError={() => { if(!isDirectFile) setError(true); }}
         />
       )}
@@ -265,11 +298,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         
         <button 
-          onClick={handleForcePlay} 
-          title="Iniciar Sinal Master" 
+          onClick={handleTogglePlay} 
+          title={isPlaying ? "Pausar/Resetar" : "Iniciar Sinal Master"} 
           className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg group"
         >
-          <Play className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+          {isPlaying && !isIframe ? (
+            <Pause className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+          ) : (
+            <Play className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+          )}
         </button>
 
         {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
