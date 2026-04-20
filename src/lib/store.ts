@@ -78,28 +78,34 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v254 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
- * Inclui conversor Master para Spotify e bloqueador de Adware.
+ * MOTOR DE LINKS MASTER v255 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * Inclui conversor Master para Spotify (com suporte a localização) e bloqueador de Adware.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  const lowUrl = url.toLowerCase().trim();
+  let finalUrl = url.trim();
+  const lowUrl = finalUrl.toLowerCase();
   
   // SPOTIFY MASTER CONVERTER: Transforma qualquer link do Spotify em Player Limpo
   if (lowUrl.includes('spotify.com')) {
-    let spotifyUrl = url.trim();
-    if (lowUrl.includes('/search/')) {
-      const searchTerm = spotifyUrl.split('/search/')[1]?.split('?')[0] || "";
+    // REMOÇÃO DE LOCALIZAÇÃO (EX: /intl-pt/) - ESSENCIAL PARA EVITAR 404
+    finalUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
+    
+    // Tratamento de Busca
+    if (finalUrl.includes('/search/')) {
+      const searchTerm = finalUrl.split('/search/')[1]?.split('?')[0] || "";
       return `https://open.spotify.com/embed/search/${searchTerm}`;
     }
-    if (!lowUrl.includes('/embed/')) {
-      return spotifyUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    
+    // Converte para Embed Padrão
+    if (!finalUrl.includes('/embed/')) {
+      return finalUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
-    return spotifyUrl;
+    return finalUrl;
   }
 
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
-    return url.trim();
+    return finalUrl;
   }
 
   // Links que precisam de Bypass ou Proxy para funcionar na VPS
@@ -117,11 +123,11 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('tvacabo');
 
   if (needsProxy) {
-    if (url.includes('/api/proxy')) return url.trim();
-    return `/api/proxy?url=${encodeURIComponent(url.trim())}`;
+    if (finalUrl.includes('/api/proxy')) return finalUrl;
+    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
-  return url.trim();
+  return finalUrl;
 };
 
 /**

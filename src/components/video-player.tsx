@@ -15,7 +15,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v254 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
+ * PLAYER MASTER SOBERANO v255 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
  * Suporte a Spotify Master, HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
