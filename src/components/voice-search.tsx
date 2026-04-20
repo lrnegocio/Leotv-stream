@@ -9,8 +9,8 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v277 - PERFORMANCE DE VPS
- * Implementação de Debounce para evitar lag ao digitar em conexões remotas.
+ * BUSCA MASTER v278 - PERFORMANCE DE VPS
+ * Implementação de Debounce REAL para evitar lag ao digitar em conexões remotas.
  */
 function VoiceSearchContent() {
   const searchParams = useSearchParams()
@@ -43,7 +43,7 @@ function VoiceSearchContent() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setQuery(val) // Atualiza o estado local IMEDIATAMENTE (sem lag na digitação)
-    triggerSearch(val) // Dispara a busca com debounce
+    triggerSearch(val) // Dispara a busca com o temporizador inteligente
   }
 
   const startListening = () => {
@@ -78,6 +78,7 @@ function VoiceSearchContent() {
       setIsProcessing(true)
       try {
         const result = await voiceSearchContent({ query: transcript })
+        setQuery(result.searchTerm)
         triggerSearch(result.searchTerm)
       } catch (e) {
         triggerSearch(transcript)
