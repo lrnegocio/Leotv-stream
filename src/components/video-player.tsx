@@ -54,7 +54,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
   const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
   const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
-  // Se for retrogames, sempre trata como Iframe (Embed)
   const isIframe = (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc');
 
   const initPlayer = React.useCallback(async () => {
@@ -75,7 +74,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           if (videoRef.current) videoRef.current.muted = true; 
           videoRef.current?.play(); 
         });
-        setLoading(false);
+        setLoading(false); // Libera a tela imediatamente para arquivos diretos
       }
       return;
     }

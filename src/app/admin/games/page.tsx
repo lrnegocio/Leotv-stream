@@ -42,7 +42,6 @@ export default function AdminGamesPage() {
   React.useEffect(() => { loadData() }, [loadData])
 
   const handleUrlChange = (val: string) => {
-    // PROTOCOLO v252: Se for um iframe, destila o link na hora
     const cleaned = formatGameLink(val);
     setGameData({ ...gameData, url: cleaned });
     if (val.includes('<iframe')) {
@@ -121,19 +120,6 @@ export default function AdminGamesPage() {
     setIsDialogOpen(true)
   }
 
-  const injectDefaults = async () => {
-    const defaults = [
-      { title: "SUPER MARIO WORLD", console: "SUPER NINTENDO (SNES)", type: "embed", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html", imageUrl: "https://picsum.photos/seed/mario/200/300" },
-      { title: "MORTAL KOMBAT 3", console: "MEGA DRIVE", type: "embed", url: "https://www.retrogames.cc/embed/18314-mortal-komed-3-usa.html", imageUrl: "https://picsum.photos/seed/mk3/200/300" },
-      { title: "METAL SLUG X", console: "ARCADE / MAME", type: "embed", url: "https://www.retrogames.cc/embed/10042-metal-slug-x-super-vehicle-001.html", imageUrl: "https://picsum.photos/seed/slug/200/300" },
-      { title: "TEKKEN 3", console: "PLAYSTATION (PS1/PSX/PS2)", type: "embed", url: "https://www.retrogames.cc/embed/40238-tekken-3.html", imageUrl: "https://picsum.photos/seed/tekken/200/300" }
-    ]
-    setLoading(true)
-    for (const g of defaults) { await saveGame(g as any); }
-    loadData()
-    toast({ title: "CLÁSSICOS INJETADOS COM SUCESSO!" })
-  }
-
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>
 
   const consoles = Array.from(new Set(games.map(g => g.console))).sort()
@@ -146,9 +132,6 @@ export default function AdminGamesPage() {
           <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={injectDefaults} className="border-emerald-500/20 text-emerald-500 h-12 rounded-xl font-black uppercase text-[9px]">
-            <RefreshCcw className="mr-2 h-4 w-4" /> Restaurar Clássicos
-          </Button>
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
             <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
           </Button>
@@ -172,11 +155,9 @@ export default function AdminGamesPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-mono font-black uppercase text-lg text-emerald-500 tracking-[0.2em]">{r.pin}</h3>
-                      <p className="text-[10px] font-bold uppercase opacity-40">Status: {idx < 3 ? 'Elite Master' : 'Combatente'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-black italic text-emerald-500 leading-none">{r.points.toLocaleString()}</p>
-                      <p className="text-[8px] font-black uppercase opacity-40 mt-1">Pontos de Arena</p>
                     </div>
                   </div>
                 ))}
@@ -225,16 +206,6 @@ export default function AdminGamesPage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-6">
-             <div className="flex items-center gap-4">
-                <ShieldCheck className="h-8 w-8 text-emerald-500" />
-                <div>
-                   <h4 className="font-black uppercase text-xs">Banco de Dados Unificado</h4>
-                   <p className="text-[10px] opacity-60">Os jogos agora são salvos na tabela principal, garantindo 100% de compatibilidade.</p>
-                </div>
-             </div>
-          </Card>
         </div>
       </div>
 
@@ -262,16 +233,6 @@ export default function AdminGamesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Tipo de Injeção</Label>
-                <Select value={gameData.type} onValueChange={(v: any) => setGameData({...gameData, type: v})}>
-                  <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="embed">Link de Embed (Iframe)</SelectItem>
-                    <SelectItem value="direct">Link ROM / Binário</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -279,9 +240,6 @@ export default function AdminGamesPage() {
                 <div className="flex items-center gap-2">
                   <Code className="h-3 w-3" /> Link ou Código Iframe
                 </div>
-                {gameData.url && gameData.url.includes('retrogames.cc') && !gameData.url.includes('/embed/') && (
-                   <span className="text-[8px] text-amber-500 font-bold animate-pulse">Página do site detectada!</span>
-                )}
               </Label>
               <div className="flex gap-2">
                 <Input 
@@ -290,18 +248,7 @@ export default function AdminGamesPage() {
                   className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" 
                   placeholder="Cole o link ou o código do Iframe aqui..." 
                 />
-                {gameData.url?.includes('retrogames.cc') && (
-                   <Button type="button" onClick={handleFixLink} disabled={isFixing} className="h-12 bg-amber-500 hover:bg-amber-600 px-4 rounded-xl shadow-lg shadow-amber-500/10">
-                     {isFixing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                   </Button>
-                )}
               </div>
-              <p className="text-[8px] font-bold opacity-40 uppercase">Dica: Se colar o código &lt;iframe&gt; completo, o sistema destila apenas o link do jogo sozinho.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem da Capa</Label>
-              <Input value={gameData.imageUrl} onChange={e => setGameData({...gameData, imageUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
             </div>
 
             <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4 shadow-xl shadow-emerald-500/20 rounded-2xl">
@@ -316,18 +263,7 @@ export default function AdminGamesPage() {
           <div className="absolute top-4 left-4 z-50 bg-black/60 px-4 py-2 rounded-full border border-white/10">
             <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO: {testGame?.title}</span>
           </div>
-          {testGame?.type === 'embed' ? (
-            <iframe src={testGame.url} className="w-full h-full border-0" allowFullScreen />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-black/90 p-10 text-center">
-               <div className="space-y-6">
-                  <UploadCloud className="h-20 w-20 text-emerald-500 mx-auto animate-bounce" />
-                  <h3 className="text-2xl font-black uppercase italic">Download no Cliente</h3>
-                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">O jogo será baixado diretamente para o cache do seu aparelho.</p>
-                  <Button variant="outline" className="border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px]" onClick={() => window.open(testGame?.url, '_blank')}>BAIXAR MANUALMENTE</Button>
-               </div>
-            </div>
-          )}
+          <iframe src={testGame?.url} className="w-full h-full border-0" allowFullScreen />
         </DialogContent>
       </Dialog>
     </div>

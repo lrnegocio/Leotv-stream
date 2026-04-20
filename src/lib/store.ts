@@ -126,11 +126,14 @@ export const formatGameLink = (input: string) => {
 
   const lowUrl = url.toLowerCase();
 
-  // CONVERSOR RETROGAMES: Transforma página em Embed
-  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
-    // Tenta extrair o ID numérico que geralmente vem antes do nome no embed
-    // No entanto, o mais seguro é o usuário usar o link de embed ou o botão de fix
-    // Se o link já tem o padrão de embed, mas sem a pasta /embed/, corrigimos
+  // CONVERSOR RETROGAMES: Transforma página comum em link de motor (Embed)
+  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/') && !lowUrl.includes('.html')) {
+     // Apenas retorna como está se for um link estranho
+  } else if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
+      // Tenta forçar a pasta /embed/ se o link terminar em .html mas não tiver a pasta
+      if (url.includes('/psx-games/') || url.includes('/snes-games/')) {
+          url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
+      }
   }
 
   return url;
@@ -276,7 +279,7 @@ export async function getRemoteGames(): Promise<GameItem[]> {
     url: i.streamUrl, 
     imageUrl: i.imageUrl, 
     genre: i.genre,
-    emulatorUrl: i.description === 'GAME' ? '' : i.description // Usamos description para guardar emulatorUrl se necessário
+    emulatorUrl: i.description === 'GAME' ? '' : i.description
   }));
 }
 
