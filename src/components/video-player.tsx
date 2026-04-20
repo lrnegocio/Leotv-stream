@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v267 - MODO BRAVE LIBERADO
- * Atendimento ao Mestre: Sandbox removido para evitar detecção.
- * Botão Play adicionado aos controles para forçar início do sinal.
+ * PLAYER MASTER SOBERANO v268 - COMANDO PLAY ATIVO
+ * Atendimento ao Mestre: Botão Play agora dispara comandos reais de hardware e sintonização.
+ * Sandbox removido para evitar detecção no Rei dos Canais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,6 +27,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
   const [settings, setSettings] = React.useState<any>(null)
+  const [playerKey, setPlayerKey] = React.useState(0)
   
   const hlsRef = React.useRef<any>(null)
   const mpegtsRef = React.useRef<any>(null)
@@ -52,7 +53,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // Sites que precisam de Iframe
   const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais') || lowUrl.includes('retrogames.cc');
   
   const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
@@ -153,7 +153,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       clearTimeout(timer)
       cleanup()
     }
-  }, [initPlayer, cleanup, url])
+  }, [initPlayer, cleanup, url, playerKey])
+
+  const handleForcePlay = () => {
+    // Ação 1: Tenta dar play no hardware de vídeo
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        if (videoRef.current) videoRef.current.muted = true;
+        videoRef.current?.play();
+      });
+    }
+    // Ação 2: Incrementa a chave para forçar re-render do Iframe/Player
+    setPlayerKey(prev => prev + 1);
+    // Ação 3: Re-inicializa a lógica do player
+    initPlayer();
+  };
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return
@@ -198,7 +212,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isIframe ? (
         <div className="relative w-full h-full flex flex-col items-center justify-center">
           <iframe 
-            key={url} 
+            key={`${url}_${playerKey}`} 
             src={finalIframeSrc} 
             className={`w-full ${isSpotify ? 'h-[152px] max-w-2xl mx-auto rounded-3xl' : 'h-full'} border-0 relative z-20`}
             allowFullScreen 
@@ -219,7 +233,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       ) : (
         <video 
-          key={url} 
+          key={`${url}_${playerKey}`} 
           ref={videoRef} 
           className="w-full h-full object-contain relative z-20" 
           autoPlay 
@@ -250,7 +264,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         
-        <button onClick={() => { cleanup(); initPlayer(); }} title="Iniciar Sinal Master" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg group">
+        <button 
+          onClick={handleForcePlay} 
+          title="Iniciar Sinal Master" 
+          className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg group"
+        >
           <Play className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
         </button>
 
