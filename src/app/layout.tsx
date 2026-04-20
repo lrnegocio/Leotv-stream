@@ -55,7 +55,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v270 - EXTERMINADOR DE ANÚNCIOS MASTER */
+          /* PROTOCOLO BRAVE SUPREMO v271 - EXTERMINADOR DE ANÚNCIOS MASTER */
           iframe { pointer-events: auto !important; }
           
           /* Esconde banners de anúncios e avisos de sandbox do Rei dos Canais e PlayCNVS */
@@ -69,7 +69,7 @@ export default function RootLayout({
           [id*="ad-"], [class*="ad-"], .pop-under, .overlay-ads,
           .mgid-ad, .ad-container, .ads-wrapper, .reidoscanais-ads, 
           .hidden-ads, #pop-under, #over-video, [class*="ReiDoCanais"], 
-          [id*="ReiDoCanais"] {
+          [id*="ReiDoCanais"], [class*="playcnvs"], [id*="playcnvs"] {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -83,7 +83,7 @@ export default function RootLayout({
           /* Extermínio de botões de Play falsos que abrem anúncios no PlayCNVS */
           [class*="play-button"], [id*="play-button"], .vjs-button, 
           .vjs-control-bar, .vjs-big-play-centered, .ads-container {
-             /* Apenas remove se for de classe de anúncio externa */
+             /* Garante que o CSS não bloqueie controles legítimos, mas limpe o lixo */
           }
 
           /* Bloqueia botões de download e redirecionamentos externos */

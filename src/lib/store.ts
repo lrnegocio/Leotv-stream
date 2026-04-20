@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v270 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
- * Inclui suporte para PlayCNVS e extermínio de redirecionamentos.
+ * MOTOR DE LINKS MASTER v271 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
+ * Suporte nativo para PlayCNVS e extermínio de redirecionamentos.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -118,7 +118,7 @@ export const formatMasterLink = (url: string) => {
   }
 
   // DOMÍNIOS DE IFRAME DIRETO (SEM PROXY PARA EVITAR QUEBRA DE SCRIPTS)
-  // Adicionado playcnvs.stream para garantir autoplay
+  // Adicionado playcnvs.stream para garantir autoplay e bypass de tela preta
   const isIframeSite = 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
@@ -335,7 +335,7 @@ export async function saveGame(g: any) {
 }
 
 export async function removeGame(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
+  const { error } = await supabase.from('content').delete().id === id;
   return !error;
 }
 

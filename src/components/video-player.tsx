@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v270 - COMANDO PLAY/PAUSE ULTRA
- * Atendimento ao Mestre: Sintonização PlayCNVS e bloqueio de botões de anúncios falsos.
- * Modo Refresh para Iframes e Controle Real para HLS/MP4.
+ * PLAYER MASTER SOBERANO v271 - COMANDO PLAY/PAUSE ULTRA
+ * Sintonização PlayCNVS e extermínio de propagandas na tela.
+ * Controles Master com prioridade de tela (Z-Index Máximo).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -173,7 +173,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
   }, [initPlayer, cleanup, url, playerKey])
 
-  // Sensor de estado do vídeo para o botão alternar sozinho
   React.useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -189,7 +188,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // Se for Iframe, o "Play" funciona como um refresh de sintonização
+      // RESET SINTONIZADO: Força o Iframe a recarregar e tentar o autoplay
       setPlayerKey(prev => prev + 1);
       setIsPlaying(true);
       return;
@@ -235,14 +234,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
       {loading && !isIframe && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 pointer-events-none">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 pointer-events-none">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando Sinal Master...</p>
         </div>
       )}
 
       {error && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-center p-10">
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white font-black uppercase mb-6 text-xs tracking-widest">Sinal Master Indisponível ou Protegido.</p>
           <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="text-primary border-primary/20 font-black uppercase text-[10px] h-12 rounded-xl">TENTAR RECONEXÃO</Button>
@@ -254,7 +253,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <iframe 
             key={`${url}_${playerKey}`} 
             src={finalIframeSrc} 
-            className={`w-full ${isSpotify ? 'h-[152px] max-w-2xl mx-auto rounded-3xl' : 'h-full'} border-0 relative z-20`}
+            className={`w-full ${isSpotify ? 'h-[152px] max-w-2xl mx-auto rounded-3xl' : 'h-full'} border-0 relative z-10`}
             allowFullScreen 
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
@@ -275,7 +274,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <video 
           key={`${url}_${playerKey}`} 
           ref={videoRef} 
-          className="w-full h-full object-contain relative z-20" 
+          className="w-full h-full object-contain relative z-10" 
           autoPlay 
           playsInline 
           controls 
@@ -286,12 +285,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
+      {/* CONTROLES MASTER - SEMPRE NO TOPO (Z-INDEX 100+) */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[110] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
       {settings?.bannerUrl && !isSpotify && (
-        <div className="absolute top-6 right-6 z-40 hidden md:block">
+        <div className="absolute top-6 right-6 z-[110] hidden md:block">
            <div className="bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 overflow-hidden cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
               <div className="relative w-32 h-10">
                  <img src={settings.bannerUrl} alt="Ad" className="w-full h-full object-cover rounded-lg" />
@@ -301,7 +301,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      <div className="absolute bottom-6 right-6 z-40 flex gap-2">
+      <div className="absolute bottom-6 right-6 z-[110] flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         
         <button 
