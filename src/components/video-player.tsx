@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v264 - MODO CLOAKING SUPREMO
- * Blindagem total contra popups e downloads forçados (Opera).
- * Cloaking de Sandbox para evitar detecção no Rei dos Canais.
+ * PLAYER MASTER SOBERANO v265 - MODO BRAVE FINAL
+ * Restauração do Sandbox para fechamento automático de redirecionamentos.
+ * Blindagem total contra downloads do Opera e anúncios pop-up.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -179,15 +179,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }
 
   /**
-   * PROTOCOLO DE SANDBOX v264
-   * allow-scripts e allow-same-origin permitem o player rodar.
-   * A AUSÊNCIA de allow-popups impede a abertura de abas e downloads forçados.
+   * PROTOCOLO DE SANDBOX v265 - O EQUILÍBRIO SOBERANO
+   * A AUSÊNCIA de allow-popups força o navegador a fechar qualquer nova aba aberta.
+   * allow-scripts e allow-same-origin permitem o vídeo rodar.
    */
-  const sandboxFlags = isDetectorSite 
-    ? "allow-scripts allow-same-origin allow-forms allow-presentation" 
-    : isSpotify 
-      ? undefined // Spotify precisa de cookies para música inteira
-      : "allow-scripts allow-same-origin allow-forms allow-presentation";
+  const sandboxFlags = isSpotify 
+    ? undefined // Spotify precisa de cookies para música completa
+    : "allow-scripts allow-same-origin allow-forms allow-presentation";
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>

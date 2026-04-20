@@ -55,21 +55,24 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v264 - BLINDAGEM TOTAL ANTI-ADWARE */
+          /* PROTOCOLO BRAVE SUPREMO v265 - EXTERMINADOR DE REDIRECTS E AVISOS */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde avisos de sandbox e bloqueios de anúncios de forma agressiva */
+          /* Esconde avisos de sandbox e bloqueios de anúncios de forma ultra-agressiva */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
-          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"] {
+          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
+          .alert-sandbox, div[style*="background-color: rgb(255, 0, 0)"] {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
             height: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
           }
 
-          /* Extermínio de anúncios e camadas de clique falsas */
+          /* Extermínio de anúncios e camadas de clique falsas que geram novas abas */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
@@ -77,7 +80,6 @@ export default function RootLayout({
           .reidoscanais-ads, .hidden-ads, #pop-under, #over-video,
           .reidoscanais-notice, #pre-player-ads, .fixed-ads,
           [class*="ReiDoCanais"], [id*="ReiDoCanais"],
-          .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta,
           #click-to-play-overlay, .video-overlay, .ad-overlay,
           .player-poster, .vjs-big-play-button, .ad-layer,
           [onclick*="window.open"], .click-to-play, .reidoscanais-premium-notice {
@@ -92,8 +94,8 @@ export default function RootLayout({
             left: -9999px !important;
           }
 
-          /* Impede que elementos de download de navegador apareçam */
-          [href*="opera.com"], [href*="browser"], .download-button {
+          /* Bloqueia botões de download de navegadores (Opera, etc) */
+          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"] {
             display: none !important;
           }
 
