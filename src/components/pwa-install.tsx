@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Settings, ShieldCheck, Zap } from "lucide-react"
+import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Settings, ShieldCheck, Zap, Share } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -10,18 +9,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 export function PwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null)
   const [isVisible, setIsVisible] = React.useState(false)
-  const [showTVGuide, setShowTVGuide] = React.useState(false)
+  const [showGuide, setShowGuide] = React.useState(false)
+  const [isIOS, setIsIOS] = React.useState(false)
 
   React.useEffect(() => {
+    // Detecta se é iOS
+    const ua = navigator.userAgent.toLowerCase()
+    const ios = /iphone|ipad|ipod/.test(ua)
+    setIsIOS(ios)
+
+    // Se já estiver no modo standalone, não mostra o banner
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+    if (isStandalone) {
+      setIsVisible(false)
+      return
+    }
+
     const handler = (e: any) => {
       e.preventDefault()
       setDeferredPrompt(e)
       setIsVisible(true)
     }
+
     window.addEventListener('beforeinstallprompt', handler)
     
-    const ua = navigator.userAgent.toLowerCase()
-    if (ua.includes('tizen') || ua.includes('webos') || ua.includes('smart-tv') || ua.includes('roku')) {
+    // Se for mobile, mostra o banner de qualquer forma para instruir
+    if (/android|iphone|ipad|ipod/.test(ua)) {
       setIsVisible(true)
     }
 
@@ -29,11 +42,8 @@ export function PwaInstall() {
   }, [])
 
   const handleInstall = async () => {
-    const ua = navigator.userAgent.toLowerCase()
-    const isTV = ua.includes('tizen') || ua.includes('webos') || ua.includes('smart-tv') || ua.includes('roku')
-
-    if (isTV) {
-      setShowTVGuide(true)
+    if (isIOS) {
+      setShowGuide(true)
       return
     }
 
@@ -45,10 +55,7 @@ export function PwaInstall() {
         setDeferredPrompt(null)
       }
     } else {
-      toast({ 
-        title: "INSTALAÇÃO DIRETA", 
-        description: "Mestre, no menu do seu navegador, selecione 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'." 
-      });
+      setShowGuide(true)
     }
   }
 
@@ -62,7 +69,7 @@ export function PwaInstall() {
             <div className="bg-white/10 p-3 rounded-2xl"><Tv className="h-6 w-6 text-white" /></div>
             <div>
               <p className="text-white font-black uppercase text-[12px] italic tracking-tighter">LÉO TV MASTER</p>
-              <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">SINAL OFICIAL</p>
+              <p className="text-white/60 text-[8px] font-black uppercase tracking-widest">APP OFICIAL</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -74,59 +81,62 @@ export function PwaInstall() {
         </div>
       </div>
 
-      <Dialog open={showTVGuide} onOpenChange={setShowTVGuide}>
+      <Dialog open={showGuide} onOpenChange={setShowGuide}>
         <DialogContent className="max-w-2xl bg-card border-white/10 rounded-[2.5rem] p-10 shadow-2xl overflow-y-auto max-h-[90vh] custom-scroll">
           <DialogHeader>
             <DialogTitle className="uppercase font-black text-primary italic text-2xl flex items-center gap-3">
-              <Monitor className="h-8 w-8" /> Guia de Sistemas Léo TV
+              {isIOS ? <Smartphone className="h-8 w-8" /> : <Monitor className="h-8 w-8" />} 
+              {isIOS ? 'Instalar no iPhone / iPad' : 'Guia de Instalação Master'}
             </DialogTitle>
           </DialogHeader>
+          
           <div className="space-y-8 py-6">
-            
-            <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-4">
-              <div className="flex items-center gap-3 text-primary font-black uppercase text-sm">
-                <ShieldCheck className="h-5 w-5" /> 1. O SEGREDO DO BRAVE (BLOQUEIO TOTAL)
+            {isIOS ? (
+              <div className="space-y-6">
+                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-4">
+                  <p className="text-sm font-bold uppercase text-primary text-center">Siga estes passos para ter o APP REAL:</p>
+                  <ol className="text-[11px] space-y-4 opacity-80 font-bold uppercase list-none">
+                    <li className="flex items-start gap-4">
+                      <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</div>
+                      <p>Clique no botão de <span className="text-primary flex items-center gap-1 inline-flex"><Share className="h-4 w-4" /> Compartilhar</span> na barra de baixo do Safari.</p>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0">2</div>
+                      <p>Role as opções para cima e clique em <span className="text-primary">"Adicionar à Tela de Início"</span>.</p>
+                    </li>
+                    <li className="flex items-start gap-4">
+                      <div className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center shrink-0">3</div>
+                      <p>Clique em <span className="text-primary">"Adicionar"</span> no canto superior direito.</p>
+                    </li>
+                  </ol>
+                </div>
+                <p className="text-[9px] text-center font-black uppercase opacity-40 italic">A Apple não permite instalação automática, este é o único método oficial.</p>
               </div>
-              <p className="text-[11px] font-bold uppercase opacity-80 leading-relaxed">
-                O Navegador Brave só pode ser instalado em:
-                <br /><span className="text-primary">• ANDROID TV (Sony, TCL, Philips)</span>
-                <br /><span className="text-primary">• FIRE TV STICK (Amazon)</span>
-                <br /><span className="text-primary">• TV BOXES ANDROID</span>
-                <br /><br />
-                <span className="text-emerald-500">DICA MESTRE:</span> Se a sua TV for Samsung ou LG, nosso sistema já vem com um "Bloqueador Brave" interno (CSS) que mata os anúncios no navegador padrão da TV!
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-6 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20 space-y-4">
+                   <div className="flex items-center gap-3 text-emerald-500 font-black uppercase text-sm">
+                     <Zap className="h-5 w-5" /> ANDROID & WINDOWS
+                   </div>
+                   <p className="text-[11px] font-bold uppercase opacity-80 leading-relaxed">
+                     Clique no botão de instalação que apareceu no topo da sua tela. 
+                     <br /><br />
+                     Se o botão sumiu, clique nos <span className="text-emerald-500">3 pontinhos</span> do seu navegador e escolha <span className="text-emerald-500">"Instalar Aplicativo"</span>.
+                   </p>
+                </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="p-5 bg-muted rounded-2xl border border-border">
-                <p className="text-xs font-black uppercase text-primary mb-3">SAMSUNG & LG</p>
-                <ol className="text-[10px] space-y-2 opacity-80 list-decimal pl-4 font-bold uppercase">
-                  <li>Abra o Navegador da TV.</li>
-                  <li>Acesse o link do painel.</li>
-                  <li>Menu > "Fixar na Home".</li>
-                  <li>Use o sinal livre de abas!</li>
-                </ol>
+                <div className="p-6 bg-primary/5 rounded-[2rem] border border-primary/20 space-y-4">
+                  <div className="flex items-center gap-3 text-primary font-black uppercase text-sm">
+                    <Monitor className="h-5 w-5" /> SMART TV (SAMSUNG/LG)
+                  </div>
+                  <p className="text-[11px] font-bold uppercase opacity-80 leading-relaxed">
+                    Acesse pelo navegador nativo da TV e use a opção <span className="text-primary">"Adicionar aos Favoritos"</span> ou <span className="text-primary">"Fixar na Home"</span> do menu da TV.
+                  </p>
+                </div>
               </div>
-              <div className="p-5 bg-muted rounded-2xl border border-border">
-                <p className="text-xs font-black uppercase text-orange-500 mb-3">ROKU & OUTRAS</p>
-                <p className="text-[10px] font-bold uppercase opacity-80">
-                  O sistema Roku não permite instalação de navegadores. 
-                  <br /><br />
-                  <span className="text-primary">SOLUÇÃO:</span> Use o espelhamento de tela (Cast) do seu celular ou conecte um Fire Stick para ter o sinal Master.
-                </p>
-              </div>
-            </div>
+            )}
 
-            <div className="p-6 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20">
-               <div className="flex items-center gap-3 text-emerald-500 font-black uppercase text-sm mb-2">
-                 <Zap className="h-5 w-5" /> RECOMENDAÇÃO DO MESTRE
-               </div>
-               <p className="text-[10px] font-bold uppercase opacity-80">
-                 Para a melhor experiência sem travamentos e com 100% de bloqueio de anúncios, utilize uma **TV BOX ANDROID** ou **FIRE STICK** e instale o navegador Brave por lá.
-               </p>
-            </div>
-
-            <Button onClick={() => setShowTVGuide(false)} className="w-full h-16 bg-primary font-black uppercase text-lg rounded-2xl shadow-xl shadow-primary/20">ENTENDI TUDO, MESTRE!</Button>
+            <Button onClick={() => setShowGuide(false)} className="w-full h-16 bg-primary font-black uppercase text-lg rounded-2xl shadow-xl shadow-primary/20">ENTENDI TUDO, MESTRE!</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -25,6 +25,12 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
         purpose: 'any',
       },
+      {
+        src: 'https://picsum.photos/seed/leotv/512/512',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      }
     ],
   }
 }
