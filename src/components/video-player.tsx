@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, RefreshCw, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, Play, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getGlobalSettings } from "@/lib/store"
 
@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v266 - MODO BRAVE FINAL
- * Sandbox de Captura: A aba abre e o navegador fecha em seguida.
- * Camuflagem Anti-Detecção: Esconde o aviso de sandbox do Rei dos Canais.
+ * PLAYER MASTER SOBERANO v267 - MODO BRAVE LIBERADO
+ * Atendimento ao Mestre: Sandbox removido para evitar detecção.
+ * Botão Play adicionado aos controles para forçar início do sinal.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -52,9 +52,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // Sites que tentam redirecionar ou detectar sandbox
-  const isDetectorSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
-  const isIframeSite = isDetectorSite || lowUrl.includes('retrogames.cc');
+  // Sites que precisam de Iframe
+  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais') || lowUrl.includes('retrogames.cc');
   
   const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
 
@@ -178,15 +177,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
   }
 
-  /**
-   * PROTOCOLO DE SANDBOX v266 - O EQUILÍBRIO SOBERANO
-   * A AUSÊNCIA de allow-popups força o navegador a fechar qualquer nova aba aberta.
-   * O layout.tsx esconde os avisos de "Acesso Bloqueado" do Rei dos Canais.
-   */
-  const sandboxFlags = isSpotify 
-    ? undefined // Spotify precisa de cookies para música completa
-    : "allow-scripts allow-same-origin allow-forms allow-presentation";
-
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
@@ -214,7 +204,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             allowFullScreen 
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
-            sandbox={sandboxFlags}
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />
@@ -260,8 +249,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
-        <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
+        
+        <button onClick={() => { cleanup(); initPlayer(); }} title="Iniciar Sinal Master" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg group">
+          <Play className="h-5 w-5 text-white fill-white group-hover:scale-110 transition-transform" />
+        </button>
+
         {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
+        
         {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>

@@ -55,52 +55,48 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v266 - EXTERMINADOR DE REDIRECTS E AVISOS */
+          /* PROTOCOLO BRAVE SUPREMO v267 - EXTERMINADOR DE ANÚNCIOS */
           iframe { pointer-events: auto !important; }
           
-          /* Manto de Invisibilidade: Apaga os avisos de sandbox e bloqueio do Rei dos Canais */
+          /* Esconde banners de anúncios e avisos de sandbox do Rei dos Canais */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
           .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
-          .alert-sandbox, div[style*="background-color: rgb(255, 0, 0)"] {
+          .alert-sandbox, div[style*="background-color: rgb(255, 0, 0)"],
+          .reidoscanais-notice, .reidoscanais-premium-notice {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
-            pointer-events: none !important;
             height: 0 !important;
             position: absolute !important;
             left: -9999px !important;
           }
 
-          /* Extermínio de anúncios e camadas de clique falsas que geram novas abas */
+          /* Extermínio de camadas invisíveis e pop-unders */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
           .cl-close, .close-ad, .ad-container, .ads-wrapper,
           .reidoscanais-ads, .hidden-ads, #pop-under, #over-video,
-          .reidoscanais-notice, #pre-player-ads, .fixed-ads,
           [class*="ReiDoCanais"], [id*="ReiDoCanais"],
           #click-to-play-overlay, .video-overlay, .ad-overlay,
-          .player-poster, .vjs-big-play-button, .ad-layer,
-          [onclick*="window.open"], .click-to-play, .reidoscanais-premium-notice {
+          .vjs-big-play-button, .ad-layer, [onclick*="window.open"], .click-to-play {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
             width: 0 !important;
             opacity: 0 !important;
-            pointer-events: none !important;
             z-index: -999 !important;
             position: absolute !important;
             left: -9999px !important;
           }
 
-          /* Bloqueia botões de download de navegadores (Opera, etc) e redirecionamentos */
-          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"], a[target="_blank"] {
+          /* Bloqueia botões de download e redirecionamentos externos */
+          [href*="opera.com"], [href*="browser"], .download-button, [class*="download"] {
             display: none !important;
           }
 
           body { -webkit-tap-highlight-color: transparent; }
-          .relative.w-full.bg-black { pointer-events: auto !important; }
           
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
