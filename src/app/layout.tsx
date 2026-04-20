@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -54,20 +55,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v283 - EXTERMINADOR DE OVERLAYS E POPUPS */
+          /* PROTOCOLO BRAVE SUPREMO v286 - EXTERMINADOR DE OVERLAYS E POPUPS */
           
-          /* Esconde avisos de sandbox e bloqueios do site original */
-          .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
-          .aviso-sandbox-container, [class*="reidoscanais-premium"],
-          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
-          .reidoscanais-sandbox {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-          }
-
-          /* Hole-punch em anúncios invisíveis (A CAPA DE VIDRO QUE ABRE ABAS) */
+          /* Camadas invisíveis que abrem novas abas */
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
@@ -75,7 +65,10 @@ export default function RootLayout({
           .vjs-overlay, .player-poster, .click-to-start,
           .vjs-ads-label, .vjs-ad-loading, .vjs-ad-playing,
           iframe[src*="doubleclick"], iframe[src*="ads"],
-          [id*="pop-"], [class*="pop-"] {
+          [id*="pop-"], [class*="pop-"], 
+          div[style*="z-index: 2147483647"],
+          div[style*="z-index: 999999"],
+          div[style*="position: fixed; width: 100%; height: 100%"] {
             display: none !important;
             width: 0 !important;
             height: 0 !important;

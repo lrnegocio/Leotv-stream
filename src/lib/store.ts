@@ -78,14 +78,23 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v284 - PROTOCOLO YOUTUBE & AUTOPLAY
- * Converte automaticamente links do YouTube para formato EMBED e aplica Mute.
+ * MOTOR DE LINKS MASTER v286 - PROTOCOLO SINTONIZAÇÃO TOTAL
+ * Converte YouTube, Spotify, Deezer e XVideos para formatos de ALTA PERFORMANCE.
+ * Aplica Túnel de Proxy para RedeCanais e TV Acabo.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
+  // XVIDEOS MASTER SINTONIZADOR
+  if (lowUrl.includes('xvideos.com')) {
+    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i);
+    if (idMatch && idMatch[1]) {
+      return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
+    }
+  }
+
   // YOUTUBE MASTER SINTONIZADOR
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
@@ -96,45 +105,35 @@ export const formatMasterLink = (url: string) => {
     } else if (lowUrl.includes('/embed/')) {
       return finalUrl + (finalUrl.includes('?') ? '&' : '?') + "autoplay=1&mute=1";
     }
-    
-    if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
-    }
+    if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
-  // SPOTIFY MASTER
+  // SPOTIFY MASTER (Música Completa se logado)
   if (lowUrl.includes('spotify.com')) {
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
     if (!cleanUrl.includes('/embed/')) cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     return cleanUrl;
   }
 
-  // IFRAME SITES AUTOPLAY & MUTE FORCED
-  const isIframeSite = 
-    lowUrl.includes('rdcanais') || 
-    lowUrl.includes('redecanaistv') || 
-    lowUrl.includes('reidoscanais') ||
-    lowUrl.includes('playcnvs') ||
-    lowUrl.includes('playcnvs.stream');
-
-  if (isIframeSite) {
-    const separator = finalUrl.includes('?') ? '&' : '?';
-    if (!finalUrl.includes('autoplay=')) {
-      finalUrl += `${separator}autoplay=1&mute=1`;
-    } else if (!finalUrl.includes('mute=')) {
-      finalUrl += `&mute=1`;
+  // DEEZER MASTER (Música Completa se logado)
+  if (lowUrl.includes('deezer.com')) {
+    const trackMatch = finalUrl.match(/track\/(\d+)/i);
+    if (trackMatch && trackMatch[1]) {
+      return `https://www.deezer.com/plugins/player?format=classic&autoplay=true&playlist=false&width=700&height=350&color=EF5466&layout=dark&size=medium&type=tracks&id=${trackMatch[1]}&app_id=1`;
     }
-    return finalUrl;
   }
 
-  // PROXY TUNNEL
+  // PROXY TUNNEL SOBERANO (Bypass Referer/CORS)
   const needsProxy = 
     lowUrl.includes('.m3u8') || 
     lowUrl.includes('.ts') || 
     lowUrl.includes('.mp4') ||
     lowUrl.includes('archive.org') || 
     lowUrl.includes('mlstatic.com') || 
-    lowUrl.includes('acplay.live');
+    lowUrl.includes('acplay.live') ||
+    lowUrl.includes('redecanaistv') ||
+    lowUrl.includes('tvacabo.top') ||
+    lowUrl.includes('rdcanais');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
@@ -351,7 +350,7 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
   return !error;
 }
 
-export const generateRandomPin = (l = 9) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
+export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function getGameRankings() { return []; }
 export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nSeu PIN *${p}* vence em *${d} dias*.`;

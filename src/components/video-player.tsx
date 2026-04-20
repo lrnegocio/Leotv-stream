@@ -14,10 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v283 - EDIÇÃO BRAVE COMANDO CENTRALIZADO
- * Transfere o poder de execução para o nosso botão de controle.
- * Remove o sandbox totalmente para evitar o erro de Acesso Bloqueado.
- * Implementa Autoplay Silencioso (Mute) para garantir início imediato.
+ * PLAYER MASTER SOBERANO v286 - EDIÇÃO COMANDO DE HARDWARE
+ * Sintonizador inteligente para XVideos, Spotify, Deezer e RedeCanais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -40,10 +38,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     lowUrl.includes('tvacabo') || 
     lowUrl.includes('reidoscanais') || 
     lowUrl.includes('playcnvs') ||
-    lowUrl.includes('playcnvs.stream') ||
     lowUrl.includes('youtube.com') ||
     lowUrl.includes('youtu.be') ||
-    lowUrl.includes('spotify.com');
+    lowUrl.includes('spotify.com') ||
+    lowUrl.includes('deezer.com') ||
+    lowUrl.includes('xvideos.com');
   
   const isIframe = isIframeSite || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http'));
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
@@ -67,7 +66,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setLoading(false);
-      // O Iframe começa em standby total até o comando do nosso botão
       return;
     }
 
@@ -122,10 +120,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return () => cleanup();
   }, [initPlayer, cleanup, url]);
 
-  /**
-   * COMANDO DE HARDWARE SOBERANO v283
-   * O poder exclusivo do nosso botão. Ele liga o Iframe injetando Autoplay e Mute.
-   */
   const handleTogglePlay = () => {
     if (isIframe) {
       if (!isPlaying) {
@@ -133,7 +127,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         setIsPlaying(true);
       } else {
         setIsPlaying(false);
-        setPlayerKey(0); // Mata o sinal para economizar dados e parar som
+        setPlayerKey(0); 
       }
       return;
     }
@@ -164,7 +158,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null;
 
-  // Sintonizador de Iframe BRAVE: Autoplay + Mute são obrigatórios para bypass
   let finalIframeSrc = url;
   if (playerKey > 0) {
     const separator = url.includes('?') ? '&' : '?';
@@ -197,7 +190,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; fullscreen" 
               onLoad={() => setLoading(false)}
-              // REMOÇÃO TOTAL DO SANDBOX PARA EVITAR DETECTOR DO REI DOS CANAIS
             />
           )}
         </div>
@@ -211,7 +203,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {/* TELA DE STANDBY BRAVE - O ESCUDO CONTRA CLIQUES ACIDENTAIS */}
       {isIframe && !isPlaying && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl z-[145] animate-in fade-in duration-300">
            <div className="text-center space-y-8">
@@ -223,13 +214,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               </button>
               <div>
                 <p className="text-2xl font-black uppercase italic text-primary tracking-widest">Sinal Pronto Mestre</p>
-                <p className="text-[10px] font-bold uppercase text-white/30 mt-2">Clique no Play ou no Botaozinho para sintonizar</p>
+                <p className="text-[10px] font-bold uppercase text-white/30 mt-2">Clique no Play para Sintonizar sem Anúncios</p>
               </div>
            </div>
         </div>
       )}
 
-      {/* CONTROLES MASTER - Z-INDEX 160 (SEMPRE NO TOPO) */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
@@ -237,7 +227,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
-        {/* O NOSSO BOTAOZINHO COMANDANTE SOBERANO */}
         <button 
           onClick={handleTogglePlay} 
           className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all group"
