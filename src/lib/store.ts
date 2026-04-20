@@ -78,34 +78,41 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v256 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
- * Inclui conversor Master para Spotify e bloqueador de Adware.
- * Sites de Iframe (RDCanais, TVaCabo) carregam direto para evitar erro de Proxy.
+ * MOTOR DE LINKS MASTER v259 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * Inclui conversor Master para Spotify (Bypass Localização) e bloqueador de Adware.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER
+  // SPOTIFY MASTER CONVERTER v259 (EXTERMINADOR DE 404 E CONEXÃO RECUSADA)
   if (lowUrl.includes('spotify.com')) {
-    finalUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
-    if (finalUrl.includes('/search/')) {
-      const searchTerm = finalUrl.split('/search/')[1]?.split('?')[0] || "";
+    // 1. Remove prefixos de localização como /intl-pt/, /intl-es/, etc.
+    let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
+    
+    // 2. Remove barras duplas residuais
+    cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, "$1");
+
+    // 3. Caso seja busca, foca no motor de busca embed
+    if (cleanUrl.includes('/search/')) {
+      const searchTerm = cleanUrl.split('/search/')[1]?.split('?')[0] || "";
       return `https://open.spotify.com/embed/search/${searchTerm}`;
     }
-    if (!finalUrl.includes('/embed/')) {
-      return finalUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    
+    // 4. Garante que o link use o endpoint /embed/ (Obrigatório pelo Spotify)
+    if (!cleanUrl.includes('/embed/')) {
+      cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
-    return finalUrl;
+    return cleanUrl;
   }
 
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
     return finalUrl;
   }
 
-  // DOMÍNIOS DE IFRAME DIRETO (NÃO USAR PROXY AQUI POIS SÃO PÁGINAS HTML)
-  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
+  // DOMÍNIOS DE IFRAME DIRETO (SEM PROXY PARA EVITAR QUEBRA DE SCRIPTS)
+  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
   if (isIframeSite) return finalUrl;
 
   // Links que precisam de Bypass ou Proxy para funcionar na VPS
