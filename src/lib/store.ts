@@ -78,7 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v281 - PROTOCOLO DE AUTOPLAY FORÇADO
+ * MOTOR DE LINKS MASTER v282 - PROTOCOLO DE AUTOPLAY SILENCIOSO
+ * Injeta mute=1 para garantir que o sinal abra sem interação e sem abas de erro.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -92,21 +93,23 @@ export const formatMasterLink = (url: string) => {
     return cleanUrl;
   }
 
-  // IFRAME SITES AUTOPLAY FORCED
-  // Injetamos autoplay=1 e mute=1 para que o canal abra direto sem interação
+  // IFRAME SITES AUTOPLAY & MUTE FORCED
   const isIframeSite = 
     lowUrl.includes('youtube.com') || 
     lowUrl.includes('youtu.be') || 
     lowUrl.includes('rdcanais') || 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('reidoscanais') ||
-    lowUrl.includes('playcnvs');
+    lowUrl.includes('playcnvs') ||
+    lowUrl.includes('playcnvs.stream');
 
   if (isIframeSite) {
     const separator = finalUrl.includes('?') ? '&' : '?';
+    // Injetamos obrigatoriamente mute=1 para que o Autoplay funcione sem interação
     if (!finalUrl.includes('autoplay=')) {
-      // Iniciar mudo (mute=1) é obrigatório para o Autoplay funcionar na maioria dos browsers
       finalUrl += `${separator}autoplay=1&mute=1`;
+    } else if (!finalUrl.includes('mute=')) {
+      finalUrl += `&mute=1`;
     }
     return finalUrl;
   }
