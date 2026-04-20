@@ -23,7 +23,8 @@ export const metadata: Metadata = {
   },
   other: {
     'mobile-web-app-capable': 'yes',
-    'apple-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
     'application-name': 'Léo TV',
     'msapplication-TileColor': '#6D2DCC',
     'theme-color': '#6D2DCC',
@@ -69,6 +70,10 @@ export default function RootLayout({
           body { -webkit-tap-highlight-color: transparent; }
           /* Proteção contra bloqueio de cliques no player */
           .relative.w-full.bg-black { pointer-events: auto !important; }
+          /* Garante que o PWA ocupe a tela toda */
+          @media all and (display-mode: standalone) {
+            body { padding-top: env(safe-area-inset-top); }
+          }
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">

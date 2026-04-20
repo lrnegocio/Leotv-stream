@@ -15,9 +15,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v253 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
- * Suporte a HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
- * Bloqueia Redirects, Popups e Anúncios de sites externos automaticamente.
+ * PLAYER MASTER SOBERANO v254 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
+ * Suporte a Spotify Master, HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -50,11 +49,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   const ytId = getYouTubeId(url);
+  const isSpotify = lowUrl.includes('spotify.com');
   
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
   const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
   const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
-  const isIframe = (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
+  const isIframe = isSpotify || (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
@@ -65,7 +65,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const s = await getGlobalSettings();
     setSettings(s);
     
-    // MODO VOD MP4/Archive: Entrega direta ao hardware
     if (isDirectFile && !url.includes('.m3u8')) {
       if (videoRef.current) {
         videoRef.current.src = url;
@@ -195,9 +194,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <iframe 
           key={url} 
           src={finalIframeSrc} 
-          className="w-full h-full border-0 relative z-20" 
+          className={`w-full ${isSpotify ? 'h-[152px] max-w-2xl mx-auto rounded-3xl' : 'h-full'} border-0 relative z-20`}
           allowFullScreen 
-          allow="autoplay; encrypted-media; fullscreen" 
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
           onLoad={() => setLoading(false)} 
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           referrerPolicy="no-referrer"
@@ -222,7 +221,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
-      {settings?.bannerUrl && (
+      {settings?.bannerUrl && !isSpotify && (
         <div className="absolute top-6 right-6 z-40 hidden md:block">
            <div className="bg-black/60 backdrop-blur-md p-1 rounded-xl border border-white/10 overflow-hidden cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
               <div className="relative w-32 h-10">
@@ -236,7 +235,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-6 right-6 z-40 flex gap-2">
         {onPrev && <button onClick={onPrev} title="Anterior" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
         <button onClick={() => { cleanup(); initPlayer(); }} title="Recarregar" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><RefreshCw className="h-4 w-4 text-white" /></button>
-        <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>
+        {!isSpotify && <button onClick={toggleFullscreen} title="Tela Cheia" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">{isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}</button>}
         {onNext && <button onClick={onNext} title="Próximo" className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
       </div>
     </div>

@@ -78,13 +78,26 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v253 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
- * Identifica e limpa links com Adware (RDCanais, RedeCanaisTV, TvAcabo).
+ * MOTOR DE LINKS MASTER v254 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * Inclui conversor Master para Spotify e bloqueador de Adware.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  const lowUrl = url.toLowerCase();
+  const lowUrl = url.toLowerCase().trim();
   
+  // SPOTIFY MASTER CONVERTER: Transforma qualquer link do Spotify em Player Limpo
+  if (lowUrl.includes('spotify.com')) {
+    let spotifyUrl = url.trim();
+    if (lowUrl.includes('/search/')) {
+      const searchTerm = spotifyUrl.split('/search/')[1]?.split('?')[0] || "";
+      return `https://open.spotify.com/embed/search/${searchTerm}`;
+    }
+    if (!lowUrl.includes('/embed/')) {
+      return spotifyUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    }
+    return spotifyUrl;
+  }
+
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
     return url.trim();
   }
@@ -113,13 +126,11 @@ export const formatMasterLink = (url: string) => {
 
 /**
  * CONVERSOR DE LINKS DE GAMES v253 - DESTILADOR DE MOTOR
- * Extrai o link real de Iframes e converte páginas de games em links puros.
  */
 export const formatGameLink = (input: string) => {
   if (!input) return "";
   let url = input.trim();
 
-  // DESTILAÇÃO DE IFRAME: Extrai apenas o SRC se colarem o código completo
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) {
@@ -128,8 +139,6 @@ export const formatGameLink = (input: string) => {
   }
 
   const lowUrl = url.toLowerCase();
-
-  // CONVERSOR RETROGAMES: Transforma página comum em link de motor (Embed)
   if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
       if (url.includes('/psx-games/') || url.includes('/snes-games/') || url.includes('/n64-games/')) {
           url = url.replace('www.retrogames.cc/', 'www.retrogames.cc/embed/');
