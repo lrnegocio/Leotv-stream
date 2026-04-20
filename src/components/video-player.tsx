@@ -1,8 +1,7 @@
-
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, Play, Pause, ChevronRight, ChevronLeft, Zap, Headphones } from "lucide-react"
+import { Loader2, AlertCircle, Maximize, Minimize, Play, Pause, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getGlobalSettings } from "@/lib/store"
 
@@ -26,7 +25,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [error, setError] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [settings, setSettings] = React.useState<any>(null)
   const [playerKey, setPlayerKey] = React.useState(0)
   const [isPlaying, setIsPlaying] = React.useState(false)
   
@@ -75,9 +73,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true);
     setIsPlaying(false);
 
-    const s = await getGlobalSettings();
-    setSettings(s);
-    
     if (isDirectFile && !url.includes('.m3u8')) {
       if (videoRef.current) {
         videoRef.current.src = url;
@@ -252,21 +247,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           <iframe 
             key={`${url}_${playerKey}`} 
             src={finalIframeSrc} 
-            className={`w-full ${isSpotify ? 'h-[152px] max-w-2xl mx-auto rounded-3xl' : 'h-full'} border-0 relative z-10`}
+            className={`w-full h-full border-0 relative z-10`}
             allowFullScreen 
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />
-          {isSpotify && (
-            <div className="mt-4 flex flex-col items-center gap-2 animate-in fade-in duration-700">
-               <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full">
-                  <Headphones className="h-3 w-3 text-emerald-500" />
-                  <span className="text-[8px] font-black uppercase text-emerald-500 tracking-widest">Dica: Faça login para ouvir a música completa</span>
-               </div>
-            </div>
-          )}
         </div>
       ) : (
         <video 
