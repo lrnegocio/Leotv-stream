@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v262 - MODO BRAVE v2 (AUTO-CLOSE POPUPS)
- * Restaura o sandbox para capturar e fechar redirects automaticamente.
- * Bypass inteligente para Spotify e Rei dos Canais.
+ * PLAYER MASTER SOBERANO v263 - MODO BRAVE v3 (ANTI-DETECTION)
+ * Extermínio total de atributos que disparam avisos em sites como Rei dos Canais.
+ * Bypass inteligente para Spotify e RDCanais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -206,11 +206,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
             /* 
-              RECALIBRAGEM v262: Sandbox re-introduzido sem "allow-popups".
-              Isso força a aba de anúncio a ser bloqueada ou fechada imediatamente pelo navegador.
-              Se o site detectar o sandbox e travar, o usuário precisará clicar no Play real exposto pelo Ad-Blocker.
+              RECALIBRAGEM v263: Atributo sandbox REMOVIDO COMPLETAMENTE para evitar detecção.
+              A proteção agora é feita via CSS global no layout.tsx que esconde os anúncios.
             */
-            sandbox={isDetectorSite ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined}
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />
