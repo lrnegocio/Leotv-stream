@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -9,8 +10,8 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v279 - PERFORMANCE EXTREMA PARA VPS
- * Implementação de Debounce REAL para evitar lag ao digitar em conexões remotas.
+ * BUSCA MASTER v280 - PERFORMANCE EXTREMA PARA VPS
+ * Implementação de Debounce de 800ms para evitar lag e erros de digitação em VPS com pouca RAM.
  */
 function VoiceSearchContent() {
   const searchParams = useSearchParams()
@@ -30,21 +31,20 @@ function VoiceSearchContent() {
   const triggerSearch = React.useCallback((value: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     
-    // DEBOUNCE MASTER: Só dispara a busca após 600ms de silêncio no teclado
-    // Isso é vital para a VPS não travar as letras digitadas.
+    // DEBOUNCE MASTER: 800ms de espera garante fluidez total na digitação via VPS/Putty.
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
       if (value) params.set('q', value)
       else params.delete('q')
       router.replace(`?${params.toString()}`, { scroll: false })
-    }, 600)
+    }, 800)
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    // Atualiza o estado local IMEDIATAMENTE (sem lag na digitação)
+    // Estado local atualiza instantaneamente para as letras não travarem
     setQuery(val) 
-    // Dispara a busca com o temporizador inteligente
+    // Pesquisa aguarda o tempo de debounce
     triggerSearch(val) 
   }
 
@@ -108,6 +108,7 @@ function VoiceSearchContent() {
           className="pl-12 pr-12 bg-muted/50 border-border focus:border-primary rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest shadow-sm transition-all"
           value={query || ""}
           onChange={handleInputChange}
+          autoComplete="off"
         />
         {query && (
           <button 

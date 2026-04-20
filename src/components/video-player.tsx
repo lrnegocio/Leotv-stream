@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,8 +14,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v279 - EDIÇÃO SEM SANDBOX E ALTA PERFORMANCE
- * Sistema recalibrado para ignorar detecções de bloqueio e garantir fluidez.
+ * PLAYER MASTER SOBERANO v280 - EDIÇÃO SEM SANDBOX E ALTA PERFORMANCE
+ * Remoção absoluta do atributo sandbox para evitar detecção do Rei dos Canais.
+ * Lógica de Play/Pause otimizada para evitar reinício de sinal ao vivo.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -63,6 +65,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setLoading(false);
+      // Mantém a chave se ela já existir para não resetar o canal no despause
       if (playerKey === 0) setPlayerKey(Date.now());
       setIsPlaying(true);
       return;
@@ -121,11 +124,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // Se estiver parado e clicarmos em Play, forçamos um refresh da sintonização
-      // para garantir que o canal abra sem travar no botão maior do player original.
-      if (!isPlaying) {
-        setPlayerKey(Date.now());
-      }
+      // Para Iframes, o pause apenas silencia e oculta visualmente
+      // Isso evita o reinício do canal.
       setIsPlaying(!isPlaying);
       return;
     }
@@ -176,19 +176,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-[140] flex flex-col items-center justify-center bg-black/95 text-center p-10">
           <AlertCircle className="h-16 w-16 text-destructive mb-6" />
           <p className="text-white font-black uppercase text-xs">Sinal Master Indisponível.</p>
-          <Button onClick={() => { cleanup(); initPlayer(); }} variant="outline" className="mt-4">TENTAR RECONEXÃO</Button>
+          <Button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} variant="outline" className="mt-4">TENTAR RECONEXÃO</Button>
         </div>
       )}
       
       {isIframe ? (
-        <div className={`relative w-full h-full transition-opacity duration-300 ${!isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className={`relative w-full h-full transition-all duration-500 ${!isPlaying ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
           {playerKey > 0 && (
             <iframe 
               src={finalIframeSrc} 
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; fullscreen" 
-              // ATENÇÃO: SANDBOX REMOVIDO TOTALMENTE PARA EVITAR DETECÇÃO DO REI DOS CANAIS
               onLoad={() => setLoading(false)}
+              /* SANDBOX REMOVIDO ABSOLUTAMENTE PARA EVITAR BLOQUEIO DO REI DOS CANAIS */
             />
           )}
         </div>
@@ -202,18 +202,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {/* TELA DE PAUSA PARA IFRAME */}
+      {/* TELA DE PAUSA PARA IFRAME (MANTÉM O VÍDEO RODANDO NO FUNDO) */}
       {isIframe && !isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[145]">
-           <div className="text-center space-y-4">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-[145] animate-in fade-in duration-300">
+           <div className="text-center space-y-6">
               <button 
                 onClick={handleTogglePlay}
-                className="h-24 w-24 rounded-full bg-primary/20 flex items-center justify-center hover:scale-110 transition-transform group"
+                className="h-32 w-32 rounded-full bg-primary/20 border-4 border-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group shadow-[0_0_50px_rgba(var(--primary),0.3)]"
               >
-                <Play className="h-12 w-12 text-primary fill-primary animate-pulse" />
+                <Play className="h-16 w-16 text-primary fill-primary animate-pulse" />
               </button>
-              <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Sinal em Pausa</p>
-              <Button onClick={handleTogglePlay} className="bg-primary rounded-xl font-black uppercase px-8 shadow-xl">RETOMAR SINAL</Button>
+              <div>
+                <p className="text-xl font-black uppercase italic text-primary tracking-widest">Sinal em Pausa</p>
+                <p className="text-[10px] font-bold uppercase text-white/40 mt-1">O carregamento continua ativo no fundo</p>
+              </div>
+              <Button onClick={handleTogglePlay} className="bg-primary rounded-2xl font-black uppercase px-12 h-14 shadow-xl hover:scale-105">RETOMAR AGORA</Button>
            </div>
         </div>
       )}
@@ -223,22 +226,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
-      <div className="absolute bottom-6 right-6 z-[150] flex gap-2">
-        {onPrev && <button onClick={onPrev} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-4 w-4 text-white" /></button>}
+      <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
+        {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
         <button 
           onClick={handleTogglePlay} 
-          className="h-12 w-12 rounded-2xl bg-primary shadow-xl flex items-center justify-center border border-white/20 hover:scale-110 active:scale-95 transition-all"
+          className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all group"
           title="Executar/Pausar Sinal"
         >
-          {isPlaying ? <Pause className="h-6 w-6 text-white fill-white" /> : <Play className="h-6 w-6 text-white fill-white" />}
+          {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
         </button>
 
-        <button onClick={toggleFullscreen} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all">
-          {isFullscreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}
+        <button onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg">
+          {isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}
         </button>
         
-        {onNext && <button onClick={onNext} className="h-10 w-10 rounded-xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-4 w-4 text-white" /></button>}
+        {onNext && <button onClick={onNext} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all shadow-lg"><ChevronRight className="h-5 w-5 text-white" /></button>}
       </div>
     </div>
   )

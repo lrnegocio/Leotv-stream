@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -54,7 +55,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v275 - EXTERMINADOR DE OVERLAYS */
+          /* PROTOCOLO BRAVE SUPREMO v280 - EXTERMINADOR DE OVERLAYS */
           
           /* Esconde avisos de sandbox e bloqueios do site original */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
@@ -76,10 +77,11 @@ export default function RootLayout({
             z-index: -1 !important;
           }
 
-          /* Garante que o botão de play original não bloqueie o nosso controle */
+          /* Garante que o botão de play original fique visível mas atrás dos nossos comandos */
           .vjs-big-play-button, .vjs-big-play-centered {
             opacity: 0.1 !important;
-            pointer-events: none !important;
+            pointer-events: auto !important;
+            z-index: 100 !important;
           }
 
           /* Bloqueio de redirecionamentos e downloads indesejados */
