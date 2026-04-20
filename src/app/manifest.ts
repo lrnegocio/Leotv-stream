@@ -5,13 +5,14 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Léo TV Stream - O Sinal Master',
     short_name: 'Léo TV',
     description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming.',
-    start_url: '/user/home',
+    start_url: '/',
     display: 'standalone',
     display_override: ['standalone', 'window-controls-overlay'],
     orientation: 'any',
     background_color: '#0A051A',
     theme_color: '#6D2DCC',
     scope: '/',
+    categories: ['entertainment', 'video'],
     icons: [
       {
         src: 'https://picsum.photos/seed/leotv/192/192',
