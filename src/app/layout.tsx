@@ -55,39 +55,47 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v281 - EXTERMINADOR DE OVERLAYS E POPUPS */
+          /* PROTOCOLO BRAVE SUPREMO v283 - EXTERMINADOR DE OVERLAYS E POPUPS */
           
           /* Esconde avisos de sandbox e bloqueios do site original */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
-          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"] {
+          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
+          .reidoscanais-sandbox {
             display: none !important;
             visibility: hidden !important;
+            opacity: 0 !important;
             pointer-events: none !important;
           }
 
-          /* Hole-punch em anúncios invisíveis de players como PlayCNVS e Rei dos Canais */
-          /* Isso deleta as camadas que abrem novas abas no clique */
+          /* Hole-punch em anúncios invisíveis (A CAPA DE VIDRO QUE ABRE ABAS) */
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
           .ad-container, .reidoscanais-ads, #over-video,
-          .vjs-overlay, .player-poster, .click-to-start {
+          .vjs-overlay, .player-poster, .click-to-start,
+          .vjs-ads-label, .vjs-ad-loading, .vjs-ad-playing,
+          iframe[src*="doubleclick"], iframe[src*="ads"],
+          [id*="pop-"], [class*="pop-"] {
             display: none !important;
+            width: 0 !important;
+            height: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
-            z-index: -1 !important;
+            z-index: -9999 !important;
           }
 
-          /* Garante que o botão de play original fique visível mas atrás dos nossos comandos */
+          /* Garante que o botão de play original fique acessível se o nosso falhar, 
+             mas sem as camadas de anúncio em volta */
           .vjs-big-play-button, .vjs-big-play-centered, .play-button {
-            opacity: 0.1 !important;
+            opacity: 1 !important;
             pointer-events: auto !important;
             z-index: 5 !important;
           }
 
           /* Bloqueio de redirecionamentos e downloads indesejados */
-          [href*="opera.com"], [href*="browser"], .download-button {
+          [href*="opera.com"], [href*="browser"], .download-button,
+          [href*="whatsapp.com/channel"] {
             display: none !important;
           }
 
