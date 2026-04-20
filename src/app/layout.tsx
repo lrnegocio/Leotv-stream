@@ -55,10 +55,21 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v263 - EXTERMÍNIO DE ANÚNCIOS E OVERLAYS */
+          /* PROTOCOLO BRAVE SUPREMO v264 - BLINDAGEM TOTAL ANTI-ADWARE */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde elementos de anúncios e camadas de clique falsas sem alertar o site */
+          /* Esconde avisos de sandbox e bloqueios de anúncios de forma agressiva */
+          .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
+          .aviso-sandbox-container, [class*="reidoscanais-premium"],
+          .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            height: 0 !important;
+          }
+
+          /* Extermínio de anúncios e camadas de clique falsas */
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
@@ -81,7 +92,11 @@ export default function RootLayout({
             left: -9999px !important;
           }
 
-          /* Garante que o player real não seja bloqueado por cliques fantasmas */
+          /* Impede que elementos de download de navegador apareçam */
+          [href*="opera.com"], [href*="browser"], .download-button {
+            display: none !important;
+          }
+
           body { -webkit-tap-highlight-color: transparent; }
           .relative.w-full.bg-black { pointer-events: auto !important; }
           

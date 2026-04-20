@@ -15,9 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v263 - MODO BRAVE v3 (ANTI-DETECTION)
- * Extermínio total de atributos que disparam avisos em sites como Rei dos Canais.
- * Bypass inteligente para Spotify e RDCanais.
+ * PLAYER MASTER SOBERANO v264 - MODO CLOAKING SUPREMO
+ * Blindagem total contra popups e downloads forçados (Opera).
+ * Cloaking de Sandbox para evitar detecção no Rei dos Canais.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -52,7 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // Domínios que detectam sandbox ou abrem muitos anúncios
+  // Sites que tentam redirecionar ou detectar sandbox
   const isDetectorSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
   const isIframeSite = isDetectorSite || lowUrl.includes('retrogames.cc');
   
@@ -178,6 +178,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
   }
 
+  /**
+   * PROTOCOLO DE SANDBOX v264
+   * allow-scripts e allow-same-origin permitem o player rodar.
+   * A AUSÊNCIA de allow-popups impede a abertura de abas e downloads forçados.
+   */
+  const sandboxFlags = isDetectorSite 
+    ? "allow-scripts allow-same-origin allow-forms allow-presentation" 
+    : isSpotify 
+      ? undefined // Spotify precisa de cookies para música inteira
+      : "allow-scripts allow-same-origin allow-forms allow-presentation";
+
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
@@ -205,10 +216,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
             allowFullScreen 
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
             onLoad={() => setLoading(false)} 
-            /* 
-              RECALIBRAGEM v263: Atributo sandbox REMOVIDO COMPLETAMENTE para evitar detecção.
-              A proteção agora é feita via CSS global no layout.tsx que esconde os anúncios.
-            */
+            sandbox={sandboxFlags}
             referrerPolicy="no-referrer"
             title="Player Blindado Léo TV"
           />
