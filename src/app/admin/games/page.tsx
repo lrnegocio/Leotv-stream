@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2, RefreshCcw } from "lucide-react"
+import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2, RefreshCcw, Wand2, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ export default function AdminGamesPage() {
   const [testGame, setTestGame] = React.useState<GameItem | null>(null)
   const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
   const [isSaving, setIsSaving] = React.useState(false)
+  const [isFixing, setIsFixing] = React.useState(false)
   
   const [gameData, setGameData] = React.useState<Partial<GameItem>>({
     title: "",
@@ -40,13 +41,44 @@ export default function AdminGamesPage() {
 
   React.useEffect(() => { loadData() }, [loadData])
 
+  const handleFixLink = async () => {
+    if (!gameData.url || !gameData.url.includes('retrogames.cc')) {
+      toast({ variant: "destructive", title: "Apenas para RetroGames.cc" })
+      return;
+    }
+    if (gameData.url.includes('/embed/')) {
+      toast({ title: "Link já é de Embed!" })
+      return;
+    }
+
+    setIsFixing(true);
+    try {
+      // Usamos o Túnel Master para buscar o link secreto dentro da página
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(gameData.url)}`;
+      const res = await fetch(proxyUrl);
+      const html = await res.text();
+      
+      // Busca o padrão do link de embed no HTML do site
+      const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
+      if (embedMatch) {
+        setGameData({ ...gameData, url: embedMatch[0] });
+        toast({ title: "LINK SINTONIZADO!", description: "O motor do jogo foi extraído com sucesso." });
+      } else {
+        toast({ variant: "destructive", title: "Erro na Extração", description: "Não localizei o link secreto nesta página." });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro de Conexão", description: "O site bloqueou a leitura automática." });
+    } finally {
+      setIsFixing(false);
+    }
+  }
+
   const handleSaveGame = async () => {
     if (!gameData.title || !gameData.url) {
       toast({ variant: "destructive", title: "Campos Obrigatórios" })
       return
     }
     setIsSaving(true)
-    // Chamamos a função blindada que usa a tabela 'content'
     const success = await saveGame(gameData)
     if (success) {
       toast({ title: gameData.id ? "JOGO ATUALIZADO!" : "JOGO ADICIONADO À ARENA!" })
@@ -192,7 +224,7 @@ export default function AdminGamesPage() {
                 <ShieldCheck className="h-8 w-8 text-emerald-500" />
                 <div>
                    <h4 className="font-black uppercase text-xs">Banco de Dados Unificado</h4>
-                   <p className="text-[10px] opacity-60">Os jogos agora são salvos na tabela principal, garantindo 100% de compatibilidade com o seu servidor.</p>
+                   <p className="text-[10px] opacity-60">Os jogos agora são salvos na tabela principal, garantindo 100% de compatibilidade.</p>
                 </div>
              </div>
           </Card>
@@ -229,26 +261,32 @@ export default function AdminGamesPage() {
                   <SelectTrigger className="bg-black/40 border-white/5 h-12 font-bold"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="embed">Link de Embed (Iframe)</SelectItem>
-                    <SelectItem value="direct">Upload / Link ROM (Client-Side)</SelectItem>
+                    <SelectItem value="direct">Link ROM / Binário</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center gap-2">
-                {gameData.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
-                {gameData.type === 'embed' ? 'URL do Iframe (Ex: RetroGames.cc)' : 'URL da ROM (Download pro Cliente)'}
+              <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {gameData.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
+                  {gameData.type === 'embed' ? 'Link do Jogo (Embed Preferencial)' : 'URL da ROM'}
+                </div>
+                {gameData.url && gameData.url.includes('retrogames.cc') && !gameData.url.includes('/embed/') && (
+                   <span className="text-[8px] text-amber-500 font-bold animate-pulse">Página do site detectada!</span>
+                )}
               </Label>
-              <Input value={gameData.url} onChange={e => setGameData({...gameData, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="https://..." />
-            </div>
-
-            {gameData.type === 'direct' && (
-              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">URL do Emulador Customizado (Opcional)</Label>
-                <Input value={gameData.emulatorUrl} onChange={e => setGameData({...gameData, emulatorUrl: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px]" placeholder="Link do emulador .js..." />
+              <div className="flex gap-2">
+                <Input value={gameData.url} onChange={e => setGameData({...gameData, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" placeholder="https://..." />
+                {gameData.url?.includes('retrogames.cc') && (
+                   <Button type="button" onClick={handleFixLink} disabled={isFixing} className="h-12 bg-amber-500 hover:bg-amber-600 px-4 rounded-xl shadow-lg shadow-amber-500/10">
+                     {isFixing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                   </Button>
+                )}
               </div>
-            )}
+              <p className="text-[8px] font-bold opacity-40 uppercase">Dica: Use links /embed/ para o jogo abrir sozinho. O botão mágica ao lado corrige links do RetroGames.cc para você.</p>
+            </div>
 
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem da Capa</Label>
@@ -274,7 +312,7 @@ export default function AdminGamesPage() {
                <div className="space-y-6">
                   <UploadCloud className="h-20 w-20 text-emerald-500 mx-auto animate-bounce" />
                   <h3 className="text-2xl font-black uppercase italic">Download no Cliente</h3>
-                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">O jogo será baixado diretamente para o cache do seu aparelho. Espaço usado: {testGame?.url}</p>
+                  <p className="text-xs font-bold opacity-40 uppercase max-w-sm mx-auto">O jogo será baixado diretamente para o cache do seu aparelho.</p>
                   <Button variant="outline" className="border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px]" onClick={() => window.open(testGame?.url, '_blank')}>BAIXAR MANUALMENTE</Button>
                </div>
             </div>

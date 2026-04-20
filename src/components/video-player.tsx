@@ -15,8 +15,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v250 - MODO SUPREMO ANTI-CONGELAMENTO + PUBLICIDADE
- * Suporte nativo a HLS Proxy 7.0, MP4 Archive, AgroPesca, YouTube Master e Banners.
+ * PLAYER MASTER SOBERANO v251 - MODO SUPREMO ANTI-CONGELAMENTO
+ * Suporte a HLS Proxy 7.5, MP4 Archive, AcPlay Bypass e RetroGames Embed.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -64,7 +64,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const s = await getGlobalSettings();
     setSettings(s);
     
-    // MODO VOD MP4/Archive: Direto ao ponto
+    // MODO VOD MP4/Archive: Entrega direta ao hardware
     if (isDirectFile && !url.includes('.m3u8')) {
       if (videoRef.current) {
         videoRef.current.src = url;
@@ -81,7 +81,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!videoRef.current) return;
 
     try {
-      // Motor MPEG-TS (Baixa Latência)
+      // Motor MPEG-TS
       if (isTs && typeof window !== 'undefined' && (window as any).mpegts) {
         const mpegts = (window as any).mpegts;
         if (mpegts.isSupported()) {
@@ -95,14 +95,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
 
-      // Motor HLS Master (Punycode / AgroPesca / Proxy 7.0)
+      // Motor HLS Master 7.5
       if (isHls && typeof window !== 'undefined' && (window as any).Hls) {
         const Hls = (window as any).Hls;
         if (Hls.isSupported()) {
           const hls = new Hls({ 
             enableWorker: true, 
             lowLatencyMode: true,
-            backBufferLength: 60,
             xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
           });
           hls.loadSource(url);
@@ -130,7 +129,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         }
       }
       
-      // Fallback nativo
       if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
         videoRef.current.src = url;
         setLoading(false);
@@ -167,19 +165,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null
 
-  // SINTONIZAÇÃO YOUTUBE MASTER FIX (v247)
   let finalIframeSrc = url;
   if (ytId) {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}&widget_referrer=${encodeURIComponent(origin)}`;
+    finalIframeSrc = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
   }
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
       {loading && !isIframe && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/10 pointer-events-none">
-          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-30" />
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 pointer-events-none">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando Sinal Master...</p>
         </div>
       )}
 

@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v249 - PROTOCOLO DE CAMUFLAGEM TOTAL
+ * TÚNEL MASTER SOBERANO v251 - PROTOCOLO DE CAMUFLAGEM E EXTRAÇÃO
  * Atravessa bloqueios de CORS, Referer e cadeados de Doramas (AcPlay).
- * Suporta reescrita de Variantes, Segmentos e Chaves de Criptografia.
+ * Suporte nativo a Extração de Links de Games e Reescrita de Manifestos.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -32,19 +32,20 @@ export async function GET(req: NextRequest) {
 
     /**
      * BLINDAGEM ACPLAY DORAMAS (BYPASS DE CADEADO)
-     * Simula um dispositivo Android oficial acessando o site para liberar conteúdos bloqueados.
      */
     if (targetUrl.includes('acplay.live')) {
        requestHeaders.set('Origin', 'https://acplay.live');
        requestHeaders.set('Referer', 'https://acplay.live/');
        requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36');
-       requestHeaders.set('Sec-Fetch-Dest', 'video');
-       requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
-       requestHeaders.set('Sec-Fetch-Site', 'cross-site');
-       requestHeaders.set('Accept', 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5');
     }
 
-    // Timeout de 15 segundos para evitar carregamento infinito em links mortos
+    /**
+     * BLINDAGEM RETROGAMES
+     */
+    if (targetUrl.includes('retrogames.cc')) {
+       requestHeaders.set('Referer', 'https://www.retrogames.cc/');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const isM3u8 = targetUrl.toLowerCase().includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
 
-    // REESCRITA PROFUNDA: Suporte a Variantes de Qualidade e Chaves de Segurança (ESPN Punycode)
+    // REESCRITA PROFUNDA HLS
     if (isM3u8) {
       const manifestText = await res.text();
       const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -77,9 +78,7 @@ export async function GET(req: NextRequest) {
           try {
             const absoluteUrl = new URL(trimmed, baseUrl).href;
             return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
-          } catch (e) {
-            return line;
-          }
+          } catch (e) { return line; }
         }
 
         if (trimmed.startsWith('#EXT-X-KEY') || trimmed.startsWith('#EXT-X-MAP')) {
@@ -87,12 +86,9 @@ export async function GET(req: NextRequest) {
             try {
               const absoluteUri = new URL(uri, baseUrl).href;
               return `URI="/api/proxy?url=${encodeURIComponent(absoluteUri)}"`;
-            } catch (e) {
-              return match;
-            }
+            } catch (e) { return match; }
           });
         }
-
         return line;
       }).join('\n');
 
@@ -105,7 +101,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fluxo normal para MP4 ou outros arquivos
+    // Fluxo para outros arquivos (MP4, TS, HTML de Games)
     const responseHeaders = new Headers();
     const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding'];
     headersToCopy.forEach(h => {
@@ -123,6 +119,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     if (error.name === 'AbortError') return new Response("Timeout no Sinal Master", { status: 504 });
-    return new Response("Falha no Túnel Master 7.0", { status: 500 });
+    return new Response("Falha no Túnel Master 7.5", { status: 500 });
   }
 }

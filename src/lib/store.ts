@@ -39,6 +39,7 @@ export interface GameItem {
   url: string;
   imageUrl?: string;
   genre: string;
+  emulatorUrl?: string;
 }
 
 export interface Reseller {
@@ -77,19 +78,17 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v248 - PROTOCOLO DE TÚNEL SOBERANO
+ * MOTOR DE LINKS MASTER v251 - PROTOCOLO DE TÚNEL SOBERANO
  * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs, AcPlay).
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   const lowUrl = url.toLowerCase();
   
-  // YouTube e Iframes de busca não usam proxy
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be') || lowUrl.includes('shorts')) {
     return url.trim();
   }
 
-  // Links que precisam do Túnel Master para evitar bloqueios de CORS/Referer/VPS
   const needsProxy = 
     lowUrl.includes('.m3u8') || 
     lowUrl.includes('.ts') || 
@@ -97,16 +96,39 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('archive.org') || 
     lowUrl.includes('mlstatic.com') || 
     lowUrl.includes('agropesca') ||
-    lowUrl.includes('acplay.live') || // Suporte Master AcPlay Doramas
-    lowUrl.includes('xn--') || // Suporte Total Punycode ESPN/AdultSwim
+    lowUrl.includes('acplay.live') || 
+    lowUrl.includes('xn--') || 
     lowUrl.includes('redecanaistv');
 
   if (needsProxy) {
-    // Evita duplicar o proxy se o link já estiver formatado
     if (url.includes('/api/proxy')) return url.trim();
     return `/api/proxy?url=${encodeURIComponent(url.trim())}`;
   }
   
+  return url.trim();
+};
+
+/**
+ * CONVERSOR DE LINKS DE GAMES v251
+ * Transforma links de páginas comuns em links de incorporação (Embed) limpos.
+ */
+export const formatGameLink = (url: string) => {
+  if (!url) return "";
+  const lowUrl = url.trim().toLowerCase();
+
+  // Se já for um link de embed, retorna normal
+  if (lowUrl.includes('/embed/')) return url.trim();
+
+  // Se for retrogames, avisa ou tenta preparar para o sintonizador
+  if (lowUrl.includes('retrogames.cc')) {
+    // Tenta capturar o ID se ele estiver presente em algum formato conhecido
+    const idMatch = url.match(/\/embed\/(\d+)/) || url.match(/-(\d+)\.html/);
+    if (idMatch && !lowUrl.includes('/embed/')) {
+       // Se achamos um ID no final de um link comum, podemos tentar reconstruir
+       // Mas o ideal é usar o sintonizador do Admin
+    }
+  }
+
   return url.trim();
 };
 
@@ -242,11 +264,28 @@ export async function validateResellerLogin(u: string, p: string) {
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
-  return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre }));
+  return (data || []).map(i => ({ 
+    id: i.id, 
+    title: i.title, 
+    console: i.genre.replace('ARENA: ', ''), 
+    type: 'embed', 
+    url: i.streamUrl, 
+    imageUrl: i.imageUrl, 
+    genre: i.genre,
+    emulatorUrl: i.description === 'GAME' ? '' : i.description // Usamos description para guardar emulatorUrl se necessário
+  }));
 }
 
 export async function saveGame(g: any) {
-  const { error } = await supabase.from('content').upsert({ id: g.id || "game_"+Date.now(), title: g.title.toUpperCase(), genre: `ARENA: ${g.console}`, streamUrl: g.url, description: 'GAME', imageUrl: g.imageUrl, isRestricted: true });
+  const { error } = await supabase.from('content').upsert({ 
+    id: g.id || "game_"+Date.now(), 
+    title: g.title.toUpperCase(), 
+    genre: `ARENA: ${g.console}`, 
+    streamUrl: g.url, 
+    description: g.emulatorUrl || 'GAME', 
+    imageUrl: g.imageUrl, 
+    isRestricted: true 
+  });
   return !error;
 }
 
