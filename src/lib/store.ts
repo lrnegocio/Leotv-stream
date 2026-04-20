@@ -78,26 +78,22 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v255 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
- * Inclui conversor Master para Spotify (com suporte a localização) e bloqueador de Adware.
+ * MOTOR DE LINKS MASTER v256 - PROTOCOLO DE TÚNEL SOBERANO (BRAVE MODE)
+ * Inclui conversor Master para Spotify e bloqueador de Adware.
+ * Sites de Iframe (RDCanais, TVaCabo) carregam direto para evitar erro de Proxy.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
   const lowUrl = finalUrl.toLowerCase();
   
-  // SPOTIFY MASTER CONVERTER: Transforma qualquer link do Spotify em Player Limpo
+  // SPOTIFY MASTER CONVERTER
   if (lowUrl.includes('spotify.com')) {
-    // REMOÇÃO DE LOCALIZAÇÃO (EX: /intl-pt/) - ESSENCIAL PARA EVITAR 404
     finalUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
-    
-    // Tratamento de Busca
     if (finalUrl.includes('/search/')) {
       const searchTerm = finalUrl.split('/search/')[1]?.split('?')[0] || "";
       return `https://open.spotify.com/embed/search/${searchTerm}`;
     }
-    
-    // Converte para Embed Padrão
     if (!finalUrl.includes('/embed/')) {
       return finalUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
@@ -108,6 +104,10 @@ export const formatMasterLink = (url: string) => {
     return finalUrl;
   }
 
+  // DOMÍNIOS DE IFRAME DIRETO (NÃO USAR PROXY AQUI POIS SÃO PÁGINAS HTML)
+  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
+  if (isIframeSite) return finalUrl;
+
   // Links que precisam de Bypass ou Proxy para funcionar na VPS
   const needsProxy = 
     lowUrl.includes('.m3u8') || 
@@ -117,10 +117,7 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('mlstatic.com') || 
     lowUrl.includes('agropesca') ||
     lowUrl.includes('acplay.live') || 
-    lowUrl.includes('xn--') || 
-    lowUrl.includes('redecanaistv') ||
-    lowUrl.includes('rdcanais') ||
-    lowUrl.includes('tvacabo');
+    lowUrl.includes('xn--');
 
   if (needsProxy) {
     if (finalUrl.includes('/api/proxy')) return finalUrl;

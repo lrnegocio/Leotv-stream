@@ -15,7 +15,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v255 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
+ * PLAYER MASTER SOBERANO v256 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
  * Suporte a Spotify Master, HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -51,10 +51,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
+  // HIERARQUIA SOBERANA: Primeiro identifica se é um site (Iframe)
+  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('retrogames.cc');
+  const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
+
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
-  const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
-  const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
-  const isIframe = isSpotify || (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
+  const isHls = !isIframe && (lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca'));
+  const isTs = !isIframe && lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
@@ -198,6 +201,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allowFullScreen 
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
           onLoad={() => setLoading(false)} 
+          // BLINDAGEM SOBERANA: Bloqueia popups e redirecionamentos externos
           sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           referrerPolicy="no-referrer"
           title="Player Blindado Léo TV"
