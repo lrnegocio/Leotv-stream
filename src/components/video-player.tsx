@@ -15,8 +15,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v269 - COMANDO PLAY/PAUSE ATIVO
- * Atendimento ao Mestre: Botão agora alterna entre Play e Pause e sincroniza com o hardware.
+ * PLAYER MASTER SOBERANO v270 - COMANDO PLAY/PAUSE ULTRA
+ * Atendimento ao Mestre: Sintonização PlayCNVS e bloqueio de botões de anúncios falsos.
  * Modo Refresh para Iframes e Controle Real para HLS/MP4.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -54,7 +54,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais') || lowUrl.includes('retrogames.cc');
+  // Lista de sites que rodam via Iframe e que possuem ads que precisamos filtrar
+  const isIframeSite = 
+    lowUrl.includes('rdcanais') || 
+    lowUrl.includes('redecanaistv') || 
+    lowUrl.includes('tvacabo') || 
+    lowUrl.includes('reidoscanais') || 
+    lowUrl.includes('retrogames.cc') ||
+    lowUrl.includes('playcnvs');
   
   const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
 

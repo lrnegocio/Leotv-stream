@@ -55,40 +55,35 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v267 - EXTERMINADOR DE ANÚNCIOS */
+          /* PROTOCOLO BRAVE SUPREMO v270 - EXTERMINADOR DE ANÚNCIOS MASTER */
           iframe { pointer-events: auto !important; }
           
-          /* Esconde banners de anúncios e avisos de sandbox do Rei dos Canais */
+          /* Esconde banners de anúncios e avisos de sandbox do Rei dos Canais e PlayCNVS */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
           .aviso-sandbox-container, [class*="reidoscanais-premium"],
           .sandbox-warning, #sandbox-notice, [id*="aviso-sandbox"],
           .alert-sandbox, div[style*="background-color: rgb(255, 0, 0)"],
-          .reidoscanais-notice, .reidoscanais-premium-notice {
+          .reidoscanais-notice, .reidoscanais-premium-notice,
+          .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
+          .vjs-big-play-button, .ad-layer, .click-to-play, #click-to-play-overlay,
+          [id*="ad-"], [class*="ad-"], .pop-under, .overlay-ads,
+          .mgid-ad, .ad-container, .ads-wrapper, .reidoscanais-ads, 
+          .hidden-ads, #pop-under, #over-video, [class*="ReiDoCanais"], 
+          [id*="ReiDoCanais"] {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
-            height: 0 !important;
-            position: absolute !important;
-            left: -9999px !important;
-          }
-
-          /* Extermínio de camadas invisíveis e pop-unders */
-          .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
-          [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
-          .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
-          .cl-close, .close-ad, .ad-container, .ads-wrapper,
-          .reidoscanais-ads, .hidden-ads, #pop-under, #over-video,
-          [class*="ReiDoCanais"], [id*="ReiDoCanais"],
-          #click-to-play-overlay, .video-overlay, .ad-overlay,
-          .vjs-big-play-button, .ad-layer, [onclick*="window.open"], .click-to-play {
-            display: none !important;
-            visibility: hidden !important;
             height: 0 !important;
             width: 0 !important;
-            opacity: 0 !important;
-            z-index: -999 !important;
             position: absolute !important;
             left: -9999px !important;
+            pointer-events: none !important;
+          }
+
+          /* Extermínio de botões de Play falsos que abrem anúncios no PlayCNVS */
+          [class*="play-button"], [id*="play-button"], .vjs-button, 
+          .vjs-control-bar, .vjs-big-play-centered, .ads-container {
+             /* Apenas remove se for de classe de anúncio externa */
           }
 
           /* Bloqueia botões de download e redirecionamentos externos */

@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v261 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
- * Inclui conversor Master para Spotify e injeção de início automático.
+ * MOTOR DE LINKS MASTER v270 - PROTOCOLO DE TÚNEL SOBERANO (MODO AUTO-PLAY)
+ * Inclui suporte para PlayCNVS e extermínio de redirecionamentos.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -100,7 +100,6 @@ export const formatMasterLink = (url: string) => {
       cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     }
     
-    // Adiciona parâmetro para forçar tentativa de autoplay
     if (!cleanUrl.includes('?')) {
       cleanUrl += '?utm_source=leotv_master&autoplay=1';
     } else {
@@ -119,7 +118,14 @@ export const formatMasterLink = (url: string) => {
   }
 
   // DOMÍNIOS DE IFRAME DIRETO (SEM PROXY PARA EVITAR QUEBRA DE SCRIPTS)
-  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('reidoscanais');
+  // Adicionado playcnvs.stream para garantir autoplay
+  const isIframeSite = 
+    lowUrl.includes('rdcanais') || 
+    lowUrl.includes('redecanaistv') || 
+    lowUrl.includes('tvacabo') || 
+    lowUrl.includes('reidoscanais') ||
+    lowUrl.includes('playcnvs');
+
   if (isIframeSite) {
     if (!finalUrl.includes('autoplay=1')) {
        finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'autoplay=1';
