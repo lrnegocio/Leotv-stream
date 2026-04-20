@@ -55,22 +55,28 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
+          /* PROTOCOLO BRAVE SUPREMO - EXTERMÍNIO DE ANÚNCIOS */
           iframe { pointer-events: auto !important; }
+          
           .adsbygoogle, .ad-unit, [id*="google_ads_iframe"], .floating-ad, 
           [class*="ad-"], [id*="ad-"], .pop-under, .overlay-ads, 
           .video-ads, .banner-ads, .mgid-ad, #chat, .chat-box, 
-          .cl-close, .close-ad, .ad-container, .ads-wrapper {
+          .cl-close, .close-ad, .ad-container, .ads-wrapper,
+          .reidoscanais-ads, .hidden-ads, #pop-under, #over-video {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
+            width: 0 !important;
             opacity: 0 !important;
             pointer-events: none !important;
             z-index: -999 !important;
+            position: absolute !important;
+            left: -9999px !important;
           }
+
           body { -webkit-tap-highlight-color: transparent; }
-          /* Proteção contra bloqueio de cliques no player */
           .relative.w-full.bg-black { pointer-events: auto !important; }
-          /* Garante que o PWA ocupe a tela toda */
+          
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
           }

@@ -15,8 +15,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v256 - MODO SUPREMO ANTI-ADWARE (BRAVE EDITION)
- * Suporte a Spotify Master, HLS Proxy 8.0, MP4 Archive e Iframe Sandbox Blindado.
+ * PLAYER MASTER SOBERANO v257 - MODO SUPREMO ANTI-ADWARE (BRAVE ADAPTATIVO)
+ * Suporte a Spotify Master, HLS Proxy 8.0 e Bypass de Detecção de Sandbox.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -51,8 +51,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const ytId = getYouTubeId(url);
   const isSpotify = lowUrl.includes('spotify.com');
   
-  // HIERARQUIA SOBERANA: Primeiro identifica se é um site (Iframe)
-  const isIframeSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo') || lowUrl.includes('retrogames.cc');
+  // DOMÍNIOS QUE DETECTAM SANDBOX E BLOQUEIAM (RDCanais e derivados)
+  const isDetectorSite = lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv') || lowUrl.includes('tvacabo');
+  const isIframeSite = isDetectorSite || lowUrl.includes('retrogames.cc');
+  
   const isIframe = isSpotify || isIframeSite || (ytId || (!lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http')));
 
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
@@ -201,8 +203,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           allowFullScreen 
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
           onLoad={() => setLoading(false)} 
-          // BLINDAGEM SOBERANA: Bloqueia popups e redirecionamentos externos
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+          // BYPASS SOBERANO: Remove sandbox apenas para sites que bloqueiam o acesso se detectarem o atributo.
+          // Mantém proteção para Spotify e outros que não reclamam.
+          {...(!isDetectorSite ? { sandbox: "allow-scripts allow-same-origin allow-forms allow-presentation" } : {})}
           referrerPolicy="no-referrer"
           title="Player Blindado Léo TV"
         />
