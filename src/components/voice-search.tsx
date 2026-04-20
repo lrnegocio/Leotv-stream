@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v276 - PERFORMANCE DE VPS
+ * BUSCA MASTER v277 - PERFORMANCE DE VPS
  * Implementação de Debounce para evitar lag ao digitar em conexões remotas.
  */
 function VoiceSearchContent() {
@@ -21,16 +21,16 @@ function VoiceSearchContent() {
 
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
-  // Sincroniza query com a URL
+  // Sincroniza query com a URL apenas no carregamento inicial
   React.useEffect(() => {
-    const q = searchParams.get('q') || "";
-    if (q !== query) setQuery(q);
+    const q = searchParams?.get('q') || "";
+    if (q && q !== query) setQuery(q);
   }, [searchParams]);
 
   const triggerSearch = React.useCallback((value: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     
-    // DEBOUNCE: Só dispara a busca após 400ms de silêncio no teclado
+    // DEBOUNCE MASTER: Só dispara a busca após 400ms de silêncio no teclado
     // Isso é vital para a VPS não travar as letras digitadas.
     searchTimeoutRef.current = setTimeout(() => {
       const params = new URLSearchParams(window.location.search)
@@ -42,8 +42,8 @@ function VoiceSearchContent() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
-    setQuery(val)
-    triggerSearch(val)
+    setQuery(val) // Atualiza o estado local IMEDIATAMENTE (sem lag na digitação)
+    triggerSearch(val) // Dispara a busca com debounce
   }
 
   const startListening = () => {

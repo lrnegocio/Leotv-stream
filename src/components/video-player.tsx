@@ -13,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v276 - CONTROLE DE FLUXO E PERFORMANCE
+ * PLAYER MASTER SOBERANO v277 - CONTROLE DE FLUXO E PERFORMANCE
  * Sistema de interrupção inteligente para evitar reinícios e bloqueios de sandbox.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -46,8 +46,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isHls = !isIframe && (lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy'));
   const isTs = !isIframe && lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
 
-  // Sites que bloqueiam se virem o atributo sandbox
-  const needsSandboxRemoval = lowUrl.includes('reidoscanais') || lowUrl.includes('rdcanais');
+  // PROTOCOLO DE DESBLOQUEIO MESTRE: Sites que bloqueiam se virem o atributo sandbox
+  const needsSandboxRemoval = lowUrl.includes('reidoscanais') || lowUrl.includes('rdcanais') || lowUrl.includes('redecanaistv');
 
   const cleanup = React.useCallback(() => {
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
@@ -66,7 +66,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setLoading(false);
-      setPlayerKey(Date.now());
+      // Gera uma chave inicial apenas se não houver uma, para evitar reinício ao despausar
+      if (playerKey === 0) setPlayerKey(Date.now());
       setIsPlaying(true);
       return;
     }
@@ -114,7 +115,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
       }
     } catch (e) { setError(true); setLoading(false); }
-  }, [url, isMounted, isDirectFile, isHls, isTs, isIframe]);
+  }, [url, isMounted, isDirectFile, isHls, isTs, isIframe, playerKey]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -124,14 +125,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = () => {
     if (isIframe) {
-      // Para Iframe, o Pause agora é Mudo/Escondido para evitar reinício no Play
-      if (isPlaying) {
-        setIsPlaying(false);
-      } else {
-        // Se a chave for 0 (parado totalmente), reinicia. Se for > 0, só despausa.
-        if (playerKey === 0) setPlayerKey(Date.now());
-        setIsPlaying(true);
-      }
+      // Para Iframe, o "Pause" agora apenas esconde o elemento para não reiniciar ao voltar
+      setIsPlaying(!isPlaying);
       return;
     }
 
@@ -164,9 +159,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   let finalIframeSrc = url;
   if (playerKey > 0) {
     const separator = url.includes('?') ? '&' : '?';
-    // Se estiver "Pausado" (isPlaying=false), forçamos o mute no link para garantir silêncio
-    const muteParam = isPlaying ? "mute=0" : "mute=1";
-    finalIframeSrc = `${url}${separator}autoplay=1&${muteParam}&t=${playerKey}`;
+    // Mute=1 no carregamento inicial ajuda o autoplay a funcionar
+    finalIframeSrc = `${url}${separator}autoplay=1&mute=1&t=${playerKey}`;
   }
 
   return (
@@ -188,14 +182,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
       
       {isIframe ? (
-        <div className={`relative w-full h-full ${!isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div className={`relative w-full h-full transition-opacity duration-300 ${!isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           {playerKey > 0 && (
             <iframe 
-              key={playerKey}
               src={finalIframeSrc} 
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; fullscreen" 
-              // BLINDAGEM MESTRE: Remove sandbox se o site detectar, senão usa o modo seguro
+              // BLINDAGEM MESTRE: Omissão total do sandbox para evitar detecção no Rei dos Canais
               sandbox={needsSandboxRemoval ? undefined : "allow-scripts allow-same-origin allow-forms allow-modals"}
               onLoad={() => setLoading(false)}
             />
@@ -213,17 +206,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {/* TELA DE PAUSA PARA IFRAME */}
       {isIframe && !isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-[145]">
            <div className="text-center space-y-4">
-              <Play className="h-20 w-20 text-primary/40 mx-auto animate-pulse" />
+              <button 
+                onClick={handleTogglePlay}
+                className="h-24 w-24 rounded-full bg-primary/20 flex items-center justify-center hover:scale-110 transition-transform group"
+              >
+                <Play className="h-12 w-12 text-primary fill-primary animate-pulse" />
+              </button>
               <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Sinal em Pausa</p>
-              <Button onClick={handleTogglePlay} className="bg-primary rounded-xl font-black uppercase">RETOMAR SINAL</Button>
+              <Button onClick={handleTogglePlay} className="bg-primary rounded-xl font-black uppercase px-8">RETOMAR SINAL</Button>
            </div>
         </div>
       )}
 
       {/* CONTROLES MASTER */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
