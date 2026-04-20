@@ -55,7 +55,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v280 - EXTERMINADOR DE OVERLAYS */
+          /* PROTOCOLO BRAVE SUPREMO v281 - EXTERMINADOR DE OVERLAYS E POPUPS */
           
           /* Esconde avisos de sandbox e bloqueios do site original */
           .aviso-sandbox, #aviso-bloqueio, .reidoscanais-alerta, 
@@ -66,11 +66,13 @@ export default function RootLayout({
             pointer-events: none !important;
           }
 
-          /* Hole-punch em anúncios invisíveis de players como PlayCNVS */
+          /* Hole-punch em anúncios invisíveis de players como PlayCNVS e Rei dos Canais */
+          /* Isso deleta as camadas que abrem novas abas no clique */
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
-          .ad-container, .reidoscanais-ads, #over-video {
+          .ad-container, .reidoscanais-ads, #over-video,
+          .vjs-overlay, .player-poster, .click-to-start {
             display: none !important;
             opacity: 0 !important;
             pointer-events: none !important;
@@ -78,10 +80,10 @@ export default function RootLayout({
           }
 
           /* Garante que o botão de play original fique visível mas atrás dos nossos comandos */
-          .vjs-big-play-button, .vjs-big-play-centered {
+          .vjs-big-play-button, .vjs-big-play-centered, .play-button {
             opacity: 0.1 !important;
             pointer-events: auto !important;
-            z-index: 100 !important;
+            z-index: 5 !important;
           }
 
           /* Bloqueio de redirecionamentos e downloads indesejados */

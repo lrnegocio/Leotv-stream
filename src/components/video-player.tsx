@@ -14,9 +14,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v280 - EDIÇÃO SEM SANDBOX E ALTA PERFORMANCE
- * Remoção absoluta do atributo sandbox para evitar detecção do Rei dos Canais.
- * Lógica de Play/Pause otimizada para evitar reinício de sinal ao vivo.
+ * PLAYER MASTER SOBERANO v281 - EDIÇÃO AUTOPLAY E VISIBILIDADE TOTAL
+ * Remoção absoluta de atributos sandbox para enganar detectores de bloqueio.
+ * Lógica de Play/Pause otimizada para Iframes (Mudo/Visível).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -65,7 +65,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setLoading(false);
-      // Mantém a chave se ela já existir para não resetar o canal no despause
+      // Mantém a chave única para permitir Autoplay silencioso
       if (playerKey === 0) setPlayerKey(Date.now());
       setIsPlaying(true);
       return;
@@ -122,11 +122,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return () => cleanup();
   }, [initPlayer, cleanup, url]);
 
+  /**
+   * COMANDO DE HARDWARE SOBERANO
+   * Para Iframes, o clique agora força uma nova sintonização com autoplay se estiver travado.
+   */
   const handleTogglePlay = () => {
     if (isIframe) {
-      // Para Iframes, o pause apenas silencia e oculta visualmente
-      // Isso evita o reinício do canal.
-      setIsPlaying(!isPlaying);
+      // Se já estiver "tocando" e o usuário clicar no seu Play, reiniciamos a sintonização
+      // para garantir que o canal abra se ele estiver preso em tela preta.
+      setPlayerKey(Date.now());
+      setIsPlaying(true);
       return;
     }
 
@@ -156,9 +161,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   if (!isMounted) return null;
 
+  // Montagem do link com bypass de cache e forçamento de autoplay
   let finalIframeSrc = url;
   if (playerKey > 0) {
     const separator = url.includes('?') ? '&' : '?';
+    // Adicionamos mute=1 para que o Autoplay seja aceito pelo navegador sem abrir novas abas
     finalIframeSrc = `${url}${separator}autoplay=1&mute=1&t=${playerKey}`;
   }
 
@@ -168,7 +175,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando...</p>
+          <p className="text-[10px] font-black uppercase text-white/40 mt-4 tracking-widest">Sintonizando Master...</p>
         </div>
       )}
 
@@ -188,7 +195,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               className="w-full h-full border-0"
               allow="autoplay; encrypted-media; fullscreen" 
               onLoad={() => setLoading(false)}
-              /* SANDBOX REMOVIDO ABSOLUTAMENTE PARA EVITAR BLOQUEIO DO REI DOS CANAIS */
+              /* REMOÇÃO ABSOLUTA DO SANDBOX PARA EVITAR BLOQUEIO DO REI DOS CANAIS */
             />
           )}
         </div>
@@ -202,7 +209,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {/* TELA DE PAUSA PARA IFRAME (MANTÉM O VÍDEO RODANDO NO FUNDO) */}
+      {/* TELA DE PAUSA PARA IFRAME */}
       {isIframe && !isPlaying && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md z-[145] animate-in fade-in duration-300">
            <div className="text-center space-y-6">
@@ -214,15 +221,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               </button>
               <div>
                 <p className="text-xl font-black uppercase italic text-primary tracking-widest">Sinal em Pausa</p>
-                <p className="text-[10px] font-bold uppercase text-white/40 mt-1">O carregamento continua ativo no fundo</p>
+                <p className="text-[10px] font-bold uppercase text-white/40 mt-1">Clique para sintonizar novamente</p>
               </div>
-              <Button onClick={handleTogglePlay} className="bg-primary rounded-2xl font-black uppercase px-12 h-14 shadow-xl hover:scale-105">RETOMAR AGORA</Button>
            </div>
         </div>
       )}
 
-      {/* CONTROLES MASTER */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[150] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
+      {/* CONTROLES MASTER - PRIORIDADE MÁXIMA Z-INDEX 160 */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
          <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[300px]">{title}</p>
       </div>
 
@@ -232,7 +238,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <button 
           onClick={handleTogglePlay} 
           className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all group"
-          title="Executar/Pausar Sinal"
+          title="Executar Sinal Master"
         >
           {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
         </button>

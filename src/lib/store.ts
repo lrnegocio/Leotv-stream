@@ -78,7 +78,7 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v275 - PROTOCOLO DE AUTOPLAY SILENCIOSO
+ * MOTOR DE LINKS MASTER v281 - PROTOCOLO DE AUTOPLAY FORÇADO
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -93,6 +93,7 @@ export const formatMasterLink = (url: string) => {
   }
 
   // IFRAME SITES AUTOPLAY FORCED
+  // Injetamos autoplay=1 e mute=1 para que o canal abra direto sem interação
   const isIframeSite = 
     lowUrl.includes('youtube.com') || 
     lowUrl.includes('youtu.be') || 
@@ -103,8 +104,10 @@ export const formatMasterLink = (url: string) => {
 
   if (isIframeSite) {
     const separator = finalUrl.includes('?') ? '&' : '?';
-    // Mute=1 é necessário para o autoplay funcionar em 90% dos navegadores
-    if (!finalUrl.includes('autoplay=')) finalUrl += `${separator}autoplay=1&mute=1`;
+    if (!finalUrl.includes('autoplay=')) {
+      // Iniciar mudo (mute=1) é obrigatório para o Autoplay funcionar na maioria dos browsers
+      finalUrl += `${separator}autoplay=1&mute=1`;
+    }
     return finalUrl;
   }
 
