@@ -15,8 +15,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v251 - MODO SUPREMO ANTI-CONGELAMENTO
+ * PLAYER MASTER SOBERANO v252 - MODO SUPREMO ANTI-CONGELAMENTO
  * Suporte a HLS Proxy 7.5, MP4 Archive, AcPlay Bypass e RetroGames Embed.
+ * Destilação de motor nativa para evitar erros de sintonização.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -53,7 +54,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
   const isHls = lowUrl.includes('.m3u8') || lowUrl.includes('/api/proxy') || lowUrl.includes('xn--') || lowUrl.includes('agropesca');
   const isTs = lowUrl.includes('.ts') && !lowUrl.includes('.m3u8');
-  const isIframe = !isDirectFile && !isHls && !isTs && (ytId || url.includes('http'));
+  // Se for retrogames, sempre trata como Iframe (Embed)
+  const isIframe = (!isDirectFile && !isHls && !isTs && (ytId || url.includes('http'))) || lowUrl.includes('retrogames.cc');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
@@ -78,7 +80,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       return;
     }
 
-    if (!videoRef.current) return;
+    if (!videoRef.current || isIframe) {
+       if(isIframe) setLoading(false);
+       return;
+    }
 
     try {
       // Motor MPEG-TS
@@ -138,7 +143,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       setError(true);
       setLoading(false);
     }
-  }, [url, isMounted, isDirectFile, isHls, isTs])
+  }, [url, isMounted, isDirectFile, isHls, isTs, isIframe])
 
   React.useEffect(() => {
     setIsMounted(true)

@@ -2,13 +2,13 @@
 "use client"
 
 import * as React from "react"
-import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2, RefreshCcw, Wand2, AlertTriangle } from "lucide-react"
+import { Gamepad2, Trophy, Play, ShieldCheck, Loader2, Star, Trash2, ChevronDown, ChevronUp, Plus, Save, UploadCloud, Globe, Edit2, RefreshCcw, Wand2, AlertTriangle, Code } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getGameRankings, GameRanking, getRemoteGames, saveGame, removeGame, GameItem } from "@/lib/store"
+import { getGameRankings, GameRanking, getRemoteGames, saveGame, removeGame, GameItem, formatGameLink } from "@/lib/store"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
 
@@ -41,6 +41,15 @@ export default function AdminGamesPage() {
 
   React.useEffect(() => { loadData() }, [loadData])
 
+  const handleUrlChange = (val: string) => {
+    // PROTOCOLO v252: Se for um iframe, destila o link na hora
+    const cleaned = formatGameLink(val);
+    setGameData({ ...gameData, url: cleaned });
+    if (val.includes('<iframe')) {
+      toast({ title: "MOTOR DESTILADO!", description: "Extraímos apenas o link do jogo do seu Iframe." });
+    }
+  }
+
   const handleFixLink = async () => {
     if (!gameData.url || !gameData.url.includes('retrogames.cc')) {
       toast({ variant: "destructive", title: "Apenas para RetroGames.cc" })
@@ -53,12 +62,10 @@ export default function AdminGamesPage() {
 
     setIsFixing(true);
     try {
-      // Usamos o Túnel Master para buscar o link secreto dentro da página
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(gameData.url)}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // Busca o padrão do link de embed no HTML do site
       const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
       if (embedMatch) {
         setGameData({ ...gameData, url: embedMatch[0] });
@@ -117,7 +124,7 @@ export default function AdminGamesPage() {
   const injectDefaults = async () => {
     const defaults = [
       { title: "SUPER MARIO WORLD", console: "SUPER NINTENDO (SNES)", type: "embed", url: "https://www.retrogames.cc/embed/16847-super-mario-world-usa.html", imageUrl: "https://picsum.photos/seed/mario/200/300" },
-      { title: "MORTAL KOMBAT 3", console: "MEGA DRIVE", type: "embed", url: "https://www.retrogames.cc/embed/18314-mortal-kombat-3-usa.html", imageUrl: "https://picsum.photos/seed/mk3/200/300" },
+      { title: "MORTAL KOMBAT 3", console: "MEGA DRIVE", type: "embed", url: "https://www.retrogames.cc/embed/18314-mortal-komed-3-usa.html", imageUrl: "https://picsum.photos/seed/mk3/200/300" },
       { title: "METAL SLUG X", console: "ARCADE / MAME", type: "embed", url: "https://www.retrogames.cc/embed/10042-metal-slug-x-super-vehicle-001.html", imageUrl: "https://picsum.photos/seed/slug/200/300" },
       { title: "TEKKEN 3", console: "PLAYSTATION (PS1/PSX/PS2)", type: "embed", url: "https://www.retrogames.cc/embed/40238-tekken-3.html", imageUrl: "https://picsum.photos/seed/tekken/200/300" }
     ]
@@ -270,22 +277,26 @@ export default function AdminGamesPage() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {gameData.type === 'embed' ? <Globe className="h-3 w-3" /> : <UploadCloud className="h-3 w-3" />}
-                  {gameData.type === 'embed' ? 'Link do Jogo (Embed Preferencial)' : 'URL da ROM'}
+                  <Code className="h-3 w-3" /> Link ou Código Iframe
                 </div>
                 {gameData.url && gameData.url.includes('retrogames.cc') && !gameData.url.includes('/embed/') && (
                    <span className="text-[8px] text-amber-500 font-bold animate-pulse">Página do site detectada!</span>
                 )}
               </Label>
               <div className="flex gap-2">
-                <Input value={gameData.url} onChange={e => setGameData({...gameData, url: e.target.value})} className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" placeholder="https://..." />
+                <Input 
+                  value={gameData.url} 
+                  onChange={e => handleUrlChange(e.target.value)} 
+                  className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" 
+                  placeholder="Cole o link ou o código do Iframe aqui..." 
+                />
                 {gameData.url?.includes('retrogames.cc') && (
                    <Button type="button" onClick={handleFixLink} disabled={isFixing} className="h-12 bg-amber-500 hover:bg-amber-600 px-4 rounded-xl shadow-lg shadow-amber-500/10">
                      {isFixing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                    </Button>
                 )}
               </div>
-              <p className="text-[8px] font-bold opacity-40 uppercase">Dica: Use links /embed/ para o jogo abrir sozinho. O botão mágica ao lado corrige links do RetroGames.cc para você.</p>
+              <p className="text-[8px] font-bold opacity-40 uppercase">Dica: Se colar o código &lt;iframe&gt; completo, o sistema destila apenas o link do jogo sozinho.</p>
             </div>
 
             <div className="space-y-2">

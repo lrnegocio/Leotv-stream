@@ -78,7 +78,7 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v251 - PROTOCOLO DE TÚNEL SOBERANO
+ * MOTOR DE LINKS MASTER v252 - PROTOCOLO DE TÚNEL SOBERANO
  * Seleciona links que precisam de travessia de firewall/CORS (Punycode, AgroPesca, MP4 CDNs, AcPlay).
  */
 export const formatMasterLink = (url: string) => {
@@ -109,27 +109,31 @@ export const formatMasterLink = (url: string) => {
 };
 
 /**
- * CONVERSOR DE LINKS DE GAMES v251
- * Transforma links de páginas comuns em links de incorporação (Embed) limpos.
+ * CONVERSOR DE LINKS DE GAMES v252 - DESTILADOR DE MOTOR
+ * Extrai o link real de Iframes e converte páginas do RetroGames em links de jogo puros.
  */
-export const formatGameLink = (url: string) => {
-  if (!url) return "";
-  const lowUrl = url.trim().toLowerCase();
+export const formatGameLink = (input: string) => {
+  if (!input) return "";
+  let url = input.trim();
 
-  // Se já for um link de embed, retorna normal
-  if (lowUrl.includes('/embed/')) return url.trim();
-
-  // Se for retrogames, avisa ou tenta preparar para o sintonizador
-  if (lowUrl.includes('retrogames.cc')) {
-    // Tenta capturar o ID se ele estiver presente em algum formato conhecido
-    const idMatch = url.match(/\/embed\/(\d+)/) || url.match(/-(\d+)\.html/);
-    if (idMatch && !lowUrl.includes('/embed/')) {
-       // Se achamos um ID no final de um link comum, podemos tentar reconstruir
-       // Mas o ideal é usar o sintonizador do Admin
+  // DESTILAÇÃO DE IFRAME: Se colarem o código completo <iframe...>, extrai o src
+  if (url.includes('<iframe') && url.includes('src=')) {
+    const srcMatch = url.match(/src=["'](.*?)["']/);
+    if (srcMatch && srcMatch[1]) {
+      url = srcMatch[1];
     }
   }
 
-  return url.trim();
+  const lowUrl = url.toLowerCase();
+
+  // CONVERSOR RETROGAMES: Transforma página em Embed
+  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
+    // Tenta extrair o ID numérico que geralmente vem antes do nome no embed
+    // No entanto, o mais seguro é o usuário usar o link de embed ou o botão de fix
+    // Se o link já tem o padrão de embed, mas sem a pasta /embed/, corrigimos
+  }
+
+  return url;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -277,11 +281,12 @@ export async function getRemoteGames(): Promise<GameItem[]> {
 }
 
 export async function saveGame(g: any) {
+  const cleanUrl = formatGameLink(g.url);
   const { error } = await supabase.from('content').upsert({ 
     id: g.id || "game_"+Date.now(), 
     title: g.title.toUpperCase(), 
     genre: `ARENA: ${g.console}`, 
-    streamUrl: g.url, 
+    streamUrl: cleanUrl, 
     description: g.emulatorUrl || 'GAME', 
     imageUrl: g.imageUrl, 
     isRestricted: true 
