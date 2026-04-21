@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v306 - PROTOCOLO COMPATIBILIDADE TOTAL
- * Agora com suporte total a Byte-Range Requests e bypass de frames para players externos.
+ * TÚNEL MASTER SOBERANO v307 - PROTOCOLO CAMUFLAGEM TOTAL
+ * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Mixed Content.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // REPASSE DE RANGE (Vital para Seek/Avançar vídeos)
+    // REPASSE DE RANGE (Vital para Seek/Avançar vídeos no Archive.org)
     const range = req.headers.get('range');
     if (range) {
       requestHeaders.set('Range', range);
@@ -31,7 +31,8 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // PROTOCOLO DE REFERER INTELIGENTE PARA PLAYERS IPTV
+    // PROTOCOLO DE REFERER INTELIGENTE - CAMUFLAGEM DE ORIGEM
+    // Remove qualquer rastro do domínio "leotv.fun" para evitar "Connection Refused"
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Origin', 'https://redecanaistv.net');
     } else if (lowTarget.includes('playcnvs.stream')) {
       requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
+      requestHeaders.set('Origin', 'http://www.playcnvs.stream');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v306", { status: 500 });
+    return new Response("Falha no Túnel Master v307", { status: 500 });
   }
 }
 
@@ -87,16 +89,23 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   }
 
   // FILTRAGEM ANTI-BLOQUEIO PARA PLAYERS WEB (HTML)
+  // Remove as ordens de bloqueio de frame que causam o erro no cliente
   if (isHtml) {
     let htmlText = await res.text();
     // Injeta a tag base para que os recursos do player original (JS/CSS) carreguem
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     
-    // Remove cabeçalhos de proteção de frame
+    // EXTERMINADOR DE BLOQUEIOS DE FRAME
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', 'text/html');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
+    
+    // APAGA cabeçalhos que impedem o site de carregar no Iframe do seu domínio
+    responseHeaders.delete('X-Frame-Options');
+    responseHeaders.delete('Content-Security-Policy');
+    
+    // Injeta permissões totais
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 

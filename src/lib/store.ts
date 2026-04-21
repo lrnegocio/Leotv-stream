@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v306 - PROTOCOLO DE COMPATIBILIDADE TOTAL
- * Blinda links diretos para Seek e links de Players Web para bypass de CORS.
+ * MOTOR DE LINKS MASTER v307 - PROTOCOLO DE CAMUFLAGEM TOTAL
+ * Força o uso de proxy para domínios problemáticos e garante compatibilidade HTTPS.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -111,12 +111,12 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
-  // Lista de domínios que PRECISAM de Proxy para funcionar em HTTPS ou bypassar bloqueios
+  // Lista de domínios que PRECISAM de Camuflagem (Proxy) para funcionar em domínio .fun e HTTPS
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
     'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live'
+    'agropesca.live', 'p2p'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

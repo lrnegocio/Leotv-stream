@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v306 - PROTOCOLO CAMALEÃO
- * Detecta se o link é um arquivo de vídeo (com Seek) ou um Player Externo (Iframe).
+ * PLAYER MASTER SOBERANO v307 - PROTOCOLO CAMALEÃO v2
+ * Detecta se o sinal é site ou arquivo e força o uso de Iframe Blindado para RedeCanais/PlayCNVS.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,20 +27,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
+  // Decodifica a URL para análise
   const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
   const lowDecoded = decodedUrl.toLowerCase();
   
-  // Detecção avançada: se for .mp4, .m3u8 ou .ts, usa a tag <video>
-  // Caso contrário (como links /s/1234), usa <iframe> porque é um player web.
+  // PROTOCOLO DE DETECÇÃO v307
+  // Se for .mp4, .m3u8 ou .ts, usamos <video>. 
+  // Se contiver nomes de players conhecidos ou for link de site, usamos <iframe>.
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
   const isYouTube = lowDecoded.includes('youtube.com/embed');
-  const isIframe = !isDirectFile && (lowDecoded.includes('http') || url.startsWith('/api/proxy') || isYouTube);
+  
+  // FORÇA IFRAME para sites de players externos (que não são arquivos diretos)
+  const isIframe = !isDirectFile || lowDecoded.includes('rdcanais') || lowDecoded.includes('redecanais') || lowDecoded.includes('playcnvs') || lowDecoded.includes('warez');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}sync_v306=${Date.now()}`;
+    // Gera uma chave única para bypassar cache de bloqueio do canal
+    return `${baseUrl}${separator}leotv_sync=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
@@ -62,8 +67,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout maior para players web carregarem scripts internos
-      setTimeout(() => setLoading(false), 2000);
+      // Aguarda o carregamento do túnel da VPS
+      setTimeout(() => setLoading(false), 2500);
       return;
     }
 
@@ -171,7 +176,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando Sinal Master v306...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Bypassing Bloqueios v307...</p>
           </div>
         </div>
       )}
