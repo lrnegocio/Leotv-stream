@@ -13,8 +13,6 @@ export default function HomePage() {
     setIsMounted(true);
   }, []);
 
-  // Blindagem Master: Se não estiver montado, renderiza um fundo neutro 
-  // que combina com o servidor para evitar erro de Hydration na TV.
   if (!isMounted) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -27,7 +25,6 @@ export default function HomePage() {
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     }>
-      {/* PWA INSTALL REMOVIDO POR ORDEM DO MESTRE LÉO */}
       <HomeContent />
     </Suspense>
   );

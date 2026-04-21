@@ -78,14 +78,14 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v294 - PROTOCOLO SINTONIZAÇÃO UNIVERSAL
- * Identifica domínios que bloqueiam VPS e aplica o Túnel de Camuflagem.
+ * MOTOR DE LINKS MASTER v295 - PROTOCOLO SINTONIZAÇÃO UNIVERSAL
+ * Identifica domínios que bloqueiam VPS e aplica o Túnel de Camuflagem Anti-Anúncio.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Limpeza de Iframes
+  // 0. Captura Automática de Iframes
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -93,7 +93,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // 1. YouTube Master
+  // 1. YouTube Master (Não usa proxy para não dar erro de IP de servidor)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -102,13 +102,18 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
-  // 2. XVideos Master
+  // 2. XVideos Master (Não usa proxy)
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 3. PROTOCOLO DE TÚNEL (Proxy) para domínios protegidos
+  // 3. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag (Ex: webtvninjas)
+  if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts')) {
+    return finalUrl;
+  }
+
+  // 4. PROTOCOLO DE TÚNEL ANTI-ANÚNCIO (Proxy) para domínios protegidos
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('rdcanais') || 
@@ -117,13 +122,9 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('tvacabo.top');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
-    const separator = finalUrl.includes('?') ? '&' : '?';
-    // Força Autoplay e Mute no sinal proxied
-    const proxiedUrl = `${finalUrl}${separator}autoplay=1&mute=1`;
-    return `/api/proxy?url=${encodeURIComponent(proxiedUrl)}`;
+    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
-  // 4. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag
   return finalUrl;
 };
 

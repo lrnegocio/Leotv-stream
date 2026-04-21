@@ -55,9 +55,8 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v290 - EXTERMINADOR DE OVERLAYS E REDIRECTS */
+          /* PROTOCOLO BRAVE SUPREMO v295 - EXTERMINADOR DE OVERLAYS E REDIRECTS */
           
-          /* Bloqueio de abertura de novas abas (Redirect Hijack) */
           iframe {
             pointer-events: auto !important;
           }
@@ -70,10 +69,7 @@ export default function RootLayout({
           .vjs-overlay, .player-poster, .click-to-start,
           .vjs-ads-label, .vjs-ad-loading, .vjs-ad-playing,
           iframe[src*="doubleclick"], iframe[src*="ads"],
-          [id*="pop-"], [class*="pop-"], 
-          div[style*="z-index: 2147483647"],
-          div[style*="z-index: 999999"],
-          div[style*="position: fixed; width: 100%; height: 100%"] {
+          [id*="pop-"], [class*="pop-"] {
             display: none !important;
             width: 0 !important;
             height: 0 !important;
@@ -82,7 +78,6 @@ export default function RootLayout({
             z-index: -9999 !important;
           }
 
-          /* Força o botão de play original a ficar mudo sob o nosso */
           .vjs-big-play-button, .vjs-big-play-centered, .play-button {
             opacity: 0.1 !important;
             pointer-events: none !important;
