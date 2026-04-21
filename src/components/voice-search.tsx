@@ -10,31 +10,35 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v313 - PERFORMANCE EXTREMA E RESILIÊNCIA AO BRAVE
- * Implementação segura para navegadores com Shields ativados.
+ * BUSCA MASTER v314 - RESILIÊNCIA EXTREMA AO BRAVE SHIELDS
+ * Se o Brave bloquear a API de voz, o sistema não trava o carregamento.
  */
 function VoiceSearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [query, setQuery] = React.useState(searchParams ? searchParams.get('q') || "" : "")
+  const [query, setQuery] = React.useState("")
   const [isListening, setIsListening] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
-  const [isSupported, setIsSupported] = React.useState(true)
+  const [isSupported, setIsSupported] = React.useState(false)
 
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   React.useEffect(() => {
+    // Inicialização segura após montagem para não travar Hydration
     const q = searchParams?.get('q') || "";
-    if (q && q !== query) setQuery(q);
+    setQuery(q);
     
-    // Verifica suporte de voz de forma segura para não travar o Brave
+    // Verifica suporte de voz de forma ultra-defensiva
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) setIsSupported(false);
+      if (SpeechRecognition) {
+        setIsSupported(true);
+      }
     } catch (e) {
+      console.warn("Voz desativada pelo navegador (Brave Shields).");
       setIsSupported(false);
     }
-  }, [searchParams, query]);
+  }, [searchParams]);
 
   const triggerSearch = React.useCallback((value: string) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
@@ -46,7 +50,7 @@ function VoiceSearchContent() {
         else params.delete('q')
         router.replace(`?${params.toString()}`, { scroll: false })
       } catch (e) {}
-    }, 800)
+    }, 600)
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +67,7 @@ function VoiceSearchContent() {
         toast({ 
           variant: "destructive", 
           title: "Não suportado", 
-          description: "Seu navegador bloqueou o reconhecimento de voz."
+          description: "O navegador bloqueou o microfone."
         })
         return
       }
@@ -75,11 +79,6 @@ function VoiceSearchContent() {
 
       recognition.onstart = () => {
         setIsListening(true)
-        toast({ 
-          title: "Escutando...", 
-          description: "Fale agora.",
-          className: "bg-primary text-white font-bold uppercase"
-        })
       }
 
       recognition.onresult = async (event: any) => {
@@ -110,7 +109,7 @@ function VoiceSearchContent() {
       <div className="relative flex-1">
         <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input
-          placeholder="BUSCAR CANAL OU CATEGORIA..."
+          placeholder="BUSCAR NO BANCO..."
           className="pl-12 pr-12 bg-muted/50 border-border focus:border-primary rounded-2xl h-14 text-[10px] font-black uppercase tracking-widest shadow-sm transition-all"
           value={query || ""}
           onChange={handleInputChange}

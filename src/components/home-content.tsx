@@ -56,10 +56,11 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     setIsMounted(true);
-    // TIMER DE SEGURANÇA v313: Força a saída do loader em 4 segundos caso o Brave trave o sistema
+    
+    // PROTOCOLO ANTI-LOOP v314: Força a exibição da tela em 1.5s mesmo se o Brave travar o banco.
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 4000);
+    }, 1500);
 
     if (typeof window !== 'undefined') {
       setSiteUrl(window.location.origin);
@@ -80,7 +81,6 @@ export default function HomeContent() {
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     if (!isMounted) return;
-    setLoading(true);
     try {
       const currentSettings = await getGlobalSettings();
       setSettings(currentSettings);
@@ -99,7 +99,7 @@ export default function HomeContent() {
       }
       if (games.length === 0) setGames(await getRemoteGames());
     } catch (err) { 
-      console.error("Erro no carregamento:", err);
+      console.error("Erro silenciado pelo Escudo v314:", err);
     } finally { 
       setLoading(false); 
     }
@@ -109,7 +109,7 @@ export default function HomeContent() {
     if (!isMounted) return;
     const delayDebounceFn = setTimeout(() => {
       loadData(q, selectedCat);
-    }, 800);
+    }, 500);
     return () => clearTimeout(delayDebounceFn);
   }, [q, selectedCat, loadData, isMounted]);
 
@@ -184,6 +184,13 @@ export default function HomeContent() {
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
+      {loading && (
+        <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v314...</p>
+        </div>
+      )}
+
       <header className="h-20 border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-all"><ChevronLeft className="h-6 w-6" /></button>}
@@ -233,23 +240,19 @@ export default function HomeContent() {
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <h2 className="text-3xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
-            {loading ? (
-              <div className="flex justify-center py-20"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-            ) : (
-              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {content.map((item) => (
-                  <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-2xl">
-                    {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-12 w-12" /></div>}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 flex flex-col justify-end">
-                      <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
-                      <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
-                    </div>
-                    {item.isRestricted && <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full border border-white/10"><Lock className="h-4 w-4 text-primary" /></div>}
+            <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {content.map((item) => (
+                <div key={item.id} onClick={() => openItem(item)} className="group relative aspect-[2/3] bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-primary transition-all shadow-2xl">
+                  {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized /> : <div className="absolute inset-0 flex items-center justify-center opacity-20"><Tv className="h-12 w-12" /></div>}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 flex flex-col justify-end">
+                    <h3 className="font-black text-xs uppercase truncate text-white leading-tight">{item.title}</h3>
+                    <p className="text-[9px] font-bold text-primary uppercase mt-1 truncate">{item.genre}</p>
                   </div>
-                ))}
-                {content.length === 0 && <div className="col-span-full py-20 text-center opacity-40 uppercase font-black">Nenhum sinal localizado nesta pasta.</div>}
-              </div>
-            )}
+                  {item.isRestricted && <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full border border-white/10"><Lock className="h-4 w-4 text-primary" /></div>}
+                </div>
+              ))}
+              {content.length === 0 && !loading && <div className="col-span-full py-20 text-center opacity-40 uppercase font-black">Nenhum sinal localizado nesta pasta.</div>}
+            </div>
           </div>
         )}
       </main>
