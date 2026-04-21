@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v309 - SINCRONIZAÇÃO TOTAL
- * Detecta automaticamente o sinal e aplica a blindagem v309.
+ * PLAYER MASTER SOBERANO v310 - SINCRONIZAÇÃO ABSOLUTA
+ * Blindado contra erros de client-side exception e loops de carregamento.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,26 +27,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Decodifica a URL para análise profunda de sinal
-  const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
+  // BLINDAGEM: Se não houver URL, evita crash
+  if (!url) return null;
+
+  // Analisa a URL de forma segura
+  const safeUrl = url.toString();
+  const decodedUrl = decodeURIComponent(safeUrl.includes('url=') ? safeUrl.split('url=')[1] : safeUrl);
   const lowDecoded = decodedUrl.toLowerCase();
   
-  // Detecção inteligente: É arquivo de vídeo direto ou é uma página HTML de player?
+  // Detecção inteligente de tipo de sinal
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4') || lowDecoded.includes('.mp3') || lowDecoded.includes('.mkv');
+  const isYoutube = lowDecoded.includes('youtube.com') || lowDecoded.includes('youtu.be');
+  const isAudioEmbed = lowDecoded.includes('spotify') || lowDecoded.includes('deezer');
   
-  // Sites conhecidos que PRECISAM de Iframe Blindado v309
+  // Sites que PRECISAM de Iframe Blindado v310
   const isIframe = !isDirectFile || 
                    lowDecoded.includes('rdcanais') || 
                    lowDecoded.includes('redecanais') || 
                    lowDecoded.includes('playcnvs') || 
-                   lowDecoded.includes('reidoscanais') ||
+                   lowDecoded.includes('xvideos') ||
                    lowDecoded.includes('rdcplayer');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
-    // Adiciona timestamp para forçar a VPS a buscar o sinal fresco e evitar cache de bloqueio
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}leotv_v309=${Date.now()}`;
+    return `${baseUrl}${separator}v310=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
@@ -65,11 +70,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!isMounted || !url) return
     setLoading(true);
 
-    if (isIframe) {
+    if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout para estabilização do Iframe v309
-      setTimeout(() => setLoading(false), 1500);
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
@@ -86,7 +90,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setLoading(false);
         })
         .catch(() => {
-          // Fallback mudo para autoplay bloqueado
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -98,7 +101,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       setLoading(false);
       setIsPlaying(true);
     }
-  }, [url, isMounted, isDirectFile, isIframe]);
+  }, [url, isMounted, isDirectFile, isIframe, isYoutube, isAudioEmbed]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -108,12 +111,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    
-    if (isIframe) {
-      setPlayerKey(Date.now());
-      setIsPlaying(true);
-      return;
-    }
+    if (isIframe) { setPlayerKey(Date.now()); setIsPlaying(true); return; }
 
     if (videoRef.current) {
       if (videoRef.current.paused) {
@@ -143,17 +141,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {isIframe && playerKey > 0 && (
+      {(isIframe || isYoutube || isAudioEmbed) && playerKey > 0 && (
         <iframe 
           key={playerKey}
-          src={getFreshUrl(url)}
+          src={isYoutube || isAudioEmbed ? url : getFreshUrl(url)}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
         />
       )}
 
-      {!isIframe && (
+      {!isIframe && !isYoutube && !isAudioEmbed && (
         <video 
           key={url} 
           ref={videoRef} 
@@ -170,7 +168,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v309...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v310...</p>
           </div>
         </div>
       )}
@@ -178,14 +176,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
-        <button 
-          onClick={handleTogglePlay} 
-          className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all"
-        >
+        <button onClick={handleTogglePlay} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all">
           {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
         </button>
 
-        <button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all" title="Reiniciar Sinal">
+        <button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all">
           <RefreshCcw className="h-5 w-5 text-white" />
         </button>
 

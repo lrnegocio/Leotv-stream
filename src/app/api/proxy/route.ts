@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v309 - PROTOCOLO CAMALEÃO SUPREMO
- * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Mixed Content.
- * Suporta SEEK (Archive.org) e neutraliza bloqueios de frames (RedeCanais/RDC).
+ * TÚNEL MASTER SOBERANO v310 - PROTOCOLO CAMALEÃO ELITE
+ * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Anti-Hotlink.
+ * Suporta XVideos, RedeCanais, RDC Player e Seek no Archive.org.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,20 +19,18 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // 1. REPASSE DE RANGE (Vital para Seek/Avançar vídeos no Archive.org)
+    // 1. REPASSE DE RANGE (Vital para Seek no Archive.org)
     const range = req.headers.get('range');
-    if (range) {
-      requestHeaders.set('Range', range);
-    }
+    if (range) requestHeaders.set('Range', range);
 
-    // 2. IDENTIDADE DE ELITE (Chrome 133) - Engana bloqueios de robôs
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36');
-    requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
+    // 2. IDENTIDADE CAMALEÃO (Simula Android TV para evitar Cloudflare)
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 11; BRAVIA 4K VH2 Build/RP1A.200720.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Cache-Control', 'no-cache');
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // 3. CAMUFLAGEM DE ORIGEM (Referer Inteligente)
+    // 3. CAMUFLAGEM DE REFERER (Identidade Falsa por Domínio)
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
@@ -41,6 +39,8 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Origin', 'https://redecanaistv.net');
     } else if (lowTarget.includes('playcnvs.stream')) {
       requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
+    } else if (lowTarget.includes('xvideos')) {
+      requestHeaders.set('Referer', 'https://www.xvideos.com/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v309", { status: 500 });
+    return new Response("Falha no Túnel Master v310", { status: 500 });
   }
 }
 
@@ -87,24 +87,25 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // B. FILTRAGEM ANTI-BLOQUEIO PARA PLAYERS WEB (HTML)
+  // B. FILTRAGEM AGRESSIVA ANTI-BLOQUEIO (HTML)
   if (isHtml) {
     let htmlText = await res.text();
     
-    // Neutraliza códigos que tentam quebrar o iframe (Iframe Breakout)
+    // Destrói scripts de "Iframe Breakout" (Tentam derrubar seu site)
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
     htmlText = htmlText.replace(/top\.location/g, 'self.location');
     htmlText = htmlText.replace(/parent\.location/g, 'self.location');
     
-    // Injeta Base Href para que imagens e scripts do site original funcionem na VPS
+    // Injeta Base Href e Neutraliza mensagens de erro
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-    htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
+    const cleanStyle = `<style>.cf-error-details, .sorry-blocked { display:none!important; }</style>`;
+    htmlText = htmlText.replace('<head>', `<head>${baseTag}${cleanStyle}`);
     
     const responseHeaders = new Headers();
-    responseHeaders.set('Content-Type', 'text/html');
+    responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // EXTERMINADOR DE BLOQUEIOS DE FRAME (X-Frame e CSP)
+    // FORCE ALLOW FRAMES
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 
@@ -114,7 +115,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // C. STREAMS DE VÍDEO DIRETO (Archive.org / MP4)
+  // C. STREAM DIRETO (Seek/Range habilitado)
   const responseHeaders = new Headers();
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
@@ -128,7 +129,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   
   responseHeaders.set('Access-Control-Allow-Origin', '*');
 
-  // Repassa o corpo do vídeo permitindo Streaming/Seek
   return new Response(res.body, { 
     status: res.status, 
     statusText: res.statusText,

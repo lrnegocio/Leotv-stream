@@ -78,23 +78,22 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v309 - SINCRONIZAÇÃO ABSOLUTA
- * Única autoridade para processar links no Admin e no Cliente.
+ * MOTOR DE LINKS MASTER v310 - PROTOCOLO SOBERANO
+ * Suporta extração de Iframe, Túnel para Adultos e Canais Instáveis.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // 1. Limpeza de Iframe (se o mestre colou o código inteiro)
-  if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
+  // 1. Extração Ultra-Robusta de Iframe
+  if (finalUrl.includes('<iframe')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
 
-  // 2. Normalização de protocolo para HTTPS (evita mixed content se possível)
   const lowUrl = finalUrl.toLowerCase();
   
-  // 3. Suporte YouTube
+  // 2. Suporte YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -103,17 +102,20 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
   }
 
-  // 4. LISTA DE DOMÍNIOS QUE EXIGEM O TÚNEL SOBERANO v309
-  // Adicionados: rdcplayer, archive, redecanais, agropesca, etc.
+  // 3. Suporte Spotify / Deezer (Mantém links originais para embed)
+  if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
+    return finalUrl;
+  }
+
+  // 4. LISTA NEGRA DE BLOQUEIOS (Exige o Túnel Master v310)
   const domainsNeedingProxy = [
-    'rdcanais', 'redecanais', 'rdcplayer', 'playcnvs.stream', 
-    'tvacabo', 'canaltv', 'topcanais', 'warez', 'embed.watch',
-    'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live', 'reidoscanais'
+    'rdcanais', 'redecanais', 'rdcplayer', 'playcnvs', 
+    'archive.org', 'xvideos', 'pornhub', 'acplay.live',
+    'agropesca.live', 'reidoscanais', 'warez', 'topcanais'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    lowUrl.startsWith('http://'); // Links sem SSL PRECISAM de proxy
+                    (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
