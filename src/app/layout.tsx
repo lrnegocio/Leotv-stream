@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -55,13 +54,13 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v295 - EXTERMINADOR DE OVERLAYS E REDIRECTS */
+          /* PROTOCOLO BRAVE SUPREMO v296 - EXTERMINADOR DE OVERLAYS E REDIRECTS */
           
           iframe {
             pointer-events: auto !important;
           }
 
-          /* Camadas invisíveis que abrem novas abas */
+          /* Bloqueio agressivo de camadas de anúncio e popups */
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -13,8 +12,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v294 - EDIÇÃO SINTONIZAÇÃO TOTAL
- * Sem Sandbox, sem travas. Foco total na transmissão via VPS.
+ * PLAYER MASTER SOBERANO v296 - EDIÇÃO ANTI-ABORT
+ * Blindagem total contra erros de interrupção de play/pause e redirects.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -25,16 +24,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   
+  const playPromiseRef = React.useRef<Promise<void> | null>(null);
+
   const lowUrl = (url || "").toLowerCase();
   const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
 
-  const cleanup = React.useCallback(() => {
+  const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
+      // Se houver uma promessa de play pendente, esperamos ela antes de dar pause
+      if (playPromiseRef.current) {
+        try { await playPromiseRef.current; } catch (e) { /* ignore */ }
+      }
       videoRef.current.pause();
       videoRef.current.removeAttribute('src');
       videoRef.current.load();
     }
+    playPromiseRef.current = null;
   }, [])
 
   const initPlayer = React.useCallback(async () => {
@@ -42,26 +48,34 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true);
 
     if (isIframe) {
-      // Inicia direto para evitar "standby" que quebra na VPS
       setPlayerKey(Date.now());
       setIsPlaying(true);
       setLoading(false);
       return;
     }
 
-    if (isDirectFile) {
-      if (videoRef.current) {
-        videoRef.current.src = url;
-        videoRef.current.load();
-        videoRef.current.play()
-          .then(() => setIsPlaying(true))
-          .catch(() => {
-            if (videoRef.current) videoRef.current.muted = true;
-            videoRef.current?.play();
-            setIsPlaying(true);
-          });
-        setLoading(false);
-      }
+    if (isDirectFile && videoRef.current) {
+      videoRef.current.src = url;
+      videoRef.current.load();
+      
+      const promise = videoRef.current.play();
+      playPromiseRef.current = promise;
+
+      promise
+        .then(() => {
+          setIsPlaying(true);
+          setLoading(false);
+        })
+        .catch((error) => {
+          if (error.name === 'AbortError') return;
+          // Tenta mudo se o play for bloqueado
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            videoRef.current.play().catch(() => {});
+          }
+          setIsPlaying(true);
+          setLoading(false);
+        });
       return;
     }
 
@@ -72,10 +86,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   React.useEffect(() => {
     setIsMounted(true);
     initPlayer();
-    return () => cleanup();
+    return () => { cleanup(); };
   }, [initPlayer, cleanup, url]);
 
-  const handleTogglePlay = (e?: React.MouseEvent) => {
+  const handleTogglePlay = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
     if (isIframe) {
@@ -91,9 +105,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        videoRef.current.play();
-        setIsPlaying(true);
+        const promise = videoRef.current.play();
+        playPromiseRef.current = promise;
+        promise.then(() => setIsPlaying(true)).catch(() => {});
       } else {
+        // Garante que não interrompemos um play pendente
+        if (playPromiseRef.current) {
+          try { await playPromiseRef.current; } catch (e) {}
+        }
         videoRef.current.pause();
         setIsPlaying(false);
       }
@@ -121,6 +140,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={url}
           className="w-full h-full border-0"
+          // Protocolo Anti-Redirect: Impede o iframe de abrir abas novas
           allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
         />
@@ -136,7 +156,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CONTROLES MESTRE v294 */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
