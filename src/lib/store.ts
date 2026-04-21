@@ -78,28 +78,23 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v289 - PROTOCOLO SINTONIZAÇÃO PROFUNDA
- * Bypass Cloudflare VPS + YouTube/XVideos Fix.
+ * MOTOR DE LINKS MASTER v290 - PROTOCOLO INTELIGENTE
+ * Mantém compatibilidade total com .m3u8 legados e aplica bypass apenas onde necessário.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Limpeza de Iframes colados no Admin
+  // 1. Limpeza de Iframes colados no Admin
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
   
   const lowUrl = finalUrl.toLowerCase();
+  const isStreamFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
   
-  // FIX XVIDEOS v289
-  if (lowUrl.includes('xvideos.com')) {
-    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
-    if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
-  }
-
-  // FIX YOUTUBE v289
+  // 2. TRATAMENTO ESPECIAL YOUTUBE
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -108,23 +103,26 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
+  // 3. TRATAMENTO ESPECIAL XVIDEOS
+  if (lowUrl.includes('xvideos.com')) {
+    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
+    if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
+  }
+
+  // 4. TRATAMENTO MÚSICA (Spotify/Deezer)
   if (lowUrl.includes('spotify.com')) {
     let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
     if (!cleanUrl.includes('/embed/')) cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
     return cleanUrl;
   }
-
   if (lowUrl.includes('deezer.com')) {
     const trackMatch = finalUrl.match(/track\/(\d+)/i);
     if (trackMatch && trackMatch[1]) return `https://www.deezer.com/plugins/player?format=classic&autoplay=true&playlist=false&width=700&height=350&color=EF5466&layout=dark&size=medium&type=tracks&id=${trackMatch[1]}&app_id=1`;
   }
 
+  // 5. PROTOCOLO DE PROXY SELETIVO
   const needsProxy = 
-    lowUrl.includes('.m3u8') || 
-    lowUrl.includes('.ts') || 
-    lowUrl.includes('.mp4') ||
-    lowUrl.includes('archive.org') || 
-    lowUrl.includes('mlstatic.com') || 
+    isStreamFile || 
     lowUrl.includes('acplay.live') ||
     lowUrl.includes('redecanaistv') ||
     lowUrl.includes('tvacabo.top') ||
@@ -132,9 +130,13 @@ export const formatMasterLink = (url: string) => {
     lowUrl.includes('rdcanais');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
-    const separator = finalUrl.includes('?') ? '&' : '?';
-    const autoplayUrl = finalUrl.includes('autoplay') ? finalUrl : `${finalUrl}${separator}autoplay=1&mute=1`;
-    return `/api/proxy?url=${encodeURIComponent(autoplayUrl)}`;
+    let target = finalUrl;
+    // SÓ adiciona parâmetros de autoplay se NÃO for um arquivo direto (.m3u8, .ts, .mp4)
+    if (!isStreamFile) {
+      const separator = target.includes('?') ? '&' : '?';
+      target = target.includes('autoplay') ? target : `${target}${separator}autoplay=1&mute=1`;
+    }
+    return `/api/proxy?url=${encodeURIComponent(target)}`;
   }
   
   return finalUrl;

@@ -14,9 +14,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v289 - EDIÇÃO BLOQUEIO TOTAL BRAVE
+ * PLAYER MASTER SOBERANO v290 - EDIÇÃO BLOQUEIO TOTAL BRAVE
  * Injeta escudo de vidro para evitar popups no primeiro clique.
- * O poder agora é 100% do botão de play roxo.
+ * Identifica corretamente links de vídeo direto (.m3u8) para não bloquear.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -32,8 +32,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const mpegtsRef = React.useRef<any>(null)
 
   const lowUrl = (url || "").toLowerCase();
+  // Um sinal é Iframe se NÃO tiver extensões de vídeo direto
   const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
-  const isDirectFile = lowUrl.includes('.mp4') || lowUrl.includes('archive.org') || lowUrl.includes('mlstatic.com');
+  const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
 
   const cleanup = React.useCallback(() => {
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
@@ -58,20 +59,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     }
 
     if (isDirectFile) {
+      // Lógica para arquivos diretos (Dorama, Webtvninjas, etc)
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-          if (videoRef.current) videoRef.current.muted = true;
-          videoRef.current?.play();
-          setIsPlaying(true);
-        });
+        videoRef.current.play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            if (videoRef.current) videoRef.current.muted = true;
+            videoRef.current?.play();
+            setIsPlaying(true);
+          });
         setLoading(false);
       }
       return;
     }
 
-    // Lógica HLS/TS simplificada para brevidade
     setLoading(false);
     setIsPlaying(true);
   }, [url, isMounted, isDirectFile, isIframe]);
@@ -87,11 +90,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     if (isIframe) {
       if (!isPlaying) {
-        // LIGA O SINAL: Injeta nova chave e ativa visibilidade
         setPlayerKey(Date.now());
         setIsPlaying(true);
       } else {
-        // PAUSA O SINAL: Desliga o frame para parar o som e anúncios
         setPlayerKey(0);
         setIsPlaying(false);
       }
@@ -159,7 +160,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CONTROLES MESTRE v289 */}
+      {/* CONTROLES MESTRE v290 */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
