@@ -79,16 +79,22 @@ export interface User {
 
 /**
  * MOTOR DE LINKS MASTER v310 - PROTOCOLO SOBERANO
- * Suporta extração de Iframe, Túnel para Adultos e Canais Instáveis.
+ * Blindagem total contra Client-Side Exception e Bloqueios de Referer.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
-  let finalUrl = url.trim();
+  let finalUrl = url.toString().trim();
 
-  // 1. Extração Ultra-Robusta de Iframe
+  // 1. Extração Ultra-Robusta de Iframe (Evita Client-Side Exception)
   if (finalUrl.includes('<iframe')) {
-    const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
-    if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
+    try {
+      const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
+      if (srcMatch && srcMatch[1]) {
+        finalUrl = srcMatch[1];
+      }
+    } catch (e) {
+      // Se falhar na extração, mantém o original para não crashar
+    }
   }
 
   const lowUrl = finalUrl.toLowerCase();
@@ -102,16 +108,16 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
   }
 
-  // 3. Suporte Spotify / Deezer (Mantém links originais para embed)
+  // 3. Suporte Spotify / Deezer
   if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
     return finalUrl;
   }
 
   // 4. LISTA NEGRA DE BLOQUEIOS (Exige o Túnel Master v310)
   const domainsNeedingProxy = [
-    'rdcanais', 'redecanais', 'rdcplayer', 'playcnvs', 
+    'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
     'archive.org', 'xvideos', 'pornhub', 'acplay.live',
-    'agropesca.live', 'reidoscanais', 'warez', 'topcanais'
+    'agropesca.live', 'warez', 'topcanais', 'redecanais'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

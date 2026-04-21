@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 
 /**
  * PLAYER MASTER SOBERANO v310 - SINCRONIZAÇÃO ABSOLUTA
- * Blindado contra erros de client-side exception e loops de carregamento.
+ * Blindado contra Client-Side Exception e scripts de Popups/Novas Abas.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,13 +27,21 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // BLINDAGEM: Se não houver URL, evita crash
-  if (!url) return null;
+  // Analisa a URL de forma ultra-segura para evitar "client-side exception"
+  const getSafeUrl = (raw: string) => {
+    if (!raw) return "";
+    try {
+      const s = raw.toString();
+      // Se já for proxy, não mexe
+      if (s.includes('/api/proxy')) return s;
+      return s;
+    } catch (e) { return ""; }
+  };
 
-  // Analisa a URL de forma segura
-  const safeUrl = url.toString();
-  const decodedUrl = decodeURIComponent(safeUrl.includes('url=') ? safeUrl.split('url=')[1] : safeUrl);
-  const lowDecoded = decodedUrl.toLowerCase();
+  const safeUrl = getSafeUrl(url);
+  if (!safeUrl) return null;
+
+  const lowDecoded = safeUrl.toLowerCase();
   
   // Detecção inteligente de tipo de sinal
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4') || lowDecoded.includes('.mp3') || lowDecoded.includes('.mkv');
@@ -67,18 +75,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [])
 
   const initPlayer = React.useCallback(async () => {
-    if (!isMounted || !url) return
+    if (!isMounted || !safeUrl) return
     setLoading(true);
 
     if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      setTimeout(() => setLoading(false), 2000);
+      // Timeout maior para dar tempo de "furar" o Cloudflare via Proxy
+      setTimeout(() => setLoading(false), 3000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
-      videoRef.current.src = url;
+      videoRef.current.src = safeUrl;
       videoRef.current.load();
       
       const promise = videoRef.current.play();
@@ -101,13 +110,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       setLoading(false);
       setIsPlaying(true);
     }
-  }, [url, isMounted, isDirectFile, isIframe, isYoutube, isAudioEmbed]);
+  }, [safeUrl, isMounted, isDirectFile, isIframe, isYoutube, isAudioEmbed]);
 
   React.useEffect(() => {
     setIsMounted(true);
     initPlayer();
     return () => { cleanup(); };
-  }, [initPlayer, cleanup, url]);
+  }, [initPlayer, cleanup, safeUrl]);
 
   const handleTogglePlay = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -144,8 +153,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {(isIframe || isYoutube || isAudioEmbed) && playerKey > 0 && (
         <iframe 
           key={playerKey}
-          src={isYoutube || isAudioEmbed ? url : getFreshUrl(url)}
+          src={isYoutube || isAudioEmbed ? safeUrl : getFreshUrl(safeUrl)}
           className="w-full h-full border-0"
+          // Sandbox v310: Impede que o site original abra novas janelas
+          sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-pointer-lock"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
         />
@@ -153,7 +164,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {!isIframe && !isYoutube && !isAudioEmbed && (
         <video 
-          key={url} 
+          key={safeUrl} 
           ref={videoRef} 
           className="w-full h-full object-contain" 
           autoPlay 

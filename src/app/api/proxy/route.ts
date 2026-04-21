@@ -8,6 +8,7 @@ export const fetchCache = 'force-no-store';
  * TÚNEL MASTER SOBERANO v310 - PROTOCOLO CAMALEÃO ELITE
  * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Anti-Hotlink.
  * Suporta XVideos, RedeCanais, RDC Player e Seek no Archive.org.
+ * NOVIDADE: Neutraliza scripts de "Iframe Breakout" e Popups que abrem novas abas.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -91,21 +92,23 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   if (isHtml) {
     let htmlText = await res.text();
     
-    // Destrói scripts de "Iframe Breakout" (Tentam derrubar seu site)
+    // EXTERMINADOR DE NOVAS ABAS E POPUPS (Neutraliza o motivo de abrir nova aba)
+    htmlText = htmlText.replace(/window\.open/g, 'console.log');
+    htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
     htmlText = htmlText.replace(/top\.location/g, 'self.location');
     htmlText = htmlText.replace(/parent\.location/g, 'self.location');
     
-    // Injeta Base Href e Neutraliza mensagens de erro
+    // Injeta Base Href e Neutraliza mensagens de erro do Cloudflare
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-    const cleanStyle = `<style>.cf-error-details, .sorry-blocked { display:none!important; }</style>`;
+    const cleanStyle = `<style>.cf-error-details, .sorry-blocked, #cf-wrapper { display:none!important; } body { overflow: auto!important; }</style>`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}${cleanStyle}`);
     
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // FORCE ALLOW FRAMES
+    // FORCE ALLOW FRAMES (Mata o erro de Conexão Recusada)
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 
@@ -115,7 +118,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // C. STREAM DIRETO (Seek/Range habilitado)
+  // C. STREAM DIRETO (Seek/Range habilitado para Archive.org)
   const responseHeaders = new Headers();
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
