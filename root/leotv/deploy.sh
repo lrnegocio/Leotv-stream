@@ -1,7 +1,6 @@
-
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v302..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v303..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -16,8 +15,13 @@ sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 # PAUSA PARA RESPIRAR: Para o serviço para ter RAM pro Build
 echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
-pm2 stop leotv-master 2>/dev/null || true
-pm2 delete leotv-master 2>/dev/null || true
+pm2 stop all 2>/dev/null || true
+pm2 delete all 2>/dev/null || true
+
+# LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 80 ou 3000
+echo "🔓 LIMPANDO PORTAS 80 E 3000..."
+fuser -k 80/tcp 2>/dev/null || true
+fuser -k 3000/tcp 2>/dev/null || true
 
 # Garante que o NPM e o PM2 estão no PATH
 export PATH=$PATH:/usr/local/bin:/usr/bin
@@ -40,13 +44,13 @@ else
     exit 1
 fi
 
-# Reinicia o processo no PM2 na PORTA 3000 (Interna)
-echo "♻️ REINICIANDO MOTORES NA PORTA 3000 (NGINX ASSUME A 80)..."
+# Reinicia o processo no PM2 na porta interna 3000
+echo "♻️ REINICIANDO MOTORES NA PORTA INTERNA 3000..."
 pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV ONLINE NO DOMÍNIO!"
-echo "🔗 ACESSE: https://leotv.fun"
+echo "✅ SISTEMA LÉO TV PRONTO PARA O DOMÍNIO!"
+echo "🔗 AGORA EXECUTE OS COMANDOS DO NGINX NO PUTTY"
 echo "--------------------------------------------------"
 pm2 list

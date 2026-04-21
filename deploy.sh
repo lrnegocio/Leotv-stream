@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v303..."
