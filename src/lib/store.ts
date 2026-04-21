@@ -78,22 +78,23 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v298 - PROTEÇÃO DE LEGADO E BYPASS CLOUDFLARE
+ * MOTOR DE LINKS MASTER v299 - PROTEÇÃO DE LEGADO E BYPASS PLAYCNVS/RDCANAIS
  * Garante que links m3u8 funcionem direto e sites protegidos passem pelo proxy atualizado.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // 0. Captura Automática de Iframes
+  // 0. CAPTURA DE IFRAMES SOBERANA (Léo TV Edition)
+  // Extrai o link real de dentro de um código de iframe completo.
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
-    const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
+    const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // 1. YouTube Master (Não usa proxy - IP Ban)
+  // 1. YouTube Master (Não usa proxy)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -109,13 +110,13 @@ export const formatMasterLink = (url: string) => {
   }
 
   // 3. PROTEÇÃO DE LEGADO: Arquivos Diretos (.m3u8, .mp4, .ts)
-  // Se o link termina com extensão de vídeo, ele DEVE ser direto para não quebrar.
+  // Se o link termina com extensão de vídeo, ele DEVE ser direto para não quebrar o player nativo.
   const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts');
   if (isDirectVideo) {
     return finalUrl;
   }
 
-  // 4. PROTOCOLO DE TÚNEL MASTER v298 (Sites que bloqueiam VPS)
+  // 4. PROTOCOLO DE TÚNEL MASTER v299 (Domínios que exigem Bypass VPS)
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('rdcanais') || 

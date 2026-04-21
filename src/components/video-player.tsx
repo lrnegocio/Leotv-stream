@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v297 - EDIÇÃO FRESH START
- * Garante sintonização independente adicionando timestamps aos iframes.
+ * PLAYER MASTER SOBERANO v299 - EDIÇÃO FRESH START
+ * Garante sintonização independente e suporte robusto para IFrames proxied.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -28,10 +28,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
   const lowUrl = (url || "").toLowerCase();
-  const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
+  
+  // Detecção de sinal direto vs Iframe/Proxy
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
+  const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy'));
 
-  // Adiciona timestamp para forçar requisição nova e evitar tela branca de cache
+  // Adiciona timestamp para forçar requisição nova e evitar tela branca de cache no Cliente
   const freshUrl = isIframe ? (url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`) : url;
 
   const cleanup = React.useCallback(async () => {
@@ -53,7 +55,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // O loading de iframes é tratado no evento onLoad do iframe
       return;
     }
 

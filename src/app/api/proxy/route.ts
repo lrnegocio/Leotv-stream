@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v298 - PROTOCOLO ULTRA-IDENTIDADE (CHROME 133)
+ * TÚNEL MASTER SOBERANO v299 - PROTOCOLO ULTRA-IDENTIDADE (CHROME 133)
  * Simula um navegador real de última geração para pular bloqueios de Cloudflare em VPS.
+ * Inclui Referer específico para playcnvs.stream e rdcanais.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,7 +20,6 @@ export async function GET(req: NextRequest) {
     const requestHeaders = new Headers();
     
     // IDENTIDADE DE ELITE (CHROME 133 - FEVEREIRO 2025)
-    // O uso de Client Hints (sec-ch-ua) é vital para pular a Cloudflare hoje.
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36');
     requestHeaders.set('sec-ch-ua', '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"');
     requestHeaders.set('sec-ch-ua-mobile', '?0');
@@ -37,12 +37,13 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // PROTOCOLO DE REFERER DINÂMICO (Camuflagem de Origem)
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('playcnvs')) {
+    // PROTOCOLO DE REFERER DINÂMICO SOBERANO
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
+    } else if (lowTarget.includes('playcnvs.stream')) {
+      requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     } else if (lowTarget.includes('redecanais')) {
-      // Ajuste específico para redecanaistv.be/net
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
       requestHeaders.set('Origin', 'https://redecanaistv.net');
     } else {
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // Se o site original bloquear a VPS (Status 403), tentamos uma rota de emergência sem referer
+    // Rota de emergência se bloqueado
     if (res.status === 403) {
       requestHeaders.delete('Referer');
       requestHeaders.delete('Origin');
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v298", { status: 500 });
+    return new Response("Falha no Túnel Master v299", { status: 500 });
   }
 }
 
@@ -76,7 +77,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl');
   const isHtml = contentType.includes('text/html');
 
-  // REESCRITA HLS MASTER (Garante chunks via proxy para evitar travamentos no Cliente)
+  // REESCRITA HLS MASTER
   if (isM3u8) {
     const manifestText = await res.text();
     const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -103,14 +104,13 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     // Limpeza de Scripts de Anúncio e Popups
     htmlText = htmlText.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, (match) => {
       const lowMatch = match.toLowerCase();
-      if (lowMatch.includes('ads') || lowMatch.includes('popunder') || lowMatch.includes('analytics') || lowMatch.includes('track')) {
+      if (lowMatch.includes('ads') || lowMatch.includes('popunder') || lowMatch.includes('analytics') || lowMatch.includes('track') || lowMatch.includes('click')) {
         return '<!-- Sinal Master: Script Removido -->';
       }
       return match;
     });
 
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
-    // Bypass de detecção de frame
     htmlText = htmlText.replace(/window\.top !== window\.self/g, "false");
     htmlText = htmlText.replace(/top\.location\.href/g, "''");
 
