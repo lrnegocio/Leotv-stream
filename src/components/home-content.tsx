@@ -56,6 +56,11 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     setIsMounted(true);
+    // TIMER DE SEGURANÇA v313: Força a saída do loader em 4 segundos caso o Brave trave o sistema
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     if (typeof window !== 'undefined') {
       setSiteUrl(window.location.origin);
       const session = localStorage.getItem("user_session");
@@ -70,6 +75,7 @@ export default function HomeContent() {
         router.push("/login");
       }
     }
+    return () => clearTimeout(safetyTimer);
   }, [router]);
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
@@ -86,15 +92,19 @@ export default function HomeContent() {
 
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
-        for (const cat of CATEGORIES) { if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); }
+        for (const cat of CATEGORIES) { 
+          if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); 
+        }
         setCatCounts(counts);
       }
       if (games.length === 0) setGames(await getRemoteGames());
-    } catch (err) { } finally { setLoading(false); }
+    } catch (err) { 
+      console.error("Erro no carregamento:", err);
+    } finally { 
+      setLoading(false); 
+    }
   }, [games.length, isMounted]);
 
-  // DEBOUNCE SOBERANO: 800ms de espera antes de carregar os dados
-  // Isso elimina o travamento das letras na VPS durante a digitação.
   React.useEffect(() => {
     if (!isMounted) return;
     const delayDebounceFn = setTimeout(() => {
@@ -151,7 +161,9 @@ export default function HomeContent() {
       setLoading(false);
     } else {
       const idx = content.findIndex(i => i.id === item.id);
-      const list = content.length > 0 ? content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) })) : [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }];
+      const list = content.length > 0 
+        ? content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) })) 
+        : [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }];
       const finalIdx = idx !== -1 ? idx : 0;
       setActiveVideo({ items: list, index: finalIdx });
     }
@@ -235,6 +247,7 @@ export default function HomeContent() {
                     {item.isRestricted && <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full border border-white/10"><Lock className="h-4 w-4 text-primary" /></div>}
                   </div>
                 ))}
+                {content.length === 0 && <div className="col-span-full py-20 text-center opacity-40 uppercase font-black">Nenhum sinal localizado nesta pasta.</div>}
               </div>
             )}
           </div>

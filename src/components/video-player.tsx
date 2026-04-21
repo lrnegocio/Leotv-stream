@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v312 - LIBERAÇÃO TOTAL
- * Removido o Sandbox do iframe para satisfazer players do Rei dos Canais e XVideos.
+ * PLAYER MASTER SOBERANO v313 - COMPATIBILIDADE BRAVE AGRESSIVO
+ * Removido o Sandbox do iframe e otimizado carregamento para evitar bloqueio do Shields.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,7 +27,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Limpeza de URL segura
   const safeUrl = React.useMemo(() => {
     if (!url) return "";
     return url.toString().trim();
@@ -67,30 +66,35 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      setTimeout(() => setLoading(false), 2500);
+      // Timeout de carregamento para não travar no Brave
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
-      videoRef.current.src = safeUrl;
-      videoRef.current.load();
-      
-      const promise = videoRef.current.play();
-      playPromiseRef.current = promise;
+      try {
+        videoRef.current.src = safeUrl;
+        videoRef.current.load();
+        
+        const promise = videoRef.current.play();
+        playPromiseRef.current = promise;
 
-      promise
-        .then(() => {
-          setIsPlaying(true);
-          setLoading(false)
-        })
-        .catch(() => {
-          if (videoRef.current) {
-            videoRef.current.muted = true;
-            videoRef.current.play().catch(() => {});
-          }
-          setIsPlaying(true);
-          setLoading(false);
-        });
+        promise
+          .then(() => {
+            setIsPlaying(true);
+            setLoading(false)
+          })
+          .catch(() => {
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(() => {});
+            }
+            setIsPlaying(true);
+            setLoading(false);
+          });
+      } catch (e) {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
       setIsPlaying(true);
@@ -123,13 +127,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
-      setIsFullscreen(false);
-    }
+    try {
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen().catch(() => {});
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen().catch(() => {});
+        setIsFullscreen(false);
+      }
+    } catch (e) {}
   };
 
   if (!isMounted || !safeUrl) return null;
@@ -142,8 +148,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={safeUrl}
           className="w-full h-full border-0"
-          // Sandbox removido conforme exigência dos provedores de sinal para liberar o vídeo.
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          // Atributos permitidos mesmo em bloqueios agressivos
+          allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
         />
       )}
@@ -163,7 +169,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v312...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v313...</p>
           </div>
         </div>
       )}
