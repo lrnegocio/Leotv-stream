@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
     const lowTarget = targetUrl.toLowerCase();
     
     // PROTOCOLO DE REFERER INTELIGENTE - CAMUFLAGEM DE ORIGEM
-    // Remove qualquer rastro do domínio "leotv.fun" para evitar "Connection Refused"
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
@@ -89,23 +88,18 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   }
 
   // FILTRAGEM ANTI-BLOQUEIO PARA PLAYERS WEB (HTML)
-  // Remove as ordens de bloqueio de frame que causam o erro no cliente
   if (isHtml) {
     let htmlText = await res.text();
-    // Injeta a tag base para que os recursos do player original (JS/CSS) carreguem
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     
-    // EXTERMINADOR DE BLOQUEIOS DE FRAME
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', 'text/html');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // APAGA cabeçalhos que impedem o site de carregar no Iframe do seu domínio
+    // EXTERMINADOR DE BLOQUEIOS DE FRAME
     responseHeaders.delete('X-Frame-Options');
     responseHeaders.delete('Content-Security-Policy');
-    
-    // Injeta permissões totais
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 

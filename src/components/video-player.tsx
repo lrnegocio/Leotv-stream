@@ -27,24 +27,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Decodifica a URL para análise
   const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
   const lowDecoded = decodedUrl.toLowerCase();
   
-  // PROTOCOLO DE DETECÇÃO v307
-  // Se for .mp4, .m3u8 ou .ts, usamos <video>. 
-  // Se contiver nomes de players conhecidos ou for link de site, usamos <iframe>.
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
   const isYouTube = lowDecoded.includes('youtube.com/embed');
-  
-  // FORÇA IFRAME para sites de players externos (que não são arquivos diretos)
   const isIframe = !isDirectFile || lowDecoded.includes('rdcanais') || lowDecoded.includes('redecanais') || lowDecoded.includes('playcnvs') || lowDecoded.includes('warez');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
     const separator = baseUrl.includes('?') ? '&' : '?';
-    // Gera uma chave única para bypassar cache de bloqueio do canal
     return `${baseUrl}${separator}leotv_sync=${Date.now()}`;
   };
 
@@ -67,13 +60,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Aguarda o carregamento do túnel da VPS
       setTimeout(() => setLoading(false), 2500);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
-      // RESET TOTAL PARA VÍDEOS DIRETOS (Seek Master)
       videoRef.current.src = url;
       videoRef.current.load();
       
@@ -87,7 +78,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
-          // Bypass para navegadores que bloqueiam autoplay com som
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});

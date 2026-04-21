@@ -79,16 +79,13 @@ export interface User {
 
 /**
  * MOTOR DE LINKS MASTER v307 - PROTOCOLO DE CAMUFLAGEM TOTAL
- * Força o uso de proxy para domínios problemáticos e garante compatibilidade HTTPS.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Se já estiver proxidado, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-  // Extrai URL de Iframe se o usuário colou o código todo
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -96,7 +93,6 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // Tratamento de YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -111,7 +107,6 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
-  // Lista de domínios que PRECISAM de Camuflagem (Proxy) para funcionar em domínio .fun e HTTPS
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
@@ -120,7 +115,7 @@ export const formatMasterLink = (url: string) => {
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://')); // Todo link HTTP puro precisa de proxy num site HTTPS
+                    (lowUrl.startsWith('http://'));
 
   if (needsProxy) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
