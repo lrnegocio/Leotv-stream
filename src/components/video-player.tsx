@@ -13,9 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v304 - SINCRONIZAÇÃO TOTAL
- * Blinda o player para que o que funciona no teste funcione no cliente.
- * Identifica automaticamente se precisa de Iframe ou Video Tag.
+ * PLAYER MASTER SOBERANO v305 - PROTOCOLO SEEK & RESET
+ * Agora com suporte total a busca (avançar/retroceder) e reset de memória.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -30,19 +29,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   
-  // Identifica se é um arquivo de vídeo direto ou se precisa de Iframe (Embed)
+  // Detecção de tipo de mídia
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
   const isYouTube = lowUrl.includes('youtube.com/embed');
-  
-  // Se não for arquivo direto, usamos o modo Iframe (Túnel Master)
   const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy') || isYouTube);
 
-  // Cache-Buster v304: Garante sinal novo toda vez que abre
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}sync_id=${Date.now()}`;
+    return `${baseUrl}${separator}sync_v305=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
@@ -51,7 +47,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         try { await playPromiseRef.current; } catch (e) { }
       }
       videoRef.current.pause();
-      videoRef.current.removeAttribute('src');
+      videoRef.current.src = "";
       videoRef.current.load();
     }
     playPromiseRef.current = null;
@@ -64,12 +60,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Nginx e Cloudflare as vezes levam 1-2s para responder o proxy
       setTimeout(() => setLoading(false), 1500);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
+      // RESET TOTAL DO OBJETO VIDEO (Evita travamentos do Archive.org)
       videoRef.current.src = url;
       videoRef.current.load();
       
@@ -90,11 +86,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setIsPlaying(true);
           setLoading(false);
         });
-      return;
+    } else {
+      setLoading(false);
+      setIsPlaying(true);
     }
-
-    setLoading(false);
-    setIsPlaying(true);
   }, [url, isMounted, isDirectFile, isIframe]);
 
   React.useEffect(() => {
@@ -156,7 +151,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {!isIframe && (
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} />
+        <video 
+          key={url} // CHAVE DE RESET: Força o React a recriar o vídeo ao mudar de link
+          ref={videoRef} 
+          className="w-full h-full object-contain" 
+          autoPlay 
+          playsInline 
+          controls 
+          onPlay={() => setIsPlaying(true)} 
+          onPause={() => setIsPlaying(false)} 
+        />
       )}
 
       {loading && (

@@ -5,9 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v304 - PROTOCOLO ULTRA-COMPATIBILIDADE
- * Ajustado para resolver o problema de "funciona no teste, mas não no cliente".
- * Garante que Referer e Origin sejam simulados corretamente para qualquer domínio de IPTV.
+ * TÚNEL MASTER SOBERANO v305 - PROTOCOLO SEEK & STREAM
+ * Agora com suporte total a Range Requests (Avançar/Retroceder vídeos MP4).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,25 +18,26 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // IDENTIDADE DE ELITE (CHROME 133) - Evita bloqueio por User-Agent
+    // REPASSE DE RANGE (Vital para Avançar/Retroceder)
+    const range = req.headers.get('range');
+    if (range) {
+      requestHeaders.set('Range', range);
+    }
+
+    // IDENTIDADE DE ELITE
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
-    requestHeaders.set('Cache-Control', 'no-cache');
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // PROTOCOLO DE REFERER INTELIGENTE v304
+    // PROTOCOLO DE REFERER INTELIGENTE
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
       requestHeaders.set('Origin', 'https://redecanaistv.net');
-    } else if (lowTarget.includes('playcnvs.stream') || lowTarget.includes('warez')) {
-      requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     } else {
-      // Fallback: o referer é a raiz do próprio site de origem do vídeo
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
 
@@ -47,17 +47,9 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // Rota de emergência se bloqueado por CORS direto
-    if (res.status === 403 || res.status === 401) {
-      requestHeaders.delete('Referer');
-      requestHeaders.delete('Origin');
-      const retryRes = await fetch(targetUrl, { headers: requestHeaders, cache: 'no-store' });
-      if (retryRes.ok) return handleResponse(retryRes, targetUrl, urlObj);
-    }
-
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v304", { status: 500 });
+    return new Response("Falha no Túnel Master v305", { status: 500 });
   }
 }
 
@@ -68,7 +60,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('apple-mpegurl');
   const isHtml = contentType.includes('text/html');
 
-  // REESCRITA HLS MASTER (Resolve caminhos relativos de canais ao vivo)
+  // REESCRITA HLS MASTER
   if (isM3u8) {
     const manifestText = await res.text();
     const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -91,40 +83,38 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // FILTRAGEM ANTI-BLOQUEIO PARA HTML (IFrames)
+  // FILTRAGEM ANTI-BLOQUEIO PARA HTML
   if (isHtml) {
     let htmlText = await res.text();
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-    
-    // Remove scripts chatos que tentam detectar o IFrame do Léo TV
-    htmlText = htmlText.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, (match) => {
-      const lowMatch = match.toLowerCase();
-      if (lowMatch.includes('top.location') || lowMatch.includes('window.top') || lowMatch.includes('ads')) {
-        return '<!-- Script Bloqueado pelo Túnel Master -->';
-      }
-      return match;
-    });
-
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
-    htmlText = htmlText.replace(/window\.top !== window\.self/g, "false");
-
     return new Response(htmlText, {
-      headers: { 
-        'Content-Type': 'text/html', 
-        'Access-Control-Allow-Origin': '*', 
-        'Cache-Control': 'no-store' 
-      }
+      headers: { 'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
     });
   }
 
-  // Streams de Vídeo Direto (TS, MP4, etc)
+  // STREAMS DE VÍDEO DIRETO (REPASSA STATUS 206 SE NECESSÁRIO)
   const responseHeaders = new Headers();
-  const headersToCopy = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+  const headersToCopy = [
+    'content-type', 
+    'content-length', 
+    'content-range', 
+    'accept-ranges', 
+    'cache-control',
+    'last-modified',
+    'etag'
+  ];
+  
   headersToCopy.forEach(h => {
     const val = res.headers.get(h);
     if (val) responseHeaders.set(h, val);
   });
+  
   responseHeaders.set('Access-Control-Allow-Origin', '*');
 
-  return new Response(res.body, { status: res.status, headers: responseHeaders });
+  return new Response(res.body, { 
+    status: res.status, 
+    statusText: res.statusText,
+    headers: responseHeaders 
+  });
 }

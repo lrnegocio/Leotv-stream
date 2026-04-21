@@ -78,18 +78,15 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v304 - SINCRONIZAÇÃO TOTAL
- * Blinda o link para que funcione IGUAL no Admin e no Cliente.
- * Resolve o problema de Mixed Content (HTTP em site HTTPS).
+ * MOTOR DE LINKS MASTER v305 - PROTOCOLO SEEK & ARCHIVE
+ * Blinda o link para que suporte o avanço (Seek) e previna travamentos no Archive.org.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Se já for um link do nosso proxy, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-  // Extração de Iframe (Sintonizador Automático)
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -97,7 +94,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // YouTube Handler (Modo TV)
+  // YouTube Handler
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -115,18 +112,14 @@ export const formatMasterLink = (url: string) => {
   // XVideos/Adult Handler
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
-    if (idMatch && idMatch[1]) {
-      return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
-    }
-    if (lowUrl.includes('embedframe')) return finalUrl;
+    if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // LISTA NEGRA DE BLOQUEIOS CORS: Força Túnel VPS v304
+  // LISTA NEGRA DE BLOQUEIOS CORS & SEEK
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
-    'streamlock', 'vizer', 'pobreflix', 'megaflix', 'supercanais',
-    'futemax', 'multicanais'
+    'archive.org', 'pobreflix', 'megaflix', 'futemax'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
