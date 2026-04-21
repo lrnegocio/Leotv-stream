@@ -27,12 +27,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
+  // Decodifica a URL para análise
   const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
   const lowDecoded = decodedUrl.toLowerCase();
   
+  // Verifica se é arquivo direto
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
   const isYouTube = lowDecoded.includes('youtube.com/embed');
-  const isIframe = !isDirectFile || lowDecoded.includes('rdcanais') || lowDecoded.includes('redecanais') || lowDecoded.includes('playcnvs') || lowDecoded.includes('warez');
+  
+  // Força Iframe para sites conhecidos ou links que não são arquivos diretos
+  const isIframe = !isDirectFile || lowDecoded.includes('rdcanais') || lowDecoded.includes('redecanais') || lowDecoded.includes('playcnvs') || lowDecoded.includes('warez') || lowDecoded.includes('reidoscanais');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
@@ -60,6 +64,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
+      // Timeout para simular carregamento de iframe
       setTimeout(() => setLoading(false), 2500);
       return;
     }
@@ -78,6 +83,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
+          // Tenta tocar mudo se falhar por política de autoplay
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});

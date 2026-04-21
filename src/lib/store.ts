@@ -84,8 +84,10 @@ export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
+  // Se já estiver com o proxy, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
+  // Extrai URL de Iframes
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -93,6 +95,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
+  // Suporte a YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -107,11 +110,12 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
+  // Domínios que PRECISAM de Túnel (Proxy)
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
     'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live', 'p2p'
+    'agropesca.live', 'p2p', 'reidoscanais'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
