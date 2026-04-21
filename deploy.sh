@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v215..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v303..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -40,13 +40,13 @@ else
     exit 1
 fi
 
-# Reinicia o processo no PM2
-echo "♻️ REINICIANDO MOTORES NA PORTA 80..."
+# Reinicia o processo no PM2 na porta interna 3000
+echo "♻️ REINICIANDO MOTORES NA PORTA INTERNA 3000..."
 pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV ONLINE E BLINDADO!"
-echo "🔗 ACESSE: http://24.152.37.78"
+echo "✅ SISTEMA LÉO TV PRONTO PARA O DOMÍNIO!"
+echo "🔗 AGORA EXECUTE OS COMANDOS DO NGINX NO PUTTY"
 echo "--------------------------------------------------"
 pm2 list

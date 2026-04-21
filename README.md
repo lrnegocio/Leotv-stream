@@ -20,8 +20,16 @@ chmod +x deploy.sh
 
 ### 🌐 3. Ativação do Domínio e SSL (HTTPS)
 Após rodar o deploy, execute estes comandos no Putty para ativar o cadeado:
+
 ```bash
-# 1. Cria a configuração do Nginx
+# 1. MATA O APACHE (Que está travando sua porta 80)
+systemctl stop httpd
+systemctl disable httpd
+
+# 2. Mata processos travados do Certbot
+killall -9 certbot
+
+# 3. Cria a configuração do Nginx
 cat <<EOF > /etc/nginx/conf.d/leotv.conf
 server {
     listen 80;
@@ -38,11 +46,11 @@ server {
 }
 EOF
 
-# 2. Reinicia o Nginx
+# 4. Inicia o Nginx de verdade
 systemctl restart nginx
 systemctl enable nginx
 
-# 3. Gera o SSL (Cadeado) - RESPONDA SEU E-MAIL QUANDO PEDIR
+# 5. Gera o SSL (Cadeado) - RESPONDA SEU E-MAIL QUANDO PEDIR
 certbot --nginx -d leotv.fun -d www.leotv.fun
 ```
 
