@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v300 - EDIÇÃO ESPECIAL YOUTUBE
- * Sintonização otimizada para YouTube Embed e IFrames de segurança.
+ * PLAYER MASTER SOBERANO v304 - SINCRONIZAÇÃO TOTAL
+ * Blinda o player para que o que funciona no teste funcione no cliente.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -29,13 +29,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   
-  // Detecção de sinal direto vs Iframe/Proxy/YouTube
+  // Identifica se é um arquivo de vídeo direto ou se precisa de Iframe
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
   const isYouTube = lowUrl.includes('youtube.com/embed');
+  
+  // Se não for arquivo direto e contiver http ou for nosso proxy, usa Iframe
   const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy') || isYouTube);
 
-  // Adiciona timestamp apenas para IFrames de canais (não para YouTube)
-  const freshUrl = (isIframe && !isYouTube) ? (url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`) : url;
+  // Cache-Buster Soberano: Garante que canais ao vivo não peguem lixo de cache
+  const getFreshUrl = (baseUrl: string) => {
+    if (!baseUrl) return "";
+    if (isYouTube) return baseUrl; // YouTube não gosta de timestamps extras
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}leo_sync=${Date.now()}`;
+  };
 
   const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
@@ -56,7 +63,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // O Iframe cuida do seu próprio carregamento
       return;
     }
 
@@ -74,6 +80,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
+          // Tenta tocar mutado se o navegador bloquear autoplay
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -126,10 +133,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const toggleFullscreen = () => {
     if (!containerRef.current) return
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen();
+      containerRef.current.requestFullscreen().catch(() => {});
       setIsFullscreen(true)
     } else {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(() => {});
       setIsFullscreen(false)
     }
   };
@@ -142,7 +149,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isIframe && playerKey > 0 && (
         <iframe 
           key={playerKey}
-          src={freshUrl}
+          src={getFreshUrl(url)}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
@@ -169,7 +176,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
         </button>
 
-        <button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all">
+        <button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all" title="Reiniciar Sinal">
           <RefreshCcw className="h-5 w-5 text-white" />
         </button>
 

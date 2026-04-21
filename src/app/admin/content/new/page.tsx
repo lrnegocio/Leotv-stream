@@ -91,11 +91,14 @@ export default function NewContentPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
-        </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
+          </Button>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
+        </div>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização Ativa v304</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -161,6 +164,7 @@ export default function NewContentPage() {
                   <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
+                <p className="text-[8px] font-bold uppercase opacity-40">O teste acima usa o mesmo protocolo do cliente final.</p>
               </div>
             </div>
           ) : (

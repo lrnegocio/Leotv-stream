@@ -78,12 +78,17 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v301 - PREPARAÇÃO PARA DOMÍNIO
+ * MOTOR DE LINKS MASTER v304 - SINCRONIZAÇÃO TOTAL
+ * Blinda o link para que funcione IGUAL no Admin e no Cliente.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
+  // Se já for um link do nosso proxy, não mexe
+  if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
+
+  // Extração de Iframe
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -91,6 +96,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
+  // YouTube Handler
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -105,6 +111,7 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
+  // XVideos Handler
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) {
@@ -113,19 +120,17 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('embedframe')) return finalUrl;
   }
 
-  const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts');
-  if (isDirectVideo) {
-    return finalUrl;
-  }
+  // Detecção de canais que PRECISAM de túnel da VPS (CORS/Referer/Mixed Content)
+  const domainsNeedingProxy = [
+    'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
+    'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
+    'streamlock', 'vizer', 'pobreflix', 'megaflix'
+  ];
 
-  const needsProxy = 
-    lowUrl.includes('redecanaistv') || 
-    lowUrl.includes('rdcanais') || 
-    lowUrl.includes('rdcplayer') || 
-    lowUrl.includes('playcnvs.stream') ||
-    lowUrl.includes('tvacabo.top');
+  const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
+                    (lowUrl.startsWith('http://') && !lowUrl.includes('.m3u8')); // Força proxy em HTTP puro para evitar Mixed Content block
 
-  if (needsProxy && !finalUrl.includes('/api/proxy')) {
+  if (needsProxy) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
