@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -12,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v296 - EDIÇÃO ANTI-ABORT
- * Blindagem total contra erros de interrupção de play/pause e redirects.
+ * PLAYER MASTER SOBERANO v297 - EDIÇÃO FRESH START
+ * Garante sintonização independente adicionando timestamps aos iframes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -30,9 +31,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
 
+  // Adiciona timestamp para forçar requisição nova e evitar tela branca de cache
+  const freshUrl = isIframe ? (url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`) : url;
+
   const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
-      // Se houver uma promessa de play pendente, esperamos ela antes de dar pause
       if (playPromiseRef.current) {
         try { await playPromiseRef.current; } catch (e) { /* ignore */ }
       }
@@ -50,7 +53,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      setLoading(false);
+      // O loading de iframes é tratado no evento onLoad do iframe
       return;
     }
 
@@ -68,7 +71,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
-          // Tenta mudo se o play for bloqueado
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -109,7 +111,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         playPromiseRef.current = promise;
         promise.then(() => setIsPlaying(true)).catch(() => {});
       } else {
-        // Garante que não interrompemos um play pendente
         if (playPromiseRef.current) {
           try { await playPromiseRef.current; } catch (e) {}
         }
@@ -138,9 +139,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {isIframe && playerKey > 0 && (
         <iframe 
           key={playerKey}
-          src={url}
+          src={freshUrl}
           className="w-full h-full border-0"
-          // Protocolo Anti-Redirect: Impede o iframe de abrir abas novas
           allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
         />

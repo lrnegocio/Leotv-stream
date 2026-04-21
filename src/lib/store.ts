@@ -78,7 +78,7 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v295 - PROTOCOLO SINTONIZAÇÃO UNIVERSAL
+ * MOTOR DE LINKS MASTER v297 - PROTOCOLO SINTONIZAÇÃO AUTÔNOMA
  * Identifica domínios que bloqueiam VPS e aplica o Túnel de Camuflagem Anti-Anúncio.
  */
 export const formatMasterLink = (url: string) => {
@@ -108,12 +108,12 @@ export const formatMasterLink = (url: string) => {
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 3. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag (Ex: webtvninjas)
+  // 3. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag
   if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts')) {
     return finalUrl;
   }
 
-  // 4. PROTOCOLO DE TÚNEL ANTI-ANÚNCIO (Proxy) para domínios protegidos
+  // 4. PROTOCOLO DE TÚNEL MASTER v297 (Bypass Acesso Negado)
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('rdcanais') || 

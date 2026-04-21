@@ -5,9 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v295 - PROTOCOLO DE FILTRAGEM ANTI-TRACKER
- * Remove scripts de anúncios e rastreadores antes de entregar ao navegador.
- * Isso silencia os alertas do Brave e evita quebra de site.
+ * TÚNEL MASTER SOBERANO v297 - PROTOCOLO SINTONIZAÇÃO AUTÔNOMA
+ * Melhora a independência da VPS para canais como rdcplayer e playcnvs.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,18 +18,24 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
+    // Identidade de Elite (Chrome 124)
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Cache-Control', 'no-cache');
+    requestHeaders.set('Sec-Fetch-Dest', 'document');
+    requestHeaders.set('Sec-Fetch-Mode', 'navigate');
+    requestHeaders.set('Sec-Fetch-Site', 'cross-site');
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // Referer Spoofing Inteligente
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
+    // PROTOCOLO DE REFERER ESTÁTICO (Fim do vínculo Admin/Cliente)
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('playcnvs')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
+      requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
+      requestHeaders.set('Origin', 'https://redecanaistv.net');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -69,7 +74,7 @@ export async function GET(req: NextRequest) {
       let htmlText = await res.text();
       const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
       
-      // EXTERMINADOR DE SCRIPTS DE ANÚNCIO (Faz o Brave ver o site como limpo)
+      // EXTERMINADOR DE SCRIPTS DE ANÚNCIO
       htmlText = htmlText.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, (match) => {
         const lowMatch = match.toLowerCase();
         if (lowMatch.includes('ads') || lowMatch.includes('popunder') || lowMatch.includes('analytics') || lowMatch.includes('track') || lowMatch.includes('counter')) {
@@ -97,6 +102,6 @@ export async function GET(req: NextRequest) {
 
     return new Response(res.body, { status: res.status, headers: responseHeaders });
   } catch (error) {
-    return new Response("Falha no Túnel Master v295", { status: 500 });
+    return new Response("Falha no Túnel Master v297", { status: 500 });
   }
 }
