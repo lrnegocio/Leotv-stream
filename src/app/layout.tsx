@@ -55,8 +55,13 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v286 - EXTERMINADOR DE OVERLAYS E POPUPS */
+          /* PROTOCOLO BRAVE SUPREMO v289 - EXTERMINADOR DE OVERLAYS E REDIRECTS */
           
+          /* Bloqueio de abertura de novas abas (Redirect Hijack) */
+          iframe {
+            pointer-events: auto !important;
+          }
+
           /* Camadas invisíveis que abrem novas abas */
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
@@ -77,18 +82,10 @@ export default function RootLayout({
             z-index: -9999 !important;
           }
 
-          /* Garante que o botão de play original fique acessível se o nosso falhar, 
-             mas sem as camadas de anúncio em volta */
+          /* Força o botão de play original a ficar mudo sob o nosso */
           .vjs-big-play-button, .vjs-big-play-centered, .play-button {
-            opacity: 1 !important;
-            pointer-events: auto !important;
-            z-index: 5 !important;
-          }
-
-          /* Bloqueio de redirecionamentos e downloads indesejados */
-          [href*="opera.com"], [href*="browser"], .download-button,
-          [href*="whatsapp.com/channel"] {
-            display: none !important;
+            opacity: 0.1 !important;
+            pointer-events: none !important;
           }
 
           body { -webkit-tap-highlight-color: transparent; }

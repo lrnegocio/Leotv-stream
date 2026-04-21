@@ -78,14 +78,14 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v288 - PROTOCOLO SINTONIZAÇÃO PROFUNDA
- * Bypass para rdcplayer.online e rdcplayer.xyz.
- * Extração de Iframes e Autoplay Forçado.
+ * MOTOR DE LINKS MASTER v289 - PROTOCOLO SINTONIZAÇÃO PROFUNDA
+ * Bypass Cloudflare VPS + YouTube/XVideos Fix.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
+  // Limpeza de Iframes colados no Admin
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -93,11 +93,13 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
+  // FIX XVIDEOS v289
   if (lowUrl.includes('xvideos.com')) {
-    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i);
+    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
+  // FIX YOUTUBE v289
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];

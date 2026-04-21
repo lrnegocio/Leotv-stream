@@ -5,10 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v288 - PROTOCOLO DE CAMUFLAGEM UNIVERSAL
- * Suporte a rdcplayer.online, rdcplayer.xyz, RedeCanais e rdcanais.
- * Injeta Tag Base em HTML para resolver links relativos e bypassar Referer.
- * Remove bloqueios de segurança do navegador para evitar Conexão Recusada.
+ * TÚNEL MASTER SOBERANO v289 - PROTOCOLO BYPASS CLOUDFLARE VPS
+ * Simula um navegador Chrome 124 real para evitar bloqueios de VPS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -23,8 +21,20 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
+    // CABEÇALHOS DE ELITE v289 (Simula Navegador Humano)
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
+    requestHeaders.set('Cache-Control', 'no-cache');
+    requestHeaders.set('Pragma', 'no-cache');
+    requestHeaders.set('Sec-Ch-Ua', '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"');
+    requestHeaders.set('Sec-Ch-Ua-Mobile', '?0');
+    requestHeaders.set('Sec-Ch-Ua-Platform', '"Windows"');
+    requestHeaders.set('Sec-Fetch-Dest', 'document');
+    requestHeaders.set('Sec-Fetch-Mode', 'navigate');
+    requestHeaders.set('Sec-Fetch-Site', 'none');
+    requestHeaders.set('Sec-Fetch-User', '?1');
+    requestHeaders.set('Upgrade-Insecure-Requests', '1');
     requestHeaders.set('Origin', urlObj.origin);
     requestHeaders.set('Referer', urlObj.origin + '/');
 
@@ -35,15 +45,6 @@ export async function GET(req: NextRequest) {
     
     if (targetUrl.includes('rdcplayer')) {
        requestHeaders.set('Referer', 'https://rdcanais.com/');
-       requestHeaders.set('Origin', 'https://rdcanais.com');
-    }
-
-    if (targetUrl.includes('tvacabo')) {
-       requestHeaders.set('Referer', 'https://tvacabo.top/');
-    }
-
-    if (targetUrl.includes('acplay.live')) {
-       requestHeaders.set('Referer', 'https://acplay.live/');
     }
 
     const controller = new AbortController();
@@ -96,7 +97,6 @@ export async function GET(req: NextRequest) {
     if (isHtml) {
       let htmlText = await res.text();
       const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-      // Injeta a tag base logo no início do head e remove bloqueios de CSP e Frame
       htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
       
       return new Response(htmlText, {
@@ -124,6 +124,6 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    return new Response("Falha no Túnel Master", { status: 500 });
+    return new Response("Falha no Túnel Master VPS", { status: 500 });
   }
 }
