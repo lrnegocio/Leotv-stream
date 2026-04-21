@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 /**
- * INSTALADOR MASTER v292 - PROTOCOLO DE SILÊNCIO (CORRIGIDO)
+ * INSTALADOR MASTER v293 - PROTOCOLO DE SILÊNCIO (CORRIGIDO)
  * Agora o banner respeita o usuário e não aparece "direto" se for fechado.
  */
 export function PwaInstall() {
@@ -43,11 +43,11 @@ export function PwaInstall() {
 
     window.addEventListener('beforeinstallprompt', handler)
     
-    // Mostra o banner após 8 segundos (menos intrusivo) se não for standalone
+    // Mostra o banner após 12 segundos (menos intrusivo) se não for standalone
     const timer = setTimeout(() => {
       const alreadyDismissed = localStorage.getItem("leotv_pwa_dismissed_v291")
       if (!isStandalone && alreadyDismissed !== "true") setIsVisible(true)
-    }, 8000)
+    }, 12000)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)

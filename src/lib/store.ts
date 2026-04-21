@@ -77,23 +77,28 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v291 - PROTEÇÃO DE LEGADO
- * Restaura links diretos (.m3u8) que não precisam de proxy.
+ * MOTOR DE LINKS MASTER v293 - EDIÇÃO SINTONIZAÇÃO TOTAL
+ * Blinda YouTube, XVideos e restaura links diretos (.m3u8).
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // 1. Limpeza de Iframes colados no Admin
+  // 1. Limpeza de Iframes colados no Admin (Extrai o link real)
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
   
   const lowUrl = finalUrl.toLowerCase();
-  const isStreamFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
   
-  // 2. TRATAMENTO ESPECIAL YOUTUBE
+  // 2. PROTEÇÃO DE LEGADO: Se for link direto de vídeo, NÃO mexe e NÃO usa proxy.
+  const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
+  if (isDirectFile && !lowUrl.includes('redecanaistv') && !lowUrl.includes('rdcanais')) {
+    return finalUrl;
+  }
+  
+  // 3. TRATAMENTO ESPECIAL YOUTUBE (Converte para embed limpo)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -102,31 +107,30 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
-  // 3. TRATAMENTO ESPECIAL XVIDEOS
+  // 4. TRATAMENTO ESPECIAL XVIDEOS (Converte para motor embed)
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 4. PROTOCOLO DE PROXY SELETIVO (Apenas para domínios que BLOQUEIAM)
+  // 5. PROTOCOLO DE PROXY SELETIVO (Apenas domínios que bloqueiam)
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('tvacabo.top') || 
     lowUrl.includes('rdcplayer') || 
     lowUrl.includes('rdcanais') ||
+    lowUrl.includes('playcnvs.stream') ||
     lowUrl.includes('acplay.live');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
-    let target = finalUrl;
-    // SÓ adiciona parâmetros de autoplay se NÃO for um arquivo direto de stream
-    if (!isStreamFile) {
-      const separator = target.includes('?') ? '&' : '?';
-      target = target.includes('autoplay') ? target : `${target}${separator}autoplay=1&mute=1`;
+    // Adiciona parâmetros de autoplay apenas se for HTML/Iframe
+    if (!isDirectFile) {
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${separator}autoplay=1&mute=1`;
     }
-    return `/api/proxy?url=${encodeURIComponent(target)}`;
+    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
-  // Se for um m3u8 comum (webtvninjas), retorna o link puro sem quebrar
   return finalUrl;
 };
 

@@ -1,12 +1,11 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v290 - PROTOCOLO BYPASS INTELIGENTE
- * Diferencia domínios protegidos de domínios abertos para não quebrar links legados.
+ * TÚNEL MASTER SOBERANO v293 - PROTOCOLO DE CAMUFLAGEM DINÂMICA
+ * Resolve "Acesso Negado" e "White Screen" injetando cabeçalhos e tags base.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -21,24 +20,33 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
     
-    // Lista de domínios que EXIGEM camuflagem Chrome Elite
+    // Lista de domínios que EXIGEM camuflagem de alto nível
+    const lowTarget = targetUrl.toLowerCase();
     const isProtectedDomain = 
-      targetUrl.includes('redecanaistv') || 
-      targetUrl.includes('reidoscanais') || 
-      targetUrl.includes('rdcanais') || 
-      targetUrl.includes('rdcplayer') ||
-      targetUrl.includes('tvacabo.top');
+      lowTarget.includes('redecanaistv') || 
+      lowTarget.includes('reidoscanais') || 
+      lowTarget.includes('rdcanais') || 
+      lowTarget.includes('rdcplayer') ||
+      lowTarget.includes('playcnvs.stream') ||
+      lowTarget.includes('tvacabo.top');
 
     if (isProtectedDomain) {
-      // CABEÇALHOS DE ELITE v290 (Simula Chrome 124 para pular Cloudflare)
+      // CABEÇALHOS DE ELITE v293 (Simula Chrome 124 Nativo)
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
       requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
       requestHeaders.set('Sec-Ch-Ua', '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"');
       requestHeaders.set('Sec-Ch-Ua-Mobile', '?0');
       requestHeaders.set('Sec-Ch-Ua-Platform', '"Windows"');
-      requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
+      
+      // Referer Inteligente: Engana o site dizendo que o sinal vem dele mesmo
+      if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais')) {
+        requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
+      } else if (lowTarget.includes('playcnvs')) {
+        requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
+      } else {
+        requestHeaders.set('Referer', urlObj.origin + '/');
+      }
     } else {
-      // CABEÇALHOS PADRÃO para links abertos (webtvninjas, etc.)
       requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
     }
 
@@ -59,10 +67,10 @@ export async function GET(req: NextRequest) {
     }
 
     const contentType = res.headers.get('content-type') || '';
-    const isM3u8 = targetUrl.toLowerCase().includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
+    const isM3u8 = lowTarget.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
     const isHtml = contentType.includes('text/html');
 
-    // REESCRITA HLS MASTER
+    // REESCRITA HLS MASTER: Garante que os pedaços (.ts) também passem pelo proxy
     if (isM3u8) {
       const manifestText = await res.text();
       const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -88,12 +96,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcplayer e outros)
+    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcplayer, playcnvs e outros)
+    // Isso resolve o erro de tela branca pois o Iframe acha os arquivos JS do site original
     if (isHtml) {
       let htmlText = await res.text();
       const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
       htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
       
+      // Remove scripts de sandbox e redirects via injeção agressiva
+      htmlText = htmlText.replace(/window\.top !== window\.self/g, "false");
+      htmlText = htmlText.replace(/parent\.location\.href/g, "''");
+
       return new Response(htmlText, {
         headers: { 
           'Content-Type': 'text/html', 

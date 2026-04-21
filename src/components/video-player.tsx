@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -14,9 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v290 - EDIÇÃO BLOQUEIO TOTAL BRAVE
- * Injeta escudo de vidro para evitar popups no primeiro clique.
- * Identifica corretamente links de vídeo direto (.m3u8) para não bloquear.
+ * PLAYER MASTER SOBERANO v293 - EDIÇÃO EXTERMÍNIO DE TELA BRANCA
+ * Unifica os botões e remove qualquer rastro de sandbox.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -28,17 +26,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   
-  const hlsRef = React.useRef<any>(null)
-  const mpegtsRef = React.useRef<any>(null)
-
   const lowUrl = (url || "").toLowerCase();
   // Um sinal é Iframe se NÃO tiver extensões de vídeo direto
   const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
 
   const cleanup = React.useCallback(() => {
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    if (mpegtsRef.current) { mpegtsRef.current.destroy(); mpegtsRef.current = null; }
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.removeAttribute('src');
@@ -52,14 +45,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true);
 
     if (isIframe) {
-      // Começa pausado para forçar o usuário a clicar no NOSSO botão e não no site original
+      // Começa pausado com escudo de vidro para evitar redirecionamentos
       setIsPlaying(false);
       setLoading(false);
       return;
     }
 
     if (isDirectFile) {
-      // Lógica para arquivos diretos (Dorama, Webtvninjas, etc)
       if (videoRef.current) {
         videoRef.current.src = url;
         videoRef.current.load();
@@ -90,6 +82,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     if (isIframe) {
       if (!isPlaying) {
+        // RESET DE HARDWARE: Gera uma nova chave para forçar o carregamento do Iframe
         setPlayerKey(Date.now());
         setIsPlaying(true);
       } else {
@@ -126,7 +119,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {/* ESCUDO DE VIDRO: Impede que cliques acidentais no Brave abram abas de anúncios */}
+      {/* ESCUDO DE VIDRO: Impede que cliques acidentais abram abas de anúncios */}
       {isIframe && !isPlaying && (
         <div className="absolute inset-0 z-[145] flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl">
            <button 
@@ -140,10 +133,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
+      {/* IFRAME MASTER: Sem SANDBOX para evitar erro "Acesso Bloqueado" */}
       {isIframe && isPlaying && playerKey > 0 && (
         <iframe 
           key={playerKey}
-          src={`${url}${url.includes('?') ? '&' : '?'}autoplay=1&mute=1&t=${playerKey}`}
+          src={url}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
@@ -160,10 +154,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CONTROLES MESTRE v290 */}
+      {/* CONTROLES MESTRE v293 */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
+        {/* PODER AO BOTAOZINHO: Este botão faz o mesmo que o central */}
         <button 
           onClick={handleTogglePlay} 
           className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all"
