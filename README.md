@@ -22,14 +22,12 @@ chmod +x deploy.sh
 Após rodar o deploy, execute estes comandos no Putty para ativar o cadeado:
 
 ```bash
-# 1. MATA O APACHE (Que está travando sua porta 80)
-systemctl stop httpd
-systemctl disable httpd
+# 1. Mata o Apache (caso exista) e o Certbot travado
+systemctl stop httpd 2>/dev/null
+systemctl disable httpd 2>/dev/null
+killall -9 certbot 2>/dev/null
 
-# 2. Mata processos travados do Certbot
-killall -9 certbot
-
-# 3. Cria a configuração do Nginx
+# 2. Cria a configuração do Nginx (Porta 80 -> Porta 3000)
 cat <<EOF > /etc/nginx/conf.d/leotv.conf
 server {
     listen 80;
@@ -46,11 +44,11 @@ server {
 }
 EOF
 
-# 4. Inicia o Nginx de verdade
+# 3. Inicia o Nginx de verdade
 systemctl restart nginx
 systemctl enable nginx
 
-# 5. Gera o SSL (Cadeado) - RESPONDA SEU E-MAIL QUANDO PEDIR
+# 4. Gera o SSL (Cadeado) - RESPONDA SEU E-MAIL QUANDO PEDIR
 certbot --nginx -d leotv.fun -d www.leotv.fun
 ```
 

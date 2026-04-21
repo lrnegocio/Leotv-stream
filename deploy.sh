@@ -16,8 +16,8 @@ sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 # PAUSA PARA RESPIRAR: Para o serviço para ter RAM pro Build
 echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
-pm2 stop leotv-master 2>/dev/null || true
-pm2 delete leotv-master 2>/dev/null || true
+pm2 stop all 2>/dev/null || true
+pm2 delete all 2>/dev/null || true
 
 # LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 80 ou 3000
 echo "🔓 LIMPANDO PORTAS 80 E 3000..."
