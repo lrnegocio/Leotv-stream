@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -78,8 +77,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v290 - PROTOCOLO INTELIGENTE
- * Mantém compatibilidade total com .m3u8 legados e aplica bypass apenas onde necessário.
+ * MOTOR DE LINKS MASTER v291 - PROTEÇÃO DE LEGADO
+ * Restaura links diretos (.m3u8) que não precisam de proxy.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -109,29 +108,17 @@ export const formatMasterLink = (url: string) => {
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 4. TRATAMENTO MÚSICA (Spotify/Deezer)
-  if (lowUrl.includes('spotify.com')) {
-    let cleanUrl = finalUrl.replace(/\/intl-[a-z]{2}\//i, '/');
-    if (!cleanUrl.includes('/embed/')) cleanUrl = cleanUrl.replace('open.spotify.com/', 'open.spotify.com/embed/');
-    return cleanUrl;
-  }
-  if (lowUrl.includes('deezer.com')) {
-    const trackMatch = finalUrl.match(/track\/(\d+)/i);
-    if (trackMatch && trackMatch[1]) return `https://www.deezer.com/plugins/player?format=classic&autoplay=true&playlist=false&width=700&height=350&color=EF5466&layout=dark&size=medium&type=tracks&id=${trackMatch[1]}&app_id=1`;
-  }
-
-  // 5. PROTOCOLO DE PROXY SELETIVO
+  // 4. PROTOCOLO DE PROXY SELETIVO (Apenas para domínios que BLOQUEIAM)
   const needsProxy = 
-    isStreamFile || 
-    lowUrl.includes('acplay.live') ||
-    lowUrl.includes('redecanaistv') ||
-    lowUrl.includes('tvacabo.top') ||
-    lowUrl.includes('rdcplayer') ||
-    lowUrl.includes('rdcanais');
+    lowUrl.includes('redecanaistv') || 
+    lowUrl.includes('tvacabo.top') || 
+    lowUrl.includes('rdcplayer') || 
+    lowUrl.includes('rdcanais') ||
+    lowUrl.includes('acplay.live');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
     let target = finalUrl;
-    // SÓ adiciona parâmetros de autoplay se NÃO for um arquivo direto (.m3u8, .ts, .mp4)
+    // SÓ adiciona parâmetros de autoplay se NÃO for um arquivo direto de stream
     if (!isStreamFile) {
       const separator = target.includes('?') ? '&' : '?';
       target = target.includes('autoplay') ? target : `${target}${separator}autoplay=1&mute=1`;
@@ -139,6 +126,7 @@ export const formatMasterLink = (url: string) => {
     return `/api/proxy?url=${encodeURIComponent(target)}`;
   }
   
+  // Se for um m3u8 comum (webtvninjas), retorna o link puro sem quebrar
   return finalUrl;
 };
 

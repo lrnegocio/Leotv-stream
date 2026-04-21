@@ -3,8 +3,12 @@
 import * as React from "react"
 import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Zap, Share, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/dialog"
 
+/**
+ * INSTALADOR MASTER v291 - PROTOCOLO DE SILÊNCIO
+ * Agora o banner respeita o usuário e não aparece "direto" se for fechado.
+ */
 export function PwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null)
   const [isVisible, setIsVisible] = React.useState(false)
@@ -13,7 +17,10 @@ export function PwaInstall() {
   const [isHttps, setIsHttps] = React.useState(true)
 
   React.useEffect(() => {
-    // Verifica se estamos em HTTPS para alertar o Mestre
+    // BLINDAGEM MESTRE: Verifica se o usuário já dispensou o aviso
+    const hasDismissed = localStorage.getItem("leotv_pwa_dismissed_v291")
+    if (hasDismissed === "true") return
+
     if (typeof window !== 'undefined') {
       setIsHttps(window.location.protocol === 'https:')
     }
@@ -31,15 +38,15 @@ export function PwaInstall() {
     const handler = (e: any) => {
       e.preventDefault()
       setDeferredPrompt(e)
-      setIsVisible(true)
+      if (!hasDismissed) setIsVisible(true)
     }
 
     window.addEventListener('beforeinstallprompt', handler)
     
-    // Mostra o banner após 3 segundos se não for standalone
+    // Mostra o banner após 8 segundos (menos intrusivo) se não for standalone
     const timer = setTimeout(() => {
-      if (!isStandalone) setIsVisible(true)
-    }, 3000)
+      if (!isStandalone && !hasDismissed) setIsVisible(true)
+    }, 8000)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
@@ -59,10 +66,17 @@ export function PwaInstall() {
       if (outcome === 'accepted') {
         setIsVisible(false)
         setDeferredPrompt(null)
+        localStorage.setItem("leotv_pwa_dismissed_v291", "true")
       }
     } else {
       setShowGuide(true)
     }
+  }
+
+  const closeBanner = () => {
+    setIsVisible(false)
+    // MESTRE: Salva que o usuário não quer instalar agora para parar de aparecer
+    localStorage.setItem("leotv_pwa_dismissed_v291", "true")
   }
 
   if (!isVisible) return null
@@ -82,7 +96,7 @@ export function PwaInstall() {
             <Button onClick={handleInstall} className="bg-white text-primary font-black uppercase text-[10px] h-11 px-5 rounded-2xl shadow-lg hover:scale-105 transition-transform">
               <ArrowDownToLine className="h-4 w-4 mr-2" /> INSTALAR
             </Button>
-            <button onClick={() => setIsVisible(false)} className="text-white/60 hover:text-white p-1"><X className="h-5 w-5" /></button>
+            <button onClick={closeBanner} className="text-white/60 hover:text-white p-1" title="Fechar e não mostrar mais"><X className="h-5 w-5" /></button>
           </div>
         </div>
         {!isHttps && (
