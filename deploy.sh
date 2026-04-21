@@ -19,6 +19,11 @@ echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
 pm2 delete leotv-master 2>/dev/null || true
 
+# LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 80 ou 3000
+echo "🔓 LIMPANDO PORTAS 80 E 3000..."
+fuser -k 80/tcp 2>/dev/null || true
+fuser -k 3000/tcp 2>/dev/null || true
+
 # Garante que o NPM e o PM2 estão no PATH
 export PATH=$PATH:/usr/local/bin:/usr/bin
 
