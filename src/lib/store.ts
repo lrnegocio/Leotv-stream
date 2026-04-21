@@ -78,7 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v307 - PROTOCOLO DE CAMUFLAGEM TOTAL
+ * MOTOR DE LINKS MASTER v308 - PROTOCOLO DE CAMUFLAGEM TOTAL
+ * Unifica a lógica para Admin e Cliente.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -87,7 +88,7 @@ export const formatMasterLink = (url: string) => {
   // Se já estiver com o proxy, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-  // Extrai URL de Iframes
+  // Extrai URL de Iframes para facilitar o trabalho do player
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -110,12 +111,12 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
-  // Domínios que PRECISAM de Túnel (Proxy)
+  // Domínios que PRECISAM de Túnel (Proxy) v308
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
     'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live', 'p2p', 'reidoscanais'
+    'agropesca.live', 'p2p', 'reidoscanais', 'rdcplayer.online'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v307 - PROTOCOLO CAMALEÃO v2
- * Detecta se o sinal é site ou arquivo e força o uso de Iframe Blindado para RedeCanais/PlayCNVS.
+ * PLAYER MASTER SOBERANO v308 - PROTOCOLO CAMALEÃO v3
+ * Unificado para suportar SEEK (Archive.org) e IFRAME BLINDADO (RedeCanais/RDC).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,20 +27,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Decodifica a URL para análise
+  // Decodifica a URL para análise profunda
   const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
   const lowDecoded = decodedUrl.toLowerCase();
   
-  // Verifica se é arquivo direto
+  // Detecção inteligente de arquivo vs site
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
   const isYouTube = lowDecoded.includes('youtube.com/embed');
   
-  // Força Iframe para sites conhecidos ou links que não são arquivos diretos
-  const isIframe = !isDirectFile || lowDecoded.includes('rdcanais') || lowDecoded.includes('redecanais') || lowDecoded.includes('playcnvs') || lowDecoded.includes('warez') || lowDecoded.includes('reidoscanais');
+  // Força Iframe para sites conhecidos que bloqueiam player direto
+  const isIframe = !isDirectFile || 
+                   lowDecoded.includes('rdcanais') || 
+                   lowDecoded.includes('redecanais') || 
+                   lowDecoded.includes('playcnvs') || 
+                   lowDecoded.includes('warez') || 
+                   lowDecoded.includes('reidoscanais') ||
+                   lowDecoded.includes('rdcplayer');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
+    // Adiciona timestamp para evitar cache e forçar recarregamento do sinal
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}leotv_sync=${Date.now()}`;
   };
@@ -64,12 +71,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout para simular carregamento de iframe
-      setTimeout(() => setLoading(false), 2500);
+      // Timeout para simular carregamento de iframe blindado
+      setTimeout(() => setLoading(false), 3000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
+      // Forçamos o reload do vídeo direto com a nova URL
       videoRef.current.src = url;
       videoRef.current.load();
       
@@ -107,6 +115,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (e) e.stopPropagation();
     
     if (isIframe) {
+      // No modo Iframe, o toggle play recarrega o sinal
       if (!isPlaying) {
         setPlayerKey(Date.now());
         setIsPlaying(true);
@@ -172,7 +181,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Bypassing Bloqueios v307...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando v308 Soberano...</p>
           </div>
         </div>
       )}

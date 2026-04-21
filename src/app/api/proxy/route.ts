@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v307 - PROTOCOLO CAMUFLAGEM TOTAL
+ * TÚNEL MASTER SOBERANO v308 - PROTOCOLO CAMUFLAGEM TOTAL
  * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Mixed Content.
+ * Suporta SEEK (Avançar/Retroceder) e Remoção de Cabeçalhos de Segurança Restritivos.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     const lowTarget = targetUrl.toLowerCase();
     
     // PROTOCOLO DE REFERER INTELIGENTE - CAMUFLAGEM DE ORIGEM
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('rdcplayer.online')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v307", { status: 500 });
+    return new Response("Falha no Túnel Master v308", { status: 500 });
   }
 }
 
@@ -90,6 +91,8 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   // FILTRAGEM ANTI-BLOQUEIO PARA PLAYERS WEB (HTML)
   if (isHtml) {
     let htmlText = await res.text();
+    
+    // Injeta Base Href para que imagens e scripts do site original funcionem
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     
@@ -97,7 +100,8 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     responseHeaders.set('Content-Type', 'text/html');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // EXTERMINADOR DE BLOQUEIOS DE FRAME
+    // EXTERMINADOR DE BLOQUEIOS DE FRAME (X-Frame-Options / CSP)
+    // Deletamos os cabeçalhos que impedem o site de abrir em Iframe
     responseHeaders.delete('X-Frame-Options');
     responseHeaders.delete('Content-Security-Policy');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
