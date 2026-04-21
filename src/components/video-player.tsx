@@ -1,8 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Loader2, AlertCircle, Maximize, Minimize, Play, Pause, ChevronRight, ChevronLeft, RefreshCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause } from "lucide-react"
 
 interface VideoPlayerProps {
   url: string
@@ -13,21 +13,19 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v293 - EDIÇÃO EXTERMÍNIO DE TELA BRANCA
- * Unifica os botões e remove qualquer rastro de sandbox.
+ * PLAYER MASTER SOBERANO v294 - EDIÇÃO SINTONIZAÇÃO TOTAL
+ * Sem Sandbox, sem travas. Foco total na transmissão via VPS.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   
   const lowUrl = (url || "").toLowerCase();
-  // Um sinal é Iframe se NÃO tiver extensões de vídeo direto
   const isIframe = !lowUrl.includes('.m3u8') && !lowUrl.includes('.ts') && !lowUrl.includes('.mp4') && lowUrl.includes('http');
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
 
@@ -41,12 +39,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !url) return
-    setError(false);
     setLoading(true);
 
     if (isIframe) {
-      // Começa pausado com escudo de vidro para evitar redirecionamentos
-      setIsPlaying(false);
+      // Inicia direto para evitar "standby" que quebra na VPS
+      setPlayerKey(Date.now());
+      setIsPlaying(true);
       setLoading(false);
       return;
     }
@@ -82,7 +80,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     
     if (isIframe) {
       if (!isPlaying) {
-        // RESET DE HARDWARE: Gera uma nova chave para forçar o carregamento do Iframe
         setPlayerKey(Date.now());
         setIsPlaying(true);
       } else {
@@ -119,22 +116,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {/* ESCUDO DE VIDRO: Impede que cliques acidentais abram abas de anúncios */}
-      {isIframe && !isPlaying && (
-        <div className="absolute inset-0 z-[145] flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl">
-           <button 
-             onClick={handleTogglePlay}
-             className="h-40 w-40 rounded-full bg-primary/20 border-8 border-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-[0_0_80px_rgba(109,45,204,0.4)]"
-           >
-             <Play className="h-20 w-20 text-primary fill-primary animate-pulse" />
-           </button>
-           <p className="text-2xl font-black uppercase italic text-primary mt-8 tracking-widest">Sintonizar Master</p>
-           <p className="text-[10px] font-bold uppercase text-white/30 mt-2">Clique para Liberar o Canal</p>
-        </div>
-      )}
-
-      {/* IFRAME MASTER: Sem SANDBOX para evitar erro "Acesso Bloqueado" */}
-      {isIframe && isPlaying && playerKey > 0 && (
+      {isIframe && playerKey > 0 && (
         <iframe 
           key={playerKey}
           src={url}
@@ -154,11 +136,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* CONTROLES MESTRE v293 */}
+      {/* CONTROLES MESTRE v294 */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
-        {/* PODER AO BOTAOZINHO: Este botão faz o mesmo que o central */}
         <button 
           onClick={handleTogglePlay} 
           className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all"

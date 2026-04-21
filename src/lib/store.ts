@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -77,14 +78,14 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v293 - EDIÇÃO SINTONIZAÇÃO TOTAL
- * Blinda YouTube, XVideos e restaura links diretos (.m3u8).
+ * MOTOR DE LINKS MASTER v294 - PROTOCOLO SINTONIZAÇÃO UNIVERSAL
+ * Identifica domínios que bloqueiam VPS e aplica o Túnel de Camuflagem.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // 1. Limpeza de Iframes colados no Admin (Extrai o link real)
+  // Limpeza de Iframes
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -92,13 +93,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // 2. PROTEÇÃO DE LEGADO: Se for link direto de vídeo, NÃO mexe e NÃO usa proxy.
-  const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
-  if (isDirectFile && !lowUrl.includes('redecanaistv') && !lowUrl.includes('rdcanais')) {
-    return finalUrl;
-  }
-  
-  // 3. TRATAMENTO ESPECIAL YOUTUBE (Converte para embed limpo)
+  // 1. YouTube Master
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -107,30 +102,28 @@ export const formatMasterLink = (url: string) => {
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
-  // 4. TRATAMENTO ESPECIAL XVIDEOS (Converte para motor embed)
+  // 2. XVideos Master
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 5. PROTOCOLO DE PROXY SELETIVO (Apenas domínios que bloqueiam)
+  // 3. PROTOCOLO DE TÚNEL (Proxy) para domínios protegidos
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
-    lowUrl.includes('tvacabo.top') || 
+    lowUrl.includes('rdcanais') || 
     lowUrl.includes('rdcplayer') || 
-    lowUrl.includes('rdcanais') ||
     lowUrl.includes('playcnvs.stream') ||
-    lowUrl.includes('acplay.live');
+    lowUrl.includes('tvacabo.top');
 
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
-    // Adiciona parâmetros de autoplay apenas se for HTML/Iframe
-    if (!isDirectFile) {
-      const separator = finalUrl.includes('?') ? '&' : '?';
-      finalUrl = `${finalUrl}${separator}autoplay=1&mute=1`;
-    }
-    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    const separator = finalUrl.includes('?') ? '&' : '?';
+    // Força Autoplay e Mute no sinal proxied
+    const proxiedUrl = `${finalUrl}${separator}autoplay=1&mute=1`;
+    return `/api/proxy?url=${encodeURIComponent(proxiedUrl)}`;
   }
   
+  // 4. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag
   return finalUrl;
 };
 

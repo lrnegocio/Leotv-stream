@@ -1,11 +1,12 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v293 - PROTOCOLO DE CAMUFLAGEM DINÂMICA
- * Resolve "Acesso Negado" e "White Screen" injetando cabeçalhos e tags base.
+ * TÚNEL MASTER SOBERANO v294 - PROTOCOLO DE CAMUFLAGEM E REESCRITA HLS
+ * Resolve "White Screen" reescrevendo manifestos .m3u8 para que os chunks (.ts) também passem pelo proxy.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -17,74 +18,50 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    const range = req.headers.get('range');
-    if (range) requestHeaders.set('Range', range);
+    // CABEÇALHOS DE ELITE v294 (Simula Chrome 124 Nativo no Windows)
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
+    requestHeaders.set('Cache-Control', 'no-cache');
+    requestHeaders.set('Pragma', 'no-cache');
     
-    // Lista de domínios que EXIGEM camuflagem de alto nível
     const lowTarget = targetUrl.toLowerCase();
-    const isProtectedDomain = 
-      lowTarget.includes('redecanaistv') || 
-      lowTarget.includes('reidoscanais') || 
-      lowTarget.includes('rdcanais') || 
-      lowTarget.includes('rdcplayer') ||
-      lowTarget.includes('playcnvs.stream') ||
-      lowTarget.includes('tvacabo.top');
-
-    if (isProtectedDomain) {
-      // CABEÇALHOS DE ELITE v293 (Simula Chrome 124 Nativo)
-      requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-      requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
-      requestHeaders.set('Sec-Ch-Ua', '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"');
-      requestHeaders.set('Sec-Ch-Ua-Mobile', '?0');
-      requestHeaders.set('Sec-Ch-Ua-Platform', '"Windows"');
-      
-      // Referer Inteligente: Engana o site dizendo que o sinal vem dele mesmo
-      if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais')) {
-        requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
-      } else if (lowTarget.includes('playcnvs')) {
-        requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
-      } else {
-        requestHeaders.set('Referer', urlObj.origin + '/');
-      }
+    
+    // Spoofing de Referer Inteligente
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
+      requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
+      requestHeaders.set('Origin', 'https://reidoscanais.ooo');
+    } else if (lowTarget.includes('playcnvs')) {
+      requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
+    } else if (lowTarget.includes('redecanais')) {
+      requestHeaders.set('Referer', 'https://redecanaistv.net/');
     } else {
-      requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+      requestHeaders.set('Referer', urlObj.origin + '/');
     }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow',
-      signal: controller.signal
+      redirect: 'follow'
     });
-    
-    clearTimeout(timeoutId);
-
-    if (!res.ok && res.status !== 206) {
-       return new Response("Erro de Origem: " + res.status, { status: res.status });
-    }
 
     const contentType = res.headers.get('content-type') || '';
-    const isM3u8 = lowTarget.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/x-mpegurl');
+    const isM3u8 = lowTarget.includes('.m3u8') || contentType.includes('mpegurl');
     const isHtml = contentType.includes('text/html');
 
     // REESCRITA HLS MASTER: Garante que os pedaços (.ts) também passem pelo proxy
+    // Isso evita que o vídeo abra no Admin mas falhe no Cliente
     if (isM3u8) {
       const manifestText = await res.text();
       const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
       
       const rewrittenManifest = manifestText.split('\n').map(line => {
         const trimmed = line.trim();
-        if (!trimmed) return line;
-        if (!trimmed.startsWith('#')) {
-          try {
-            const absoluteUrl = new URL(trimmed, baseUrl).href;
-            return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
-          } catch (e) { return line; }
-        }
-        return line;
+        if (!trimmed || trimmed.startsWith('#')) return line;
+        try {
+          const absoluteUrl = new URL(trimmed, baseUrl).href;
+          return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
+        } catch (e) { return line; }
       }).join('\n');
 
       return new Response(rewrittenManifest, {
@@ -96,16 +73,15 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // INJEÇÃO DE TAG BASE PARA HTML (Bypass rdcplayer, playcnvs e outros)
-    // Isso resolve o erro de tela branca pois o Iframe acha os arquivos JS do site original
+    // INJEÇÃO DE TAG BASE PARA HTML
     if (isHtml) {
       let htmlText = await res.text();
       const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
       htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
       
-      // Remove scripts de sandbox e redirects via injeção agressiva
+      // Neutraliza bloqueios de Iframe
       htmlText = htmlText.replace(/window\.top !== window\.self/g, "false");
-      htmlText = htmlText.replace(/parent\.location\.href/g, "''");
+      htmlText = htmlText.replace(/top\.location\.href/g, "''");
 
       return new Response(htmlText, {
         headers: { 
@@ -124,14 +100,13 @@ export async function GET(req: NextRequest) {
     });
 
     responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Cache-Control', 'no-store');
 
     return new Response(res.body, {
       status: res.status,
       headers: responseHeaders,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     return new Response("Falha no Túnel Master VPS", { status: 500 });
   }
 }
