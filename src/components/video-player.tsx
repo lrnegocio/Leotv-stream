@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v309 - PROTOCOLO CAMALEÃO v3
- * Unificado para suportar SEEK (Archive.org) e IFRAME BLINDADO (RedeCanais/RDC).
+ * PLAYER MASTER SOBERANO v309 - SINCRONIZAÇÃO TOTAL
+ * Detecta automaticamente o sinal e aplica a blindagem v309.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,29 +27,26 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Decodifica a URL para análise profunda
+  // Decodifica a URL para análise profunda de sinal
   const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
   const lowDecoded = decodedUrl.toLowerCase();
   
-  // Detecção inteligente de arquivo vs site
+  // Detecção inteligente: É arquivo de vídeo direto ou é uma página HTML de player?
   const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4') || lowDecoded.includes('.mp3') || lowDecoded.includes('.mkv');
-  const isYouTube = lowDecoded.includes('youtube.com/embed');
   
-  // Força Iframe para sites conhecidos que bloqueiam player direto ou são páginas HTML
+  // Sites conhecidos que PRECISAM de Iframe Blindado v309
   const isIframe = !isDirectFile || 
                    lowDecoded.includes('rdcanais') || 
                    lowDecoded.includes('redecanais') || 
                    lowDecoded.includes('playcnvs') || 
-                   lowDecoded.includes('warez') || 
                    lowDecoded.includes('reidoscanais') ||
                    lowDecoded.includes('rdcplayer');
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
-    if (isYouTube) return baseUrl; 
-    // Adiciona timestamp para evitar cache e forçar recarregamento do sinal real da VPS
+    // Adiciona timestamp para forçar a VPS a buscar o sinal fresco e evitar cache de bloqueio
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}leotv_sync=${Date.now()}`;
+    return `${baseUrl}${separator}leotv_v309=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
@@ -71,8 +68,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout de 2 segundos para o sinal estabilizar no Iframe
-      setTimeout(() => setLoading(false), 2000);
+      // Timeout para estabilização do Iframe v309
+      setTimeout(() => setLoading(false), 1500);
       return;
     }
 
@@ -88,9 +85,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           setIsPlaying(true);
           setLoading(false);
         })
-        .catch((error) => {
-          if (error.name === 'AbortError') return;
-          // Tenta tocar mudo se falhar por política de autoplay
+        .catch(() => {
+          // Fallback mudo para autoplay bloqueado
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -114,7 +110,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (e) e.stopPropagation();
     
     if (isIframe) {
-      // No modo Iframe, o toggle play recarrega o sinal para garantir que o cliente veja o ao vivo
       setPlayerKey(Date.now());
       setIsPlaying(true);
       return;
@@ -172,10 +167,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando v309 Soberano...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v309...</p>
           </div>
         </div>
       )}
@@ -202,7 +197,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       </div>
 
       <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md pointer-events-none">
-         <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[200px]">{title}</p>
+         <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[250px]">{title}</p>
       </div>
     </div>
   )

@@ -78,52 +78,44 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v309 - PROTOCOLO DE SINCRONIZAÇÃO TOTAL
- * Esta função é a única autoridade para formatar links na plataforma.
- * O que ela decidir vale para o Admin e para o Cliente.
+ * MOTOR DE LINKS MASTER v309 - SINCRONIZAÇÃO ABSOLUTA
+ * Única autoridade para processar links no Admin e no Cliente.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Se já estiver com o proxy, não mexe para não duplicar
-  if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
-
-  // Extrai URL de Iframes (Ex: se colar o código do Iframe direto)
+  // 1. Limpeza de Iframe (se o mestre colou o código inteiro)
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
-  
+
+  // 2. Normalização de protocolo para HTTPS (evita mixed content se possível)
   const lowUrl = finalUrl.toLowerCase();
   
-  // Suporte Nativo a YouTube
+  // 3. Suporte YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
-    if (lowUrl.includes('watch?v=')) {
-      videoId = finalUrl.split('v=')[1]?.split('&')[0];
-    } else if (lowUrl.includes('youtu.be/')) {
-      videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-    } else if (lowUrl.includes('/embed/')) {
-      return finalUrl;
-    }
-    if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
-    }
+    if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
+    else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+    else if (lowUrl.includes('/embed/')) return finalUrl;
+    if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
   }
 
-  // LISTA NEGRA DE BLOQUEIOS (Domínios que PRECISAM do Túnel Master v309)
+  // 4. LISTA DE DOMÍNIOS QUE EXIGEM O TÚNEL SOBERANO v309
+  // Adicionados: rdcplayer, archive, redecanais, agropesca, etc.
   const domainsNeedingProxy = [
-    'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
-    'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
+    'rdcanais', 'redecanais', 'rdcplayer', 'playcnvs.stream', 
+    'tvacabo', 'canaltv', 'topcanais', 'warez', 'embed.watch',
     'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live', 'reidoscanais', 'rdcplayer.online', 'stream'
+    'agropesca.live', 'reidoscanais'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://')); // Força Proxy para HTTP em site HTTPS
+                    lowUrl.startsWith('http://'); // Links sem SSL PRECISAM de proxy
 
-  if (needsProxy) {
+  if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
   
