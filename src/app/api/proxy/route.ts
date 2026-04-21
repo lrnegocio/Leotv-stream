@@ -5,10 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v310 - PROTOCOLO CAMALEÃO ELITE
- * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Anti-Hotlink.
- * Suporta XVideos, RedeCanais, RDC Player e Seek no Archive.org.
- * NOVIDADE: Neutraliza scripts de "Iframe Breakout" e Popups que abrem novas abas.
+ * TÚNEL MASTER SOBERANO v311 - PROTOCOLO CAMALEÃO ELITE
+ * Ajustado para NUNCA interferir no YouTube e focar em XVideos/RedeCanais.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,30 +14,31 @@ export async function GET(req: NextRequest) {
 
   if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
+  // PROTEÇÃO YOUTUBE: Se por algum erro o YouTube cair aqui, devolvemos um erro 403
+  // para o player carregar o link direto sem proxy.
+  if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
+    return new NextResponse("YouTube deve ser carregado diretamente.", { status: 403 });
+  }
+
   try {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // 1. REPASSE DE RANGE (Vital para Seek no Archive.org)
+    // Repasse de Range (Seek no Archive.org)
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
 
-    // 2. IDENTIDADE CAMALEÃO (Simula Android TV para evitar Cloudflare)
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 11; BRAVIA 4K VH2 Build/RP1A.200720.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    // Identidade Smart TV
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 11; BRAVIA 4K Build/RP1A.200720.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Cache-Control', 'no-cache');
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // 3. CAMUFLAGEM DE REFERER (Identidade Falsa por Domínio)
+    // CAMUFLAGEM DE REFERER (O segredo para abrir o sinal)
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
-      requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
-      requestHeaders.set('Origin', 'https://redecanaistv.net');
-    } else if (lowTarget.includes('playcnvs.stream')) {
-      requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
     } else if (lowTarget.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
     } else {
@@ -54,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v310", { status: 500 });
+    return new Response("Falha no Túnel Master v311", { status: 500 });
   }
 }
 
@@ -65,7 +64,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl');
   const isHtml = contentType.includes('text/html');
 
-  // A. REESCRITA HLS MASTER (Para canais ao vivo)
+  // A. REESCRITA HLS MASTER
   if (isM3u8) {
     const manifestText = await res.text();
     const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -88,29 +87,24 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // B. FILTRAGEM AGRESSIVA ANTI-BLOQUEIO (HTML)
+  // B. LIMPEZA DE BLOQUEIOS (HTML)
   if (isHtml) {
     let htmlText = await res.text();
     
-    // EXTERMINADOR DE NOVAS ABAS E POPUPS (Neutraliza o motivo de abrir nova aba)
+    // Neutraliza scripts que abrem novas abas
     htmlText = htmlText.replace(/window\.open/g, 'console.log');
     htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
-    htmlText = htmlText.replace(/top\.location/g, 'self.location');
-    htmlText = htmlText.replace(/parent\.location/g, 'self.location');
     
-    // Injeta Base Href e Neutraliza mensagens de erro do Cloudflare
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
-    const cleanStyle = `<style>.cf-error-details, .sorry-blocked, #cf-wrapper { display:none!important; } body { overflow: auto!important; }</style>`;
-    htmlText = htmlText.replace('<head>', `<head>${baseTag}${cleanStyle}`);
+    htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     
     const responseHeaders = new Headers();
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // FORCE ALLOW FRAMES (Mata o erro de Conexão Recusada)
+    // Mata os erros de CSP e Frame-Options
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
-    responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 
     return new Response(htmlText, {
       headers: responseHeaders,
@@ -118,11 +112,11 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // C. STREAM DIRETO (Seek/Range habilitado para Archive.org)
+  // C. STREAM DIRETO
   const responseHeaders = new Headers();
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
-    'accept-ranges', 'cache-control', 'last-modified', 'etag'
+    'accept-ranges', 'cache-control'
   ];
   
   headersToCopy.forEach(h => {
@@ -134,7 +128,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   return new Response(res.body, { 
     status: res.status, 
-    statusText: res.statusText,
     headers: responseHeaders 
   });
 }

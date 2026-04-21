@@ -78,42 +78,38 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v310 - PROTOCOLO SOBERANO
- * Blindagem total contra Client-Side Exception e Bloqueios de Referer.
+ * MOTOR DE LINKS MASTER v311 - SINCRONIZAÇÃO ABSOLUTA
+ * Resolve YouTube no Admin e XVideos no Cliente.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.toString().trim();
 
-  // 1. Extração Ultra-Robusta de Iframe (Evita Client-Side Exception)
+  // 1. Extração de Iframe (Limpeza de códigos colados)
   if (finalUrl.includes('<iframe')) {
-    try {
-      const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
-      if (srcMatch && srcMatch[1]) {
-        finalUrl = srcMatch[1];
-      }
-    } catch (e) {
-      // Se falhar na extração, mantém o original para não crashar
-    }
+    const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
+    if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
 
   const lowUrl = finalUrl.toLowerCase();
   
-  // 2. Suporte YouTube
+  // 2. SUPORTE YOUTUBE (NUNCA USAR PROXY NO YOUTUBE)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
     else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
     else if (lowUrl.includes('/embed/')) return finalUrl;
-    if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
+    
+    if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
+    return finalUrl; // Retorna original se não achar ID
   }
 
-  // 3. Suporte Spotify / Deezer
+  // 3. Suporte Spotify / Deezer (Direto)
   if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
     return finalUrl;
   }
 
-  // 4. LISTA NEGRA DE BLOQUEIOS (Exige o Túnel Master v310)
+  // 4. LISTA DE TÚNEL (VPS) - Apenas para o que é bloqueado
   const domainsNeedingProxy = [
     'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
     'archive.org', 'xvideos', 'pornhub', 'acplay.live',
@@ -123,6 +119,7 @@ export const formatMasterLink = (url: string) => {
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
                     (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
 
+  // Se precisar de proxy e ainda não tiver a rota da API
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }

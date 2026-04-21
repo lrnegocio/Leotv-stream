@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v310 - SINCRONIZAÇÃO ABSOLUTA
- * Blindado contra Client-Side Exception e scripts de Popups/Novas Abas.
+ * PLAYER MASTER SOBERANO v311 - SINCRONIZAÇÃO TOTAL
+ * Resolve o erro de YouTube no Admin e XVideos no Cliente.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,62 +27,49 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  // Analisa a URL de forma ultra-segura para evitar "client-side exception"
-  const getSafeUrl = (raw: string) => {
-    if (!raw) return "";
-    try {
-      const s = raw.toString();
-      // Se já for proxy, não mexe
-      if (s.includes('/api/proxy')) return s;
-      return s;
-    } catch (e) { return ""; }
-  };
+  // Limpeza de URL segura
+  const safeUrl = React.useMemo(() => {
+    if (!url) return "";
+    return url.toString().trim();
+  }, [url]);
 
-  const safeUrl = getSafeUrl(url);
-  if (!safeUrl) return null;
+  const lowUrl = safeUrl.toLowerCase();
+  const isYoutube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+  const isAudioEmbed = lowUrl.includes('spotify') || lowUrl.includes('deezer');
+  
+  // Detecção de arquivos diretos (MP4, M3U8, etc)
+  const isDirectFile = lowUrl.includes('.m3u8') || 
+                       lowUrl.includes('.ts') || 
+                       lowUrl.includes('.mp4') || 
+                       lowUrl.includes('.mp3') || 
+                       lowUrl.includes('.mkv');
 
-  const lowDecoded = safeUrl.toLowerCase();
-  
-  // Detecção inteligente de tipo de sinal
-  const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4') || lowDecoded.includes('.mp3') || lowDecoded.includes('.mkv');
-  const isYoutube = lowDecoded.includes('youtube.com') || lowDecoded.includes('youtu.be');
-  const isAudioEmbed = lowDecoded.includes('spotify') || lowDecoded.includes('deezer');
-  
-  // Sites que PRECISAM de Iframe Blindado v310
+  // Iframe é necessário se não for arquivo direto ou se for um site conhecido
   const isIframe = !isDirectFile || 
-                   lowDecoded.includes('rdcanais') || 
-                   lowDecoded.includes('redecanais') || 
-                   lowDecoded.includes('playcnvs') || 
-                   lowDecoded.includes('xvideos') ||
-                   lowDecoded.includes('rdcplayer');
-
-  const getFreshUrl = (baseUrl: string) => {
-    if (!baseUrl) return "";
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}v310=${Date.now()}`;
-  };
+                   lowUrl.includes('rdcanais') || 
+                   lowUrl.includes('redecanais') || 
+                   lowUrl.includes('playcnvs') || 
+                   lowUrl.includes('xvideos') ||
+                   lowUrl.includes('rdcplayer');
 
   const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
-      if (playPromiseRef.current) {
-        try { await playPromiseRef.current; } catch (e) { }
-      }
       videoRef.current.pause();
       videoRef.current.src = "";
       videoRef.current.load();
     }
     playPromiseRef.current = null;
-  }, [])
+  }, []);
 
   const initPlayer = React.useCallback(async () => {
-    if (!isMounted || !safeUrl) return
+    if (!isMounted || !safeUrl) return;
     setLoading(true);
 
     if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout maior para dar tempo de "furar" o Cloudflare via Proxy
-      setTimeout(() => setLoading(false), 3000);
+      // Timeout para carregar o iframe
+      setTimeout(() => setLoading(false), 2500);
       return;
     }
 
@@ -120,13 +107,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const handleTogglePlay = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (isIframe) { setPlayerKey(Date.now()); setIsPlaying(true); return; }
+    if (isIframe || isYoutube) { 
+      setPlayerKey(Date.now()); 
+      setIsPlaying(true); 
+      return; 
+    }
 
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        const promise = videoRef.current.play();
-        playPromiseRef.current = promise;
-        promise.then(() => setIsPlaying(true)).catch(() => {});
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
       } else {
         videoRef.current.pause();
         setIsPlaying(false);
@@ -135,27 +124,27 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   };
 
   const toggleFullscreen = () => {
-    if (!containerRef.current) return
+    if (!containerRef.current) return;
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().catch(() => {});
-      setIsFullscreen(true)
+      setIsFullscreen(true);
     } else {
       document.exitFullscreen().catch(() => {});
-      setIsFullscreen(false)
+      setIsFullscreen(false);
     }
   };
 
-  if (!isMounted) return null;
+  if (!isMounted || !safeUrl) return null;
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {(isIframe || isYoutube || isAudioEmbed) && playerKey > 0 && (
+      {(isIframe || isYoutube || isAudioEmbed) && (
         <iframe 
           key={playerKey}
-          src={isYoutube || isAudioEmbed ? safeUrl : getFreshUrl(safeUrl)}
+          src={safeUrl}
           className="w-full h-full border-0"
-          // Sandbox v310: Impede que o site original abra novas janelas
+          // YouTube exige allow-presentation e allow-same-origin para não dar erro
           sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-pointer-lock"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
@@ -170,16 +159,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls 
-          onPlay={() => setIsPlaying(true)} 
-          onPause={() => setIsPlaying(false)} 
         />
       )}
 
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v310...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v311...</p>
           </div>
         </div>
       )}
@@ -191,7 +178,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
         </button>
 
-        <button onClick={() => { cleanup(); setPlayerKey(Date.now()); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all">
+        <button onClick={() => { cleanup(); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all">
           <RefreshCcw className="h-5 w-5 text-white" />
         </button>
 
