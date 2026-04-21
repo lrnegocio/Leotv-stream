@@ -55,13 +55,15 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v297 - EXTERMINADOR DE BLOQUEIOS VISUAIS */
+          /* PROTOCOLO BRAVE SUPREMO v298 - EXTERMINADOR DE BLOQUEIOS E MENSAGENS CLOUDFLARE */
           
           iframe {
             pointer-events: auto !important;
           }
 
-          /* Bloqueio agressivo de camadas de anúncio e mensagens de erro do site original */
+          /* Oculta mensagens de erro e bloqueio de Cloudflare que poluem o player */
+          .cf-error-details, #cf-error-details, .cf-browser-verification,
+          [id*="cf-"], [class*="cf-"], .sorry-blocked, .access-denied,
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
           .ad-layer, .click-to-play, #click-to-play-overlay,
           [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
@@ -70,7 +72,7 @@ export default function RootLayout({
           .vjs-ads-label, .vjs-ad-loading, .vjs-ad-playing,
           iframe[src*="doubleclick"], iframe[src*="ads"],
           [id*="pop-"], [class*="pop-"],
-          .access-denied, .unauthorized-domain, #error-message {
+          .unauthorized-domain, #error-message {
             display: none !important;
             width: 0 !important;
             height: 0 !important;

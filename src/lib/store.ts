@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v297 - PROTOCOLO SINTONIZAÇÃO AUTÔNOMA
- * Identifica domínios que bloqueiam VPS e aplica o Túnel de Camuflagem Anti-Anúncio.
+ * MOTOR DE LINKS MASTER v298 - PROTEÇÃO DE LEGADO E BYPASS CLOUDFLARE
+ * Garante que links m3u8 funcionem direto e sites protegidos passem pelo proxy atualizado.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -93,12 +93,12 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // 1. YouTube Master (Não usa proxy para não dar erro de IP de servidor)
+  // 1. YouTube Master (Não usa proxy - IP Ban)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
     else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-    else if (lowUrl.includes('/embed/')) return finalUrl + (finalUrl.includes('?') ? '&' : '?') + "autoplay=1&mute=1";
+    else if (lowUrl.includes('/embed/')) return finalUrl;
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
   }
 
@@ -108,12 +108,14 @@ export const formatMasterLink = (url: string) => {
     if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
   }
 
-  // 3. Arquivos Diretos (.m3u8, .mp4, .ts) - Mantém direto para evitar lag
-  if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts')) {
+  // 3. PROTEÇÃO DE LEGADO: Arquivos Diretos (.m3u8, .mp4, .ts)
+  // Se o link termina com extensão de vídeo, ele DEVE ser direto para não quebrar.
+  const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts');
+  if (isDirectVideo) {
     return finalUrl;
   }
 
-  // 4. PROTOCOLO DE TÚNEL MASTER v297 (Bypass Acesso Negado)
+  // 4. PROTOCOLO DE TÚNEL MASTER v298 (Sites que bloqueiam VPS)
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('rdcanais') || 
