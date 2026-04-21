@@ -3,10 +3,10 @@
 import * as React from "react"
 import { X, Tv, ArrowDownToLine, Monitor, Smartphone, Zap, Share, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 /**
- * INSTALADOR MASTER v291 - PROTOCOLO DE SILÊNCIO
+ * INSTALADOR MASTER v292 - PROTOCOLO DE SILÊNCIO (CORRIGIDO)
  * Agora o banner respeita o usuário e não aparece "direto" se for fechado.
  */
 export function PwaInstall() {
@@ -45,7 +45,8 @@ export function PwaInstall() {
     
     // Mostra o banner após 8 segundos (menos intrusivo) se não for standalone
     const timer = setTimeout(() => {
-      if (!isStandalone && !hasDismissed) setIsVisible(true)
+      const alreadyDismissed = localStorage.getItem("leotv_pwa_dismissed_v291")
+      if (!isStandalone && alreadyDismissed !== "true") setIsVisible(true)
     }, 8000)
 
     return () => {
