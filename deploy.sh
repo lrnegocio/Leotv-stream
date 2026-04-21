@@ -18,9 +18,8 @@ echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
 pm2 stop all 2>/dev/null || true
 pm2 delete all 2>/dev/null || true
 
-# LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 80 ou 3000
-echo "🔓 LIMPANDO PORTAS 80 E 3000..."
-fuser -k 80/tcp 2>/dev/null || true
+# LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 3000
+echo "🔓 LIMPANDO PORTA INTERNA 3000..."
 fuser -k 3000/tcp 2>/dev/null || true
 
 # Garante que o NPM e o PM2 estão no PATH
