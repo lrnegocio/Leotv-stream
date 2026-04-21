@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v308 - PROTOCOLO CAMUFLAGEM TOTAL
+ * TÚNEL MASTER SOBERANO v309 - PROTOCOLO CAMALEÃO SUPREMO
  * Blinda o sinal contra bloqueios de CORS, X-Frame-Options e Mixed Content.
- * Suporta SEEK (Avançar/Retroceder) e Remoção de Cabeçalhos de Segurança Restritivos.
+ * Neutraliza 'Iframe Breakout' e suporta SEEK (Archive.org).
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -27,13 +27,15 @@ export async function GET(req: NextRequest) {
 
     // IDENTIDADE DE ELITE (Chrome 133)
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36');
-    requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
+    requestHeaders.set('Cache-Control', 'no-cache');
+    requestHeaders.set('Pragma', 'no-cache');
     
     const lowTarget = targetUrl.toLowerCase();
     
     // PROTOCOLO DE REFERER INTELIGENTE - CAMUFLAGEM DE ORIGEM
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('rdcplayer.online')) {
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
@@ -41,7 +43,6 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Origin', 'https://redecanaistv.net');
     } else if (lowTarget.includes('playcnvs.stream')) {
       requestHeaders.set('Referer', 'http://www.playcnvs.stream/');
-      requestHeaders.set('Origin', 'http://www.playcnvs.stream');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v308", { status: 500 });
+    return new Response("Falha no Túnel Master v309", { status: 500 });
   }
 }
 
@@ -92,6 +93,11 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   if (isHtml) {
     let htmlText = await res.text();
     
+    // NEUTRALIZADOR DE IFRAME BREAKOUT (Impedir que o site saia do seu player)
+    htmlText = htmlText.replace(/window\.top/g, 'window.self');
+    htmlText = htmlText.replace(/top\.location/g, 'self.location');
+    htmlText = htmlText.replace(/parent\.location/g, 'self.location');
+    
     // Injeta Base Href para que imagens e scripts do site original funcionem
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
@@ -100,10 +106,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     responseHeaders.set('Content-Type', 'text/html');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // EXTERMINADOR DE BLOQUEIOS DE FRAME (X-Frame-Options / CSP)
-    // Deletamos os cabeçalhos que impedem o site de abrir em Iframe
-    responseHeaders.delete('X-Frame-Options');
-    responseHeaders.delete('Content-Security-Policy');
+    // EXTERMINADOR DE BLOQUEIOS DE FRAME
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *");
 
