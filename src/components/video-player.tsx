@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v305 - PROTOCOLO SEEK & RESET
- * Agora com suporte total a busca (avançar/retroceder) e reset de memória.
+ * PLAYER MASTER SOBERANO v306 - PROTOCOLO CAMALEÃO
+ * Detecta se o link é um arquivo de vídeo (com Seek) ou um Player Externo (Iframe).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,18 +27,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
-  const lowUrl = (url || "").toLowerCase();
+  const decodedUrl = decodeURIComponent(url.includes('url=') ? url.split('url=')[1] : url);
+  const lowDecoded = decodedUrl.toLowerCase();
   
-  // Detecção de tipo de mídia
-  const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
-  const isYouTube = lowUrl.includes('youtube.com/embed');
-  const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy') || isYouTube);
+  // Detecção avançada: se for .mp4, .m3u8 ou .ts, usa a tag <video>
+  // Caso contrário (como links /s/1234), usa <iframe> porque é um player web.
+  const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
+  const isYouTube = lowDecoded.includes('youtube.com/embed');
+  const isIframe = !isDirectFile && (lowDecoded.includes('http') || url.startsWith('/api/proxy') || isYouTube);
 
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}sync_v305=${Date.now()}`;
+    return `${baseUrl}${separator}sync_v306=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
@@ -60,12 +62,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      setTimeout(() => setLoading(false), 1500);
+      // Timeout maior para players web carregarem scripts internos
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
-      // RESET TOTAL DO OBJETO VIDEO (Evita travamentos do Archive.org)
+      // RESET TOTAL PARA VÍDEOS DIRETOS (Seek Master)
       videoRef.current.src = url;
       videoRef.current.load();
       
@@ -79,6 +82,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
+          // Bypass para navegadores que bloqueiam autoplay com som
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -152,7 +156,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {!isIframe && (
         <video 
-          key={url} // CHAVE DE RESET: Força o React a recriar o vídeo ao mudar de link
+          key={url} 
           ref={videoRef} 
           className="w-full h-full object-contain" 
           autoPlay 
@@ -165,7 +169,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando Sinal Master v306...</p>
+          </div>
         </div>
       )}
 

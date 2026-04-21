@@ -78,15 +78,17 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v305 - PROTOCOLO SEEK & ARCHIVE
- * Blinda o link para que suporte o avanço (Seek) e previna travamentos no Archive.org.
+ * MOTOR DE LINKS MASTER v306 - PROTOCOLO DE COMPATIBILIDADE TOTAL
+ * Blinda links diretos para Seek e links de Players Web para bypass de CORS.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
+  // Se já estiver proxidado, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
+  // Extrai URL de Iframe se o usuário colou o código todo
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -94,7 +96,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // YouTube Handler
+  // Tratamento de YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -109,21 +111,16 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
-  // XVideos/Adult Handler
-  if (lowUrl.includes('xvideos.com')) {
-    const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
-    if (idMatch && idMatch[1]) return `https://www.xvideos.com/embedframe/${idMatch[1]}`;
-  }
-
-  // LISTA NEGRA DE BLOQUEIOS CORS & SEEK
+  // Lista de domínios que PRECISAM de Proxy para funcionar em HTTPS ou bypassar bloqueios
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
-    'archive.org', 'pobreflix', 'megaflix', 'futemax'
+    'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
+    'agropesca.live'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://') && !lowUrl.includes('.m3u8')); 
+                    (lowUrl.startsWith('http://')); // Todo link HTTP puro precisa de proxy num site HTTPS
 
   if (needsProxy) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
