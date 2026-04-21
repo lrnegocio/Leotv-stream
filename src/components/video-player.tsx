@@ -15,6 +15,7 @@ interface VideoPlayerProps {
 /**
  * PLAYER MASTER SOBERANO v304 - SINCRONIZAÇÃO TOTAL
  * Blinda o player para que o que funciona no teste funcione no cliente.
+ * Identifica automaticamente se precisa de Iframe ou Video Tag.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -29,25 +30,25 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   
-  // Identifica se é um arquivo de vídeo direto ou se precisa de Iframe
+  // Identifica se é um arquivo de vídeo direto ou se precisa de Iframe (Embed)
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
   const isYouTube = lowUrl.includes('youtube.com/embed');
   
-  // Se não for arquivo direto e contiver http ou for nosso proxy, usa Iframe
+  // Se não for arquivo direto, usamos o modo Iframe (Túnel Master)
   const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy') || isYouTube);
 
-  // Cache-Buster Soberano: Garante que canais ao vivo não peguem lixo de cache
+  // Cache-Buster v304: Garante sinal novo toda vez que abre
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
-    if (isYouTube) return baseUrl; // YouTube não gosta de timestamps extras
+    if (isYouTube) return baseUrl; 
     const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}leo_sync=${Date.now()}`;
+    return `${baseUrl}${separator}sync_id=${Date.now()}`;
   };
 
   const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
       if (playPromiseRef.current) {
-        try { await playPromiseRef.current; } catch (e) { /* ignore */ }
+        try { await playPromiseRef.current; } catch (e) { }
       }
       videoRef.current.pause();
       videoRef.current.removeAttribute('src');
@@ -63,6 +64,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
+      // Nginx e Cloudflare as vezes levam 1-2s para responder o proxy
+      setTimeout(() => setLoading(false), 1500);
       return;
     }
 
@@ -80,7 +83,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         })
         .catch((error) => {
           if (error.name === 'AbortError') return;
-          // Tenta tocar mutado se o navegador bloquear autoplay
           if (videoRef.current) {
             videoRef.current.muted = true;
             videoRef.current.play().catch(() => {});
@@ -121,9 +123,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         playPromiseRef.current = promise;
         promise.then(() => setIsPlaying(true)).catch(() => {});
       } else {
-        if (playPromiseRef.current) {
-          try { await playPromiseRef.current; } catch (e) {}
-        }
         videoRef.current.pause();
         setIsPlaying(false);
       }

@@ -80,6 +80,7 @@ export interface User {
 /**
  * MOTOR DE LINKS MASTER v304 - SINCRONIZAÇÃO TOTAL
  * Blinda o link para que funcione IGUAL no Admin e no Cliente.
+ * Resolve o problema de Mixed Content (HTTP em site HTTPS).
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -88,7 +89,7 @@ export const formatMasterLink = (url: string) => {
   // Se já for um link do nosso proxy, não mexe
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-  // Extração de Iframe
+  // Extração de Iframe (Sintonizador Automático)
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -96,7 +97,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // YouTube Handler
+  // YouTube Handler (Modo TV)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -107,11 +108,11 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
     if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&controls=1`;
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&controls=1`;
     }
   }
 
-  // XVideos Handler
+  // XVideos/Adult Handler
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) {
@@ -120,15 +121,16 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('embedframe')) return finalUrl;
   }
 
-  // Detecção de canais que PRECISAM de túnel da VPS (CORS/Referer/Mixed Content)
+  // LISTA NEGRA DE BLOQUEIOS CORS: Força Túnel VPS v304
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
-    'streamlock', 'vizer', 'pobreflix', 'megaflix'
+    'streamlock', 'vizer', 'pobreflix', 'megaflix', 'supercanais',
+    'futemax', 'multicanais'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://') && !lowUrl.includes('.m3u8')); // Força proxy em HTTP puro para evitar Mixed Content block
+                    (lowUrl.startsWith('http://') && !lowUrl.includes('.m3u8')); 
 
   if (needsProxy) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;

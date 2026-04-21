@@ -164,7 +164,7 @@ export default function NewContentPage() {
                   <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Link do Stream" className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
-                <p className="text-[8px] font-bold uppercase opacity-40">O teste acima usa o mesmo protocolo do cliente final.</p>
+                <p className="text-[8px] font-bold uppercase opacity-40">O teste acima usa o mesmo protocolo do cliente final (Sincronização v304).</p>
               </div>
             </div>
           ) : (

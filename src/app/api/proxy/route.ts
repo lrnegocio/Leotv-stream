@@ -7,7 +7,7 @@ export const fetchCache = 'force-no-store';
 /**
  * TÚNEL MASTER SOBERANO v304 - PROTOCOLO ULTRA-COMPATIBILIDADE
  * Ajustado para resolver o problema de "funciona no teste, mas não no cliente".
- * Garante que Referer e Origin sejam simulados corretamente para qualquer domínio de streaming.
+ * Garante que Referer e Origin sejam simulados corretamente para qualquer domínio de IPTV.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // IDENTIDADE DE ELITE (CHROME 133)
+    // IDENTIDADE DE ELITE (CHROME 133) - Evita bloqueio por User-Agent
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
@@ -27,18 +27,17 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // PROTOCOLO DE REFERER AUTOMÁTICO
-    // Se o domínio for conhecido, usa o referer dele, senão usa a própria origem do link
+    // PROTOCOLO DE REFERER INTELIGENTE v304
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
       requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
       requestHeaders.set('Origin', 'https://redecanaistv.net');
-    } else if (lowTarget.includes('playcnvs.stream')) {
+    } else if (lowTarget.includes('playcnvs.stream') || lowTarget.includes('warez')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     } else {
-      // Fallback soberano: o referer é a raiz do próprio site de origem do vídeo
+      // Fallback: o referer é a raiz do próprio site de origem do vídeo
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
 
@@ -48,7 +47,7 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
-    // Rota de emergência se bloqueado
+    // Rota de emergência se bloqueado por CORS direto
     if (res.status === 403 || res.status === 401) {
       requestHeaders.delete('Referer');
       requestHeaders.delete('Origin');
@@ -69,7 +68,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('apple-mpegurl');
   const isHtml = contentType.includes('text/html');
 
-  // REESCRITA HLS MASTER (Sincronização de caminhos relativos)
+  // REESCRITA HLS MASTER (Resolve caminhos relativos de canais ao vivo)
   if (isM3u8) {
     const manifestText = await res.text();
     const baseUrl = targetUrl.split('?')[0].substring(0, targetUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -92,24 +91,22 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     });
   }
 
-  // FILTRAGEM ANTI-BLOQUEIO PARA HTML (Players Embutidos)
+  // FILTRAGEM ANTI-BLOQUEIO PARA HTML (IFrames)
   if (isHtml) {
     let htmlText = await res.text();
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     
-    // Limpeza agressiva de scripts que detectam IFrames e bloqueiam o site do cliente
+    // Remove scripts chatos que tentam detectar o IFrame do Léo TV
     htmlText = htmlText.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, (match) => {
       const lowMatch = match.toLowerCase();
-      if (lowMatch.includes('top.location') || lowMatch.includes('window.top') || lowMatch.includes('ads') || lowMatch.includes('analytics')) {
-        return '<!-- Script de Bloqueio Removido pelo Túnel Master -->';
+      if (lowMatch.includes('top.location') || lowMatch.includes('window.top') || lowMatch.includes('ads')) {
+        return '<!-- Script Bloqueado pelo Túnel Master -->';
       }
       return match;
     });
 
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
-    // Bypass de detecção de frame
     htmlText = htmlText.replace(/window\.top !== window\.self/g, "false");
-    htmlText = htmlText.replace(/top\.location\.href/g, "''");
 
     return new Response(htmlText, {
       headers: { 
