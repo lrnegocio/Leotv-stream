@@ -13,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v308 - PROTOCOLO CAMALEÃO v3
+ * PLAYER MASTER SOBERANO v309 - PROTOCOLO CAMALEÃO v3
  * Unificado para suportar SEEK (Archive.org) e IFRAME BLINDADO (RedeCanais/RDC).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -32,10 +32,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowDecoded = decodedUrl.toLowerCase();
   
   // Detecção inteligente de arquivo vs site
-  const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4');
+  const isDirectFile = lowDecoded.includes('.m3u8') || lowDecoded.includes('.ts') || lowDecoded.includes('.mp4') || lowDecoded.includes('.mp3') || lowDecoded.includes('.mkv');
   const isYouTube = lowDecoded.includes('youtube.com/embed');
   
-  // Força Iframe para sites conhecidos que bloqueiam player direto
+  // Força Iframe para sites conhecidos que bloqueiam player direto ou são páginas HTML
   const isIframe = !isDirectFile || 
                    lowDecoded.includes('rdcanais') || 
                    lowDecoded.includes('redecanais') || 
@@ -47,7 +47,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const getFreshUrl = (baseUrl: string) => {
     if (!baseUrl) return "";
     if (isYouTube) return baseUrl; 
-    // Adiciona timestamp para evitar cache e forçar recarregamento do sinal
+    // Adiciona timestamp para evitar cache e forçar recarregamento do sinal real da VPS
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}leotv_sync=${Date.now()}`;
   };
@@ -71,13 +71,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout para simular carregamento de iframe blindado
-      setTimeout(() => setLoading(false), 3000);
+      // Timeout de 2 segundos para o sinal estabilizar no Iframe
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
-      // Forçamos o reload do vídeo direto com a nova URL
       videoRef.current.src = url;
       videoRef.current.load();
       
@@ -115,14 +114,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (e) e.stopPropagation();
     
     if (isIframe) {
-      // No modo Iframe, o toggle play recarrega o sinal
-      if (!isPlaying) {
-        setPlayerKey(Date.now());
-        setIsPlaying(true);
-      } else {
-        setPlayerKey(0);
-        setIsPlaying(false);
-      }
+      // No modo Iframe, o toggle play recarrega o sinal para garantir que o cliente veja o ao vivo
+      setPlayerKey(Date.now());
+      setIsPlaying(true);
       return;
     }
 
@@ -181,7 +175,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando v308 Soberano...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sintonizando v309 Soberano...</p>
           </div>
         </div>
       )}

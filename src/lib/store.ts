@@ -78,17 +78,18 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v308 - PROTOCOLO DE CAMUFLAGEM TOTAL
- * Unifica a lógica para Admin e Cliente.
+ * MOTOR DE LINKS MASTER v309 - PROTOCOLO DE SINCRONIZAÇÃO TOTAL
+ * Esta função é a única autoridade para formatar links na plataforma.
+ * O que ela decidir vale para o Admin e para o Cliente.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Se já estiver com o proxy, não mexe
+  // Se já estiver com o proxy, não mexe para não duplicar
   if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-  // Extrai URL de Iframes para facilitar o trabalho do player
+  // Extrai URL de Iframes (Ex: se colar o código do Iframe direto)
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -96,7 +97,7 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // Suporte a YouTube
+  // Suporte Nativo a YouTube
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -111,16 +112,16 @@ export const formatMasterLink = (url: string) => {
     }
   }
 
-  // Domínios que PRECISAM de Túnel (Proxy) v308
+  // LISTA NEGRA DE BLOQUEIOS (Domínios que PRECISAM do Túnel Master v309)
   const domainsNeedingProxy = [
     'redecanaistv', 'rdcanais', 'rdcplayer', 'playcnvs.stream', 
     'tvacabo.top', 'canaltv', 'topcanais', 'warez', 'embed.watch',
     'archive.org', 'pobreflix', 'megaflix', 'futemax', 'acplay.live',
-    'agropesca.live', 'p2p', 'reidoscanais', 'rdcplayer.online'
+    'agropesca.live', 'reidoscanais', 'rdcplayer.online', 'stream'
   ];
 
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://'));
+                    (lowUrl.startsWith('http://')); // Força Proxy para HTTP em site HTTPS
 
   if (needsProxy) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
