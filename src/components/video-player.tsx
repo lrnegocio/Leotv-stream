@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v299 - EDIÇÃO FRESH START
- * Garante sintonização independente e suporte robusto para IFrames proxied.
+ * PLAYER MASTER SOBERANO v300 - EDIÇÃO ESPECIAL YOUTUBE
+ * Sintonização otimizada para YouTube Embed e IFrames de segurança.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -29,12 +29,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = (url || "").toLowerCase();
   
-  // Detecção de sinal direto vs Iframe/Proxy
+  // Detecção de sinal direto vs Iframe/Proxy/YouTube
   const isDirectFile = lowUrl.includes('.m3u8') || lowUrl.includes('.ts') || lowUrl.includes('.mp4');
-  const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy'));
+  const isYouTube = lowUrl.includes('youtube.com/embed');
+  const isIframe = !isDirectFile && (lowUrl.includes('http') || lowUrl.startsWith('/api/proxy') || isYouTube);
 
-  // Adiciona timestamp para forçar requisição nova e evitar tela branca de cache no Cliente
-  const freshUrl = isIframe ? (url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`) : url;
+  // Adiciona timestamp apenas para IFrames de canais (não para YouTube)
+  const freshUrl = (isIframe && !isYouTube) ? (url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`) : url;
 
   const cleanup = React.useCallback(async () => {
     if (videoRef.current) {
@@ -55,6 +56,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
+      // O Iframe cuida do seu próprio carregamento
       return;
     }
 
@@ -142,7 +144,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={freshUrl}
           className="w-full h-full border-0"
-          allow="autoplay; encrypted-media; fullscreen"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
         />
       )}
