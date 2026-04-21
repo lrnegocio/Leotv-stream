@@ -10,8 +10,7 @@ import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
 /**
- * BUSCA MASTER v314 - RESILIÊNCIA EXTREMA AO BRAVE SHIELDS
- * Se o Brave bloquear a API de voz, o sistema não trava o carregamento.
+ * BUSCA MASTER v315 - BLINDAGEM DIAMANTE CONTRA CLIENT-SIDE EXCEPTION
  */
 function VoiceSearchContent() {
   const searchParams = useSearchParams()
@@ -20,23 +19,25 @@ function VoiceSearchContent() {
   const [isListening, setIsListening] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
   const [isSupported, setIsSupported] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
 
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   React.useEffect(() => {
-    // Inicialização segura após montagem para não travar Hydration
+    setIsMounted(true);
     const q = searchParams?.get('q') || "";
     setQuery(q);
     
-    // Verifica suporte de voz de forma ultra-defensiva
-    try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        setIsSupported(true);
+    // Verificação ultra-segura de API de Voz
+    if (typeof window !== 'undefined') {
+      try {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          setIsSupported(true);
+        }
+      } catch (e) {
+        setIsSupported(false);
       }
-    } catch (e) {
-      console.warn("Voz desativada pelo navegador (Brave Shields).");
-      setIsSupported(false);
     }
   }, [searchParams]);
 
@@ -60,27 +61,16 @@ function VoiceSearchContent() {
   }
 
   const startListening = () => {
+    if (!isSupported) return;
+    
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
-        toast({ 
-          variant: "destructive", 
-          title: "Não suportado", 
-          description: "O navegador bloqueou o microfone."
-        })
-        return
-      }
-
       const recognition = new SpeechRecognition();
       recognition.lang = 'pt-BR';
       recognition.continuous = false;
       recognition.interimResults = false;
 
-      recognition.onstart = () => {
-        setIsListening(true)
-      }
-
+      recognition.onstart = () => setIsListening(true);
       recognition.onresult = async (event: any) => {
         const transcript = event.results[0][0].transcript
         setQuery(transcript)
@@ -95,14 +85,15 @@ function VoiceSearchContent() {
           setIsProcessing(false)
         }
       }
-
-      recognition.onerror = () => setIsListening(false)
-      recognition.onend = () => setIsListening(false)
-      recognition.start()
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
     } catch (e) {
-      setIsListening(false)
+      setIsListening(false);
     }
   }
+
+  if (!isMounted) return null;
 
   return (
     <div className="relative flex w-full max-w-2xl items-center gap-2 group">

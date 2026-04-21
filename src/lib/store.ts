@@ -78,62 +78,58 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v312 - SINCRONIZAÇÃO ABSOLUTA
- * Resolve Sandbox, XVideos (Somente Vídeo) e RDC Player.
+ * MOTOR DE LINKS MASTER v315 - BLINDAGEM TOTAL
  */
 export const formatMasterLink = (url: string) => {
-  if (!url) return "";
-  let finalUrl = url.toString().trim();
+  try {
+    if (!url || typeof url !== 'string') return "";
+    let finalUrl = url.trim();
 
-  // 1. Extração de Iframe (Limpeza de códigos colados)
-  if (finalUrl.includes('<iframe')) {
-    const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
-    if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
-  }
-
-  let lowUrl = finalUrl.toLowerCase();
-  
-  // 2. SUPORTE YOUTUBE (Direto)
-  if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
-    let videoId = "";
-    if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
-    else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-    else if (lowUrl.includes('/embed/')) return finalUrl;
-    
-    if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
-    return finalUrl;
-  }
-
-  // 3. CONVERSOR XVIDEOS (MODO APENAS VÍDEO)
-  // Transforma link do site em link do player embed
-  if (lowUrl.includes('xvideos.com/video')) {
-    const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
-    if (videoIdMatch && videoIdMatch[1]) {
-      finalUrl = `https://www.xvideos.com/embedframe/${videoIdMatch[1]}`;
-      lowUrl = finalUrl.toLowerCase();
+    if (finalUrl.includes('<iframe')) {
+      const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
+      if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
     }
-  }
 
-  // 4. Suporte Spotify / Deezer (Direto)
-  if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
+    let lowUrl = finalUrl.toLowerCase();
+    
+    if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
+      let videoId = "";
+      if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+      else if (lowUrl.includes('/embed/')) return finalUrl;
+      
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
+      return finalUrl;
+    }
+
+    if (lowUrl.includes('xvideos.com/video')) {
+      const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        return `https://www.xvideos.com/embedframe/${videoIdMatch[1]}`;
+      }
+    }
+
+    if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
+      return finalUrl;
+    }
+
+    const domainsNeedingProxy = [
+      'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
+      'archive.org', 'xvideos', 'pornhub', 'acplay.live',
+      'agropesca.live', 'warez', 'topcanais', 'redecanais'
+    ];
+
+    const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
+                      (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
+
+    if (needsProxy && !finalUrl.includes('/api/proxy')) {
+      return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+    
     return finalUrl;
+  } catch (e) {
+    return url || "";
   }
-
-  // 5. LISTA DE TÚNEL (VPS)
-  const domainsNeedingProxy = [
-    'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
-    'archive.org', 'xvideos', 'pornhub', 'acplay.live',
-    'agropesca.live', 'warez', 'topcanais', 'redecanais'
-  ];
-
-  const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                    (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
-
-  if (needsProxy && !finalUrl.includes('/api/proxy')) {
-    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
-  }
-  
-  return finalUrl;
 };
 
 export const formatGameLink = (input: string) => {
@@ -185,14 +181,16 @@ export async function saveContent(item: Partial<ContentItem>) {
 }
 
 export async function getContentById(id: string) {
-  const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-  if (data) {
-    return {
-      ...data,
-      episodes: Array.isArray(data.episodes) ? data.episodes : [],
-      seasons: Array.isArray(data.seasons) ? data.seasons : []
-    };
-  }
+  try {
+    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
+    if (data) {
+      return {
+        ...data,
+        episodes: Array.isArray(data.episodes) ? data.episodes : [],
+        seasons: Array.isArray(data.seasons) ? data.seasons : []
+      };
+    }
+  } catch (e) {}
   return null;
 }
 
@@ -240,8 +238,10 @@ export async function saveUser(user: Partial<User>) {
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-  return data || [];
+  try {
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function removeUser(id: string) {
@@ -250,8 +250,10 @@ export async function removeUser(id: string) {
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-  return data || [];
+  try {
+    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function saveReseller(r: Partial<Reseller>) {
@@ -265,21 +267,25 @@ export async function removeReseller(id: string) {
 }
 
 export async function validateResellerLogin(u: string, p: string) {
-  const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
-  return data ? { reseller: data } : { error: "INVÁLIDO" };
+  try {
+    const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
+    return data ? { reseller: data } : { error: "INVÁLIDO" };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
-  const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
-  return (data || []).map(i => ({ 
-    id: i.id, 
-    title: i.title, 
-    console: i.genre.replace('ARENA: ', ''), 
-    type: 'embed', 
-    url: i.streamUrl, 
-    imageUrl: i.imageUrl, 
-    genre: i.genre
-  }));
+  try {
+    const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
+    return (data || []).map(i => ({ 
+      id: i.id, 
+      title: i.title, 
+      console: i.genre.replace('ARENA: ', ''), 
+      type: 'embed', 
+      url: i.streamUrl, 
+      imageUrl: i.imageUrl, 
+      genre: i.genre
+    }));
+  } catch (e) { return []; }
 }
 
 export async function saveGame(g: any) {
@@ -300,13 +306,17 @@ export async function removeGame(id: string) {
 }
 
 export async function getGlobalSettings() {
-  const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-  return { 
-    parentalPin: data?.value?.parentalPin || "1234", 
-    announcement: data?.value?.announcement || "",
-    bannerUrl: data?.value?.bannerUrl || "",
-    bannerLink: data?.value?.bannerLink || ""
-  };
+  try {
+    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
+    return { 
+      parentalPin: data?.value?.parentalPin || "1234", 
+      announcement: data?.value?.announcement || "",
+      bannerUrl: data?.value?.bannerUrl || "",
+      bannerLink: data?.value?.bannerLink || ""
+    };
+  } catch (e) {
+    return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
+  }
 }
 
 export async function updateGlobalSettings(v: any) {
@@ -315,18 +325,24 @@ export async function updateGlobalSettings(v: any) {
 }
 
 export async function getCategoryCount(g: string) {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
-  return count || 0;
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function getTopContent(l = 10) {
-  const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
-  return data || [];
+  try {
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
+    return data || [];
+  } catch (e) { return []; }
 }
 
 export async function getTotalContentCount() {
-  const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
-  return count || 0;
+  try {
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
+    return count || 0;
+  } catch (e) { return 0; }
 }
 
 export async function removeContent(id: string) { 

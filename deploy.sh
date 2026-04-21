@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v314..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v315..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -32,7 +32,7 @@ npm install --no-audit --no-fund --prefer-offline
 
 # Build ultra-otimizado para 1GB de RAM
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
-export NODE_OPTIONS="--max-old-space-size=450"
+export NODE_OPTIONS="--max-old-space-size=512"
 npm run build
 
 # Verifica se o build deu certo
@@ -50,7 +50,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v314!"
+echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v315!"
 echo "🔗 AGORA EXECUTE: systemctl restart nginx"
 echo "--------------------------------------------------"
 pm2 list

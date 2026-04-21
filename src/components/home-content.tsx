@@ -52,35 +52,9 @@ export default function HomeContent() {
   
   const router = useRouter()
   const searchParams = useSearchParams()
-  const q = searchParams ? searchParams.get('q') || "" : ""
-
-  React.useEffect(() => {
-    setIsMounted(true);
-    
-    // PROTOCOLO ANTI-LOOP v314: Força a exibição da tela em 1.5s mesmo se o Brave travar o banco.
-    const safetyTimer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-
-    if (typeof window !== 'undefined') {
-      setSiteUrl(window.location.origin);
-      const session = localStorage.getItem("user_session");
-      if (session) {
-        try {
-          setUser(JSON.parse(session));
-        } catch (e) {
-          localStorage.removeItem("user_session");
-          router.push("/login");
-        }
-      } else {
-        router.push("/login");
-      }
-    }
-    return () => clearTimeout(safetyTimer);
-  }, [router]);
+  const q = searchParams ? (searchParams.get('q') || "") : ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
-    if (!isMounted) return;
     try {
       const currentSettings = await getGlobalSettings();
       setSettings(currentSettings);
@@ -97,13 +71,37 @@ export default function HomeContent() {
         }
         setCatCounts(counts);
       }
-      if (games.length === 0) setGames(await getRemoteGames());
+      const remoteGames = await getRemoteGames();
+      setGames(remoteGames);
     } catch (err) { 
-      console.error("Erro silenciado pelo Escudo v314:", err);
+      console.warn("Supressão de erro v315.");
     } finally { 
       setLoading(false); 
     }
-  }, [games.length, isMounted]);
+  }, []);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+
+    if (typeof window !== 'undefined') {
+      try {
+        setSiteUrl(window.location.origin);
+        const session = localStorage.getItem("user_session");
+        if (session) {
+          setUser(JSON.parse(session));
+        } else {
+          router.push("/login");
+        }
+      } catch (e) {
+        router.push("/login");
+      }
+    }
+    return () => clearTimeout(safetyTimer);
+  }, [router]);
 
   React.useEffect(() => {
     if (!isMounted) return;
@@ -124,29 +122,34 @@ export default function HomeContent() {
   };
 
   const verifyPassword = async () => {
-    const globalSettings = await getGlobalSettings();
-    if (pinInput === globalSettings.parentalPin) {
-      if (unlockTarget === 'ITEM' && unlockTargetItem) {
-        const item = unlockTargetItem;
-        setUnlockTargetItem(null);
-        setUnlockTarget(null);
-        openItem(item, true);
-      } else if (unlockTarget === 'GAMES') {
-        setUnlockTarget(null);
-        setGamesMenuOpen(true);
-      } else if (unlockTarget) {
-        setSelectedCat(unlockTarget);
-        setUnlockTarget(null);
+    try {
+      const globalSettings = await getGlobalSettings();
+      if (pinInput === globalSettings.parentalPin) {
+        if (unlockTarget === 'ITEM' && unlockTargetItem) {
+          const item = unlockTargetItem;
+          setUnlockTargetItem(null);
+          setUnlockTarget(null);
+          openItem(item, true);
+        } else if (unlockTarget === 'GAMES') {
+          setUnlockTarget(null);
+          setGamesMenuOpen(true);
+        } else if (unlockTarget) {
+          setSelectedCat(unlockTarget);
+          setUnlockTarget(null);
+        }
+        setIsPinOpen(false);
+        setPinInput("");
+      } else {
+        toast({ variant: "destructive", title: "SENHA INCORRETA" });
+        setPinInput("");
       }
-      setIsPinOpen(false);
-      setPinInput("");
-    } else {
-      toast({ variant: "destructive", title: "SENHA INCORRETA" });
-      setPinInput("");
+    } catch (e) {
+      toast({ variant: "destructive", title: "ERRO DE SEGURANÇA" });
     }
   };
 
   const openItem = async (item: ContentItem, bypassPin = false) => {
+    if (!item) return;
     if (!bypassPin && item.isRestricted) {
       setUnlockTarget('ITEM');
       setUnlockTargetItem(item);
@@ -156,9 +159,14 @@ export default function HomeContent() {
 
     if (item.type === 'multi-season' || item.type === 'series') {
       setLoading(true);
-      const deepItem = await getContentById(item.id);
-      setSelectedSeries(deepItem || item);
-      setLoading(false);
+      try {
+        const deepItem = await getContentById(item.id);
+        setSelectedSeries(deepItem || item);
+      } catch (e) {
+        setSelectedSeries(item);
+      } finally {
+        setLoading(false);
+      }
     } else {
       const idx = content.findIndex(i => i.id === item.id);
       const list = content.length > 0 
@@ -170,7 +178,8 @@ export default function HomeContent() {
   };
 
   const playEpisode = (episode: Episode, fullList: Episode[]) => {
-    const proxiedList = fullList.sort((a,b) => a.number - b.number).map(ep => ({ 
+    if (!episode || !fullList) return;
+    const proxiedList = [...fullList].sort((a,b) => a.number - b.number).map(ep => ({ 
       ...ep, 
       streamUrl: formatMasterLink(ep.streamUrl) 
     }));
@@ -180,14 +189,14 @@ export default function HomeContent() {
     }
   };
 
-  if (!isMounted) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+  if (!isMounted) return null;
 
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v314...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v315...</p>
         </div>
       )}
 
