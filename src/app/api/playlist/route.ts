@@ -5,8 +5,8 @@ import { getRemoteContent, formatMasterLink } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR DE PLAYLIST M3U SOBERANO v199
- * Aplica o túnel de proxy automaticamente para todos os links necessários.
+ * MOTOR DE PLAYLIST M3U SOBERANO v301
+ * Ajustado para detectar automaticamente se o site usa HTTP ou HTTPS (Domínio).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
     const pin = searchParams.get('pin') || 'ACESSO';
     
     const host = req.headers.get('host');
-    const protocol = 'http'; 
+    // Detecta se está em domínio com SSL ou IP puro
+    const protocol = host?.includes('localhost') || host?.match(/^\d/) ? 'http' : 'https'; 
     const baseUrl = `${protocol}://${host}`;
 
     const items = await getRemoteContent();
@@ -24,11 +25,9 @@ export async function GET(req: NextRequest) {
       const category = item.genre || "LÉO TV AO VIVO";
       const logo = item.imageUrl || "";
 
-      // Canais e Filmes (Simples)
       if (item.type === 'channel' || item.type === 'movie') {
         let streamUrl = item.streamUrl || "";
         if (streamUrl) {
-          // Aplica o formatMasterLink mas garante que o link seja absoluto para o M3U
           let finalUrl = formatMasterLink(streamUrl);
           if (finalUrl.startsWith('/api/proxy')) {
             finalUrl = `${baseUrl}${finalUrl}`;
@@ -38,7 +37,6 @@ export async function GET(req: NextRequest) {
           m3u += `${finalUrl}\n`;
         }
       } 
-      // Séries
       else if (item.type === 'series' || item.type === 'multi-season') {
         const episodes: any[] = [];
         

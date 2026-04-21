@@ -78,14 +78,12 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v300 - PROTOCOLO DE SINTONIZAÇÃO TOTAL
- * Resolve YouTube (X-Frame-Options), XVideos, IFrames e mantém m3u8 legados.
+ * MOTOR DE LINKS MASTER v301 - PREPARAÇÃO PARA DOMÍNIO
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // 1. CAPTURA DE IFRAMES SOBERANA
   if (finalUrl.includes('<iframe') && finalUrl.includes('src=')) {
     const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -93,8 +91,6 @@ export const formatMasterLink = (url: string) => {
   
   const lowUrl = finalUrl.toLowerCase();
   
-  // 2. YOUTUBE MASTER - CONVERSÃO PARA EMBED (Fim da Conexão Recusada)
-  // YouTube NÃO PODE passar pelo proxy da VPS ou dá erro de IP de Data Center.
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) {
@@ -104,13 +100,11 @@ export const formatMasterLink = (url: string) => {
     } else if (lowUrl.includes('/embed/')) {
       return finalUrl;
     }
-    
     if (videoId) {
       return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&rel=0&showinfo=0&controls=1`;
     }
   }
 
-  // 3. XVIDEOS MASTER - CONVERSÃO PARA EMBEDFRAME
   if (lowUrl.includes('xvideos.com')) {
     const idMatch = finalUrl.match(/video\.([a-z0-9]+)/i) || finalUrl.match(/video-([a-z0-9]+)/i);
     if (idMatch && idMatch[1]) {
@@ -119,15 +113,11 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('embedframe')) return finalUrl;
   }
 
-  // 4. PROTEÇÃO DE LEGADO: Arquivos Diretos (.m3u8, .mp4, .ts)
-  // Estes links DEVEM ser diretos para máxima velocidade e estabilidade.
   const isDirectVideo = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts');
   if (isDirectVideo) {
     return finalUrl;
   }
 
-  // 5. PROTOCOLO DE TÚNEL MASTER v300 (Domínios que exigem Bypass VPS)
-  // Apenas sites que bloqueiam sinal via Cloudflare/Referer passam por aqui.
   const needsProxy = 
     lowUrl.includes('redecanaistv') || 
     lowUrl.includes('rdcanais') || 

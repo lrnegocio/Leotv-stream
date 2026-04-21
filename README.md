@@ -25,5 +25,8 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
+### 🌐 3. Dica do Mestre: Domínio e PWA
+Para que o App (PWA) funcione perfeitamente, você deve apontar um **Domínio** para o IP da sua VPS e ativar o **SSL (HTTPS)**. Isso eliminará erros de "Conexão Recusada" no YouTube e outros players.
+
 ---
-**SEU LINK DE ACESSO:** `http://24.152.37.78`
+**SEU LINK DE ACESSO ATUAL:** `http://24.152.37.78`
