@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v311 - SINCRONIZAÇÃO TOTAL
- * Resolve o erro de YouTube no Admin e XVideos no Cliente.
+ * PLAYER MASTER SOBERANO v312 - LIBERAÇÃO TOTAL
+ * Removido o Sandbox do iframe para satisfazer players do Rei dos Canais e XVideos.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -37,17 +37,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isYoutube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
   const isAudioEmbed = lowUrl.includes('spotify') || lowUrl.includes('deezer');
   
-  // Detecção de arquivos diretos (MP4, M3U8, etc)
   const isDirectFile = lowUrl.includes('.m3u8') || 
                        lowUrl.includes('.ts') || 
                        lowUrl.includes('.mp4') || 
                        lowUrl.includes('.mp3') || 
                        lowUrl.includes('.mkv');
 
-  // Iframe é necessário se não for arquivo direto ou se for um site conhecido
   const isIframe = !isDirectFile || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
+                   lowUrl.includes('reidoscanais') ||
                    lowUrl.includes('playcnvs') || 
                    lowUrl.includes('xvideos') ||
                    lowUrl.includes('rdcplayer');
@@ -68,7 +67,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout para carregar o iframe
       setTimeout(() => setLoading(false), 2500);
       return;
     }
@@ -144,8 +142,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={safeUrl}
           className="w-full h-full border-0"
-          // YouTube exige allow-presentation e allow-same-origin para não dar erro
-          sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-pointer-lock"
+          // Sandbox removido conforme exigência dos provedores de sinal para liberar o vídeo.
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
         />
@@ -166,7 +163,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronizando v311...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v312...</p>
           </div>
         </div>
       )}

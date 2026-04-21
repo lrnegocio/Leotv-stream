@@ -78,8 +78,8 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v311 - SINCRONIZAÇÃO ABSOLUTA
- * Resolve YouTube no Admin e XVideos no Cliente.
+ * MOTOR DE LINKS MASTER v312 - SINCRONIZAÇÃO ABSOLUTA
+ * Resolve Sandbox, XVideos (Somente Vídeo) e RDC Player.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -91,9 +91,9 @@ export const formatMasterLink = (url: string) => {
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
   }
 
-  const lowUrl = finalUrl.toLowerCase();
+  let lowUrl = finalUrl.toLowerCase();
   
-  // 2. SUPORTE YOUTUBE (NUNCA USAR PROXY NO YOUTUBE)
+  // 2. SUPORTE YOUTUBE (Direto)
   if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
     let videoId = "";
     if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -101,15 +101,24 @@ export const formatMasterLink = (url: string) => {
     else if (lowUrl.includes('/embed/')) return finalUrl;
     
     if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
-    return finalUrl; // Retorna original se não achar ID
+    return finalUrl;
   }
 
-  // 3. Suporte Spotify / Deezer (Direto)
+  // 3. CONVERSOR XVIDEOS (MODO APENAS VÍDEO)
+  if (lowUrl.includes('xvideos.com/video')) {
+    const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
+    if (videoIdMatch && videoIdMatch[1]) {
+      finalUrl = `https://www.xvideos.com/embedframe/${videoIdMatch[1]}`;
+      lowUrl = finalUrl.toLowerCase();
+    }
+  }
+
+  // 4. Suporte Spotify / Deezer (Direto)
   if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
     return finalUrl;
   }
 
-  // 4. LISTA DE TÚNEL (VPS) - Apenas para o que é bloqueado
+  // 5. LISTA DE TÚNEL (VPS)
   const domainsNeedingProxy = [
     'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
     'archive.org', 'xvideos', 'pornhub', 'acplay.live',
@@ -119,7 +128,6 @@ export const formatMasterLink = (url: string) => {
   const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
                     (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
 
-  // Se precisar de proxy e ainda não tiver a rota da API
   if (needsProxy && !finalUrl.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
