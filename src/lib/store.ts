@@ -105,6 +105,7 @@ export const formatMasterLink = (url: string) => {
   }
 
   // 3. CONVERSOR XVIDEOS (MODO APENAS VÍDEO)
+  // Transforma link do site em link do player embed
   if (lowUrl.includes('xvideos.com/video')) {
     const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
     if (videoIdMatch && videoIdMatch[1]) {

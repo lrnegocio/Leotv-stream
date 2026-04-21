@@ -81,7 +81,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       promise
         .then(() => {
           setIsPlaying(true);
-          setLoading(false);
+          setLoading(false)
         })
         .catch(() => {
           if (videoRef.current) {
