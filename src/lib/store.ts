@@ -181,10 +181,10 @@ export async function saveContent(item: Partial<ContentItem>) {
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
     
-    // BLINDAGEM v326: Usa upsert com id como critério de conflito
+    // BLINDAGEM v327: Upsert resolvido pelo ID
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
     if (error) {
-      console.error("Erro Supabase saveContent:", error);
+      console.error("Erro Supabase saveContent:", error.message || error);
       return false;
     }
     return true;
@@ -230,19 +230,16 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
-    // MOTOR SOBERANO v326: Busca o ID pelo PIN para garantir que o upsert não falhe
-    let targetId = user.id;
-    if (!targetId) {
-      const { data: existing } = await supabase
-        .from('users')
-        .select('id')
-        .eq('pin', cleanPin)
-        .maybeSingle();
-      if (existing) targetId = existing.id;
-    }
+    // MOTOR SOBERANO v327: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('pin', cleanPin)
+      .maybeSingle();
 
     const payload = {
-      id: targetId || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
+      // Se já temos um registro, usamos o ID dele para fazer o UPDATE
+      id: existing?.id || user.id || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
       pin: cleanPin,
       role: user.role || 'user',
       subscriptionTier: user.subscriptionTier || 'monthly',
@@ -260,17 +257,16 @@ export async function saveUser(user: Partial<User>) {
       gamePoints: user.gamePoints || 0
     };
     
-    // BLINDAGEM TOTAL v326: Tenta upsert pelo ID. Se falhar, tenta pelo PIN.
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
+    // Upsert resolvido pelo campo PIN como reserva, mas o ID correto já garante a atualização
+    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
+    
     if (error) {
-      const { error: error2 } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
-      if (error2) {
-        console.error("Erro Crítico Supabase saveUser:", error2);
-        return false;
-      }
+      console.error("Erro Supabase saveUser:", error.message || JSON.stringify(error));
+      return false;
     }
     return true;
   } catch (e) { 
+    console.error("Exceção crítica saveUser:", e);
     return false; 
   }
 }
