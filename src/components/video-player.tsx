@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause, BellRing, X } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause, BellRing, X, Volume2, VolumeX } from "lucide-react"
 import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v340 - MEMÓRIA DE AVISOS LIDOS
- * O aviso só reaparece se o conteúdo da mensagem for alterado no Admin.
+ * PLAYER MASTER SOBERANO v344 - MESTRE DE VOLUME
+ * Botão central focado em ativar o som, facilitando para usuários de TV.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -24,6 +24,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
   const [isPlaying, setIsPlaying] = React.useState(false)
+  const [isMuted, setIsMuted] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   const [announcement, setAnnouncement] = React.useState<string | null>(null)
   const [showAnnouncement, setShowAnnouncement] = React.useState(false)
@@ -66,12 +67,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!isMounted || !safeUrl) return;
     setLoading(true);
 
-    // Carrega Aviso do Mural com Memória de Leitura
     try {
       const settings = await getGlobalSettings();
       if (settings.announcement && settings.announcement.trim()) {
         const lastSeen = localStorage.getItem('leotv_last_announcement');
-        // Só mostra se for diferente do que ele já leu
         if (lastSeen !== settings.announcement) {
           setAnnouncement(settings.announcement);
           setShowAnnouncement(true);
@@ -97,11 +96,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         promise
           .then(() => {
             setIsPlaying(true);
+            setIsMuted(videoRef.current?.muted || false);
             setLoading(false)
           })
           .catch(() => {
             if (videoRef.current) {
               videoRef.current.muted = true;
+              setIsMuted(true);
               videoRef.current.play().catch(() => {});
             }
             setIsPlaying(true);
@@ -122,21 +123,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     return () => { cleanup(); };
   }, [initPlayer, cleanup, safeUrl]);
 
-  const handleTogglePlay = async (e?: React.MouseEvent) => {
+  const handleToggleMute = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (isIframe || isYoutube) { 
-      setPlayerKey(Date.now()); 
-      setIsPlaying(true); 
-      return; 
-    }
-
     if (videoRef.current) {
-      if (videoRef.current.paused) {
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-      } else {
-        videoRef.current.pause();
-        setIsPlaying(false);
-      }
+      const newMuteState = !videoRef.current.muted;
+      videoRef.current.muted = newMuteState;
+      setIsMuted(newMuteState);
+    } else if (isIframe || isYoutube) {
+      // Para iframes, o reload muitas vezes resolve o problema do som bloqueado
+      setPlayerKey(Date.now());
+      setIsPlaying(true);
     }
   };
 
@@ -190,12 +186,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v340...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v344...</p>
           </div>
         </div>
       )}
 
-      {/* MURAL DE AVISOS MASTER SOBERANO COM MEMÓRIA */}
       {showAnnouncement && (
         <div className="absolute inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
            <div className="max-w-md w-full bg-card rounded-[2rem] border-2 border-primary shadow-2xl overflow-hidden animate-in zoom-in-95">
@@ -219,8 +214,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
-        <button onClick={handleTogglePlay} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all">
-          {isPlaying ? <Pause className="h-8 w-8 text-white fill-white" /> : <Play className="h-8 w-8 text-white fill-white" />}
+        {/* BOTÃO MESTRE DE VOLUME - Substituiu o Play/Pause por ordem do Mestre Léo */}
+        <button onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all" title={isMuted ? "Ativar Som" : "Mudo"}>
+          {isMuted ? <VolumeX className="h-8 w-8 text-white animate-pulse" /> : <Volume2 className="h-8 w-8 text-white" />}
         </button>
 
         <button onClick={() => { cleanup(); initPlayer(); }} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-emerald-500 transition-all">
