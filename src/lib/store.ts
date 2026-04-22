@@ -204,19 +204,29 @@ export async function getContentById(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
+    // PIN de Emergência Master
     if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, maxScreens: 999 } };
+    
     const { data: users } = await supabase.from('users').select('*').eq('pin', cleanPin);
     const user = users?.[0];
+    
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
+    
     const now = new Date();
     if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
+    
     let devices = user.activeDevices || [];
     if (!devices.includes(deviceId)) {
-      if (devices.length >= (user.maxScreens || 1)) devices = [deviceId]; 
-      else devices.push(deviceId);
+      if (devices.length >= (user.maxScreens || 1)) {
+        // Se excedeu telas, reseta para o novo dispositivo (Política de Troca Rápida)
+        devices = [deviceId]; 
+      } else {
+        devices.push(deviceId);
+      }
       await supabase.from('users').update({ activeDevices: devices }).eq('id', user.id);
     }
+    
     return { user: { ...user, activeDevices: devices } };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
@@ -226,7 +236,7 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
-    // Busca o ID real pelo PIN para garantir o upsert correto
+    // Busca o ID real pelo PIN para garantir que o upsert não crie duplicata
     const { data: existing } = await supabase
       .from('users')
       .select('id')
@@ -252,11 +262,10 @@ export async function saveUser(user: Partial<User>) {
       isAlacarteEnabled: !!user.isAlacarteEnabled
     };
 
-    // Tenta o upsert completo (baseado no PIN para evitar duplicidade de regra de banco)
     const { error } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
     
     if (error) {
-      // Blindagem Soberana: Se as colunas VIP não existirem, salva apenas o básico para não travar
+      // Blindagem Soberana: Se as colunas VIP ainda não existem no seu banco, salvamos apenas o básico
       if (error.message.includes("column") || error.code === "42703") {
         const fallback = { ...payload };
         delete fallback.isPpvEnabled;
@@ -284,6 +293,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     
     if (usersError) throw usersError;
 
+    // Busca nomes dos revendedores para exibir na tabela
     const { data: resellersData } = await supabase.from('resellers').select('id, name');
     const resMap: Record<string, string> = {};
     (resellersData || []).forEach(r => { resMap[r.id] = r.name; });

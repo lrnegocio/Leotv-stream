@@ -3,14 +3,13 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, Episode } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Image from "next/image"
 
 const CATEGORIES = [
@@ -49,26 +48,43 @@ export default function HomeContent() {
   const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
-  const [siteUrl, setSiteUrl] = React.useState('')
   const [isMounted, setIsMounted] = React.useState(false)
   
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams ? (searchParams.get('q') || "") : ""
 
+  const syncUserPermissions = React.useCallback(async (currentUser: User) => {
+    try {
+      // Re-valida o PIN para pegar permissões atualizadas (PPV, Alacarte, etc)
+      const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "");
+      if (res.user) {
+        setUser(res.user);
+        localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId: (currentUser as any).deviceId }));
+      }
+    } catch (e) {
+      console.error("Erro ao sincronizar permissões");
+    }
+  }, []);
+
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
     try {
       const currentSettings = await getGlobalSettings();
       setSettings(currentSettings);
+      
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
       const genreToFilter = categoryObj?.genre || "";
       const data = await getRemoteContent(false, queryStr, genreToFilter);
       setContent(data);
+
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
-        for (const cat of CATEGORIES) { if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); }
+        for (const cat of CATEGORIES) { 
+          if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); 
+        }
         setCatCounts(counts);
       }
+      
       const remoteGames = await getRemoteGames();
       setGames(remoteGames);
     } catch (err) { } finally { setLoading(false); }
@@ -76,16 +92,20 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     setIsMounted(true);
-    setTimeout(() => setLoading(false), 1500);
     if (typeof window !== 'undefined') {
       try {
-        setSiteUrl(window.location.origin);
         const session = localStorage.getItem("user_session");
-        if (session) setUser(JSON.parse(session));
-        else router.push("/login");
+        if (session) {
+          const parsed = JSON.parse(session);
+          setUser(parsed);
+          // Sincroniza permissões VIP em tempo real
+          syncUserPermissions(parsed);
+        } else {
+          router.push("/login");
+        }
       } catch (e) { router.push("/login"); }
     }
-  }, [router]);
+  }, [router, syncUserPermissions]);
 
   React.useEffect(() => {
     if (!isMounted) return;
@@ -139,7 +159,6 @@ export default function HomeContent() {
   const handleCategoryClick = (cat: any) => {
     if (!user) return;
     
-    // MESTRE LÉO: Admin tem acesso TOTAL automático
     if (user.role === 'admin') {
       if (cat.special === 'games') setGamesMenuOpen(true);
       else setSelectedCat(cat.id);
@@ -147,7 +166,9 @@ export default function HomeContent() {
     }
 
     if (cat.specialAccess) {
-      if (!(user as any)[cat.specialAccess]) return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor." });
+      if (!(user as any)[cat.specialAccess]) {
+        return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor para liberar este sinal." });
+      }
       setSelectedCat(cat.id);
       return;
     }
@@ -167,7 +188,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v330...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v332...</p>
         </div>
       )}
 
@@ -183,10 +204,20 @@ export default function HomeContent() {
         </div>
       </header>
 
-      <main className="p-8 max-w-[1600px] mx-auto">
+      <main className="p-8 max-w-[1600px] mx-auto space-y-8">
+        {user?.individualMessage && !selectedCat && !q && (
+          <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl">
+             <div className="bg-primary p-3 rounded-2xl shadow-lg"><BellRing className="h-6 w-6 text-white" /></div>
+             <div className="flex-1">
+                <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Recado do Mestre Léo</p>
+                <p className="text-sm font-bold leading-relaxed">{user.individualMessage}</p>
+             </div>
+          </div>
+        )}
+
         {!selectedCat && !q && settings?.bannerUrl && (
-          <div className="mb-8 w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
-             <div className="relative aspect-[4/1] w-full rounded-[2rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
+          <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
+             <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
                 <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
                 <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade Soberana</span></div>
              </div>
@@ -196,7 +227,6 @@ export default function HomeContent() {
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {CATEGORIES.map(c => {
-              // MESTRE LÉO: Admin vê TUDO sempre
               const isVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
               if (!isVisible) return null;
 
@@ -245,19 +275,41 @@ export default function HomeContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
-        <DialogContent className="max-w-[90vw] w-full h-[85vh] bg-card rounded-[3rem] p-0 overflow-hidden flex flex-col border-emerald-500/20">
-          <div className="h-20 bg-emerald-600/10 border-b border-border px-10 flex items-center justify-between"><div className="flex items-center gap-4"><Gamepad2 className="h-8 w-8 text-emerald-600" /><h2 className="text-2xl font-black uppercase text-emerald-600 italic">Léo Games Arena</h2></div><button onClick={() => setGamesMenuOpen(false)} className="h-10 w-10 rounded-full hover:bg-muted transition-all flex items-center justify-center"><X className="h-6 w-6" /></button></div>
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-80 border-r border-border p-8 overflow-y-auto bg-black/5 custom-scroll scrollbar-visible">
-               {Array.from(new Set(games.map(g => g.console))).map(c => (
-                 <div key={c} className="mb-8"><div className="text-[11px] font-black uppercase opacity-40 px-3 mb-3 tracking-widest text-emerald-600">{c}</div>{games.filter(g => g.console === c).map(g => <Button key={g.id} variant="ghost" onClick={() => setActiveGame(g)} className={`w-full justify-start h-12 rounded-xl text-[11px] font-black uppercase mb-1 transition-all ${activeGame?.id === g.id ? 'bg-emerald-500 text-white shadow-lg' : 'hover:bg-emerald-500/10'}`}>{g.title}</Button>)}</div>
-               ))}
-            </div>
-            <div className="flex-1 bg-black/95 relative">{activeGame ? <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen /> : <div className="flex flex-col items-center justify-center h-full opacity-30 text-white text-center p-10"><Trophy className="h-32 w-32 mb-6 animate-bounce" /><h3 className="text-3xl font-black uppercase italic">Escolha um Jogo Master</h3></div>}</div>
-          </div>
+      <Dialog open={showAcesso} onOpenChange={setShowAcesso}>
+        <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 shadow-2xl">
+           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Dados da Minha Conta</DialogTitle></DialogHeader>
+           <div className="py-6 space-y-6">
+              <div className="flex justify-between items-center p-4 bg-muted rounded-2xl">
+                 <span className="text-[10px] font-black uppercase opacity-40">Seu PIN:</span>
+                 <span className="font-mono font-black text-xl text-primary tracking-widest">{user?.pin}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                    <p className="text-[8px] font-black uppercase opacity-40">Validade</p>
+                    <p className="text-xs font-black uppercase text-primary">{user?.expiryDate ? new Date(user.expiryDate).toLocaleDateString() : 'Livre'}</p>
+                 </div>
+                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                    <p className="text-[8px] font-black uppercase opacity-40">Telas</p>
+                    <p className="text-xs font-black uppercase text-primary">{user?.maxScreens} Unidades</p>
+                 </div>
+              </div>
+              <div className="space-y-3">
+                 <p className="text-[10px] font-black uppercase opacity-40 text-center">Protocolo de Segurança</p>
+                 <div className="flex flex-wrap justify-center gap-2">
+                    <Badge className={user?.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-30'}>ADULTO</Badge>
+                    <Badge className={user?.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-30'}>GAMES</Badge>
+                    <Badge className={user?.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-30'}>PPV</Badge>
+                    <Badge className={user?.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-30'}>ALACARTE</Badge>
+                 </div>
+              </div>
+           </div>
+           <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary font-black uppercase rounded-2xl">FECHAR PAINEL</Button>
         </DialogContent>
       </Dialog>
     </div>
   )
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white shadow-md ${className}`}>{children}</span>
 }
