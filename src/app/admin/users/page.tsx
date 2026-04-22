@@ -71,13 +71,13 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // Sincronização v322: Busca o usuário existente por PIN se o ID for nulo
+    // Busca o usuário existente para preservar dados que não estão no form
     const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === newUser.pin.toUpperCase().trim());
     
     const userData: Partial<User> = {
       id: editingUserId || existingUser?.id,
       pin: newUser.pin.toUpperCase().trim(),
-      role: (newUser.pin.toLowerCase() === 'adm77x2p') ? 'admin' : 'user',
+      role: (newUser.pin.toUpperCase() === 'ADM77X2P') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || null,
       maxScreens: parseInt(newUser.screens) || 1,
@@ -110,6 +110,8 @@ export default function UserManagementPage() {
     const updated = { ...user, [field]: !(user as any)[field] };
     if (await saveUser(updated)) {
       loadUsers();
+    } else {
+      toast({ variant: "destructive", title: "Falha ao ativar VIP" });
     }
   }
 

@@ -10,13 +10,6 @@ export interface Episode {
   streamUrl: string; 
 }
 
-export interface Episode { 
-  id: string; 
-  title: string; 
-  number: number; 
-  streamUrl: string; 
-}
-
 export interface Season { 
   id: string; 
   number: number; 
@@ -233,6 +226,7 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
+    // Busca o ID real pelo PIN para garantir o upsert correto
     const { data: existing } = await supabase
       .from('users')
       .select('id')
@@ -251,22 +245,25 @@ export async function saveUser(user: Partial<User>) {
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       individualMessage: user.individualMessage || "",
-      gamePoints: user.gamePoints || 0
-    };
-    
-    const fullPayload = {
-      ...payload,
+      gamePoints: user.gamePoints || 0,
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
       isPpvEnabled: !!user.isPpvEnabled,
       isAlacarteEnabled: !!user.isAlacarteEnabled
     };
 
-    const { error } = await supabase.from('users').upsert(fullPayload, { onConflict: 'pin' });
+    // Tenta o upsert completo (baseado no PIN para evitar duplicidade de regra de banco)
+    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
     
     if (error) {
+      // Blindagem Soberana: Se as colunas VIP não existirem, salva apenas o básico para não travar
       if (error.message.includes("column") || error.code === "42703") {
-        const { error: retryError } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
+        const fallback = { ...payload };
+        delete fallback.isPpvEnabled;
+        delete fallback.isAlacarteEnabled;
+        delete fallback.individualMessage;
+        
+        const { error: retryError } = await supabase.from('users').upsert(fallback, { onConflict: 'pin' });
         if (retryError) return false;
         return true;
       }
