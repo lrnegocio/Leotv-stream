@@ -181,7 +181,6 @@ export async function saveContent(item: Partial<ContentItem>) {
       seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
     };
     
-    // BLINDAGEM v327: Upsert resolvido pelo ID
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
     if (error) {
       console.error("Erro Supabase saveContent:", error.message || error);
@@ -230,15 +229,15 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
-    // MOTOR SOBERANO v327: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
+    // MOTOR SOBERANO v328: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
     const { data: existing } = await supabase
       .from('users')
       .select('id')
       .eq('pin', cleanPin)
       .maybeSingle();
 
-    const payload = {
-      // Se já temos um registro, usamos o ID dele para fazer o UPDATE
+    // Payload básico (colunas que temos certeza que existem no banco)
+    const payload: any = {
       id: existing?.id || user.id || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
       pin: cleanPin,
       role: user.role || 'user',
@@ -247,20 +246,35 @@ export async function saveUser(user: Partial<User>) {
       maxScreens: user.maxScreens || 1,
       activeDevices: user.activeDevices || [],
       isBlocked: !!user.isBlocked,
-      isAdultEnabled: !!user.isAdultEnabled,
-      isGamesEnabled: !!user.isGamesEnabled,
-      isPpvEnabled: !!user.isPpvEnabled,
-      isAlacarteEnabled: !!user.isAlacarteEnabled,
       resellerId: user.resellerId || null,
       activatedAt: user.activatedAt || null,
       individualMessage: user.individualMessage || "",
       gamePoints: user.gamePoints || 0
     };
     
-    // Upsert resolvido pelo campo PIN como reserva, mas o ID correto já garante a atualização
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
+    // Tenta salvar com as colunas VIP (Adulto, Games, PPV, Alacarte)
+    // Se o banco der erro de "coluna não encontrada", faremos um fallback
+    const fullPayload = {
+      ...payload,
+      isAdultEnabled: !!user.isAdultEnabled,
+      isGamesEnabled: !!user.isGamesEnabled,
+      isPpvEnabled: !!user.isPpvEnabled,
+      isAlacarteEnabled: !!user.isAlacarteEnabled
+    };
+
+    const { error } = await supabase.from('users').upsert(fullPayload, { onConflict: 'pin' });
     
     if (error) {
+      // BLINDAGEM v328: Se o erro for de coluna inexistente, tenta salvar sem os campos VIP
+      if (error.message.includes("column") || error.code === "42703") {
+        console.warn("Detectadas colunas ausentes no Supabase. Salvando apenas dados basicos...");
+        const { error: retryError } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
+        if (retryError) {
+          console.error("Erro fatal ao salvar usuário:", retryError.message);
+          return false;
+        }
+        return true;
+      }
       console.error("Erro Supabase saveUser:", error.message || JSON.stringify(error));
       return false;
     }
