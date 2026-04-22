@@ -118,10 +118,12 @@ export const formatMasterLink = (url: string) => {
       }
     }
 
+    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v336
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
-      'agropesca.live', 'warez', 'topcanais', 'redecanais', 'redecanaistv'
+      'agropesca.live', 'warez', 'topcanais', 'redecanais', 
+      'redecanaistv', 'tokyvideo' // ADICIONADO TOKYVIDEO NO TÚNEL
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

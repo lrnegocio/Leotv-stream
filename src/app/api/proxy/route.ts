@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v312 - PROTOCOLO CAMALEÃO ELITE
- * Ajustado para remover Sandbox e limpar cabeçalhos de frame.
+ * TÚNEL MASTER SOBERANO v336 - PROTOCOLO CAMALEÃO ELITE
+ * Ajustado para incluir suporte a TokyVideo e Referers dinâmicos.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,17 +25,20 @@ export async function GET(req: NextRequest) {
     const range = req.headers.get('range');
     if (range) requestHeaders.set('Range', range);
 
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 11; BRAVIA 4K Build/RP1A.200720.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     
     const lowTarget = targetUrl.toLowerCase();
     
+    // CALIBRAGEM DE REFERER POR DOMÍNIO v336
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.net/');
     } else if (lowTarget.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
+    } else if (lowTarget.includes('tokyvideo')) {
+      requestHeaders.set('Referer', 'https://www.tokyvideo.com/'); // BLINDAGEM TOKYVIDEO
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v312", { status: 500 });
+    return new Response("Falha no Túnel Master v336", { status: 500 });
   }
 }
 
