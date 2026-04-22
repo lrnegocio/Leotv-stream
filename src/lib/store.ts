@@ -221,8 +221,15 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function saveUser(user: Partial<User>) {
   try {
+    // BLINDAGEM v322: Se não tem ID mas tem PIN, busca o ID existente para não duplicar
+    let finalId = user.id;
+    if (!finalId && user.pin) {
+      const { data } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
+      if (data) finalId = data.id;
+    }
+
     const payload = {
-      id: user.id || "user_" + Date.now(),
+      id: finalId || "user_" + Date.now(),
       pin: user.pin?.trim().toUpperCase(),
       role: user.role || 'user',
       subscriptionTier: user.subscriptionTier || 'monthly',
@@ -246,10 +253,11 @@ export async function saveUser(user: Partial<User>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
+    // Sincronização v322: Puxa todos sem filtro para garantir que PINs antigos apareçam
     const { data, error } = await supabase
       .from('users')
       .select('*, resellers(name)')
-      .order('created_at', { ascending: false });
+      .order('id', { ascending: false });
     
     if (error) throw error;
     
@@ -257,7 +265,10 @@ export async function getRemoteUsers(): Promise<User[]> {
       ...u,
       reseller_name: u.resellers?.name || 'ADMIN'
     }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    console.error("Erro ao buscar usuários:", e);
+    return []; 
+  }
 }
 
 export async function removeUser(id: string) {

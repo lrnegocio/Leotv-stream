@@ -71,8 +71,8 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // Busca o usuário existente se estiver editando ou se o PIN já constar na lista
-    const existingUser = users.find(u => u.id === editingUserId || u.pin === newUser.pin.toUpperCase().trim());
+    // Sincronização v322: Busca o usuário existente por PIN se o ID for nulo
+    const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === newUser.pin.toUpperCase().trim());
     
     const userData: Partial<User> = {
       id: editingUserId || existingUser?.id,
@@ -195,7 +195,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.sort((a,b) => (b.created_at || '').localeCompare(a.created_at || '')).map((u) => {
+              {filteredUsers.sort((a,b) => (b.id || '').localeCompare(a.id || '')).map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
