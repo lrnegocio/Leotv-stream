@@ -221,7 +221,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function saveUser(user: Partial<User>) {
   try {
-    // BLINDAGEM v322: Se não tem ID mas tem PIN, busca o ID existente para não duplicar
     let finalId = user.id;
     if (!finalId && user.pin) {
       const { data } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
@@ -253,7 +252,6 @@ export async function saveUser(user: Partial<User>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // Sincronização v322: Puxa todos sem filtro para garantir que PINs antigos apareçam
     const { data, error } = await supabase
       .from('users')
       .select('*, resellers(name)')

@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v321..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v322..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -50,7 +50,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v321!"
+echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v322!"
 echo "🔗 AGORA EXECUTE: systemctl restart nginx"
 echo "--------------------------------------------------"
 pm2 list
