@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -49,6 +49,7 @@ export default function HomeContent() {
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
+  const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -56,7 +57,6 @@ export default function HomeContent() {
 
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
-      // Re-valida o PIN para pegar permissões atualizadas (PPV, Alacarte, etc)
       const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "vps_device");
       if (res.user) {
         setUser(res.user);
@@ -98,7 +98,6 @@ export default function HomeContent() {
         if (session) {
           const parsed = JSON.parse(session);
           setUser(parsed);
-          // Sincroniza permissões VIP em tempo real
           syncUserPermissions(parsed);
         } else {
           router.push("/login");
@@ -181,6 +180,8 @@ export default function HomeContent() {
     } else setSelectedCat(cat.id);
   };
 
+  const gameConsoles = Array.from(new Set(games.map(g => g.console))).sort();
+
   if (!isMounted) return null;
 
   return (
@@ -188,7 +189,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v333...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v334...</p>
         </div>
       )}
 
@@ -265,7 +266,53 @@ export default function HomeContent() {
           <div className="text-2xl font-black uppercase italic mb-4 text-primary">Sinal Restrito</div>
           <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha Parental</p>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
-          <Button onClick={verifyPassword} className="w-full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">LIBERAR AGORA</Button>
+          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">LIBERAR AGORA</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
+        <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-8 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+          <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-emerald-500 flex items-center gap-3"><Gamepad2 className="h-8 w-8" /> Arena Games Master</DialogTitle></DialogHeader>
+          <div className="mt-8 flex-1 overflow-y-auto custom-scroll pr-2 space-y-4">
+            {gameConsoles.map(consoleName => (
+              <div key={consoleName} className="space-y-2">
+                <button 
+                  onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)}
+                  className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group"
+                >
+                  <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
+                  {expandedConsole === consoleName ? <ChevronUp className="h-5 w-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
+                </button>
+                {expandedConsole === consoleName && (
+                  <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
+                    {games.filter(g => g.console === consoleName).map(game => (
+                      <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group">
+                        <span className="text-[10px] font-black uppercase truncate tracking-tighter">{game.title}</span>
+                        <Play className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {games.length === 0 && <div className="p-20 text-center opacity-30 font-black uppercase text-xs italic">Nenhum combate registrado na arena.</div>}
+          </div>
+          <Button onClick={() => setGamesMenuOpen(false)} className="mt-6 w-full h-14 bg-zinc-800 font-black uppercase rounded-2xl">SAIR DA ARENA</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!activeGame} onOpenChange={() => setActiveGame(null)}>
+        <DialogContent className="max-w-6xl h-[90vh] bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
+           {activeGame && (
+             <div className="w-full h-full relative">
+                <div className="absolute top-4 left-4 z-50 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 flex items-center gap-3">
+                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                   <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">{activeGame.title} - {activeGame.console}</span>
+                </div>
+                <button onClick={() => setActiveGame(null)} className="absolute top-4 right-4 z-50 bg-red-500/80 p-2 rounded-full text-white hover:scale-110 transition-all"><X className="h-5 w-5" /></button>
+                <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen />
+             </div>
+           )}
         </DialogContent>
       </Dialog>
 
