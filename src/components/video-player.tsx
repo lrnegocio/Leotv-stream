@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v338 - MURAL DE AVISOS PERSISTENTE
- * Implementado alerta que sobrepõe o player e exige fechamento manual.
+ * PLAYER MASTER SOBERANO v340 - MEMÓRIA DE AVISOS LIDOS
+ * O aviso só reaparece se o conteúdo da mensagem for alterado no Admin.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -66,12 +66,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!isMounted || !safeUrl) return;
     setLoading(true);
 
-    // Carrega Aviso do Mural
+    // Carrega Aviso do Mural com Memória de Leitura
     try {
       const settings = await getGlobalSettings();
       if (settings.announcement && settings.announcement.trim()) {
-        setAnnouncement(settings.announcement);
-        setShowAnnouncement(true);
+        const lastSeen = localStorage.getItem('leotv_last_announcement');
+        // Só mostra se for diferente do que ele já leu
+        if (lastSeen !== settings.announcement) {
+          setAnnouncement(settings.announcement);
+          setShowAnnouncement(true);
+        }
       }
     } catch (e) {}
 
@@ -149,6 +153,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     } catch (e) {}
   };
 
+  const handleCloseAnnouncement = () => {
+    if (announcement) {
+      localStorage.setItem('leotv_last_announcement', announcement);
+    }
+    setShowAnnouncement(false);
+  };
+
   if (!isMounted || !safeUrl) return null;
 
   return (
@@ -179,12 +190,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v338...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v340...</p>
           </div>
         </div>
       )}
 
-      {/* MURAL DE AVISOS MASTER SOBERANO */}
+      {/* MURAL DE AVISOS MASTER SOBERANO COM MEMÓRIA */}
       {showAnnouncement && (
         <div className="absolute inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
            <div className="max-w-md w-full bg-card rounded-[2rem] border-2 border-primary shadow-2xl overflow-hidden animate-in zoom-in-95">
@@ -195,7 +206,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
               <div className="p-8">
                  <p className="text-sm font-bold leading-relaxed text-foreground whitespace-pre-wrap">{announcement}</p>
                  <button 
-                  onClick={() => setShowAnnouncement(false)}
+                  onClick={handleCloseAnnouncement}
                   className="w-full mt-8 h-14 bg-primary text-white font-black uppercase rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
                  >
                    CIENTE / FECHAR AVISO

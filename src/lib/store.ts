@@ -81,9 +81,9 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v339
+ * FORMATAÇÃO MASTER SOBERANA v340
  * Inteligência avançada para extrair links diretos e injetar no Túnel Master.
- * Agora com suporte a IDs alfanuméricos do XVideos.
+ * Calibragem extra para IDs alfanuméricos complexos.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -117,17 +117,17 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // TRATAMENTO XVIDEOS v339 - EXTRAÇÃO ALFANUMÉRICA SOBERANA
-    // Captura tanto IDs numéricos quanto IDs com letras (ex: video.kabopuh3e7b)
+    // TRATAMENTO XVIDEOS v340 - EXTRAÇÃO ALFANUMÉRICA BLINDADA
     if (lowUrl.includes('xvideos.com/video')) {
-      const videoIdMatch = finalUrl.match(/video\.?([a-z0-9]+)/i);
-      if (videoIdMatch && videoIdMatch[1]) {
-        finalUrl = `https://www.xvideos.com/embedframe/${videoIdMatch[1]}`;
+      // Captura o ID após /video. ou /video
+      const idMatch = finalUrl.match(/\/video\.?([a-z0-9]+)/i);
+      if (idMatch && idMatch[1]) {
+        finalUrl = `https://www.xvideos.com/embedframe/${idMatch[1]}`;
         lowUrl = finalUrl.toLowerCase();
       }
     }
 
-    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v339
+    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v340
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
