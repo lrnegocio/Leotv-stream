@@ -81,9 +81,9 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v340
+ * FORMATAÇÃO MASTER SOBERANA v341
  * Inteligência avançada para extrair links diretos e injetar no Túnel Master.
- * Calibragem extra para IDs alfanuméricos complexos.
+ * Adicionado suporte agressivo para RedeCanais e Rei dos Canais.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -117,9 +117,8 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // TRATAMENTO XVIDEOS v340 - EXTRAÇÃO ALFANUMÉRICA BLINDADA
+    // TRATAMENTO XVIDEOS v341 - EXTRAÇÃO ALFANUMÉRICA COMPLETA
     if (lowUrl.includes('xvideos.com/video')) {
-      // Captura o ID após /video. ou /video
       const idMatch = finalUrl.match(/\/video\.?([a-z0-9]+)/i);
       if (idMatch && idMatch[1]) {
         finalUrl = `https://www.xvideos.com/embedframe/${idMatch[1]}`;
@@ -127,12 +126,12 @@ export const formatMasterLink = (url: string) => {
       }
     }
 
-    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v340
+    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v341
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
-      'redecanaistv', 'tokyvideo'
+      'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v337 - PROTOCOLO CAMALEÃO ELITE
- * Ajustado para blindagem total XVideos, TokyVideo e bloqueios do Brave.
+ * TÚNEL MASTER SOBERANO v341 - PROTOCOLO PERSISTÊNCIA ELITE
+ * Blindagem total para RedeCanais, Rei dos Canais e TokyVideo.
+ * Remove a necessidade do Admin "aquecer" o link para o cliente.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -28,16 +29,21 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
+    requestHeaders.set('Cache-Control', 'no-cache');
+    requestHeaders.set('Pragma', 'no-cache');
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // CALIBRAGEM DE REFERER POR DOMÍNIO v337
+    // CALIBRAGEM DE REFERER POR DOMÍNIO v341
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
+      requestHeaders.set('Origin', 'https://reidoscanais.ooo');
     } else if (lowTarget.includes('redecanais')) {
-      requestHeaders.set('Referer', 'https://redecanaistv.net/');
+      // Ajuste RedeCanais: Alguns usam o .be outros o .ooo
+      const origin = targetUrl.includes('.be') ? 'https://redecanaistv.be/' : 'https://redecanaistv.net/';
+      requestHeaders.set('Referer', origin);
+      requestHeaders.set('Origin', origin.replace(/\/$/, ''));
     } else if (lowTarget.includes('xvideos')) {
-      // Blindagem XVideos: Usa o referer da própria plataforma para liberar o sinal
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
       requestHeaders.set('Origin', 'https://www.xvideos.com');
     } else if (lowTarget.includes('tokyvideo')) {
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v337", { status: 500 });
+    return new Response("Falha no Túnel Master v341", { status: 500 });
   }
 }
 
@@ -104,7 +110,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     
-    // Limpeza radical de bloqueios de frame para o Brave
+    // Limpeza radical de bloqueios de frame para o Brave e outros navegadores
     responseHeaders.delete('X-Frame-Options');
     responseHeaders.delete('Content-Security-Policy');
     responseHeaders.delete('X-Content-Security-Policy');
