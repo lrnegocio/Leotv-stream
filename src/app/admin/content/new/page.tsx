@@ -148,7 +148,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização Ativa v317</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização Ativa v320</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -185,6 +185,8 @@ export default function NewContentPage() {
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
                     <SelectItem value="LÉO TV SÉRIES">LÉO TV SÉRIES</SelectItem>
+                    <SelectItem value="LÉO TV PAY PER VIEW">LÉO TV PAY PER VIEW</SelectItem>
+                    <SelectItem value="LÉO TV ALACARTES">LÉO TV ALACARTES</SelectItem>
                     <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
                     <SelectItem value="LÉO TV MUSICAS">LÉO TV MÚSICAS</SelectItem>
                     <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>

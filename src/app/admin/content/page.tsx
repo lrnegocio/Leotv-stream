@@ -185,6 +185,8 @@ export default function ContentManagementPage() {
                     <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
                     <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
                     <SelectItem value="LÉO TV SÉRIES">LÉO TV SÉRIES</SelectItem>
+                    <SelectItem value="LÉO TV PAY PER VIEW">LÉO TV PAY PER VIEW</SelectItem>
+                    <SelectItem value="LÉO TV ALACARTES">LÉO TV ALACARTES</SelectItem>
                     <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
                     <SelectItem value="LÉO TV MUSICAS">LÉO TV MÚSICAS</SelectItem>
                     <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>

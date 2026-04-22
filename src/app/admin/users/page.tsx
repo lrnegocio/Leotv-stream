@@ -65,13 +65,14 @@ export default function UserManagementPage() {
     return { label: `${diffDays} DIA(S) ATIVO`, color: "bg-emerald-500/10 text-emerald-500", icon: UserCheck };
   };
 
-  const handleGeneratePin = () => { setNewUser(prev => ({ ...prev, pin: generateRandomPin(9) })) }
+  const handleGeneratePin = () => { setNewUser(prev => ({ ...prev, pin: generateRandomPin(11) })) }
 
   const handleSaveUser = async () => {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    const existingUser = users.find(u => u.pin === newUser.pin.toUpperCase().trim() || u.id === editingUserId);
+    // Busca o usuário existente se estiver editando ou se o PIN já constar na lista
+    const existingUser = users.find(u => u.id === editingUserId || u.pin === newUser.pin.toUpperCase().trim());
     
     const userData: Partial<User> = {
       id: editingUserId || existingUser?.id,
@@ -88,7 +89,8 @@ export default function UserManagementPage() {
       isAlacarteEnabled: !!newUser.isAlacarteEnabled,
       activatedAt: existingUser?.activatedAt || null,
       individualMessage: newUser.individualMessage.trim(),
-      gamePoints: existingUser?.gamePoints || 0
+      gamePoints: existingUser?.gamePoints || 0,
+      resellerId: existingUser?.resellerId || null
     }
 
     const success = await saveUser(userData);
@@ -162,7 +164,7 @@ export default function UserManagementPage() {
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
-           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(9), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(11), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
@@ -245,9 +247,9 @@ export default function UserManagementPage() {
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (9 Dígitos)</Label>
+              <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (11 Dígitos)</Label>
               <div className="flex gap-2">
-                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" maxLength={9} />
+                <Input value={newUser.pin} onChange={e => setNewUser({...newUser, pin: e.target.value.toUpperCase()})} className="bg-black/40 font-black text-xl tracking-[0.3em] text-center border-white/5 h-14 rounded-xl" maxLength={11} />
                 <Button variant="outline" onClick={handleGeneratePin} className="h-14 border-white/5"><RefreshCcw className="h-4 w-4 text-primary" /></Button>
               </div>
             </div>
