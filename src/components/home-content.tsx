@@ -57,10 +57,10 @@ export default function HomeContent() {
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
       // Re-valida o PIN para pegar permissões atualizadas (PPV, Alacarte, etc)
-      const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "");
+      const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "vps_device");
       if (res.user) {
         setUser(res.user);
-        localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId: (currentUser as any).deviceId }));
+        localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId: (currentUser as any).deviceId || "vps_device" }));
       }
     } catch (e) {
       console.error("Erro ao sincronizar permissões");
@@ -188,7 +188,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v332...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v333...</p>
         </div>
       )}
 

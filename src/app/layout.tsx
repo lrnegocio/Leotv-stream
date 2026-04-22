@@ -55,7 +55,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* PROTOCOLO BRAVE SUPREMO v298 - EXTERMINADOR DE BLOQUEIOS E MENSAGENS CLOUDFLARE */
+          /* PROTOCOLO BRAVE SUPREMO v333 - EXTERMINADOR DE BLOQUEIOS E MENSAGENS CLOUDFLARE */
           
           iframe {
             pointer-events: auto !important;
@@ -90,6 +90,16 @@ export default function RootLayout({
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
           }
+        `}} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          /* BLINDAGEM DIAMANTE ANTI-NOVA-ABA */
+          (function() {
+            const originalOpen = window.open;
+            window.open = function() {
+              console.log('Tentativa de nova aba bloqueada pelo Mestre Léo.');
+              return null;
+            };
+          })();
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">

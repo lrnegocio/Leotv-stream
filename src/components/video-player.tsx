@@ -13,8 +13,9 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v313 - COMPATIBILIDADE BRAVE AGRESSIVO
+ * PLAYER MASTER SOBERANO v333 - COMPATIBILIDADE BRAVE AGRESSIVO
  * Removido o Sandbox do iframe e otimizado carregamento para evitar bloqueio do Shields.
+ * Implementado bloqueio de abertura de novas abas dentro do iframe.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -149,6 +150,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={safeUrl}
           className="w-full h-full border-0"
           // Atributos permitidos mesmo em bloqueios agressivos
+          // NÃO usar sandbox aqui para não travar o carregamento do Brave
           allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
         />
@@ -169,7 +171,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v313...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v333...</p>
           </div>
         </div>
       )}
