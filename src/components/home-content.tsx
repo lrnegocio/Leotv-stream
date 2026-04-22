@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const CATEGORIES = [
   { id: 'LIVE', name: 'CANAIS AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
@@ -189,7 +190,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v335...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v343...</p>
         </div>
       )}
 
@@ -260,36 +261,36 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* DIALOG DE EPISÓDIOS MASTER v335 */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
-        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Selecione o Episódio</DialogTitle></DialogHeader>
-          <div className="mt-6 flex flex-col gap-2 max-h-[500px] overflow-y-auto custom-scroll pr-2 scrollbar-visible">
-            {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-              <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-primary hover:text-white transition-all group">
-                <span className="font-black uppercase text-[10px] tracking-widest">EP {ep.number} - {ep.title || 'SINAL MASTER'}</span>
-                <PlayCircle className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
-              </button>
-            ))}
-            {selectedSeries?.seasons?.sort((a,b) => a.number - b.number).map(season => (
-              <div key={season.id} className="space-y-2 mb-4">
-                <p className="text-[10px] font-black text-primary uppercase pl-4 border-l-4 border-primary ml-2 mb-3">Temporada {season.number}</p>
-                {season.episodes.sort((a,b) => a.number - b.number).map(ep => {
-                  // Mapeia todos os episódios de todas as temporadas para navegação no player
-                  const allSeasonEps = selectedSeries.seasons!.flatMap(s => s.episodes.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - T${s.number} EP ${e.number}` })));
-                  const currentIdx = allSeasonEps.findIndex(i => i.id === ep.id);
-                  
-                  return (
-                    <button key={ep.id} onClick={() => setActiveVideo({ items: allSeasonEps, index: currentIdx })} className="w-full flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-primary hover:text-white transition-all group ml-4">
-                      <span className="font-bold uppercase text-[9px]">EPISÓDIO {ep.number} - {ep.title || 'SINAL'}</span>
-                      <PlayCircle className="h-4 w-4 text-primary group-hover:text-white" />
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-          <Button onClick={() => setSelectedSeries(null)} className="mt-6 w-full h-14 bg-zinc-800 font-black uppercase rounded-2xl">FECHAR LISTA</Button>
+          <ScrollArea className="flex-1 mt-6 pr-4">
+            <div className="flex flex-col gap-3">
+              {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
+                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
+                  <span className="font-black uppercase text-[11px] tracking-widest">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
+                  <PlayCircle className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
+                </button>
+              ))}
+              {selectedSeries?.seasons?.sort((a,b) => a.number - b.number).map(season => (
+                <div key={season.id} className="space-y-3 mb-6">
+                  <p className="text-[11px] font-black text-primary uppercase pl-4 border-l-4 border-primary ml-2 mb-4 bg-primary/5 py-2 rounded-r-xl">Temporada {season.number}</p>
+                  {season.episodes.sort((a,b) => a.number - b.number).map(ep => {
+                    const allSeasonEps = selectedSeries.seasons!.flatMap(s => s.episodes.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - T${s.number} EP ${e.number}` })));
+                    const currentIdx = allSeasonEps.findIndex(i => i.id === ep.id);
+                    
+                    return (
+                      <button key={ep.id} onClick={() => setActiveVideo({ items: allSeasonEps, index: currentIdx })} className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-2xl hover:bg-primary hover:text-white transition-all group ml-4 border border-border/20">
+                        <span className="font-bold uppercase text-[10px]">EPISÓDIO {ep.number} - {ep.title || 'SINAL'}</span>
+                        <PlayCircle className="h-5 w-5 text-primary group-hover:text-white" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          <Button onClick={() => setSelectedSeries(null)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">FECHAR LISTA</Button>
         </DialogContent>
       </Dialog>
 
@@ -306,31 +307,33 @@ export default function HomeContent() {
       <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
         <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-8 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-emerald-500 flex items-center gap-3"><Gamepad2 className="h-8 w-8" /> Arena Games Master</DialogTitle></DialogHeader>
-          <div className="mt-8 flex-1 overflow-y-auto custom-scroll pr-2 space-y-4">
-            {gameConsoles.map(consoleName => (
-              <div key={consoleName} className="space-y-2">
-                <button 
-                  onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)}
-                  className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group"
-                >
-                  <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
-                  {expandedConsole === consoleName ? <ChevronUp className="h-5 w-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
-                </button>
-                {expandedConsole === consoleName && (
-                  <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
-                    {games.filter(g => g.console === consoleName).map(game => (
-                      <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group">
-                        <span className="text-[10px] font-black uppercase truncate tracking-tighter">{game.title}</span>
-                        <Play className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {games.length === 0 && <div className="p-20 text-center opacity-30 font-black uppercase text-xs italic">Nenhum combate registrado na arena.</div>}
-          </div>
-          <Button onClick={() => setGamesMenuOpen(false)} className="mt-6 w-full h-14 bg-zinc-800 font-black uppercase rounded-2xl">SAIR DA ARENA</Button>
+          <ScrollArea className="mt-8 flex-1 pr-4">
+            <div className="space-y-4">
+              {gameConsoles.map(consoleName => (
+                <div key={consoleName} className="space-y-2">
+                  <button 
+                    onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)}
+                    className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group"
+                  >
+                    <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
+                    {expandedConsole === consoleName ? <ChevronUp className="h-5 w-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
+                  </button>
+                  {expandedConsole === consoleName && (
+                    <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
+                      {games.filter(g => g.console === consoleName).map(game => (
+                        <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group">
+                          <span className="text-[10px] font-black uppercase truncate tracking-tighter">{game.title}</span>
+                          <Play className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {games.length === 0 && <div className="p-20 text-center opacity-30 font-black uppercase text-xs italic">Nenhum combate registrado na arena.</div>}
+            </div>
+          </ScrollArea>
+          <Button onClick={() => setGamesMenuOpen(false)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">SAIR DA ARENA</Button>
         </DialogContent>
       </Dialog>
 
