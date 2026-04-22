@@ -252,15 +252,20 @@ export async function saveUser(user: Partial<User>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // SOBERANA v322: Busca direta e mapeamento resiliente para PINs antigos aparecerem
-    const { data, error } = await supabase
+    // BLINDAGEM v323: Busca simples sem joins para evitar erros de esquema e garantir que todos os PINs apareçam
+    const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('*, resellers(name)')
-      .order('created_at', { ascending: false });
+      .select('*')
+      .order('id', { ascending: false });
     
-    if (error) throw error;
+    if (usersError) throw usersError;
+
+    // Busca revendedores separadamente para vincular os nomes
+    const { data: resellersData } = await supabase.from('resellers').select('id, name');
+    const resMap: Record<string, string> = {};
+    (resellersData || []).forEach(r => { resMap[r.id] = r.name; });
     
-    return (data || []).map(u => ({
+    return (usersData || []).map(u => ({
       id: u.id,
       pin: u.pin || "00000000000",
       role: u.role || 'user',
@@ -277,10 +282,10 @@ export async function getRemoteUsers(): Promise<User[]> {
       activatedAt: u.activatedAt,
       individualMessage: u.individualMessage,
       gamePoints: u.gamePoints || 0,
-      reseller_name: u.resellers?.name || 'ADMIN'
+      reseller_name: u.resellerId ? (resMap[u.resellerId] || 'REVENDEDOR') : 'ADMIN'
     }));
   } catch (e) { 
-    console.error("Erro ao buscar usuários:", e);
+    console.error("ERRO CRITICO AO BUSCAR USUARIOS:", e);
     return []; 
   }
 }
