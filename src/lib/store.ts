@@ -221,21 +221,25 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function saveUser(user: Partial<User>) {
   try {
+    const cleanPin = user.pin?.trim().toUpperCase();
+    if (!cleanPin) return false;
+
+    // BUSCA MASTER v325: Localiza o ID real do usuário no banco pelo PIN 
+    // antes de qualquer tentativa de salvar, para evitar "Erro no Núcleo"
     let finalId = user.id;
-    
-    // BLINDAGEM v324: Se não temos ID, buscamos pelo PIN para garantir que estamos atualizando o registro certo
-    if (!finalId && user.pin) {
-      const { data } = await supabase
-        .from('users')
-        .select('id')
-        .eq('pin', user.pin.trim().toUpperCase())
-        .maybeSingle();
-      if (data) finalId = data.id;
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('pin', cleanPin)
+      .maybeSingle();
+
+    if (existing) {
+      finalId = existing.id;
     }
 
     const payload = {
       id: finalId || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      pin: user.pin?.trim().toUpperCase(),
+      pin: cleanPin,
       role: user.role || 'user',
       subscriptionTier: user.subscriptionTier || 'monthly',
       expiryDate: user.expiryDate || null,
@@ -252,14 +256,14 @@ export async function saveUser(user: Partial<User>) {
       gamePoints: user.gamePoints || 0
     };
     
-    const { error } = await supabase.from('users').upsert(payload);
+    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
     if (error) {
-      console.error("Erro Supabase saveUser:", error);
-      return false;
+      // Se deu erro com o ID, tenta via PIN como último recurso
+      const { error: error2 } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
+      return !error2;
     }
     return true;
   } catch (e) { 
-    console.error("Erro fatal saveUser:", e);
     return false; 
   }
 }
@@ -297,7 +301,6 @@ export async function getRemoteUsers(): Promise<User[]> {
       reseller_name: u.resellerId ? (resMap[u.resellerId] || 'REVENDEDOR') : 'ADMIN'
     }));
   } catch (e) { 
-    console.error("ERRO CRITICO AO BUSCAR USUARIOS:", e);
     return []; 
   }
 }
