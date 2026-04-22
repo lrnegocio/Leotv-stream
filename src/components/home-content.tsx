@@ -189,7 +189,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v334...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v335...</p>
         </div>
       )}
 
@@ -200,8 +200,8 @@ export default function HomeContent() {
         </div>
         <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border-primary/20 text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
+          <button onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></button>
+          <button onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl flex items-center justify-center bg-destructive/10 hover:bg-destructive hover:text-white transition-all"><LogOut className="h-6 w-6" /></button>
         </div>
       </header>
 
@@ -259,6 +259,39 @@ export default function HomeContent() {
           </div>
         )}
       </main>
+
+      {/* DIALOG DE EPISÓDIOS MASTER v335 */}
+      <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
+        <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Selecione o Episódio</DialogTitle></DialogHeader>
+          <div className="mt-6 flex flex-col gap-2 max-h-[500px] overflow-y-auto custom-scroll pr-2 scrollbar-visible">
+            {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
+              <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-primary hover:text-white transition-all group">
+                <span className="font-black uppercase text-[10px] tracking-widest">EP {ep.number} - {ep.title || 'SINAL MASTER'}</span>
+                <PlayCircle className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
+              </button>
+            ))}
+            {selectedSeries?.seasons?.sort((a,b) => a.number - b.number).map(season => (
+              <div key={season.id} className="space-y-2 mb-4">
+                <p className="text-[10px] font-black text-primary uppercase pl-4 border-l-4 border-primary ml-2 mb-3">Temporada {season.number}</p>
+                {season.episodes.sort((a,b) => a.number - b.number).map(ep => {
+                  // Mapeia todos os episódios de todas as temporadas para navegação no player
+                  const allSeasonEps = selectedSeries.seasons!.flatMap(s => s.episodes.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - T${s.number} EP ${e.number}` })));
+                  const currentIdx = allSeasonEps.findIndex(i => i.id === ep.id);
+                  
+                  return (
+                    <button key={ep.id} onClick={() => setActiveVideo({ items: allSeasonEps, index: currentIdx })} className="w-full flex items-center justify-between p-4 bg-muted/50 rounded-xl hover:bg-primary hover:text-white transition-all group ml-4">
+                      <span className="font-bold uppercase text-[9px]">EPISÓDIO {ep.number} - {ep.title || 'SINAL'}</span>
+                      <PlayCircle className="h-4 w-4 text-primary group-hover:text-white" />
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <Button onClick={() => setSelectedSeries(null)} className="mt-6 w-full h-14 bg-zinc-800 font-black uppercase rounded-2xl">FECHAR LISTA</Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
