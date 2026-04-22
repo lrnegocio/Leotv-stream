@@ -81,9 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v341
- * Inteligência avançada para extrair links diretos e injetar no Túnel Master.
- * Adicionado suporte agressivo para RedeCanais e Rei dos Canais.
+ * FORMATAÇÃO MASTER SOBERANA v342
+ * Adicionado suporte para novos domínios e tratamento de cookies via proxy.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -108,25 +107,7 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // TRATAMENTO DAILYMOTION
-    if (lowUrl.includes('dailymotion.com')) {
-      if (lowUrl.includes('/video/')) {
-        const videoId = finalUrl.split('/video/')[1]?.split('?')[0];
-        if (videoId) return `https://www.dailymotion.com/embed/video/${videoId}`;
-      }
-      return finalUrl;
-    }
-
-    // TRATAMENTO XVIDEOS v341 - EXTRAÇÃO ALFANUMÉRICA COMPLETA
-    if (lowUrl.includes('xvideos.com/video')) {
-      const idMatch = finalUrl.match(/\/video\.?([a-z0-9]+)/i);
-      if (idMatch && idMatch[1]) {
-        finalUrl = `https://www.xvideos.com/embedframe/${idMatch[1]}`;
-        lowUrl = finalUrl.toLowerCase();
-      }
-    }
-
-    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v341
+    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v342
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
