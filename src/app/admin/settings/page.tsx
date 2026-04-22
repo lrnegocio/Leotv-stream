@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, Image as ImageIcon, Link as LinkIcon, ShieldCheck, Key } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, Image as ImageIcon, Link as LinkIcon, ShieldCheck, Key, Send } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
@@ -26,11 +26,6 @@ export default function SettingsPage() {
   const [confirmCurrent, setConfirmCurrent] = React.useState("")
   const [newPin, setNewPin] = React.useState("")
   const [newPinConfirm, setNewPinConfirm] = React.useState("")
-
-  // ESTADO DORAMA MASTER
-  const [doramaTitle, setDoramaDitle] = React.useState("")
-  const [doramaId, setDoramaId] = React.useState("")
-  const [doramaEps, setDoramaEps] = React.useState(1)
 
   React.useEffect(() => {
     const load = async () => {
@@ -52,6 +47,17 @@ export default function SettingsPage() {
         toast({ title: "CONFIGURAÇÕES SINCROZINADAS!" })
       }
     } catch (e) { toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
+    } finally { setSaving(false) }
+  }
+
+  const handleSendAnnouncement = async () => {
+    setSaving(true)
+    try {
+      if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
+        toast({ title: "AVISO DISPARADO COM SUCESSO!", description: "Todos os clientes verão esta mensagem no player." })
+      }
+    } catch (e) { 
+      toast({ variant: "destructive", title: "ERRO AO DISPARAR" })
     } finally { setSaving(false) }
   }
 
@@ -77,47 +83,12 @@ export default function SettingsPage() {
     setSaving(false)
   }
 
-  const handleInjectDorama = async () => {
-    if (!doramaTitle || !doramaId || doramaEps < 1) {
-      toast({ variant: "destructive", title: "CAMPOS OBRIGATÓRIOS" });
-      return;
-    }
-    setIsProcessing(true);
-    const episodes: Episode[] = [];
-    const cleanId = doramaId.trim().toUpperCase();
-    for (let i = 1; i <= doramaEps; i++) {
-      episodes.push({
-        id: `ep_${cleanId}_${i}_${Date.now()}`,
-        title: `EPISÓDIO ${i}`,
-        number: i,
-        streamUrl: `https://acplay.live/shortseries/${cleanId}/${cleanId}${i}.mp4`
-      });
-    }
-    const success = await saveContent({
-      title: doramaTitle.toUpperCase(),
-      type: 'series',
-      genre: 'LÉO TV DORAMAS',
-      description: 'Sinal Master - Short Series Dorama Desbloqueado',
-      isRestricted: false,
-      imageUrl: "",
-      episodes: episodes
-    });
-    if (success) {
-      toast({ title: "DORAMA INJETADO!", description: `${doramaEps} episódios prontos.` });
-      setDoramaDitle(""); setDoramaId(""); setDoramaEps(1);
-    } else {
-      toast({ variant: "destructive", title: "FALHA NA INJEÇÃO" });
-    }
-    setIsProcessing(false);
-  }
-
   const handleImportList = async () => {
     if (!listText.trim()) return;
     setIsProcessing(true);
     let imported = 0;
     try {
       const lines = listText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-      const seriesMap = new Map<string, any>();
       let currentItem: any = null;
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -192,7 +163,7 @@ export default function SettingsPage() {
                 <div className="space-y-6 animate-in fade-in zoom-in-95">
                    <div className="space-y-2">
                      <Label className="uppercase text-[10px] font-black text-primary">Digite a Senha Atual</Label>
-                     <Input type="password" value={confirmCurrent} onChange={e => setConfirmCurrent(e.target.value)} className="h-16 text-center text-3xl font-black tracking-[0.5em] bg-black/40" maxLength={4} />
+                     <Input type="password" value={confirmCurrent} onChange={e => setConfirmCurrent(e.target.value)} className="h-16 text-center text-4xl font-black tracking-[0.5em] bg-black/40" maxLength={4} />
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Nova Senha</Label><Input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
@@ -209,17 +180,30 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-8">
-          <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle></CardHeader>
-            <CardContent className="p-8 space-y-6">
-              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
-              <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
+          <Card className="bg-card/50 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6 flex flex-row items-center justify-between">
+              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
+              <Button onClick={handleSendAnnouncement} disabled={saving || !announcement} className="bg-blue-600 hover:bg-blue-700 h-10 px-4 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-blue-500/20 animate-pulse">
+                <Send className="mr-2 h-4 w-4" /> ENVIAR AVISO GERAL
+              </Button>
+            </CardHeader>
+            <CardContent className="p-8 space-y-4">
+              <p className="text-[9px] font-bold uppercase text-primary/60 italic">A mensagem escrita abaixo aparecerá na tela do player para todos os clientes.</p>
+              <Textarea 
+                value={announcement} 
+                onChange={e => setAnnouncement(e.target.value)} 
+                placeholder="Ex: Manutenção no sinal de esportes hoje às 22h..."
+                className="h-32 bg-black/40 border-white/5 font-bold text-xs" 
+              />
             </CardContent>
           </Card>
 
-          <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle></CardHeader>
-            <CardContent className="p-8 space-y-6"><Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} className="h-32 bg-black/40 border-white/5 font-bold text-xs" /></CardContent>
+          <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle></CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U." className="h-[200px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+              <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
+            </CardContent>
           </Card>
         </div>
       </div>

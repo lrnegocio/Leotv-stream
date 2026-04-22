@@ -2,7 +2,8 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause, BellRing, X } from "lucide-react"
+import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -13,9 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v333 - COMPATIBILIDADE BRAVE AGRESSIVO
- * Removido o Sandbox do iframe e otimizado carregamento para evitar bloqueio do Shields.
- * Implementado bloqueio de abertura de novas abas dentro do iframe.
+ * PLAYER MASTER SOBERANO v338 - MURAL DE AVISOS PERSISTENTE
+ * Implementado alerta que sobrepõe o player e exige fechamento manual.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -25,6 +25,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
+  const [announcement, setAnnouncement] = React.useState<string | null>(null)
+  const [showAnnouncement, setShowAnnouncement] = React.useState(false)
   
   const playPromiseRef = React.useRef<Promise<void> | null>(null);
 
@@ -64,10 +66,18 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (!isMounted || !safeUrl) return;
     setLoading(true);
 
+    // Carrega Aviso do Mural
+    try {
+      const settings = await getGlobalSettings();
+      if (settings.announcement && settings.announcement.trim()) {
+        setAnnouncement(settings.announcement);
+        setShowAnnouncement(true);
+      }
+    } catch (e) {}
+
     if (isIframe || isYoutube || isAudioEmbed) {
       setPlayerKey(Date.now());
       setIsPlaying(true);
-      // Timeout de carregamento para não travar no Brave
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -149,8 +159,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={safeUrl}
           className="w-full h-full border-0"
-          // Atributos permitidos mesmo em bloqueios agressivos
-          // NÃO usar sandbox aqui para não travar o carregamento do Brave
           allow="autoplay; encrypted-media; fullscreen"
           onLoad={() => setLoading(false)}
         />
@@ -171,8 +179,29 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v333...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v338...</p>
           </div>
+        </div>
+      )}
+
+      {/* MURAL DE AVISOS MASTER SOBERANO */}
+      {showAnnouncement && (
+        <div className="absolute inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
+           <div className="max-w-md w-full bg-card rounded-[2rem] border-2 border-primary shadow-2xl overflow-hidden animate-in zoom-in-95">
+              <div className="bg-primary p-6 flex items-center gap-4">
+                 <div className="bg-white/20 p-3 rounded-2xl"><BellRing className="h-6 w-6 text-white" /></div>
+                 <h3 className="font-black uppercase italic text-white tracking-widest">Aviso do Mestre Léo</h3>
+              </div>
+              <div className="p-8">
+                 <p className="text-sm font-bold leading-relaxed text-foreground whitespace-pre-wrap">{announcement}</p>
+                 <button 
+                  onClick={() => setShowAnnouncement(false)}
+                  className="w-full mt-8 h-14 bg-primary text-white font-black uppercase rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+                 >
+                   CIENTE / FECHAR AVISO
+                 </button>
+              </div>
+           </div>
         </div>
       )}
 
