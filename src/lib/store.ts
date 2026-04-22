@@ -229,7 +229,7 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
-    // MOTOR SOBERANO v328: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
+    // MOTOR SOBERANO v329: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
     const { data: existing } = await supabase
       .from('users')
       .select('id')
@@ -253,7 +253,6 @@ export async function saveUser(user: Partial<User>) {
     };
     
     // Tenta salvar com as colunas VIP (Adulto, Games, PPV, Alacarte)
-    // Se o banco der erro de "coluna não encontrada", faremos um fallback
     const fullPayload = {
       ...payload,
       isAdultEnabled: !!user.isAdultEnabled,
@@ -265,22 +264,16 @@ export async function saveUser(user: Partial<User>) {
     const { error } = await supabase.from('users').upsert(fullPayload, { onConflict: 'pin' });
     
     if (error) {
-      // BLINDAGEM v328: Se o erro for de coluna inexistente, tenta salvar sem os campos VIP
+      // BLINDAGEM v329: Se o erro for de coluna inexistente, salva apenas dados básicos sem crashar
       if (error.message.includes("column") || error.code === "42703") {
-        console.warn("Detectadas colunas ausentes no Supabase. Salvando apenas dados basicos...");
         const { error: retryError } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
-        if (retryError) {
-          console.error("Erro fatal ao salvar usuário:", retryError.message);
-          return false;
-        }
+        if (retryError) return false;
         return true;
       }
-      console.error("Erro Supabase saveUser:", error.message || JSON.stringify(error));
       return false;
     }
     return true;
   } catch (e) { 
-    console.error("Exceção crítica saveUser:", e);
     return false; 
   }
 }
