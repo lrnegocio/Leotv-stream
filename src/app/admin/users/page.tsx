@@ -104,6 +104,13 @@ export default function UserManagementPage() {
     setIsSaving(false);
   }
 
+  const handleToggleSpecial = async (user: User, field: string) => {
+    const updated = { ...user, [field]: !(user as any)[field] };
+    if (await saveUser(updated)) {
+      loadUsers();
+    }
+  }
+
   const toggleBlock = async (user: User) => {
     const updated = { ...user, isBlocked: !user.isBlocked };
     if (await saveUser(updated)) { loadUsers(); }
@@ -191,6 +198,7 @@ export default function UserManagementPage() {
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
                     <TableCell className="px-8">
+                      <p className="text-[8px] font-black text-primary/40 uppercase mb-1">{u.reseller_name || 'ADMIN'}</p>
                       <p className="font-mono font-black text-xl text-primary tracking-[0.2em]">{u.pin}</p>
                       <Badge variant="outline" className="uppercase text-[8px] font-black border-primary/20 text-primary/60 mt-1">{u.subscriptionTier}</Badge>
                     </TableCell>
@@ -201,11 +209,11 @@ export default function UserManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="grid grid-cols-2 gap-1">
-                        <Badge className={`uppercase text-[7px] font-black ${u.isAdultEnabled ? 'bg-red-500/20 text-red-500' : 'bg-muted opacity-20'}`}>ADULTO</Badge>
-                        <Badge className={`uppercase text-[7px] font-black ${u.isGamesEnabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-muted opacity-20'}`}>GAMES</Badge>
-                        <Badge className={`uppercase text-[7px] font-black ${u.isPpvEnabled ? 'bg-orange-500/20 text-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
-                        <Badge className={`uppercase text-[7px] font-black ${u.isAlacarteEnabled ? 'bg-blue-500/20 text-blue-500' : 'bg-muted opacity-20'}`}>ALACARTE</Badge>
+                      <div className="grid grid-cols-2 gap-1 w-32">
+                        <Badge onClick={() => handleToggleSpecial(u, 'isAdultEnabled')} className={`cursor-pointer uppercase text-[7px] font-black ${u.isAdultEnabled ? 'bg-red-500/20 text-red-500' : 'bg-muted opacity-20'}`}>ADULTO</Badge>
+                        <Badge onClick={() => handleToggleSpecial(u, 'isGamesEnabled')} className={`cursor-pointer uppercase text-[7px] font-black ${u.isGamesEnabled ? 'bg-emerald-500/20 text-emerald-500' : 'bg-muted opacity-20'}`}>GAMES</Badge>
+                        <Badge onClick={() => handleToggleSpecial(u, 'isPpvEnabled')} className={`cursor-pointer uppercase text-[7px] font-black ${u.isPpvEnabled ? 'bg-orange-500/20 text-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
+                        <Badge onClick={() => handleToggleSpecial(u, 'isAlacarteEnabled')} className={`cursor-pointer uppercase text-[7px] font-black ${u.isAlacarteEnabled ? 'bg-blue-500/20 text-blue-500' : 'bg-muted opacity-20'}`}>ALACARTE</Badge>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

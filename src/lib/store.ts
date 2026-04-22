@@ -77,6 +77,7 @@ export interface User {
   individualMessage?: string;
   gamePoints?: number;
   created_at?: string;
+  reseller_name?: string; // Virtual field for display
 }
 
 export const formatMasterLink = (url: string) => {
@@ -245,8 +246,17 @@ export async function saveUser(user: Partial<User>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    return data || [];
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, resellers(name)')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return (data || []).map(u => ({
+      ...u,
+      reseller_name: u.resellers?.name || 'ADMIN'
+    }));
   } catch (e) { return []; }
 }
 

@@ -157,7 +157,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v318...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v319...</p>
         </div>
       )}
 
@@ -185,15 +185,20 @@ export default function HomeContent() {
 
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {CATEGORIES.map(c => (
-              <button key={c.id} onClick={() => handleCategoryClick(c)} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl">
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
-                  <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
-                  <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
-                </div>
-              </button>
-            ))}
+            {CATEGORIES.map(c => {
+              const isVisible = !c.specialAccess || (user && (user as any)[c.specialAccess]);
+              if (!isVisible) return null;
+
+              return (
+                <button key={c.id} onClick={() => handleCategoryClick(c)} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                    <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
+                    <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
+                    <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">

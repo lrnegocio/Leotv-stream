@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Key, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap, Monitor, Lock, Globe, Clock, AlertTriangle, UserCheck, Bell, MessageSquare, Star } from "lucide-react"
+import { Key, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap, Monitor, Lock, Globe, Clock, AlertTriangle, UserCheck, Bell, MessageSquare, Star, Gamepad2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,13 +22,13 @@ export default function ResellerDashboard() {
   const [loading, setLoading] = React.useState(true)
   const [search, setSearch] = React.useState("")
   const [isGenerating, setIsGenerating] = React.useState(false)
-  const [filterExpiring, setFilterExpiring] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<User | null>(null)
   const [msgInput, setMsgInput] = React.useState("")
   
   const [config, setConfig] = React.useState({
     screens: "1",
     isAdultEnabled: false,
+    isGamesEnabled: false,
     isPpvEnabled: false,
     isAlacarteEnabled: false
   })
@@ -86,7 +86,7 @@ export default function ResellerDashboard() {
       activeDevices: [],
       isBlocked: false,
       isAdultEnabled: config.isAdultEnabled,
-      isGamesEnabled: false,
+      isGamesEnabled: config.isGamesEnabled,
       isPpvEnabled: config.isPpvEnabled,
       isAlacarteEnabled: config.isAlacarteEnabled,
       resellerId: reseller.id
@@ -148,17 +148,21 @@ export default function ResellerDashboard() {
                     <SelectContent><SelectItem value="1">1 Tela (1 CRÉD)</SelectItem><SelectItem value="2">2 Telas (2 CRÉD)</SelectItem><SelectItem value="3">3 Telas (3 CRÉD)</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                   <div className="flex items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[8px] font-black uppercase flex-1">Adulto</span>
+                <div className="grid grid-cols-4 gap-2">
+                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                      <span className="text-[7px] font-black uppercase">Adulto</span>
                       <Switch checked={config.isAdultEnabled} onCheckedChange={v => setConfig({...config, isAdultEnabled: v})} />
                    </div>
-                   <div className="flex items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[8px] font-black uppercase flex-1">PPV</span>
+                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                      <span className="text-[7px] font-black uppercase">Games</span>
+                      <Switch checked={config.isGamesEnabled} onCheckedChange={v => setConfig({...config, isGamesEnabled: v})} />
+                   </div>
+                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                      <span className="text-[7px] font-black uppercase">PPV</span>
                       <Switch checked={config.isPpvEnabled} onCheckedChange={v => setConfig({...config, isPpvEnabled: v})} />
                    </div>
-                   <div className="flex items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[8px] font-black uppercase flex-1">ALACARTE</span>
+                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
+                      <span className="text-[7px] font-black uppercase">ALACARTE</span>
                       <Switch checked={config.isAlacarteEnabled} onCheckedChange={v => setConfig({...config, isAlacarteEnabled: v})} />
                    </div>
                 </div>
@@ -187,8 +191,9 @@ export default function ResellerDashboard() {
                       <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-2xl text-primary border border-primary/20">{u.pin.substring(0,2)}</div>
                       <div>
                         <p className="font-mono font-black text-3xl text-primary tracking-[0.25em]">{u.pin}</p>
-                        <div className="flex gap-1 mt-2">
+                        <div className="flex flex-wrap gap-1 mt-2">
                            <Badge onClick={() => handleUpdateClientStatus(u, 'isAdultEnabled', !u.isAdultEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-20'}`}>Adulto</Badge>
+                           <Badge onClick={() => handleUpdateClientStatus(u, 'isGamesEnabled', !u.isGamesEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-20'}`}>Games</Badge>
                            <Badge onClick={() => handleUpdateClientStatus(u, 'isPpvEnabled', !u.isPpvEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
                            <Badge onClick={() => handleUpdateClientStatus(u, 'isAlacarteEnabled', !u.isAlacarteEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-20'}`}>Alacarte</Badge>
                         </div>
