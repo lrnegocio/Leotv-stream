@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
-import { getContentById, saveContent, Season, Episode, ContentItem } from "@/lib/store"
+import { getContentById, saveContent, Season, Episode, ContentItem, formatMasterLink } from "@/lib/store"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -24,6 +24,7 @@ export default function EditContentPage() {
   
   const [loading, setLoading] = React.useState(false)
   const [fetching, setFetching] = React.useState(true)
+  const [isFixing, setIsFixing] = React.useState(false)
   const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
   const [formData, setFormData] = React.useState<ContentItem | null>(null)
@@ -51,6 +52,54 @@ export default function EditContentPage() {
     }
     load()
   }, [id, router])
+
+  const handleFixLink = async () => {
+    if (!formData || !formData.streamUrl) {
+      toast({ variant: "destructive", title: "Cole um link primeiro!" })
+      return
+    }
+    
+    // Links que já sabemos tratar no store.ts nem precisam de fetch pesado
+    const fastFormat = formatMasterLink(formData.streamUrl);
+    if (fastFormat !== formData.streamUrl && !fastFormat.includes('/api/proxy')) {
+       setFormData(prev => prev ? { ...prev, streamUrl: fastFormat } : null);
+       toast({ title: "SINAL DESTILADO!", description: "O link foi convertido para o formato de player." });
+       return;
+    }
+
+    setIsFixing(true);
+    try {
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(formData.streamUrl)}`;
+      const res = await fetch(proxyUrl);
+      const html = await res.text();
+      
+      const patterns = [
+        /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
+        /https?:\/\/[^"']+(?:player|embed|video|iframe)[^"']+/i,
+        /src=["'](https?:\/\/[^"']+)["']/i
+      ];
+
+      let found = "";
+      for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match) {
+          found = match[1] || match[0];
+          if (!found.includes('google') && !found.includes('analytics')) break;
+        }
+      }
+
+      if (found) {
+        setFormData(prev => prev ? { ...prev, streamUrl: found } : null);
+        toast({ title: "SINAL SINTONIZADO!", description: "Localizamos o motor do vídeo nesta página." });
+      } else {
+        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um player direto. Tentaremos o modo manual." });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro de Conexão", description: "O site original bloqueou a leitura." });
+    } finally {
+      setIsFixing(false);
+    }
+  }
 
   const addEpisode = () => {
     const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
@@ -168,10 +217,15 @@ export default function EditContentPage() {
           {!isSeriesMode && (
             <div className="grid gap-6 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
               <div className="space-y-2">
-                <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Link Master Soberano</h3>
+                <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
+                   <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
+                   <Button type="button" variant="outline" size="sm" onClick={handleFixLink} disabled={isFixing} className="h-7 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
+                    {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Canal
+                  </Button>
+                </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" placeholder="Link único para Web e IPTV" />
-                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formData.streamUrl || "", title: formData.title || 'Teste'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
+                  <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl || ""), title: formData.title || 'Teste'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
               </div>
             </div>
@@ -213,7 +267,7 @@ export default function EditContentPage() {
                             newEps[idx].streamUrl = e.target.value
                             setEpisodes(newEps)
                           }} className="h-10 bg-black/40 font-mono text-[9px] flex-1" />
-                         <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4 text-white" /></Button>
+                         <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4 text-white" /></Button>
                        </div>
                     </div>
                   </div>
@@ -259,7 +313,7 @@ export default function EditContentPage() {
                                  newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                  setSeasons(newSeasons)
                               }} className="flex-1 h-8 bg-black/40 text-[10px]" />
-                              <Button type="button" size="icon" onClick={() => setTestVideo({url: ep.streamUrl, title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
+                              <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                               <Button type="button" variant="ghost" size="icon" onClick={() => {
                                 const newSeasons = [...seasons]
                                 newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
@@ -305,7 +359,7 @@ export default function EditContentPage() {
             </div>
           </div>
           
-          <Button type="submit" className="w-full h-16 bg-primary font-black text-lg uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>
+          <Button type="submit" className="w-full h-16 bg-primary font-black text-sm uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} SALVAR RECALIBRAGEM
           </Button>
         </div>
