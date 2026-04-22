@@ -70,6 +70,8 @@ export interface User {
   isBlocked: boolean;
   isAdultEnabled: boolean; 
   isGamesEnabled: boolean;
+  isPpvEnabled: boolean;
+  isAlacarteEnabled: boolean;
   resellerId?: string | null; 
   activatedAt?: string | null;
   individualMessage?: string;
@@ -77,15 +79,11 @@ export interface User {
   created_at?: string;
 }
 
-/**
- * MOTOR DE LINKS MASTER v316 - CONVERSOR INTELIGENTE
- */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // Se for um Iframe completo, extrai apenas o SRC
     if (finalUrl.includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -93,7 +91,6 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
     
-    // YouTube: Sempre direto via Embed (Não usa Proxy)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -104,7 +101,6 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // Dailymotion: Auto-Embed
     if (lowUrl.includes('dailymotion.com')) {
       if (lowUrl.includes('/video/')) {
         const videoId = finalUrl.split('/video/')[1]?.split('?')[0];
@@ -113,7 +109,6 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // XVideos: Auto-Embed
     if (lowUrl.includes('xvideos.com/video')) {
       const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
       if (videoIdMatch && videoIdMatch[1]) {
@@ -122,12 +117,6 @@ export const formatMasterLink = (url: string) => {
       }
     }
 
-    // Spotify/Deezer: Direto
-    if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
-      return finalUrl;
-    }
-
-    // Lista de domínios que precisam passar pelo Túnel Master da VPS
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
@@ -147,28 +136,13 @@ export const formatMasterLink = (url: string) => {
   }
 };
 
-/**
- * CONVERSOR DE JOGOS RETRO v316
- */
 export const formatGameLink = (input: string) => {
   if (!input) return "";
   let url = input.trim();
-  
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) url = srcMatch[1];
   }
-
-  let lowUrl = url.toLowerCase();
-
-  // RetroGames.cc: Tenta converter página em Embed
-  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
-    // Tenta identificar se o link é da página de detalhe e sugere o embed
-    // Mestre Léo, para RetroGames o ideal é que o túnel extraia o link real, 
-    // mas aqui fazemos a limpeza básica.
-    return url;
-  }
-
   return url;
 };
 
@@ -227,7 +201,7 @@ export async function getContentById(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin?.trim().toUpperCase();
-    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, maxScreens: 999 } };
+    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, maxScreens: 999 } };
     const { data: users } = await supabase.from('users').select('*').eq('pin', cleanPin);
     const user = users?.[0];
     if (!user) return { error: "PIN INVÁLIDO" };
@@ -257,6 +231,8 @@ export async function saveUser(user: Partial<User>) {
       isBlocked: !!user.isBlocked,
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
+      isPpvEnabled: !!user.isPpvEnabled,
+      isAlacarteEnabled: !!user.isAlacarteEnabled,
       resellerId: user.resellerId,
       activatedAt: user.activatedAt,
       individualMessage: user.individualMessage,

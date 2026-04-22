@@ -25,9 +25,10 @@
         "role": { "type": "string" },
         "gamePoints": { "type": "number" },
         "isGamesEnabled": { "type": "boolean" },
+        "isAdultEnabled": { "type": "boolean" },
+        "isPpvEnabled": { "type": "boolean" },
+        "isAlacarteEnabled": { "type": "boolean" },
         "gamesPassword": { "type": "string" },
-        "isSearchingMatch": { "type": "boolean" },
-        "searchingMatchAt": { "type": "string", "format": "date-time" },
         "individualMessage": { "type": "string" }
       }
     }

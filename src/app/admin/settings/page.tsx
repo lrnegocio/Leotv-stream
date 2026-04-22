@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, Image as ImageIcon, Link as LinkIcon, ShieldCheck, Key } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,12 @@ export default function SettingsPage() {
   const [saving, setSaving] = React.useState(false)
   const [isProcessing, setIsProcessing] = React.useState(false)
   const [listText, setListText] = React.useState("")
+
+  // ESTADO SEGURANÇA MESTRE
+  const [isChangingPin, setIsChangingPin] = React.useState(false)
+  const [confirmCurrent, setConfirmCurrent] = React.useState("")
+  const [newPin, setNewPin] = React.useState("")
+  const [newPinConfirm, setNewPinConfirm] = React.useState("")
 
   // ESTADO DORAMA MASTER
   const [doramaTitle, setDoramaDitle] = React.useState("")
@@ -40,10 +46,6 @@ export default function SettingsPage() {
   }, [])
 
   const handleSaveSettings = async () => {
-    if (!parentalPin || parentalPin.length < 4) {
-      toast({ variant: "destructive", title: "Senha Curta" })
-      return
-    }
     setSaving(true)
     try {
       if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
@@ -53,16 +55,36 @@ export default function SettingsPage() {
     } finally { setSaving(false) }
   }
 
+  const handleUpdatePin = async () => {
+    if (confirmCurrent !== parentalPin) {
+      toast({ variant: "destructive", title: "SENHA ATUAL INCORRETA" })
+      return
+    }
+    if (newPin.length < 4 || newPin !== newPinConfirm) {
+      toast({ variant: "destructive", title: "SENHAS NÃO CONFEREM OU CURTAS" })
+      return
+    }
+    
+    setSaving(true)
+    if (await updateGlobalSettings({ parentalPin: newPin, announcement, bannerUrl, bannerLink })) {
+      setParentalPin(newPin)
+      setConfirmCurrent("")
+      setNewPin("")
+      setNewPinConfirm("")
+      setIsChangingPin(false)
+      toast({ title: "SENHA PARENTAL ALTERADA!" })
+    }
+    setSaving(false)
+  }
+
   const handleInjectDorama = async () => {
     if (!doramaTitle || !doramaId || doramaEps < 1) {
       toast({ variant: "destructive", title: "CAMPOS OBRIGATÓRIOS" });
       return;
     }
     setIsProcessing(true);
-    
     const episodes: Episode[] = [];
     const cleanId = doramaId.trim().toUpperCase();
-
     for (let i = 1; i <= doramaEps; i++) {
       episodes.push({
         id: `ep_${cleanId}_${i}_${Date.now()}`,
@@ -71,7 +93,6 @@ export default function SettingsPage() {
         streamUrl: `https://acplay.live/shortseries/${cleanId}/${cleanId}${i}.mp4`
       });
     }
-
     const success = await saveContent({
       title: doramaTitle.toUpperCase(),
       type: 'series',
@@ -81,9 +102,8 @@ export default function SettingsPage() {
       imageUrl: "",
       episodes: episodes
     });
-
     if (success) {
-      toast({ title: "DORAMA INJETADO E DESBLOQUEADO!", description: `${doramaEps} episódios prontos para o play.` });
+      toast({ title: "DORAMA INJETADO!", description: `${doramaEps} episódios prontos.` });
       setDoramaDitle(""); setDoramaId(""); setDoramaEps(1);
     } else {
       toast({ variant: "destructive", title: "FALHA NA INJEÇÃO" });
@@ -95,115 +115,42 @@ export default function SettingsPage() {
     if (!listText.trim()) return;
     setIsProcessing(true);
     let imported = 0;
-    
     try {
       const lines = listText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
       const seriesMap = new Map<string, any>();
       let currentItem: any = null;
-
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-
         if (line.startsWith('#EXTINF:')) {
           const nameMatch = line.match(/,(.*)$/);
           const logoMatch = line.match(/tvg-logo="(.*?)"/);
           const groupMatch = line.match(/group-title="(.*?)"/);
-          
           let rawName = nameMatch ? nameMatch[1].trim() : "NOVO SINAL";
           const logo = logoMatch ? logoMatch[1] : "";
           const groupStr = groupMatch ? String(groupMatch[1]).toUpperCase() : "LÉO TV AO VIVO";
-          
           const inlineUrlMatch = line.match(/(https?:\/\/[^\s,]+)$/i) || rawName.match(/(https?:\/\/[^\s,]+)$/i);
           let extractedUrl = inlineUrlMatch ? inlineUrlMatch[0] : "";
-          
-          if (extractedUrl && rawName.includes(extractedUrl)) {
-            rawName = rawName.replace(extractedUrl, '').trim();
-          }
-
+          if (extractedUrl && rawName.includes(extractedUrl)) rawName = rawName.replace(extractedUrl, '').trim();
           let targetGenre = "LÉO TV AO VIVO";
           let targetType: ContentType = 'channel';
-
-          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA') || groupStr.includes('PAY-PER-VIEW') || groupStr.includes('TIM')) {
-            targetGenre = "LÉO TV SÉRIES";
-            targetType = 'multi-season';
-          } else if (groupStr.includes('FILME') || groupStr.includes('CINE') || groupStr.includes('VOD') || groupStr.includes('4K') || groupStr.includes('UHD')) {
-            targetGenre = "LÉO TV FILMES";
-            targetType = 'movie';
-          } else if (groupStr.includes('ESPORTE') || groupStr.includes('SPORT') || groupStr.includes('FUTEBOL') || groupStr.includes('PREMIERE') || groupStr.includes('DAZN')) {
-            targetGenre = "LÉO TV ESPORTES";
-          } else if (groupStr.includes('PIADA') || groupStr.includes('HUMOR')) {
-            targetGenre = "LÉO TV PIADAS";
-          } else if (groupStr.includes('REEL') || groupStr.includes('TIKTOK')) {
-            targetGenre = "LÉO TV REELS";
-          } else if (groupStr.includes('CLIPE')) {
-            targetGenre = "LÉO TV VÍDEO CLIPES";
-          } else if (groupStr.includes('MUSICA') || groupStr.includes('BIS')) {
-            targetGenre = "LÉO TV MUSICAS";
-          } else if (groupStr.includes('ADULT') || groupStr.includes('XXX') || groupStr.includes('18+')) {
-            targetGenre = "LÉO TV ADULTOS";
-          } else if (groupStr.includes('KIDS') || groupStr.includes('DESENHO') || groupStr.includes('INFANTIL')) {
-            targetGenre = "LÉO TV DESENHOS";
-          } else if (groupStr.includes('NOVELA')) {
-            targetGenre = "LÉO TV NOVELAS";
-          } else if (groupStr.includes('DORAMA')) {
-            targetGenre = "LÉO TV DORAMAS";
-          } else if (groupStr.includes('RADIO')) {
-            targetGenre = "LÉO TV RÁDIOS";
-          }
-
-          currentItem = {
-            title: rawName,
-            imageUrl: logo,
-            genre: targetGenre,
-            type: targetType,
-            description: "Sinal Master Importado",
-            isRestricted: targetGenre === "LÉO TV ADULTOS"
-          };
-
-          if (extractedUrl) {
-             await saveContent({ ...currentItem, streamUrl: extractedUrl });
-             imported++;
-             currentItem = null;
-          }
-        } else if (line.toLowerCase().startsWith('http')) {
-          if (currentItem) {
-            let finalUrl = line;
-
-            if (currentItem.type === 'multi-season') {
-              const baseTitle = currentItem.title.split(/S\d+|E\d+|\d+ª|T\d+/i)[0].trim();
-              const sMatch = currentItem.title.match(/S(\d+)/i) || currentItem.title.match(/(\d+)ª/i) || currentItem.title.match(/T(\d+)/i) || [null, "1"];
-              const eMatch = currentItem.title.match(/E(\d+)/i) || currentItem.title.match(/EP(\d+)/i) || [null, "1"];
-              const sNum = parseInt(sMatch[1] as string) || 1;
-              const eNum = parseInt(eMatch[1] as string) || 1;
-
-              if (!seriesMap.has(baseTitle)) {
-                seriesMap.set(baseTitle, { ...currentItem, title: baseTitle, seasons: [] });
-              }
-              const series = seriesMap.get(baseTitle);
-              let season = series.seasons.find((s: any) => s.number === sNum);
-              if (!season) {
-                season = { id: `s_${sNum}_${Date.now()}`, number: sNum, episodes: [] };
-                series.seasons.push(season);
-              }
-              season.episodes.push({ id: `ep_${Date.now()}_${Math.random()}`, title: currentItem.title, number: eNum, streamUrl: finalUrl });
-            } else {
-              await saveContent({ ...currentItem, streamUrl: finalUrl });
-              imported++;
-            }
-            currentItem = null;
-          }
+          if (groupStr.includes('SERIE') || groupStr.includes('TEMPORADA')) { targetGenre = "LÉO TV SÉRIES"; targetType = 'multi-season'; }
+          else if (groupStr.includes('FILME') || groupStr.includes('VOD')) { targetGenre = "LÉO TV FILMES"; targetType = 'movie'; }
+          else if (groupStr.includes('ESPORTE')) targetGenre = "LÉO TV ESPORTES";
+          else if (groupStr.includes('ADULT')) targetGenre = "LÉO TV ADULTOS";
+          else if (groupStr.includes('KIDS')) targetGenre = "LÉO TV DESENHOS";
+          else if (groupStr.includes('PPV')) targetGenre = "LÉO TV PAY PER VIEW";
+          else if (groupStr.includes('ALACARTE')) targetGenre = "LÉO TV ALACARTES";
+          currentItem = { title: rawName, imageUrl: logo, genre: targetGenre, type: targetType, description: "Sinal Master", isRestricted: targetGenre === "LÉO TV ADULTOS" };
+          if (extractedUrl) { await saveContent({ ...currentItem, streamUrl: extractedUrl }); imported++; currentItem = null; }
+        } else if (line.toLowerCase().startsWith('http') && currentItem) {
+          await saveContent({ ...currentItem, streamUrl: line });
+          imported++;
+          currentItem = null;
         }
       }
-
-      for (const series of seriesMap.values()) {
-        await saveContent(series);
-        imported++;
-      }
-
-      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados na rede!` });
+      toast({ title: `IMPORTAÇÃO CONCLUÍDA`, description: `${imported} sinais injetados!` });
       setListText("");
-    } catch (e) { 
-      toast({ variant: "destructive", title: "FALHA NA IMPORTAÇÃO" });
+    } catch (e) { toast({ variant: "destructive", title: "FALHA NA IMPORTAÇÃO" });
     } finally { setIsProcessing(false); }
   }
 
@@ -224,74 +171,46 @@ export default function SettingsPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <Card className="bg-primary/5 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
-             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6">
-                <CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2">
-                   <Megaphone className="h-5 w-5" /> Publicidade Master (Faturamento)
-                </CardTitle>
-             </CardHeader>
+             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2"><Megaphone className="h-5 w-5" /> Publicidade Master</CardTitle></CardHeader>
              <CardContent className="p-8 space-y-4">
-                <div className="space-y-2">
-                   <Label className="uppercase text-[10px] font-black opacity-60">URL da Imagem do Banner (1200x300)</Label>
-                   <div className="flex gap-2">
-                      <div className="bg-black/40 p-3 rounded-xl border border-white/5"><ImageIcon className="h-5 w-5 opacity-40" /></div>
-                      <Input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} placeholder="https://site.com/anuncio.jpg" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
-                   </div>
-                </div>
-                <div className="space-y-2">
-                   <Label className="uppercase text-[10px] font-black opacity-60">Link de Destino (WhatsApp/Site)</Label>
-                   <div className="flex gap-2">
-                      <div className="bg-black/40 p-3 rounded-xl border border-white/5"><LinkIcon className="h-5 w-5 opacity-40" /></div>
-                      <Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} placeholder="https://wa.me/seunumeroaqui" className="h-12 bg-black/40 border-white/5 font-mono text-[10px]" />
-                   </div>
-                </div>
-                <p className="text-[8px] font-bold text-primary/60 text-center uppercase">Dica: Venda este espaço para seus revendedores faturarem mais.</p>
+                <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">URL do Banner</Label><Input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
+                <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Link de Destino</Label><Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
              </CardContent>
           </Card>
 
-          <Card className="bg-emerald-500/5 border border-emerald-500/20 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-emerald-500/10 border-b border-emerald-500/10 p-6">
-              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2">
-                <Sparkles className="h-5 w-5" /> Injetor de Doramas Master (Bypass)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-4">
-              <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Título da Série</Label>
-                <Input value={doramaTitle} onChange={e => setDoramaDitle(e.target.value)} placeholder="Ex: O PREÇO DA VINGANÇA" className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="uppercase text-[10px] font-black opacity-60">ID no Link (Ex: OPRECODA)</Label>
-                  <Input value={doramaId} onChange={e => setDoramaId(e.target.value)} placeholder="Ex: OPRECODA" className="h-12 bg-black/40 border-white/5 font-mono" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="uppercase text-[10px] font-black opacity-60">Total de Episódios</Label>
-                  <Input type="number" value={doramaEps} onChange={e => setDoramaEps(parseInt(e.target.value) || 1)} className="h-12 bg-black/40 border-white/5 font-black text-center" />
-                </div>
-              </div>
-              <Button onClick={handleInjectDorama} disabled={isProcessing || !doramaId} className="w-full h-14 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
-                {isProcessing ? <Loader2 className="animate-spin" /> : <><Zap className="mr-2 h-5 w-5" /> INJETAR DORAMA E LIBERAR AGORA</>}
-              </Button>
-            </CardContent>
-          </Card>
-
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
-              <CardTitle className="uppercase text-sm font-black italic">Senha Parental Global</CardTitle>
-            </CardHeader>
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Senha Parental Global</CardTitle></CardHeader>
             <CardContent className="p-8 space-y-6">
-              <div className="flex gap-4">
-                <input title="PIN Parental" value={parentalPin} onChange={(e) => setParentalPin(e.target.value)} className="bg-black/40 text-center font-black tracking-[0.5em] text-3xl h-16 w-full rounded-2xl border border-white/10 outline-none focus:border-primary" maxLength={4} />
-              </div>
+              {!isChangingPin ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-black/20 p-6 rounded-2xl border border-white/5">
+                    <div className="flex items-center gap-4 text-primary"><ShieldCheck className="h-8 w-8" /><span className="text-xl font-black italic uppercase">Senha Blindada</span></div>
+                    <Button onClick={() => setIsChangingPin(true)} className="bg-primary h-12 rounded-xl font-black uppercase text-[10px]">Alterar Senha</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6 animate-in fade-in zoom-in-95">
+                   <div className="space-y-2">
+                     <Label className="uppercase text-[10px] font-black text-primary">Digite a Senha Atual</Label>
+                     <Input type="password" value={confirmCurrent} onChange={e => setConfirmCurrent(e.target.value)} className="h-16 text-center text-3xl font-black tracking-[0.5em] bg-black/40" maxLength={4} />
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Nova Senha</Label><Input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
+                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Confirmar</Label><Input type="password" value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
+                   </div>
+                   <div className="flex gap-2">
+                      <Button onClick={() => setIsChangingPin(false)} variant="outline" className="flex-1 h-12 font-black uppercase text-[10px]">Cancelar</Button>
+                      <Button onClick={handleUpdatePin} className="flex-1 h-12 bg-emerald-500 font-black uppercase text-[10px]">Confirmar Troca</Button>
+                   </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-8">
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
-              <CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle>
-            </CardHeader>
+            <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-emerald-500">Terminal de Injeção de Sinais</CardTitle></CardHeader>
             <CardContent className="p-8 space-y-6">
               <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="Cole sua lista M3U." className="h-[300px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
               <Button onClick={handleImportList} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">{isProcessing ? <Loader2 className="animate-spin" /> : <><ListPlus className="mr-2 h-6 w-6" /> INJETAR LISTA NA REDE</>}</Button>
@@ -299,12 +218,8 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6">
-              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-              <Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="Ex: Novos sinais Master online!" className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
-            </CardContent>
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle></CardHeader>
+            <CardContent className="p-8 space-y-6"><Textarea value={announcement} onChange={e => setAnnouncement(e.target.value)} className="h-32 bg-black/40 border-white/5 font-bold text-xs" /></CardContent>
           </Card>
         </div>
       </div>
