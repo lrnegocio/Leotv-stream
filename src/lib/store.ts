@@ -252,15 +252,31 @@ export async function saveUser(user: Partial<User>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
+    // SOBERANA v322: Busca direta e mapeamento resiliente para PINs antigos aparecerem
     const { data, error } = await supabase
       .from('users')
       .select('*, resellers(name)')
-      .order('id', { ascending: false });
+      .order('created_at', { ascending: false });
     
     if (error) throw error;
     
     return (data || []).map(u => ({
-      ...u,
+      id: u.id,
+      pin: u.pin || "00000000000",
+      role: u.role || 'user',
+      subscriptionTier: u.subscriptionTier || 'monthly',
+      expiryDate: u.expiryDate,
+      maxScreens: u.maxScreens || 1,
+      activeDevices: u.activeDevices || [],
+      isBlocked: !!u.isBlocked,
+      isAdultEnabled: !!u.isAdultEnabled,
+      isGamesEnabled: !!u.isGamesEnabled,
+      isPpvEnabled: !!u.isPpvEnabled,
+      isAlacarteEnabled: !!u.isAlacarteEnabled,
+      resellerId: u.resellerId,
+      activatedAt: u.activatedAt,
+      individualMessage: u.individualMessage,
+      gamePoints: u.gamePoints || 0,
       reseller_name: u.resellers?.name || 'ADMIN'
     }));
   } catch (e) { 
