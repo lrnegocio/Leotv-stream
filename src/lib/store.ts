@@ -10,6 +10,13 @@ export interface Episode {
   streamUrl: string; 
 }
 
+export interface Episode { 
+  id: string; 
+  title: string; 
+  number: number; 
+  streamUrl: string; 
+}
+
 export interface Season { 
   id: string; 
   number: number; 
@@ -182,10 +189,7 @@ export async function saveContent(item: Partial<ContentItem>) {
     };
     
     const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
-    if (error) {
-      console.error("Erro Supabase saveContent:", error.message || error);
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e) { return false; }
 }
@@ -229,14 +233,12 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = user.pin?.trim().toUpperCase();
     if (!cleanPin) return false;
 
-    // MOTOR SOBERANO v329: Busca o ID atual pelo PIN no banco para evitar conflito de chave única
     const { data: existing } = await supabase
       .from('users')
       .select('id')
       .eq('pin', cleanPin)
       .maybeSingle();
 
-    // Payload básico (colunas que temos certeza que existem no banco)
     const payload: any = {
       id: existing?.id || user.id || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
       pin: cleanPin,
@@ -252,7 +254,6 @@ export async function saveUser(user: Partial<User>) {
       gamePoints: user.gamePoints || 0
     };
     
-    // Tenta salvar com as colunas VIP (Adulto, Games, PPV, Alacarte)
     const fullPayload = {
       ...payload,
       isAdultEnabled: !!user.isAdultEnabled,
@@ -264,7 +265,6 @@ export async function saveUser(user: Partial<User>) {
     const { error } = await supabase.from('users').upsert(fullPayload, { onConflict: 'pin' });
     
     if (error) {
-      // BLINDAGEM v329: Se o erro for de coluna inexistente, salva apenas dados básicos sem crashar
       if (error.message.includes("column") || error.code === "42703") {
         const { error: retryError } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
         if (retryError) return false;

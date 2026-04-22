@@ -1,14 +1,17 @@
+
 'use client';
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getRemoteUsers, getRemoteResellers, getTotalContentCount, User, Reseller } from "@/lib/store"
+import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
 
 export default function AdminDashboard() {
   const [totalContent, setTotalContent] = React.useState(0)
+  const [ppvCount, setPpvCount] = React.useState(0)
+  const [alacarteCount, setAlacarteCount] = React.useState(0)
   const [users, setUsers] = React.useState<User[]>([])
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -17,10 +20,14 @@ export default function AdminDashboard() {
     const load = async () => {
       try {
         const count = await getTotalContentCount()
+        const ppv = await getCategoryCount('LÉO TV PAY PER VIEW')
+        const alacarte = await getCategoryCount('LÉO TV ALACARTES')
         const u = await getRemoteUsers()
         const r = await getRemoteResellers()
         
         setTotalContent(count)
+        setPpvCount(ppv)
+        setAlacarteCount(alacarte)
         setUsers(u)
         setResellers(r)
       } catch (err) {
@@ -40,7 +47,8 @@ export default function AdminDashboard() {
   const stats = [
     { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-500" },
     { title: "Sinais na Rede", value: totalContent.toLocaleString(), icon: Zap, color: "text-amber-500" },
-    { title: "Canais & VOD", value: totalContent.toLocaleString(), icon: Tv, color: "text-primary" },
+    { title: "Sinais PPV", value: ppvCount.toLocaleString(), icon: Zap, color: "text-orange-500" },
+    { title: "Sinais ALACARTE", value: alacarteCount.toLocaleString(), icon: Star, color: "text-blue-600" },
     { title: "Revendas", value: resellers.length.toString(), icon: Briefcase, color: "text-emerald-500" },
   ]
 
@@ -60,7 +68,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.title} className="bg-card border-border shadow-sm overflow-hidden relative group rounded-2xl">
             <div className="absolute top-0 right-0 p-4 opacity-5 scale-150 transition-transform group-hover:scale-[1.7]">

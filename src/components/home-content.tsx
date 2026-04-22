@@ -137,11 +137,21 @@ export default function HomeContent() {
   };
 
   const handleCategoryClick = (cat: any) => {
-    if (cat.specialAccess && user) {
+    if (!user) return;
+    
+    // MESTRE LÉO: Admin tem acesso TOTAL automático
+    if (user.role === 'admin') {
+      if (cat.special === 'games') setGamesMenuOpen(true);
+      else setSelectedCat(cat.id);
+      return;
+    }
+
+    if (cat.specialAccess) {
       if (!(user as any)[cat.specialAccess]) return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor." });
       setSelectedCat(cat.id);
       return;
     }
+
     if (cat.special === 'games' || cat.restricted) {
       if (cat.special === 'games' && !user?.isGamesEnabled) return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
       if (cat.restricted && !user?.isAdultEnabled) return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
@@ -157,7 +167,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v319...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v330...</p>
         </div>
       )}
 
@@ -186,7 +196,8 @@ export default function HomeContent() {
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {CATEGORIES.map(c => {
-              const isVisible = !c.specialAccess || (user && (user as any)[c.specialAccess]);
+              // MESTRE LÉO: Admin vê TUDO sempre
+              const isVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
               if (!isVisible) return null;
 
               return (
