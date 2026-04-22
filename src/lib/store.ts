@@ -222,17 +222,23 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 export async function saveUser(user: Partial<User>) {
   try {
     let finalId = user.id;
+    
+    // BLINDAGEM v324: Se não temos ID, buscamos pelo PIN para garantir que estamos atualizando o registro certo
     if (!finalId && user.pin) {
-      const { data } = await supabase.from('users').select('id').eq('pin', user.pin.trim().toUpperCase()).maybeSingle();
+      const { data } = await supabase
+        .from('users')
+        .select('id')
+        .eq('pin', user.pin.trim().toUpperCase())
+        .maybeSingle();
       if (data) finalId = data.id;
     }
 
     const payload = {
-      id: finalId || "user_" + Date.now(),
+      id: finalId || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
       pin: user.pin?.trim().toUpperCase(),
       role: user.role || 'user',
       subscriptionTier: user.subscriptionTier || 'monthly',
-      expiryDate: user.expiryDate,
+      expiryDate: user.expiryDate || null,
       maxScreens: user.maxScreens || 1,
       activeDevices: user.activeDevices || [],
       isBlocked: !!user.isBlocked,
@@ -240,19 +246,26 @@ export async function saveUser(user: Partial<User>) {
       isGamesEnabled: !!user.isGamesEnabled,
       isPpvEnabled: !!user.isPpvEnabled,
       isAlacarteEnabled: !!user.isAlacarteEnabled,
-      resellerId: user.resellerId,
-      activatedAt: user.activatedAt,
-      individualMessage: user.individualMessage,
+      resellerId: user.resellerId || null,
+      activatedAt: user.activatedAt || null,
+      individualMessage: user.individualMessage || "",
       gamePoints: user.gamePoints || 0
     };
+    
     const { error } = await supabase.from('users').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
+    if (error) {
+      console.error("Erro Supabase saveUser:", error);
+      return false;
+    }
+    return true;
+  } catch (e) { 
+    console.error("Erro fatal saveUser:", e);
+    return false; 
+  }
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // BLINDAGEM v323: Busca simples sem joins para evitar erros de esquema e garantir que todos os PINs apareçam
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('*')
@@ -260,7 +273,6 @@ export async function getRemoteUsers(): Promise<User[]> {
     
     if (usersError) throw usersError;
 
-    // Busca revendedores separadamente para vincular os nomes
     const { data: resellersData } = await supabase.from('resellers').select('id, name');
     const resMap: Record<string, string> = {};
     (resellersData || []).forEach(r => { resMap[r.id] = r.name; });
