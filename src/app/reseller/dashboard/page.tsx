@@ -26,11 +26,7 @@ export default function ResellerDashboard() {
   const [msgInput, setMsgInput] = React.useState("")
   
   const [config, setConfig] = React.useState({
-    screens: "1",
-    isAdultEnabled: false,
-    isGamesEnabled: false,
-    isPpvEnabled: false,
-    isAlacarteEnabled: false
+    screens: "1"
   })
 
   const router = useRouter()
@@ -52,7 +48,7 @@ export default function ResellerDashboard() {
 
   React.useEffect(() => { loadData() }, [loadData])
 
-  const getExpiryDays = (expiryDate?: string) => {
+  const getExpiryDays = (expiryDate?: string | null) => {
     if (!expiryDate) return null;
     const now = new Date();
     const exp = new Date(expiryDate);
@@ -60,7 +56,7 @@ export default function ResellerDashboard() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryStatus = (expiryDate?: string) => {
+  const getExpiryStatus = (expiryDate?: string | null) => {
     const diffDays = getExpiryDays(expiryDate);
     if (diffDays === null) return { label: "AGUARDANDO ATIVAÇÃO", color: "text-blue-400", icon: Clock };
     if (diffDays < 0) return { label: "PIN EXPIRADO", color: "text-destructive", icon: AlertTriangle };
@@ -76,7 +72,7 @@ export default function ResellerDashboard() {
       return;
     }
     setIsGenerating(true);
-    const pin = generateRandomPin();
+    const pin = generateRandomPin(11);
     const newUser: User = {
       id: "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin,
@@ -85,10 +81,10 @@ export default function ResellerDashboard() {
       maxScreens: screens,
       activeDevices: [],
       isBlocked: false,
-      isAdultEnabled: config.isAdultEnabled,
-      isGamesEnabled: config.isGamesEnabled,
-      isPpvEnabled: config.isPpvEnabled,
-      isAlacarteEnabled: config.isAlacarteEnabled,
+      isAdultEnabled: false, // BLOQUEADO PARA REVENDA: Apenas Admin ativa
+      isGamesEnabled: false,  // BLOQUEADO PARA REVENDA: Apenas Admin ativa
+      isPpvEnabled: false,    // BLOQUEADO PARA REVENDA: Apenas Admin ativa
+      isAlacarteEnabled: false, // BLOQUEADO PARA REVENDA: Apenas Admin ativa
       resellerId: reseller.id
     };
     if (await saveUser(newUser)) {
@@ -107,14 +103,6 @@ export default function ResellerDashboard() {
   const sendAccess = (u: User) => {
     const msg = getBeautifulMessage(u.pin, u.subscriptionTier, window.location.origin, u.maxScreens);
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-
-  const handleUpdateClientStatus = async (user: User, field: string, val: boolean) => {
-    const updated = { ...user, [field]: val };
-    if (await saveUser(updated)) {
-      toast({ title: "Acesso atualizado!" });
-      await loadData();
-    }
   }
 
   const filtered = myUsers.filter(u => u.pin.includes(search));
@@ -148,23 +136,8 @@ export default function ResellerDashboard() {
                     <SelectContent><SelectItem value="1">1 Tela (1 CRÉD)</SelectItem><SelectItem value="2">2 Telas (2 CRÉD)</SelectItem><SelectItem value="3">3 Telas (3 CRÉD)</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
-                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[7px] font-black uppercase">Adulto</span>
-                      <Switch checked={config.isAdultEnabled} onCheckedChange={v => setConfig({...config, isAdultEnabled: v})} />
-                   </div>
-                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[7px] font-black uppercase">Games</span>
-                      <Switch checked={config.isGamesEnabled} onCheckedChange={v => setConfig({...config, isGamesEnabled: v})} />
-                   </div>
-                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[7px] font-black uppercase">PPV</span>
-                      <Switch checked={config.isPpvEnabled} onCheckedChange={v => setConfig({...config, isPpvEnabled: v})} />
-                   </div>
-                   <div className="flex flex-col items-center gap-2 bg-black/20 p-3 rounded-xl border border-white/5">
-                      <span className="text-[7px] font-black uppercase">ALACARTE</span>
-                      <Switch checked={config.isAlacarteEnabled} onCheckedChange={v => setConfig({...config, isAlacarteEnabled: v})} />
-                   </div>
+                <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
+                   <p className="text-[9px] font-black uppercase text-primary italic">Atenção: Ativação de Adulto, Games, PPV e Alacarte é feita EXCLUSIVAMENTE pelo Mestre Léo. Seus clientes devem pagar e solicitar a ele.</p>
                 </div>
              </div>
              <div className="grid grid-cols-2 gap-4">
@@ -186,21 +159,21 @@ export default function ResellerDashboard() {
               {filtered.map(u => {
                 const status = getExpiryStatus(u.expiryDate);
                 return (
-                  <div key={u.id} className="p-8 flex flex-col lg:flex-row items-center justify-between hover:bg-white/5 gap-8">
-                    <div className="flex items-center gap-8 flex-1">
+                  <div key={u.id} className="p-8 flex flex-col lg:grid lg:grid-cols-4 items-center hover:bg-white/5 gap-8">
+                    <div className="flex items-center gap-6 col-span-2">
                       <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-2xl text-primary border border-primary/20">{u.pin.substring(0,2)}</div>
                       <div>
                         <p className="font-mono font-black text-3xl text-primary tracking-[0.25em]">{u.pin}</p>
                         <div className="flex flex-wrap gap-1 mt-2">
-                           <Badge onClick={() => handleUpdateClientStatus(u, 'isAdultEnabled', !u.isAdultEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-20'}`}>Adulto</Badge>
-                           <Badge onClick={() => handleUpdateClientStatus(u, 'isGamesEnabled', !u.isGamesEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-20'}`}>Games</Badge>
-                           <Badge onClick={() => handleUpdateClientStatus(u, 'isPpvEnabled', !u.isPpvEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
-                           <Badge onClick={() => handleUpdateClientStatus(u, 'isAlacarteEnabled', !u.isAlacarteEnabled)} className={`cursor-pointer text-[7px] uppercase ${u.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-20'}`}>Alacarte</Badge>
+                           <Badge className={`text-[7px] uppercase ${u.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-20'}`}>Adulto</Badge>
+                           <Badge className={`text-[7px] uppercase ${u.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-20'}`}>Games</Badge>
+                           <Badge className={`text-[7px] uppercase ${u.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
+                           <Badge className={`text-[7px] uppercase ${u.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-20'}`}>Alacarte</Badge>
                         </div>
                       </div>
                     </div>
-                    <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase ${status.color}`}>{status.label}</div>
-                    <div className="flex gap-2">
+                    <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase text-center ${status.color}`}>{status.label}</div>
+                    <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setMsgInput(u.individualMessage || ""); }} className="text-primary"><MessageSquare className="h-5 w-5" /></Button>
                       <Button variant="outline" onClick={() => sendAccess(u)} className="h-12 border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px] rounded-xl px-6">ENVIAR ACESSO</Button>
                     </div>
