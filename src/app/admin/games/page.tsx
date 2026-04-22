@@ -42,13 +42,16 @@ export default function AdminGamesPage() {
   React.useEffect(() => { loadData() }, [loadData])
 
   const handleUrlChange = (val: string) => {
+    // Mestre Léo: Aqui o sistema já tenta "destilar" o link assim que você cola
     const cleaned = formatGameLink(val);
-    setGameData({ ...gameData, url: cleaned });
+    setGameData(prev => ({ ...prev, url: cleaned }));
+    
     if (val.includes('<iframe')) {
       toast({ title: "MOTOR DESTILADO!", description: "Extraímos apenas o link do jogo do seu Iframe." });
     }
   }
 
+  // Função para sintonizar links do RetroGames.cc que não estão em embed
   const handleFixLink = async () => {
     if (!gameData.url || !gameData.url.includes('retrogames.cc')) {
       toast({ variant: "destructive", title: "Apenas para RetroGames.cc" })
@@ -61,16 +64,17 @@ export default function AdminGamesPage() {
 
     setIsFixing(true);
     try {
+      // Usa o proxy para ler a página e tentar achar o link secreto do embed
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(gameData.url)}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
       const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
       if (embedMatch) {
-        setGameData({ ...gameData, url: embedMatch[0] });
+        setGameData(prev => ({ ...prev, url: embedMatch[0] }));
         toast({ title: "LINK SINTONIZADO!", description: "O motor do jogo foi extraído com sucesso." });
       } else {
-        toast({ variant: "destructive", title: "Erro na Extração", description: "Não localizei o link secreto nesta página." });
+        toast({ variant: "destructive", title: "Erro na Extração", description: "Não localizei o link de embed nesta página." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Erro de Conexão", description: "O site bloqueou a leitura automática." });
@@ -91,7 +95,7 @@ export default function AdminGamesPage() {
       setIsDialogOpen(false)
       loadData()
     } else {
-      toast({ variant: "destructive", title: "Erro de Permissão no Banco" })
+      toast({ variant: "destructive", title: "Erro ao Salvar" })
     }
     setIsSaving(false)
   }
@@ -233,6 +237,11 @@ export default function AdminGamesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-end">
+                <Button variant="outline" onClick={handleFixLink} disabled={isFixing} className="h-12 w-full border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase text-[9px]">
+                  {isFixing ? <Loader2 className="animate-spin mr-2 h-3 w-3" /> : <Wand2 className="mr-2 h-3 w-3" />} Sintonizar RetroGames
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -245,6 +254,7 @@ export default function AdminGamesPage() {
                 <Input 
                   value={gameData.url} 
                   onChange={e => handleUrlChange(e.target.value)} 
+                  onBlur={(e) => handleUrlChange(e.target.value)}
                   className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" 
                   placeholder="Cole o link ou o código do Iframe aqui..." 
                 />

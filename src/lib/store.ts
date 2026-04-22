@@ -78,13 +78,14 @@ export interface User {
 }
 
 /**
- * MOTOR DE LINKS MASTER v315 - BLINDAGEM TOTAL
+ * MOTOR DE LINKS MASTER v316 - CONVERSOR INTELIGENTE
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
+    // Se for um Iframe completo, extrai apenas o SRC
     if (finalUrl.includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -92,6 +93,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
     
+    // YouTube: Sempre direto via Embed (Não usa Proxy)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
@@ -102,21 +104,34 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
+    // Dailymotion: Auto-Embed
+    if (lowUrl.includes('dailymotion.com')) {
+      if (lowUrl.includes('/video/')) {
+        const videoId = finalUrl.split('/video/')[1]?.split('?')[0];
+        if (videoId) return `https://www.dailymotion.com/embed/video/${videoId}`;
+      }
+      return finalUrl;
+    }
+
+    // XVideos: Auto-Embed
     if (lowUrl.includes('xvideos.com/video')) {
       const videoIdMatch = finalUrl.match(/video\.([^/]+)/);
       if (videoIdMatch && videoIdMatch[1]) {
-        return `https://www.xvideos.com/embedframe/${videoIdMatch[1]}`;
+        const cleanId = videoIdMatch[1].split('/')[0];
+        return `https://www.xvideos.com/embedframe/${cleanId}`;
       }
     }
 
+    // Spotify/Deezer: Direto
     if (lowUrl.includes('spotify.com') || lowUrl.includes('deezer.com')) {
       return finalUrl;
     }
 
+    // Lista de domínios que precisam passar pelo Túnel Master da VPS
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
-      'agropesca.live', 'warez', 'topcanais', 'redecanais'
+      'agropesca.live', 'warez', 'topcanais', 'redecanais', 'redecanaistv'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
@@ -132,13 +147,28 @@ export const formatMasterLink = (url: string) => {
   }
 };
 
+/**
+ * CONVERSOR DE JOGOS RETRO v316
+ */
 export const formatGameLink = (input: string) => {
   if (!input) return "";
   let url = input.trim();
+  
   if (url.includes('<iframe') && url.includes('src=')) {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) url = srcMatch[1];
   }
+
+  let lowUrl = url.toLowerCase();
+
+  // RetroGames.cc: Tenta converter página em Embed
+  if (lowUrl.includes('retrogames.cc') && !lowUrl.includes('/embed/')) {
+    // Tenta identificar se o link é da página de detalhe e sugere o embed
+    // Mestre Léo, para RetroGames o ideal é que o túnel extraia o link real, 
+    // mas aqui fazemos a limpeza básica.
+    return url;
+  }
+
   return url;
 };
 
