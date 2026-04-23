@@ -36,39 +36,31 @@ export default function NewContentPage() {
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
 
-  const handleFixLink = async () => {
-    if (!formData.streamUrl) {
-      toast({ variant: "destructive", title: "Cole um link primeiro!" })
-      return
+  const runTuner = async (url: string) => {
+    if (!url) {
+      toast({ variant: "destructive", title: "Cole um link primeiro!" });
+      return null;
     }
     
-    const lowUrl = formData.streamUrl.toLowerCase();
-
-    // TRAVA DE SEGURANÇA: Se já for um formato direto ou youtube, não mexe
+    const lowUrl = url.toLowerCase();
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-    if (isDirect) {
-      toast({ title: "SINAL JÁ É DIRETO!", description: "Este link já é aceito nativamente pelo player." });
-      return;
-    }
     
-    // TRATAMENTO RÁPIDO DAILYMOTION
+    if (isDirect) {
+      toast({ title: "SINAL JÁ É DIRETO!" });
+      return null;
+    }
+
     if (lowUrl.includes('dailymotion.com/video/')) {
-       const id = formData.streamUrl.split('/video/')[1]?.split('?')[0];
-       if (id) {
-          const newLink = `https://www.dailymotion.com/embed/video/${id}`;
-          setFormData(prev => ({ ...prev, streamUrl: newLink }));
-          toast({ title: "SINAL DESTILADO!", description: "Dailymotion convertido para Player Master." });
-          return;
-       }
+       const id = url.split('/video/')[1]?.split('?')[0];
+       if (id) return `https://www.dailymotion.com/embed/video/${id}`;
     }
 
     setIsFixing(true);
     try {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(formData.streamUrl)}`;
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // PATTERNS DE EXTRAÇÃO MASTER (Busca por Embeds, Players e Arquivos escondidos)
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
         /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
@@ -84,24 +76,47 @@ export default function NewContentPage() {
         const match = html.match(pattern);
         if (match) {
           const possible = match[1] || match[0];
-          // FILTRO DE DIAMANTE: Rejeita lixo e arquivos de sistema
-          if (!possible.includes('.js') && !possible.includes('.css') && !possible.includes('analytics') && !possible.includes('google')) {
+          if (!possible.includes('.js') && !possible.includes('.css') && !possible.includes('analytics')) {
              found = possible;
              break;
           }
         }
       }
-
-      if (found) {
-        setFormData(prev => ({ ...prev, streamUrl: found }));
-        toast({ title: "SINAL SINTONIZADO!", description: "Extraímos o núcleo do sinal com sucesso." });
-      } else {
-        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um sinal Master compatível neste site." });
-      }
+      return found || null;
     } catch (e) {
-      toast({ variant: "destructive", title: "Erro de Conexão", description: "O site original bloqueou a leitura." });
+      return null;
     } finally {
       setIsFixing(false);
+    }
+  }
+
+  const handleFixMainLink = async () => {
+    const fixed = await runTuner(formData.streamUrl);
+    if (fixed) {
+      setFormData(prev => ({ ...prev, streamUrl: fixed }));
+      toast({ title: "SINAL SINTONIZADO!" });
+    } else if (!isFixing) {
+      toast({ variant: "destructive", title: "Sintonização Falhou" });
+    }
+  }
+
+  const handleFixEpisodeLink = async (idx: number) => {
+    const fixed = await runTuner(episodes[idx].streamUrl);
+    if (fixed) {
+      const newEps = [...episodes];
+      newEps[idx].streamUrl = fixed;
+      setEpisodes(newEps);
+      toast({ title: "EPISÓDIO SINTONIZADO!" });
+    }
+  }
+
+  const handleFixSeasonEpisodeLink = async (sIdx: number, eIdx: number) => {
+    const fixed = await runTuner(seasons[sIdx].episodes[eIdx].streamUrl);
+    if (fixed) {
+      const newSeasons = [...seasons];
+      newSeasons[sIdx].episodes[eIdx].streamUrl = fixed;
+      setSeasons(newSeasons);
+      toast({ title: "EPISÓDIO SINTONIZADO!" });
     }
   }
 
@@ -168,7 +183,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v348</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v349</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -233,7 +248,7 @@ export default function NewContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                   <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                  <Button type="button" variant="outline" size="sm" onClick={handleFixLink} disabled={isFixing} className="h-7 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
+                  <Button type="button" variant="outline" size="sm" onClick={handleFixMainLink} disabled={isFixing} className="h-7 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
                     {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Sinal
                   </Button>
                 </h3>
@@ -274,7 +289,12 @@ export default function NewContentPage() {
                           <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         <div className="space-y-2">
-                           <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
+                           <Label className="text-[8px] font-black uppercase opacity-40 flex items-center justify-between">
+                             Link do Episódio
+                             <Button type="button" variant="ghost" size="sm" onClick={() => handleFixEpisodeLink(idx)} disabled={isFixing} className="h-5 text-primary font-black uppercase text-[7px] hover:bg-primary/10">
+                                {isFixing ? <Loader2 className="animate-spin h-2 w-2 mr-1" /> : <Wand2 className="h-2 w-2 mr-1" />} Sintonizar
+                             </Button>
+                           </Label>
                            <div className="flex gap-2">
                              <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
                                 const newEps = [...episodes]
@@ -327,6 +347,9 @@ export default function NewContentPage() {
                                      newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                      setSeasons(newSeasons)
                                   }} className="flex-1 h-8 bg-black/40 text-[10px]" />
+                                  <Button type="button" variant="ghost" size="sm" onClick={() => handleFixSeasonEpisodeLink(sIdx, eIdx)} disabled={isFixing} className="h-8 text-primary px-2 hover:bg-primary/10">
+                                     {isFixing ? <Loader2 className="animate-spin h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
+                                  </Button>
                                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                                   <Button type="button" variant="ghost" size="icon" onClick={() => {
                                     const newSeasons = [...seasons]
