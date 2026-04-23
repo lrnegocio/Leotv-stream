@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v342
- * Adicionado suporte para novos domínios e tratamento de cookies via proxy.
+ * FORMATAÇÃO MASTER SOBERANA v347
+ * Adicionado suporte para YouTube Shorts e conversão automática para Embed.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -96,12 +96,19 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
     
-    // TRATAMENTO YOUTUBE
+    // TRATAMENTO YOUTUBE (INCLUINDO SHORTS v347)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
-      if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-      else if (lowUrl.includes('/embed/')) return finalUrl;
+      
+      if (lowUrl.includes('/shorts/')) {
+        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
+      } else if (lowUrl.includes('watch?v=')) {
+        videoId = finalUrl.split('v=')[1]?.split('&')[0];
+      } else if (lowUrl.includes('youtu.be/')) {
+        videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+      } else if (lowUrl.includes('/embed/')) {
+        return finalUrl;
+      }
       
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
       return finalUrl;

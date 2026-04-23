@@ -1,6 +1,6 @@
 
 # Léo TV Stream - O Sistema Master (Edição Domínio leotv.fun)
-
+                                                            
 ### 🛠️ 1. Desbloqueio Total (No Putty):
 Copie e cole estes comandos um por um para abrir o Firewall:
 ```bash

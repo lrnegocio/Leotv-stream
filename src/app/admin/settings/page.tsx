@@ -159,7 +159,7 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v346</h1>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v347</h1>
           <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade e Injeção de Sinais em Massa.</p>
         </div>
         <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
