@@ -59,12 +59,13 @@ export default function EditContentPage() {
       return
     }
     
-    // Links que já sabemos tratar no store.ts nem precisam de fetch pesado
-    const fastFormat = formatMasterLink(formData.streamUrl);
-    if (fastFormat !== formData.streamUrl && !fastFormat.includes('/api/proxy')) {
-       setFormData(prev => prev ? { ...prev, streamUrl: fastFormat } : null);
-       toast({ title: "SINAL DESTILADO!", description: "O link foi convertido para o formato de player." });
-       return;
+    const lowUrl = formData.streamUrl.toLowerCase();
+
+    // TRAVA DE SEGURANÇA: Se já for um formato direto funcional, não tenta sintonizar
+    const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+    if (isDirect) {
+      toast({ title: "SINAL JÁ É DIRETO!", description: "Este link já é reconhecido perfeitamente pelo sistema." });
+      return;
     }
 
     setIsFixing(true);
@@ -73,8 +74,13 @@ export default function EditContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
+      // PATTERNS DE EXTRAÇÃO MASTER (Igual aos Games)
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
+        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
+        /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
+        /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
+        /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
         /https?:\/\/[^"']+(?:player|embed|video|iframe)[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
@@ -83,16 +89,20 @@ export default function EditContentPage() {
       for (const pattern of patterns) {
         const match = html.match(pattern);
         if (match) {
-          found = match[1] || match[0];
-          if (!found.includes('google') && !found.includes('analytics')) break;
+          const possible = match[1] || match[0];
+          // FILTRO DE DIAMANTE: Rejeita scripts e lixo
+          if (!possible.includes('.js') && !possible.includes('.css') && !possible.includes('analytics')) {
+             found = possible;
+             break;
+          }
         }
       }
 
       if (found) {
         setFormData(prev => prev ? { ...prev, streamUrl: found } : null);
-        toast({ title: "SINAL SINTONIZADO!", description: "Localizamos o motor do vídeo nesta página." });
+        toast({ title: "SINAL SINTONIZADO!", description: "Localizamos o motor do vídeo com sucesso." });
       } else {
-        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um player direto. Tentaremos o modo manual." });
+        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um player direto ou compatível." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Erro de Conexão", description: "O site original bloqueou a leitura." });

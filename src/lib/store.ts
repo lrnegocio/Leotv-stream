@@ -81,13 +81,16 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v347
- * Adicionado suporte para YouTube Shorts e conversão automática para Embed.
+ * FORMATAÇÃO MASTER SOBERANA v348
+ * Inteligência de detecção de links diretos para evitar re-sintonização desnecessária.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
+
+    // Se já estiver no formato de proxy, não mexe
+    if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
     if (finalUrl.includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
@@ -96,19 +99,17 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
     
-    // TRATAMENTO YOUTUBE (INCLUINDO SHORTS v347)
+    // FORMATOS DIRETOS: Se termina em vídeo direto, não precisa de sintonizador pesado
+    const directFormats = ['.m3u8', '.mp4', '.mkv', '.ts', '.mp3'];
+    const isDirect = directFormats.some(ext => lowUrl.includes(ext));
+
+    // TRATAMENTO YOUTUBE
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
-      
-      if (lowUrl.includes('/shorts/')) {
-        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
-      } else if (lowUrl.includes('watch?v=')) {
-        videoId = finalUrl.split('v=')[1]?.split('&')[0];
-      } else if (lowUrl.includes('youtu.be/')) {
-        videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-      } else if (lowUrl.includes('/embed/')) {
-        return finalUrl;
-      }
+      if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
+      else if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+      else if (lowUrl.includes('/embed/')) return finalUrl;
       
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
       return finalUrl;

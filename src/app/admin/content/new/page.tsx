@@ -42,8 +42,16 @@ export default function NewContentPage() {
       return
     }
     
-    // TRATAMENTO RÁPIDO DAILYMOTION E OUTROS
     const lowUrl = formData.streamUrl.toLowerCase();
+
+    // TRAVA DE SEGURANÇA: Se já for um formato direto ou youtube, não mexe
+    const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+    if (isDirect) {
+      toast({ title: "SINAL JÁ É DIRETO!", description: "Este link já é aceito nativamente pelo player." });
+      return;
+    }
+    
+    // TRATAMENTO RÁPIDO DAILYMOTION
     if (lowUrl.includes('dailymotion.com/video/')) {
        const id = formData.streamUrl.split('/video/')[1]?.split('?')[0];
        if (id) {
@@ -54,21 +62,19 @@ export default function NewContentPage() {
        }
     }
 
-    const fastFormat = formatMasterLink(formData.streamUrl);
-    if (fastFormat !== formData.streamUrl && !fastFormat.includes('/api/proxy')) {
-       setFormData(prev => ({ ...prev, streamUrl: fastFormat }));
-       toast({ title: "SINAL DESTILADO!", description: "O link foi convertido para o formato de player." });
-       return;
-    }
-
     setIsFixing(true);
     try {
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(formData.streamUrl)}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
+      // PATTERNS DE EXTRAÇÃO MASTER (Busca por Embeds, Players e Arquivos escondidos)
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
+        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
+        /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
+        /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
+        /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
         /https?:\/\/[^"']+(?:player|embed|video|iframe)[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
@@ -78,8 +84,8 @@ export default function NewContentPage() {
         const match = html.match(pattern);
         if (match) {
           const possible = match[1] || match[0];
-          // FILTRO DE DIAMANTE: Rejeita lixo .js ou analytics
-          if (!possible.includes('.js') && !possible.includes('analytics') && !possible.includes('google')) {
+          // FILTRO DE DIAMANTE: Rejeita lixo e arquivos de sistema
+          if (!possible.includes('.js') && !possible.includes('.css') && !possible.includes('analytics') && !possible.includes('google')) {
              found = possible;
              break;
           }
@@ -88,9 +94,9 @@ export default function NewContentPage() {
 
       if (found) {
         setFormData(prev => ({ ...prev, streamUrl: found }));
-        toast({ title: "SINAL SINTONIZADO!", description: "Localizamos o motor do vídeo nesta página." });
+        toast({ title: "SINAL SINTONIZADO!", description: "Extraímos o núcleo do sinal com sucesso." });
       } else {
-        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um sinal direto compatível." });
+        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um sinal Master compatível neste site." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Erro de Conexão", description: "O site original bloqueou a leitura." });
@@ -162,7 +168,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v346</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v348</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
