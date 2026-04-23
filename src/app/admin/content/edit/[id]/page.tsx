@@ -60,17 +60,24 @@ export default function EditContentPage() {
     }
     
     const lowUrl = url.toLowerCase();
-    const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-    
-    if (isDirect) {
-      toast({ title: "SINAL JÁ É DIRETO!" });
-      return null;
+
+    // TRATAMENTO RÁPIDO XVIDEOS (v350)
+    if (lowUrl.includes('xvideos.com/video.')) {
+       const match = url.match(/video\.([a-z0-9]+)/i);
+       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
     }
 
     // TRATAMENTO RÁPIDO DAILYMOTION
     if (lowUrl.includes('dailymotion.com/video/')) {
        const id = url.split('/video/')[1]?.split('?')[0];
        if (id) return `https://www.dailymotion.com/embed/video/${id}`;
+    }
+
+    const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
+    
+    if (isDirect) {
+      toast({ title: "SINAL JÁ É DIRETO!" });
+      return null;
     }
 
     setIsFixing(true);

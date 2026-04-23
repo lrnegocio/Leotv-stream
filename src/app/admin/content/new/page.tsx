@@ -43,16 +43,24 @@ export default function NewContentPage() {
     }
     
     const lowUrl = url.toLowerCase();
+    
+    // TRATAMENTO RÁPIDO XVIDEOS (v350)
+    if (lowUrl.includes('xvideos.com/video.')) {
+       const match = url.match(/video\.([a-z0-9]+)/i);
+       if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
+    }
+
+    // TRATAMENTO RÁPIDO DAILYMOTION
+    if (lowUrl.includes('dailymotion.com/video/')) {
+       const id = url.split('/video/')[1]?.split('?')[0];
+       if (id) return `https://www.dailymotion.com/embed/video/${id}`;
+    }
+
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
     
     if (isDirect) {
       toast({ title: "SINAL JÁ É DIRETO!" });
       return null;
-    }
-
-    if (lowUrl.includes('dailymotion.com/video/')) {
-       const id = url.split('/video/')[1]?.split('?')[0];
-       if (id) return `https://www.dailymotion.com/embed/video/${id}`;
     }
 
     setIsFixing(true);
@@ -183,7 +191,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v349</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v350</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">

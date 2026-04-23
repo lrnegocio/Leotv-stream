@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v348
- * Inteligência de detecção de links diretos para evitar re-sintonização desnecessária.
+ * FORMATAÇÃO MASTER SOBERANA v350
+ * Inteligência de detecção de links diretos e extrator de Embed XVideos integrado.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -98,6 +98,15 @@ export const formatMasterLink = (url: string) => {
     }
 
     let lowUrl = finalUrl.toLowerCase();
+
+    // TRATAMENTO XVIDEOS (Embed Frame)
+    if (lowUrl.includes('xvideos.com/video.')) {
+       const match = finalUrl.match(/video\.([a-z0-9]+)/i);
+       if (match && match[1]) {
+          finalUrl = `https://www.xvideos.com/embedframe/${match[1]}`;
+          lowUrl = finalUrl.toLowerCase();
+       }
+    }
     
     // FORMATOS DIRETOS: Se termina em vídeo direto, não precisa de sintonizador pesado
     const directFormats = ['.m3u8', '.mp4', '.mkv', '.ts', '.mp3'];
