@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v342 - PROTOCOLO PERSISTÊNCIA TOTAL (COOKIES)
- * Agora o proxy repassa cookies entre o cliente e o alvo, permitindo 
- * que cada dispositivo estabeleça sua própria sessão sem depender do Admin.
+ * TÚNEL MASTER SOBERANO v351 - PROTOCOLO RDC ELITE
+ * Calibragem extrema para rdcplayer.online e rdcanais.com para evitar
+ * o erro de ManifestLoadError no HLS.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // Repassa Headers essenciais do cliente para o alvo
     const headersToForward = ['range', 'cookie', 'accept-language'];
     headersToForward.forEach(h => {
       const val = req.headers.get(h);
@@ -36,10 +35,13 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // CALIBRAGEM DE REFERER E ORIGIN v342
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
-      requestHeaders.set('Referer', 'https://reidoscanais.ooo/');
-      requestHeaders.set('Origin', 'https://reidoscanais.ooo');
+    // CALIBRAGEM RDC ELITE v351
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('rdcplayer.online')) {
+      // O segredo do RDC está em usar o Referer do domínio principal e não o do player
+      requestHeaders.set('Referer', 'https://rdcanais.com/');
+      requestHeaders.set('Origin', 'https://rdcanais.com');
+      requestHeaders.set('Sec-Fetch-Mode', 'cors');
+      requestHeaders.set('Sec-Fetch-Site', 'cross-site');
     } else if (lowTarget.includes('redecanais')) {
       const origin = targetUrl.includes('.be') ? 'https://redecanaistv.be/' : 'https://redecanaistv.net/';
       requestHeaders.set('Referer', origin);
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v342", { status: 500 });
+    return new Response("Falha no Túnel Master v351", { status: 500 });
   }
 }
 
@@ -75,7 +77,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   const responseHeaders = new Headers();
   
-  // Repassa headers de resposta importantes para o cliente
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
     'accept-ranges', 'cache-control'
@@ -86,7 +87,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     if (val) responseHeaders.set(h, val);
   });
   
-  // PROTOCOLO COOKIE MASTER: Repassa Set-Cookie para o cliente salvar a sessão
   const setCookies = res.headers.getSetCookie();
   setCookies.forEach(cookie => {
     responseHeaders.append('Set-Cookie', cookie);
@@ -119,7 +119,9 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     htmlText = htmlText.replace(/window\.open/g, 'console.log');
     htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
+    htmlText = htmlText.replace(/top\.location/g, 'window.location');
     
+    // Injeta a BASE para que requisições relativas no HTML (como .m3u8) passem pelo proxy
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     

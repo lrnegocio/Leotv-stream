@@ -81,15 +81,14 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v350
- * Inteligência de detecção de links diretos e extrator de Embed XVideos integrado.
+ * FORMATAÇÃO MASTER SOBERANA v351
+ * Inteligência de detecção de links diretos e extrator de Embed RDC e XVideos integrado.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // Se já estiver no formato de proxy, não mexe
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
     if (finalUrl.includes('<iframe')) {
@@ -108,7 +107,6 @@ export const formatMasterLink = (url: string) => {
        }
     }
     
-    // FORMATOS DIRETOS: Se termina em vídeo direto, não precisa de sintonizador pesado
     const directFormats = ['.m3u8', '.mp4', '.mkv', '.ts', '.mp3'];
     const isDirect = directFormats.some(ext => lowUrl.includes(ext));
 
@@ -124,7 +122,6 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // LISTA DE DOMÍNIOS QUE EXIGEM TÚNEL MASTER v342
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
