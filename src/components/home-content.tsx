@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 const CATEGORIES = [
   { id: 'LIVE', name: 'CANAIS AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
@@ -52,9 +51,22 @@ export default function HomeContent() {
   const [isMounted, setIsMounted] = React.useState(false)
   const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
   
+  const episodeListRef = React.useRef<HTMLDivElement>(null)
+  const gamesListRef = React.useRef<HTMLDivElement>(null)
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams ? (searchParams.get('q') || "") : ""
+
+  const scrollContainer = (ref: React.RefObject<HTMLDivElement>, direction: 'up' | 'down') => {
+    if (ref.current) {
+      const amount = 350;
+      ref.current.scrollBy({
+        top: direction === 'up' ? -amount : amount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
@@ -190,7 +202,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v343...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v345...</p>
         </div>
       )}
 
@@ -264,11 +276,20 @@ export default function HomeContent() {
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Selecione o Episódio</DialogTitle></DialogHeader>
-          <ScrollArea className="flex-1 mt-6 pr-4">
-            <div className="flex flex-col gap-3">
+          
+          <div className="mt-6 flex-1 flex flex-col gap-2 overflow-hidden">
+            {/* BOTÃO SETA PARA CIMA */}
+            <button 
+              onClick={() => scrollContainer(episodeListRef, 'up')}
+              className="w-full h-10 flex items-center justify-center bg-primary/5 hover:bg-primary/20 text-primary rounded-xl border border-primary/10 transition-all focus:ring-2 focus:ring-primary outline-none"
+            >
+              <ChevronUp className="h-8 w-8 animate-bounce" />
+            </button>
+
+            <div ref={episodeListRef} className="flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
               {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
-                  <span className="font-black uppercase text-[11px] tracking-widest">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
+                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50 outline-none focus:ring-2 focus:ring-primary">
+                  <span className="font-black uppercase text-[11px] tracking-widest text-left">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
                   <PlayCircle className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
                 </button>
               ))}
@@ -280,8 +301,8 @@ export default function HomeContent() {
                     const currentIdx = allSeasonEps.findIndex(i => i.id === ep.id);
                     
                     return (
-                      <button key={ep.id} onClick={() => setActiveVideo({ items: allSeasonEps, index: currentIdx })} className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-2xl hover:bg-primary hover:text-white transition-all group ml-4 border border-border/20">
-                        <span className="font-bold uppercase text-[10px]">EPISÓDIO {ep.number} - {ep.title || 'SINAL'}</span>
+                      <button key={ep.id} onClick={() => setActiveVideo({ items: allSeasonEps, index: currentIdx })} className="w-full flex items-center justify-between p-4 bg-muted/30 rounded-2xl hover:bg-primary hover:text-white transition-all group ml-4 border border-border/20 outline-none focus:ring-2 focus:ring-primary">
+                        <span className="font-bold uppercase text-[10px] text-left">EPISÓDIO {ep.number} - {ep.title || 'SINAL'}</span>
                         <PlayCircle className="h-5 w-5 text-primary group-hover:text-white" />
                       </button>
                     );
@@ -289,7 +310,16 @@ export default function HomeContent() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+
+            {/* BOTÃO SETA PARA BAIXO */}
+            <button 
+              onClick={() => scrollContainer(episodeListRef, 'down')}
+              className="w-full h-10 flex items-center justify-center bg-primary/5 hover:bg-primary/20 text-primary rounded-xl border border-primary/10 transition-all focus:ring-2 focus:ring-primary outline-none"
+            >
+              <ChevronDown className="h-8 w-8 animate-bounce" />
+            </button>
+          </div>
+
           <Button onClick={() => setSelectedSeries(null)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">FECHAR LISTA</Button>
         </DialogContent>
       </Dialog>
@@ -307,13 +337,21 @@ export default function HomeContent() {
       <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
         <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-8 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-emerald-500 flex items-center gap-3"><Gamepad2 className="h-8 w-8" /> Arena Games Master</DialogTitle></DialogHeader>
-          <ScrollArea className="mt-8 flex-1 pr-4">
-            <div className="space-y-4">
+          
+          <div className="mt-8 flex-1 flex flex-col gap-2 overflow-hidden">
+            <button 
+              onClick={() => scrollContainer(gamesListRef, 'up')}
+              className="w-full h-10 flex items-center justify-center bg-emerald-500/5 hover:bg-emerald-500/20 text-emerald-500 rounded-xl border border-emerald-500/10 transition-all outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <ChevronUp className="h-8 w-8" />
+            </button>
+
+            <div ref={gamesListRef} className="flex-1 overflow-y-auto pr-4 custom-scroll scrollbar-visible space-y-4">
               {gameConsoles.map(consoleName => (
                 <div key={consoleName} className="space-y-2">
                   <button 
                     onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)}
-                    className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group"
+                    className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
                     {expandedConsole === consoleName ? <ChevronUp className="h-5 w-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
@@ -321,7 +359,7 @@ export default function HomeContent() {
                   {expandedConsole === consoleName && (
                     <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
                       {games.filter(g => g.console === consoleName).map(game => (
-                        <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group">
+                        <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group outline-none focus:ring-2 focus:ring-emerald-500">
                           <span className="text-[10px] font-black uppercase truncate tracking-tighter">{game.title}</span>
                           <Play className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />
                         </button>
@@ -332,7 +370,15 @@ export default function HomeContent() {
               ))}
               {games.length === 0 && <div className="p-20 text-center opacity-30 font-black uppercase text-xs italic">Nenhum combate registrado na arena.</div>}
             </div>
-          </ScrollArea>
+
+            <button 
+              onClick={() => scrollContainer(gamesListRef, 'down')}
+              className="w-full h-10 flex items-center justify-center bg-emerald-500/5 hover:bg-emerald-500/20 text-emerald-500 rounded-xl border border-emerald-500/10 transition-all outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <ChevronDown className="h-8 w-8" />
+            </button>
+          </div>
+
           <Button onClick={() => setGamesMenuOpen(false)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">SAIR DA ARENA</Button>
         </DialogContent>
       </Dialog>
