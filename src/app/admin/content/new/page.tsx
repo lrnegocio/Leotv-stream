@@ -42,7 +42,18 @@ export default function NewContentPage() {
       return
     }
     
-    // Links que já sabemos tratar no store.ts nem precisam de fetch pesado
+    // TRATAMENTO RÁPIDO DAILYMOTION E OUTROS
+    const lowUrl = formData.streamUrl.toLowerCase();
+    if (lowUrl.includes('dailymotion.com/video/')) {
+       const id = formData.streamUrl.split('/video/')[1]?.split('?')[0];
+       if (id) {
+          const newLink = `https://www.dailymotion.com/embed/video/${id}`;
+          setFormData(prev => ({ ...prev, streamUrl: newLink }));
+          toast({ title: "SINAL DESTILADO!", description: "Dailymotion convertido para Player Master." });
+          return;
+       }
+    }
+
     const fastFormat = formatMasterLink(formData.streamUrl);
     if (fastFormat !== formData.streamUrl && !fastFormat.includes('/api/proxy')) {
        setFormData(prev => ({ ...prev, streamUrl: fastFormat }));
@@ -56,7 +67,6 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // Busca por links de embed comuns
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
         /https?:\/\/[^"']+(?:player|embed|video|iframe)[^"']+/i,
@@ -67,8 +77,12 @@ export default function NewContentPage() {
       for (const pattern of patterns) {
         const match = html.match(pattern);
         if (match) {
-          found = match[1] || match[0];
-          if (!found.includes('google') && !found.includes('analytics')) break;
+          const possible = match[1] || match[0];
+          // FILTRO DE DIAMANTE: Rejeita lixo .js ou analytics
+          if (!possible.includes('.js') && !possible.includes('analytics') && !possible.includes('google')) {
+             found = possible;
+             break;
+          }
         }
       }
 
@@ -76,7 +90,7 @@ export default function NewContentPage() {
         setFormData(prev => ({ ...prev, streamUrl: found }));
         toast({ title: "SINAL SINTONIZADO!", description: "Localizamos o motor do vídeo nesta página." });
       } else {
-        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um player direto. Tentaremos o modo manual." });
+        toast({ variant: "destructive", title: "Sintonização Falhou", description: "Não localizei um sinal direto compatível." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Erro de Conexão", description: "O site original bloqueou a leitura." });
@@ -148,7 +162,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização Ativa v320</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v346</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -214,14 +228,13 @@ export default function NewContentPage() {
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                   <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
                   <Button type="button" variant="outline" size="sm" onClick={handleFixLink} disabled={isFixing} className="h-7 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
-                    {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Canal
+                    {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Sinal
                   </Button>
                 </h3>
                 <div className="flex gap-2">
-                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link ou Iframe aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
+                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
-                <p className="text-[8px] font-bold uppercase opacity-40">Dica: Se colar um link de site, use o botão "Sintonizar" acima para extrair o vídeo.</p>
               </div>
             </div>
           ) : (
