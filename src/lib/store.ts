@@ -81,8 +81,9 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v351
- * Inteligência de detecção de links diretos e extrator de Embed RDC e XVideos integrado.
+ * FORMATAÇÃO MASTER SOBERANA v352
+ * Inteligência de detecção de links e extrator de Embed RDC e XVideos integrado.
+ * Agora com suporte a limpeza de CSP para evitar tela branca.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -98,7 +99,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // TRATAMENTO XVIDEOS (Embed Frame)
+    // TRATAMENTO XVIDEOS (Embed Frame Limpo)
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = finalUrl.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) {
@@ -107,9 +108,6 @@ export const formatMasterLink = (url: string) => {
        }
     }
     
-    const directFormats = ['.m3u8', '.mp4', '.mkv', '.ts', '.mp3'];
-    const isDirect = directFormats.some(ext => lowUrl.includes(ext));
-
     // TRATAMENTO YOUTUBE
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
@@ -126,7 +124,8 @@ export const formatMasterLink = (url: string) => {
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
       'archive.org', 'xvideos', 'pornhub', 'acplay.live',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
-      'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be'
+      'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
+      'shortflix', 'nsstorage'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

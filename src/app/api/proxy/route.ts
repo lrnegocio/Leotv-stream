@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v351 - PROTOCOLO RDC ELITE
- * Calibragem extrema para rdcplayer.online e rdcanais.com para evitar
- * o erro de ManifestLoadError no HLS.
+ * TÚNEL MASTER SOBERANO v352 - PROTOCOLO DE DECAPITAÇÃO DE HEADERS
+ * Calibragem extrema para remover bloqueios de segurança (CSP, X-Frame) 
+ * que causam tela branca em sites como XVideos e RDC Player.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
+    // Encaminha headers essenciais do cliente
     const headersToForward = ['range', 'cookie', 'accept-language'];
     headersToForward.forEach(h => {
       const val = req.headers.get(h);
@@ -35,13 +36,10 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // CALIBRAGEM RDC ELITE v351
-    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer') || lowTarget.includes('rdcplayer.online')) {
-      // O segredo do RDC está em usar o Referer do domínio principal e não o do player
+    // CALIBRAGEM DE REFERER POR DOMÍNIO
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
-      requestHeaders.set('Sec-Fetch-Mode', 'cors');
-      requestHeaders.set('Sec-Fetch-Site', 'cross-site');
     } else if (lowTarget.includes('redecanais')) {
       const origin = targetUrl.includes('.be') ? 'https://redecanaistv.be/' : 'https://redecanaistv.net/';
       requestHeaders.set('Referer', origin);
@@ -52,6 +50,8 @@ export async function GET(req: NextRequest) {
     } else if (lowTarget.includes('tokyvideo')) {
       requestHeaders.set('Referer', 'https://www.tokyvideo.com/'); 
       requestHeaders.set('Origin', 'https://www.tokyvideo.com');
+    } else if (lowTarget.includes('shortflix')) {
+      requestHeaders.set('Referer', 'https://www.shortflix.net/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v351", { status: 500 });
+    return new Response("Falha no Túnel Master v352", { status: 500 });
   }
 }
 
@@ -77,6 +77,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   const responseHeaders = new Headers();
   
+  // Copia headers básicos
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
     'accept-ranges', 'cache-control'
@@ -87,14 +88,19 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     if (val) responseHeaders.set(h, val);
   });
   
+  // Repassa Cookies para manter sessões ativas (Independência do Admin)
   const setCookies = res.headers.getSetCookie();
   setCookies.forEach(cookie => {
     responseHeaders.append('Set-Cookie', cookie);
   });
   
+  // EXTERMINADOR DE BLOQUEIOS (Resolve Tela Branca)
   responseHeaders.set('Access-Control-Allow-Origin', '*');
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
+  responseHeaders.delete('X-Content-Security-Policy');
+  responseHeaders.delete('X-WebKit-CSP');
+  responseHeaders.set('X-Frame-Options', 'ALLOWALL');
 
   if (isM3u8) {
     const manifestText = await res.text();
@@ -116,18 +122,16 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   if (isHtml) {
     let htmlText = await res.text();
+    // Neutraliza scripts que tentam detectar frames ou abrir janelas
     htmlText = htmlText.replace(/window\.open/g, 'console.log');
     htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
     htmlText = htmlText.replace(/top\.location/g, 'window.location');
     
-    // Injeta a BASE para que requisições relativas no HTML (como .m3u8) passem pelo proxy
     const baseTag = `<base href="${urlObj.origin}${urlObj.pathname}">`;
     htmlText = htmlText.replace('<head>', `<head>${baseTag}`);
     
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
-    responseHeaders.set('X-Frame-Options', 'ALLOWALL');
-
     return new Response(htmlText, {
       headers: responseHeaders,
       status: 200

@@ -44,7 +44,7 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
-    // TRATAMENTO RÁPIDO XVIDEOS (v350)
+    // TRATAMENTO RÁPIDO XVIDEOS (v352)
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
@@ -65,12 +65,16 @@ export default function NewContentPage() {
 
     setIsFixing(true);
     try {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+      // QUEBRA-CACHE: Adiciona timestamp para evitar pegar o link do episódio anterior
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
       const patterns = [
-        /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
+        // Prioridade 1: Manifestos HLS / Vídeos Diretos
+        /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
+        /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
+        // Prioridade 2: Embeds conhecidos
         /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
         /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
         /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
@@ -81,14 +85,16 @@ export default function NewContentPage() {
 
       let found = "";
       for (const pattern of patterns) {
-        const match = html.match(pattern);
-        if (match) {
-          const possible = match[1] || match[0];
-          if (!possible.includes('.js') && !possible.includes('.css') && !possible.includes('analytics')) {
-             found = possible;
-             break;
-          }
+        const matches = html.matchAll(new RegExp(pattern, 'gi'));
+        for (const match of matches) {
+           const possible = match[1] || match[0];
+           const pLow = possible.toLowerCase();
+           if (!pLow.includes('.js') && !pLow.includes('.css') && !pLow.includes('analytics') && !pLow.includes('ads.')) {
+              found = possible;
+              break;
+           }
         }
+        if (found) break;
       }
       return found || null;
     } catch (e) {
@@ -191,7 +197,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v350</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v352</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
