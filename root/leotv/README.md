@@ -47,4 +47,21 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 ```
 
 ---
+
+### 📡 4. Manual do Mestre: Integrando Sinais Externos (Vivensis)
+
+**A) A Lógica do Hardware:**
+- **1 Receptor Vivensis + 1 Encoder = 1 Canal por vez.**
+- O link gerado mostrará exatamente o canal que estiver selecionado no controle remoto da Vivensis.
+- Para oferecer 80 canais independentes ao mesmo tempo, seria necessário um rack profissional de receptores.
+
+**B) Funcionamento e Manutenção:**
+- **Energia:** O kit Vivensis + Encoder deve ficar ligado 24h por dia. Se desligar, o sinal no seu painel cai.
+- **Internet:** O Encoder precisa de um cabo de rede ligado ao seu roteador para "enviar" o vídeo para o seu site Léo TV.
+- **Bloqueio por PIN:** Uma vez que o link do Encoder está no seu painel, você tem controle total. Se o PIN do cliente vencer, o acesso ao sinal da Vivensis é cortado automaticamente pelo sistema.
+
+**C) Grade de Canais:**
+- Foca em canais abertos regionais (Globo, SBT, Record, Band) via satélite Sat HD Regional. Zero delay e imagem HD pura.
+
+---
 **SEU LINK DE ACESSO:** `https://leotv.fun`
