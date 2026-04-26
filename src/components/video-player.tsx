@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Play, Pause, BellRing, X, Volume2, VolumeX } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Volume2, VolumeX } from "lucide-react"
 import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
@@ -14,8 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANO v344 - MESTRE DE VOLUME
- * Botão central focado em ativar o som, facilitando para usuários de TV.
+ * PLAYER MASTER SOBERANA v369 - MESTRE DE FORMATOS
+ * Suporte a .ts via mpegts.js e Swap Gênio inteligente.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -23,13 +23,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [loading, setLoading] = React.useState(true)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [isPlaying, setIsPlaying] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   const [announcement, setAnnouncement] = React.useState<string | null>(null)
   const [showAnnouncement, setShowAnnouncement] = React.useState(false)
   
-  const playPromiseRef = React.useRef<Promise<void> | null>(null);
+  const mpegtsPlayerRef = React.useRef<any>(null);
 
   const safeUrl = React.useMemo(() => {
     if (!url) return "";
@@ -37,8 +36,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   }, [url]);
 
   const lowUrl = safeUrl.toLowerCase();
-  const isYoutube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isAudioEmbed = lowUrl.includes('spotify') || lowUrl.includes('deezer');
   
   const isDirectFile = lowUrl.includes('.m3u8') || 
                        lowUrl.includes('.ts') || 
@@ -52,15 +49,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                    lowUrl.includes('reidoscanais') ||
                    lowUrl.includes('playcnvs') || 
                    lowUrl.includes('xvideos') ||
-                   lowUrl.includes('rdcplayer');
+                   lowUrl.includes('rdcplayer') ||
+                   lowUrl.includes('dailymotion');
 
   const cleanup = React.useCallback(async () => {
+    if (mpegtsPlayerRef.current) {
+      mpegtsPlayerRef.current.destroy();
+      mpegtsPlayerRef.current = null;
+    }
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.src = "";
       videoRef.current.load();
     }
-    playPromiseRef.current = null;
   }, []);
 
   const initPlayer = React.useCallback(async () => {
@@ -78,34 +79,44 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     } catch (e) {}
 
-    if (isIframe || isYoutube || isAudioEmbed) {
+    if (isIframe) {
       setPlayerKey(Date.now());
-      setIsPlaying(true);
       setTimeout(() => setLoading(false), 2000);
       return;
     }
 
     if (isDirectFile && videoRef.current) {
       try {
+        // Suporte especial para .ts via mpegts.js
+        if (lowUrl.includes('.ts') && (window as any).mpegts) {
+          const mpegts = (window as any).mpegts;
+          if (mpegts.getFeatureList().mse) {
+            mpegtsPlayerRef.current = mpegts.createPlayer({
+              type: 'mse',
+              url: safeUrl
+            });
+            mpegtsPlayerRef.current.attachMediaElement(videoRef.current);
+            mpegtsPlayerRef.current.load();
+            mpegtsPlayerRef.current.play().catch(() => {
+              if (videoRef.current) videoRef.current.muted = true;
+              mpegtsPlayerRef.current.play();
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Padrao para outros arquivos diretos (.mp4, .m3u8 nativo)
         videoRef.current.src = safeUrl;
         videoRef.current.load();
-        
-        const promise = videoRef.current.play();
-        playPromiseRef.current = promise;
-
-        promise
-          .then(() => {
-            setIsPlaying(true);
-            setIsMuted(videoRef.current?.muted || false);
-            setLoading(false)
-          })
+        videoRef.current.play()
+          .then(() => setLoading(false))
           .catch(() => {
             if (videoRef.current) {
               videoRef.current.muted = true;
               setIsMuted(true);
-              videoRef.current.play().catch(() => {});
+              videoRef.current.play();
             }
-            setIsPlaying(true);
             setLoading(false);
           });
       } catch (e) {
@@ -113,9 +124,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     } else {
       setLoading(false);
-      setIsPlaying(true);
     }
-  }, [safeUrl, isMounted, isDirectFile, isIframe, isYoutube, isAudioEmbed]);
+  }, [safeUrl, isMounted, isDirectFile, isIframe, lowUrl]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -129,10 +139,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const newMuteState = !videoRef.current.muted;
       videoRef.current.muted = newMuteState;
       setIsMuted(newMuteState);
-    } else if (isIframe || isYoutube) {
-      // Para iframes, o reload muitas vezes resolve o problema do som bloqueado
+    } else if (isIframe) {
       setPlayerKey(Date.now());
-      setIsPlaying(true);
     }
   };
 
@@ -149,19 +157,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     } catch (e) {}
   };
 
-  const handleCloseAnnouncement = () => {
-    if (announcement) {
-      localStorage.setItem('leotv_last_announcement', announcement);
-    }
-    setShowAnnouncement(false);
-  };
-
   if (!isMounted || !safeUrl) return null;
 
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {(isIframe || isYoutube || isAudioEmbed) && (
+      {isIframe && (
         <iframe 
           key={playerKey}
           src={safeUrl}
@@ -171,7 +172,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         />
       )}
 
-      {!isIframe && !isYoutube && !isAudioEmbed && (
+      {!isIframe && (
         <video 
           key={safeUrl} 
           ref={videoRef} 
@@ -186,27 +187,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v344...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v369...</p>
           </div>
         </div>
       )}
 
-      {showAnnouncement && (
-        <div className="absolute inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-500">
-           <div className="max-w-md w-full bg-card rounded-[2rem] border-2 border-primary shadow-2xl overflow-hidden animate-in zoom-in-95">
-              <div className="bg-primary p-6 flex items-center gap-4">
-                 <div className="bg-white/20 p-3 rounded-2xl"><BellRing className="h-6 w-6 text-white" /></div>
-                 <h3 className="font-black uppercase italic text-white tracking-widest">Aviso do Mestre Léo</h3>
-              </div>
-              <div className="p-8">
-                 <p className="text-sm font-bold leading-relaxed text-foreground whitespace-pre-wrap">{announcement}</p>
-                 <button 
-                  onClick={handleCloseAnnouncement}
-                  className="w-full mt-8 h-14 bg-primary text-white font-black uppercase rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
-                 >
-                   CIENTE / FECHAR AVISO
-                 </button>
-              </div>
+      {showAnnouncement && announcement && (
+        <div className="absolute inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+           <div className="max-w-md w-full bg-card rounded-[2rem] border-2 border-primary p-8 shadow-2xl">
+              <h3 className="font-black uppercase text-primary mb-4">Aviso do Mestre Léo</h3>
+              <p className="text-sm font-bold leading-relaxed mb-8">{announcement}</p>
+              <button onClick={() => setShowAnnouncement(false)} className="w-full h-14 bg-primary text-white font-black uppercase rounded-2xl shadow-xl">ENTENDIDO</button>
            </div>
         </div>
       )}
@@ -214,8 +205,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <button onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5 text-white" /></button>}
         
-        {/* BOTÃO MESTRE DE VOLUME - Substituiu o Play/Pause por ordem do Mestre Léo */}
-        <button onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all" title={isMuted ? "Ativar Som" : "Mudo"}>
+        <button onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl flex items-center justify-center border-4 border-white/20 hover:scale-110 active:scale-95 transition-all">
           {isMuted ? <VolumeX className="h-8 w-8 text-white animate-pulse" /> : <Volume2 className="h-8 w-8 text-white" />}
         </button>
 

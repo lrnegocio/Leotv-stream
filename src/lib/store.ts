@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v368
- * Inteligência de detecção de links internacional e Correção Mercado Play, XVideos e Roblox.
+ * FORMATAÇÃO MASTER SOBERANA v369
+ * Inteligência de detecção de links internacional e Swap Gênio .ts -> .m3u8
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -98,12 +98,18 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // TRATAMENTO MERCADO PLAY v368
+    // SWAP GÊNIO v369: Converte .ts para .m3u8 automaticamente em IPs de IPTV
+    if (lowUrl.endsWith('.ts') && (lowUrl.includes('http://') || lowUrl.includes('https://'))) {
+       finalUrl = finalUrl.substring(0, finalUrl.length - 3) + ".m3u8";
+       lowUrl = finalUrl.toLowerCase();
+    }
+
+    // TRATAMENTO MERCADO PLAY
     if (lowUrl.includes('play.mercadolivre.com.br')) {
        return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // TRATAMENTO XVIDEOS v368 - EXTERMINADOR DE TELA BRANCA
+    // TRATAMENTO XVIDEOS
     if (lowUrl.includes('xvideos.com/')) {
        let xid = "";
        const match = finalUrl.match(/video\.([a-z0-9]+)/i);
@@ -115,7 +121,7 @@ export const formatMasterLink = (url: string) => {
        }
     }
 
-    // TRATAMENTO ROBLOX v368
+    // TRATAMENTO ROBLOX
     if (lowUrl.includes('roblox.com/pt/games/') || lowUrl.includes('roblox.com/games/')) {
        return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -126,7 +132,7 @@ export const formatMasterLink = (url: string) => {
        if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
     }
     
-    // TRATAMENTO OK.RU (RÚSSIA)
+    // TRATAMENTO OK.RU
     if (lowUrl.includes('ok.ru/video/')) {
        const id = finalUrl.split('/video/')[1]?.split('/')[0]?.split('?')[0];
        if (id) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${id}`)}`;
@@ -153,7 +159,11 @@ export const formatMasterLink = (url: string) => {
       'roblox.com', 'mercadolivre.com.br'
     ];
 
+    // IPs diretos geralmente precisam de proxy para resolver problemas de Mixed Content (HTTP em HTTPS)
+    const isIpLink = /^(https?:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lowUrl);
+
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
+                      isIpLink ||
                       (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
 
     if (needsProxy && !finalUrl.includes('/api/proxy')) {

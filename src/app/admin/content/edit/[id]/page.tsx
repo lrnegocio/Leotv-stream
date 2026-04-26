@@ -83,26 +83,33 @@ export default function EditContentPage() {
       return null;
     }
     
-    const lowUrl = url.toLowerCase();
+    let currentUrl = url.trim();
+    const lowUrl = currentUrl.toLowerCase();
     
-    // v368: REGRAS DE OURO PARA MERCADO PLAY, XVIDEOS E DAILYMOTION
+    // SWAP GÊNIO v369: Se for .ts, converte para .m3u8 na hora da sintonia
+    if (lowUrl.endsWith('.ts')) {
+       const swapped = currentUrl.substring(0, currentUrl.length - 3) + ".m3u8";
+       toast({ title: "SWAP GÊNIO v369 ATIVO!", description: "Convertido .ts para .m3u8 para liberar o sinal." });
+       return swapped;
+    }
+
     if (lowUrl.includes('mercadolivre.com.br')) {
-       return `/api/proxy?url=${encodeURIComponent(url)}`;
+       return `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
     }
 
     if (lowUrl.includes('xvideos.com/video.')) {
-       const match = url.match(/video\.([a-z0-9]+)/i);
+       const match = currentUrl.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;
     }
 
     if (lowUrl.includes('dailymotion.com/video/')) {
-       const dId = url.split('/video/')[1]?.split('?')[0];
+       const dId = currentUrl.split('/video/')[1]?.split('?')[0];
        if (dId) return `https://www.dailymotion.com/embed/video/${dId}?autoplay=1`;
     }
 
     if (lowUrl.includes('ok.ru/video/')) {
-       const id = url.split('/video/')[1]?.split('/')[0]?.split('?')[0];
-       if (id) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${id}`)}`;
+       const vId = currentUrl.split('/video/')[1]?.split('/')[0]?.split('?')[0];
+       if (vId) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${vId}`)}`;
     }
 
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
@@ -113,7 +120,7 @@ export default function EditContentPage() {
 
     setIsFixing(true);
     try {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`;
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(currentUrl)}&t=${Date.now()}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
