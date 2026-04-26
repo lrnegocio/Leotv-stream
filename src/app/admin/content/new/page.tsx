@@ -1,9 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2 } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2, Languages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { saveContent, ContentType, cleanName, Episode, Season, formatMasterLink } from "@/lib/store"
+import { translateMetadata } from "@/ai/flows/translate-metadata-flow"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -21,6 +21,7 @@ export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
   const [isFixing, setIsFixing] = React.useState(false)
+  const [isTranslating, setIsTranslating] = React.useState(false)
   const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
   const [formData, setFormData] = React.useState({
@@ -36,6 +37,31 @@ export default function NewContentPage() {
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
 
+  const handleTranslate = async () => {
+    if (!formData.title && !formData.description) {
+      toast({ variant: "destructive", title: "Nada para traduzir!" });
+      return;
+    }
+    setIsTranslating(true);
+    try {
+      const results = await Promise.all([
+        formData.title ? translateMetadata({ text: formData.title, context: 'title' }) : Promise.resolve({ translatedText: "" }),
+        formData.description ? translateMetadata({ text: formData.description, context: 'description' }) : Promise.resolve({ translatedText: "" })
+      ]);
+      
+      setFormData(prev => ({
+        ...prev,
+        title: results[0].translatedText || prev.title,
+        description: results[1].translatedText || prev.description
+      }));
+      toast({ title: "TRADUÇÃO CONCLUÍDA!" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Falha na IA Tradutora" });
+    } finally {
+      setIsTranslating(false);
+    }
+  }
+
   const runTuner = async (url: string) => {
     if (!url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" });
@@ -43,21 +69,16 @@ export default function NewContentPage() {
     }
     
     const lowUrl = url.toLowerCase();
-    
-    // TRATAMENTO RÁPIDO XVIDEOS (v352)
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
     }
-
-    // TRATAMENTO RÁPIDO DAILYMOTION
     if (lowUrl.includes('dailymotion.com/video/')) {
        const id = url.split('/video/')[1]?.split('?')[0];
        if (id) return `https://www.dailymotion.com/embed/video/${id}`;
     }
 
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-    
     if (isDirect) {
       toast({ title: "SINAL JÁ É DIRETO!" });
       return null;
@@ -65,21 +86,17 @@ export default function NewContentPage() {
 
     setIsFixing(true);
     try {
-      // QUEBRA-CACHE: Adiciona timestamp para evitar pegar o link do episódio anterior
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`;
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
       const patterns = [
-        // Prioridade 1: Manifestos HLS / Vídeos Diretos
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
         /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
-        // Prioridade 2: Embeds conhecidos
         /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
         /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
         /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
         /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
-        /https?:\/\/[^"']+(?:player|embed|video|iframe)[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
 
@@ -197,14 +214,19 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v352</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v357</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
+              <div className="flex items-center justify-between">
+                <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-6 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
+                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir via IA
+                </Button>
+              </div>
               <Input 
                 value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
