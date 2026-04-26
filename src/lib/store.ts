@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v360
- * Inteligência de detecção de links internacional e Anti-Cloudflare.
+ * FORMATAÇÃO MASTER SOBERANA v363
+ * Inteligência de detecção de links internacional e Arena Games Roblox.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -133,7 +133,7 @@ export const formatMasterLink = (url: string) => {
       'archive.org', 'pornhub', 'acplay.live', 'hoathinh3d',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
       'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
-      'shortflix', 'nsstorage', 'ok.ru', 'plutotv', 'googleapis.com.de'
+      'shortflix', 'nsstorage', 'ok.ru', 'plutotv', 'googleapis.com.de', 'roblox.com'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

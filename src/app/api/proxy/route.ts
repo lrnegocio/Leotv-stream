@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v361 - O EXTERMINADOR DE BLOQUEIOS E JUNK-LINKS
- * Calibragem especial para googleapis.com.de e mascaramento de TV.
+ * TÚNEL MASTER SOBERANO v363 - O EXTERMINADOR DE BLOQUEIOS E JUNK-LINKS
+ * Calibragem especial para googleapis, roblox e mascaramento de TV.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const lowTarget = targetUrl.toLowerCase();
 
-  // EXTERMINADOR DE JUNK v361: Bloqueia analytics e junk links que travam o painel
+  // EXTERMINADOR DE JUNK v363: Bloqueia analytics e junk links que travam o painel
   if (lowTarget.includes('googletagmanager') || lowTarget.includes('analytics') || lowTarget.includes('facebook.net') || lowTarget.includes('pixel')) {
     return new NextResponse("Link de Junk Bloqueado", { status: 403 });
   }
@@ -44,10 +44,13 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Sec-Fetch-Site', 'none');
     requestHeaders.set('Upgrade-Insecure-Requests', '1');
     
-    // CALIBRAGEM DE REFERER SOBERANA v361
+    // CALIBRAGEM DE REFERER SOBERANA v363
     if (lowTarget.includes('googleapis.com.de')) {
       requestHeaders.set('Referer', 'https://googleapis.com.de/');
       requestHeaders.set('Origin', 'https://googleapis.com.de');
+    } else if (lowTarget.includes('roblox.com')) {
+      requestHeaders.set('Referer', 'https://www.roblox.com/');
+      requestHeaders.set('Origin', 'https://www.roblox.com');
     } else if (lowTarget.includes('hoathinh3d')) {
       requestHeaders.set('Referer', 'https://hoathinh3d.co.in/');
       requestHeaders.set('Origin', 'https://hoathinh3d.co.in');
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v361", { status: 500 });
+    return new Response("Falha no Túnel Master v363", { status: 500 });
   }
 }
 
@@ -108,7 +111,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
-  // DECAPITADOR DE SEGURANÇA v361
+  // DECAPITADOR DE SEGURANÇA v363
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');
