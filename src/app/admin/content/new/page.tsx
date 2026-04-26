@@ -92,8 +92,8 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // EXTERMINADOR DE JUNK-LINKS v361
-      const junkPatterns = ['gtag', 'googletagmanager', 'google-analytics', 'wp-json', 'oembed', '.js', '.css', 'pixel', 'facebook.net'];
+      // EXTERMINADOR DE JUNK-LINKS v362 - LISTA NEGRA AGRESSIVA
+      const junkPatterns = ['gtag', 'googletagmanager', 'google-analytics', 'wp-json', 'oembed', '.js', '.css', 'pixel', 'facebook.net', 'adsbygoogle', 'scripts', 'tracking'];
       
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
@@ -114,7 +114,7 @@ export default function NewContentPage() {
            const pLow = possible.toLowerCase();
            
            const isJunk = junkPatterns.some(junk => pLow.includes(junk));
-           if (!isJunk) {
+           if (!isJunk && pLow.startsWith('http')) {
               found = possible;
               break;
            }
@@ -222,19 +222,14 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v361</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v362</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-7 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
-                </Button>
-              </div>
+              <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
               <Input 
                 value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
@@ -292,9 +287,14 @@ export default function NewContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                   <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                  <Button type="button" variant="outline" size="sm" onClick={handleFixMainLink} disabled={isFixing} className="h-7 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
-                    {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Sinal
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
+                      {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={handleFixMainLink} disabled={isFixing} className="h-8 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
+                      {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Sinal
+                    </Button>
+                  </div>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link original aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
@@ -304,6 +304,15 @@ export default function NewContentPage() {
             </div>
           ) : (
             <div className="space-y-6">
+              <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="uppercase text-[10px] font-black opacity-60">IA TRADUTORA PARA SÉRIES</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
+                    {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Título e Sinopse
+                  </Button>
+                </div>
+              </div>
+
               {formData.type === 'series' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
