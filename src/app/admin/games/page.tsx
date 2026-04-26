@@ -45,7 +45,7 @@ export default function AdminGamesPage() {
     setGameData(prev => ({ ...prev, url: val.trim() }));
   }
 
-  // SINTONIZADOR MASTER v364: Inteligência Roblox e RetroGames
+  // SINTONIZADOR MASTER v365: Deep-Cleaning Roblox Integrado
   const handleFixLink = async () => {
     if (!gameData.url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
@@ -60,7 +60,7 @@ export default function AdminGamesPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // CASO ROBLOX v364: Extrai título e força passagem pelo proxy
+      // CASO ROBLOX v365: Extrai título e força Deep-Cleaning via Proxy
       if (currentUrl.includes('roblox.com')) {
         const titleMatch = html.match(/<title>(.*?)<\/title>/i);
         let cleanTitle = "JOGO ROBLOX";
@@ -68,7 +68,7 @@ export default function AdminGamesPage() {
            cleanTitle = titleMatch[1].split(' - Roblox')[0].trim().toUpperCase();
         }
 
-        // Reconstrói o link para passar pelo proxy de desbloqueio profundo
+        // Reconstrói o link injetando o proxy que fará a limpeza da interface
         const finalLink = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
 
         setGameData(prev => ({ 
@@ -77,7 +77,7 @@ export default function AdminGamesPage() {
           console: "ROBLOX",
           url: finalLink
         }));
-        toast({ title: "ROBLOX SINTONIZADO!", description: "Link desbloqueado e título extraído." });
+        toast({ title: "ROBLOX CALIBRADO!", description: "Sinal pronto com limpeza de interface v365." });
       } 
       // CASO RETROGAMES: Extrai o link de embed
       else if (currentUrl.includes('retrogames.cc')) {
@@ -149,7 +149,7 @@ export default function AdminGamesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v364.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v365.</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">

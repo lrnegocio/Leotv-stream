@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v364 - O EXTERMINADOR DE BLOQUEIOS E JUNK-LINKS
+ * TÚNEL MASTER SOBERANO v365 - O EXTERMINADOR DE BLOQUEIOS E JUNK-LINKS
  * Calibragem especial para googleapis, roblox e mascaramento de TV.
+ * v365: Injeção de Deep-Cleaning para esconder interface do site Roblox.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const lowTarget = targetUrl.toLowerCase();
 
-  // EXTERMINADOR DE JUNK v364: Bloqueia analytics e junk links que travam o painel
+  // EXTERMINADOR DE JUNK v365: Bloqueia analytics e junk links que travam o painel
   if (lowTarget.includes('googletagmanager') || lowTarget.includes('analytics') || lowTarget.includes('facebook.net') || lowTarget.includes('pixel')) {
     return new NextResponse("Link de Junk Bloqueado", { status: 403 });
   }
@@ -44,11 +45,10 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Sec-Fetch-Site', 'none');
     requestHeaders.set('Upgrade-Insecure-Requests', '1');
     
-    // CALIBRAGEM DE REFERER SOBERANA v364
+    // CALIBRAGEM DE REFERER SOBERANA v365
     if (lowTarget.includes('roblox.com')) {
       requestHeaders.set('Referer', 'https://www.roblox.com/');
       requestHeaders.set('Origin', 'https://www.roblox.com');
-      // Roblox exige que o host seja exato
       requestHeaders.set('Host', 'www.roblox.com');
     } else if (lowTarget.includes('googleapis.com.de')) {
       requestHeaders.set('Referer', 'https://googleapis.com.de/');
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v364", { status: 500 });
+    return new Response("Falha no Túnel Master v365", { status: 500 });
   }
 }
 
@@ -113,7 +113,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
-  // DECAPITADOR DE SEGURANÇA v364 - EXTERMINADOR DE TELA BRANCA
+  // DECAPITADOR DE SEGURANÇA v365 - EXTERMINADOR DE TELA BRANCA
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');
@@ -146,6 +146,49 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   if (isHtml) {
     let htmlText = await res.text();
+
+    // v365: INJEÇÃO DE DEEP-CLEANING PARA ROBLOX
+    if (lowUrl.includes('roblox.com')) {
+      const robloxCleanCss = `
+        <style>
+          /* ESCONDE TUDO QUE NÃO É O JOGO */
+          #navbar-container, .rbx-header, .footer-container, .ad-slot, 
+          .chat-container, .left-col-container, .setup-install-modal-container,
+          .user-status-container, .notification-stream-container, #notification-stream-data {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+          }
+          .content {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            background: black !important;
+          }
+          .game-main-content {
+             width: 100% !important;
+             margin: 0 !important;
+          }
+          #container-main {
+             padding: 0 !important;
+          }
+          body {
+            background-color: black !important;
+            overflow-x: hidden !important;
+          }
+          /* DESTACA O BOTÃO DE PLAY */
+          .game-buttons-container {
+             background: rgba(0,0,0,0.5) !important;
+             padding: 20px !important;
+             border-radius: 20px !important;
+          }
+        </style>
+      `;
+      htmlText = htmlText.replace('<head>', `<head>${robloxCleanCss}`);
+    }
+
     htmlText = htmlText.replace(/window\.open/g, 'console.log');
     htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
