@@ -81,9 +81,9 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v354
+ * FORMATAÇÃO MASTER SOBERANA v355
  * Inteligência de detecção de links e extrator de Embed RDC e XVideos integrado.
- * Agora com suporte a limpeza de CSP via Proxy para XVideos.
+ * Adicionado suporte para Archive.org, TokyVideo e Ok.ru.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -128,7 +128,7 @@ export const formatMasterLink = (url: string) => {
       'archive.org', 'pornhub', 'acplay.live',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
       'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
-      'shortflix', 'nsstorage'
+      'shortflix', 'nsstorage', 'ok.ru', 'plutotv'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 

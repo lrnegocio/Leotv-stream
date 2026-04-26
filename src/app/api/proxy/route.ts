@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v354 - PROTOCOLO DE DECAPITAÇÃO DE HEADERS ELITE
- * Calibragem extrema para XVideos e sites com proteção CSP agressiva.
+ * TÚNEL MASTER SOBERANO v355 - EXTERMINADOR DE BLOQUEIOS ELITE
+ * Adicionado suporte agressivo para Archive.org e TokyVideo.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', origin);
       requestHeaders.set('Origin', origin.replace(/\/$/, ''));
     } else if (lowTarget.includes('xvideos')) {
-      // SPOOFING ELITE PARA XVIDEOS
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
       requestHeaders.set('Origin', 'https://www.xvideos.com');
       requestHeaders.set('Sec-Fetch-Dest', 'iframe');
@@ -53,6 +52,10 @@ export async function GET(req: NextRequest) {
     } else if (lowTarget.includes('tokyvideo')) {
       requestHeaders.set('Referer', 'https://www.tokyvideo.com/'); 
       requestHeaders.set('Origin', 'https://www.tokyvideo.com');
+    } else if (lowTarget.includes('archive.org')) {
+      requestHeaders.set('Referer', 'https://archive.org/');
+    } else if (lowTarget.includes('ok.ru')) {
+      requestHeaders.set('Referer', 'https://ok.ru/');
     } else if (lowTarget.includes('shortflix')) {
       requestHeaders.set('Referer', 'https://www.shortflix.net/');
     } else {
@@ -67,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v354", { status: 500 });
+    return new Response("Falha no Túnel Master v355", { status: 500 });
   }
 }
 
@@ -80,7 +83,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   const responseHeaders = new Headers();
   
-  // Copia headers básicos
   const headersToCopy = [
     'content-type', 'content-length', 'content-range', 
     'accept-ranges', 'cache-control'
@@ -91,18 +93,15 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     if (val) responseHeaders.set(h, val);
   });
   
-  // Repassa Cookies para manter sessões ativas
   const setCookies = res.headers.getSetCookie();
   setCookies.forEach(cookie => {
     responseHeaders.append('Set-Cookie', cookie);
   });
   
-  // EXTERMINADOR DE BLOQUEIOS (Resolve Tela Branca XVideos e RDC)
   responseHeaders.set('Access-Control-Allow-Origin', '*');
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
-  // DECAPITAÇÃO DE HEADERS DE SEGURANÇA
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');
@@ -110,7 +109,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.delete('Report-To');
   responseHeaders.delete('NEL');
   
-  // FORÇA LIBERAÇÃO DE IFRAME
   responseHeaders.set('X-Frame-Options', 'ALLOWALL');
   responseHeaders.set('Content-Security-Policy', "default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *;");
 
@@ -134,7 +132,6 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
 
   if (isHtml) {
     let htmlText = await res.text();
-    // Neutraliza scripts que tentam detectar frames ou abrir janelas
     htmlText = htmlText.replace(/window\.open/g, 'console.log');
     htmlText = htmlText.replace(/target=["']_blank["']/g, 'target="_self"');
     htmlText = htmlText.replace(/window\.top/g, 'window.self');
