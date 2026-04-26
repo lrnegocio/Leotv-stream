@@ -9,7 +9,7 @@ firewall-cmd --permanent --add-port=443/tcp
 firewall-cmd --reload
 ```
 
-### 📦 2. Atualização e Ativação do Sistema (Sincronização v356):
+### 📦 2. Atualização e Ativação do Sistema (Sincronização v370):
 ```bash
 cd ~/leotv
 git fetch origin main
@@ -20,38 +20,33 @@ chmod +x deploy.sh
 
 ### 🌐 3. Ativação do Domínio e SSL (HTTPS)
 Após rodar o deploy, execute estes comandos no Putty para ativar o cadeado:
-
 ```bash
-# Inicia o Nginx de verdade
 systemctl restart nginx
 systemctl enable nginx
-
-# Gera o SSL (Cadeado) - RESPONDA SEU E-MAIL QUANDO PEDIR
 certbot --nginx -d leotv.fun -d www.leotv.fun
 ```
 
 ---
 
-### 📡 4. Manual do Mestre: Integrando Sinais Externos (Vivensis/Encoder)
+### 📡 4. Inteligência de Sinais: Permanente vs Temporário
 
-**A) A Regra de Ouro (1 pra 1):**
-- **1 Receptor + 1 Encoder = 1 Canal Ativo.**
-- Se você mudar o canal no controle remoto da Vivensis, o link no seu painel muda automaticamente para o novo canal.
+**A) Sinais de IPTV (Servidores Externos):**
+- **O que são:** Sinais alugados (Ex: `172.110...`).
+- **Validade:** São vinculados a uma conta. Quando o acesso vence no servidor deles, o sinal para. 
+- **O Segredo:** Não existe link vitalício em servidores de terceiros. Se você não é o dono do servidor, você depende do pagamento da conta.
 
-**B) Como achar le link no seu PC:**
-1. Digite o IP do Encoder no navegador (ex: `192.168.1.168`).
-2. Procure a aba **"Main Stream"** ou **"HLS"**. 
-3. Copie le link `.m3u8` e cole no painel.
+**B) Sinais de Hardware (O Único Vitalício):**
+- **O que é:** 1 Receptor Vivensis + 1 Encoder ligados na SUA rede.
+- **Vantagem:** O sinal sai da antena direto para o seu site. **Nunca expira**, não tem mensalidade de servidor e o link é seu para sempre.
+- **Como integrar:** Pegue o IP do seu Encoder e cole no painel Léo TV.
 
 ---
 
-### 🧠 5. Inteligência de Sinais (Como escolher links)
+### 🧠 5. Protocolo de Captura (O Manual do Mestre)
 
-Ao escolher entre dois links para seu painel, siga a lógica do Mestre:
-
-1. **Links com TOKEN (Péssimos):** Se o link tiver `?token=` ou `?username=`, ele vai **PARAR** de funcionar assim que o plano expirar.
-2. **Links de CAMINHO (Bons):** Se o link for direto (ex: `.../pasta/video.mp4`), ele dura mais, mas pode mudar a pasta.
-3. **Links PERMANENTES (Elite):** Use **Archive.org**, **TokyVideo** ou **Ok.ru** (`ok.ru/video/ID`). Esses são sinais que ficam vivos por anos e o nosso sintonizador limpa tudo!
+1. **Swap Gênio:** Se o link terminar em `.ts`, o sistema converte para `.m3u8` para economizar banda e evitar bloqueios.
+2. **Deep-Trace:** Nosso sistema agora segue redirecionamentos ocultos para tentar achar a CDN final do vídeo.
+3. **Limpeza Profunda:** Anúncios e interfaces de sites (Roblox, Mercado Play) são removidos por injeção de CSS.
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`
