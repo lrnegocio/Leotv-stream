@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v366
- * Inteligência de detecção de links internacional e Correção Dailymotion.
+ * FORMATAÇÃO MASTER SOBERANA v367
+ * Inteligência de detecção de links internacional e Correção XVideos e Roblox.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -98,13 +98,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // TRATAMENTO DAILYMOTION v366
-    if (lowUrl.includes('dailymotion.com/video/')) {
-       const id = finalUrl.split('/video/')[1]?.split('?')[0];
-       if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
-    }
-
-    // TRATAMENTO XVIDEOS
+    // TRATAMENTO XVIDEOS v367 - EXTERMINADOR DE TELA BRANCA
     if (lowUrl.includes('xvideos.com/')) {
        let xid = "";
        const match = finalUrl.match(/video\.([a-z0-9]+)/i);
@@ -114,6 +108,17 @@ export const formatMasterLink = (url: string) => {
        if (xid) {
           return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${xid}`)}`;
        }
+    }
+
+    // TRATAMENTO ROBLOX v367
+    if (lowUrl.includes('roblox.com/pt/games/') || lowUrl.includes('roblox.com/games/')) {
+       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
+    // TRATAMENTO DAILYMOTION
+    if (lowUrl.includes('dailymotion.com/video/')) {
+       const id = finalUrl.split('/video/')[1]?.split('?')[0];
+       if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
     }
     
     // TRATAMENTO OK.RU (RÚSSIA)

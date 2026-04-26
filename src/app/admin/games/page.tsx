@@ -45,7 +45,7 @@ export default function AdminGamesPage() {
     setGameData(prev => ({ ...prev, url: val.trim() }));
   }
 
-  // SINTONIZADOR MASTER v365: Deep-Cleaning Roblox Integrado
+  // SINTONIZADOR MASTER v367: Deep-Cleaning Roblox v2 Integrado
   const handleFixLink = async () => {
     if (!gameData.url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
@@ -60,7 +60,7 @@ export default function AdminGamesPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // CASO ROBLOX v365: Extrai título e força Deep-Cleaning via Proxy
+      // CASO ROBLOX v367: Extrai título e força Deep-Cleaning via Proxy
       if (currentUrl.includes('roblox.com')) {
         const titleMatch = html.match(/<title>(.*?)<\/title>/i);
         let cleanTitle = "JOGO ROBLOX";
@@ -68,7 +68,7 @@ export default function AdminGamesPage() {
            cleanTitle = titleMatch[1].split(' - Roblox')[0].trim().toUpperCase();
         }
 
-        // Reconstrói o link injetando o proxy que fará a limpeza da interface
+        // Reconstrói o link injetando o proxy v367
         const finalLink = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
 
         setGameData(prev => ({ 
@@ -77,20 +77,17 @@ export default function AdminGamesPage() {
           console: "ROBLOX",
           url: finalLink
         }));
-        toast({ title: "ROBLOX CALIBRADO!", description: "Sinal pronto com limpeza de interface v365." });
+        toast({ title: "ROBLOX CALIBRADO!", description: "Limpeza profunda v367 aplicada." });
       } 
-      // CASO RETROGAMES: Extrai o link de embed
       else if (currentUrl.includes('retrogames.cc')) {
         const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
         if (embedMatch) {
           setGameData(prev => ({ ...prev, url: embedMatch[0] }));
-          toast({ title: "MOTOR SINTONIZADO!", description: "Link de emulação extraído." });
-        } else {
-          toast({ variant: "destructive", title: "Embed não localizado." });
+          toast({ title: "MOTOR SINTONIZADO!" });
         }
       } 
       else {
-        toast({ title: "SINAL ANALISADO", description: "O link foi processado pelo sistema." });
+        toast({ title: "SINAL ANALISADO" });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Sintonização Falhou" });
@@ -149,7 +146,7 @@ export default function AdminGamesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v365.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v367.</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
