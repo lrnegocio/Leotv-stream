@@ -9,7 +9,7 @@ firewall-cmd --permanent --add-port=443/tcp
 firewall-cmd --reload
 ```
 
-### 📦 2. Atualização e Ativação do Sistema (Sincronização v353):
+### 📦 2. Atualização e Ativação do Sistema (Sincronização v356):
 ```bash
 cd ~/leotv
 git fetch origin main
@@ -36,18 +36,22 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 
 **A) A Regra de Ouro (1 pra 1):**
 - **1 Receptor + 1 Encoder = 1 Canal Ativo.**
-- Se você mudar o canal no controle remoto da Vivensis, o link no seu painel muda automaticamente para o novo canal. O sinal anterior é substituído. Não existem "links permanentes para 80 canais" com apenas um aparelho.
+- Se você mudar o canal no controle remoto da Vivensis, o link no seu painel muda automaticamente para o novo canal.
 
 **B) Como achar o link no seu PC:**
-1. Conecte o Encoder no seu Roteador via cabo de rede.
-2. No seu computador, abra o navegador e digite o IP do Encoder (ex: `192.168.1.168`). Esse IP vem no manual do aparelho.
-3. Entre com o usuário e senha (geralmente `admin` / `admin`).
-4. Procure a aba **"Main Stream"** ou **"HLS"**. 
-5. Lá estará o seu link master (ex: `http://192.168.1.168:8080/live/stream.m3u8`).
-6. **IMPORTANTE:** Para esse link funcionar na internet para seus clientes, você precisa fazer o "Redirecionamento de Portas" (Port Forwarding) no seu roteador para a porta 8080.
+1. Digite o IP do Encoder no navegador (ex: `192.168.1.168`).
+2. Procure a aba **"Main Stream"** ou **"HLS"**. 
+3. Copie o link `.m3u8` e cole no painel.
 
-**C) Uso Recomendado:**
-- Use o kit físico para garantir o canal MAIS IMPORTANTE da sua grade com 100% de estabilidade (Ex: Globo da sua cidade). Para os demais canais, continue usando os links de internet sintonizados pelo sistema.
+---
+
+### 🧠 5. Inteligência de Sinais (Como escolher links)
+
+Ao escolher entre dois links para seu painel, siga a lógica do Mestre:
+
+1. **Links com TOKEN (Péssimos):** Se o link tiver `?token=` ou `?username=`, ele vai **PARAR** de funcionar assim que o plano expirar. O servidor corta o sinal na hora.
+2. **Links de CAMINHO (Bons):** Se o link for direto (ex: `.../pasta/video.mp4`), ele dura mais, pois não exige login. Mas cuidado: servidores de IPTV mudam as pastas periodicamente.
+3. **Links PERMANENTES (Elite):** Use **Archive.org**, **YouTube** (via nosso sintonizador) ou **TokyVideo**. Esses são sinais que ficam vivos por anos.
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`
