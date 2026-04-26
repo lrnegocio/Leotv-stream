@@ -42,11 +42,10 @@ export default function AdminGamesPage() {
   React.useEffect(() => { loadData() }, [loadData])
 
   const handleUrlChange = (val: string) => {
-    const cleaned = formatGameLink(val);
-    setGameData(prev => ({ ...prev, url: cleaned }));
+    setGameData(prev => ({ ...prev, url: val.trim() }));
   }
 
-  // SINTONIZADOR MASTER v363: Detecta RetroGames, Roblox e outros automaticamente
+  // SINTONIZADOR MASTER v364: Inteligência Roblox e RetroGames
   const handleFixLink = async () => {
     if (!gameData.url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
@@ -55,12 +54,33 @@ export default function AdminGamesPage() {
 
     setIsFixing(true);
     try {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(gameData.url)}&t=${Date.now()}`;
+      const currentUrl = gameData.url;
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(currentUrl)}&t=${Date.now()}`;
+      
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
+      // CASO ROBLOX v364: Extrai título e força passagem pelo proxy
+      if (currentUrl.includes('roblox.com')) {
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        let cleanTitle = "JOGO ROBLOX";
+        if (titleMatch && titleMatch[1]) {
+           cleanTitle = titleMatch[1].split(' - Roblox')[0].trim().toUpperCase();
+        }
+
+        // Reconstrói o link para passar pelo proxy de desbloqueio profundo
+        const finalLink = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
+
+        setGameData(prev => ({ 
+          ...prev, 
+          title: cleanTitle,
+          console: "ROBLOX",
+          url: finalLink
+        }));
+        toast({ title: "ROBLOX SINTONIZADO!", description: "Link desbloqueado e título extraído." });
+      } 
       // CASO RETROGAMES: Extrai o link de embed
-      if (gameData.url.includes('retrogames.cc')) {
+      else if (currentUrl.includes('retrogames.cc')) {
         const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
         if (embedMatch) {
           setGameData(prev => ({ ...prev, url: embedMatch[0] }));
@@ -69,23 +89,8 @@ export default function AdminGamesPage() {
           toast({ variant: "destructive", title: "Embed não localizado." });
         }
       } 
-      // CASO ROBLOX: Extrai o nome do jogo
-      else if (gameData.url.includes('roblox.com')) {
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        if (titleMatch && titleMatch[1]) {
-           const cleanTitle = titleMatch[1].split(' - Roblox')[0].trim();
-           setGameData(prev => ({ 
-             ...prev, 
-             title: cleanTitle.toUpperCase(),
-             console: prev.console || "ROBLOX"
-           }));
-           toast({ title: "ROBLOX RECONHECIDO!", description: `Jogo: ${cleanTitle}` });
-        } else {
-           toast({ title: "ROBLOX DETECTADO", description: "Link pronto para uso." });
-        }
-      }
       else {
-        toast({ title: "SINAL RECONHECIDO", description: "O link foi processado pelo sistema." });
+        toast({ title: "SINAL ANALISADO", description: "O link foi processado pelo sistema." });
       }
     } catch (e) {
       toast({ variant: "destructive", title: "Sintonização Falhou" });
@@ -144,7 +149,7 @@ export default function AdminGamesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v363.</p>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v364.</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">

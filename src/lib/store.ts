@@ -81,7 +81,7 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v363
+ * FORMATAÇÃO MASTER SOBERANA v364
  * Inteligência de detecção de links internacional e Arena Games Roblox.
  */
 export const formatMasterLink = (url: string) => {
@@ -156,6 +156,12 @@ export const formatGameLink = (input: string) => {
     const srcMatch = url.match(/src=["'](.*?)["']/);
     if (srcMatch && srcMatch[1]) url = srcMatch[1];
   }
+  
+  // v364: Roblox sempre passa pelo proxy
+  if (url.toLowerCase().includes('roblox.com') && !url.includes('/api/proxy')) {
+    return `/api/proxy?url=${encodeURIComponent(url)}`;
+  }
+  
   return url;
 };
 
