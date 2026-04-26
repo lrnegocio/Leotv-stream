@@ -85,7 +85,11 @@ export default function EditContentPage() {
     
     const lowUrl = url.toLowerCase();
     
-    // v367: REGRAS DE OURO PARA XVIDEOS E DAILYMOTION
+    // v368: REGRAS DE OURO PARA MERCADO PLAY, XVIDEOS E DAILYMOTION
+    if (lowUrl.includes('mercadolivre.com.br')) {
+       return `/api/proxy?url=${encodeURIComponent(url)}`;
+    }
+
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;

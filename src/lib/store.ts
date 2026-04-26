@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v367
- * Inteligência de detecção de links internacional e Correção XVideos e Roblox.
+ * FORMATAÇÃO MASTER SOBERANA v368
+ * Inteligência de detecção de links internacional e Correção Mercado Play, XVideos e Roblox.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -98,7 +98,12 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // TRATAMENTO XVIDEOS v367 - EXTERMINADOR DE TELA BRANCA
+    // TRATAMENTO MERCADO PLAY v368
+    if (lowUrl.includes('play.mercadolivre.com.br')) {
+       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
+    // TRATAMENTO XVIDEOS v368 - EXTERMINADOR DE TELA BRANCA
     if (lowUrl.includes('xvideos.com/')) {
        let xid = "";
        const match = finalUrl.match(/video\.([a-z0-9]+)/i);
@@ -110,7 +115,7 @@ export const formatMasterLink = (url: string) => {
        }
     }
 
-    // TRATAMENTO ROBLOX v367
+    // TRATAMENTO ROBLOX v368
     if (lowUrl.includes('roblox.com/pt/games/') || lowUrl.includes('roblox.com/games/')) {
        return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -144,7 +149,8 @@ export const formatMasterLink = (url: string) => {
       'archive.org', 'pornhub', 'acplay.live', 'hoathinh3d',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
       'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
-      'shortflix', 'nsstorage', 'ok.ru', 'plutotv', 'googleapis.com.de', 'roblox.com'
+      'shortflix', 'nsstorage', 'ok.ru', 'plutotv', 'googleapis.com.de', 
+      'roblox.com', 'mercadolivre.com.br'
     ];
 
     const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
