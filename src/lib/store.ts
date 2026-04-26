@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v358
- * Inteligência de detecção de links internacional (Vietnã/Rússia).
+ * FORMATAÇÃO MASTER SOBERANA v359
+ * Inteligência de detecção de links internacional (Vietnã/Rússia/XV).
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -110,6 +110,12 @@ export const formatMasterLink = (url: string) => {
        }
     }
     
+    // TRATAMENTO OK.RU (RÚSSIA)
+    if (lowUrl.includes('ok.ru/video/')) {
+       const id = finalUrl.split('/video/')[1]?.split('/')[0]?.split('?')[0];
+       if (id) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${id}`)}`;
+    }
+
     // TRATAMENTO YOUTUBE
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";

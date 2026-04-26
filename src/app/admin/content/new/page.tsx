@@ -71,21 +71,14 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
-    // TRATAMENTO RÁPIDO XVIDEOS
+    // TRATAMENTO RÁPIDO XV/OK
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
     }
-    
-    // TRATAMENTO RÁPIDO OK.RU
     if (lowUrl.includes('ok.ru/video/')) {
        const id = url.split('/video/')[1]?.split('/')[0]?.split('?')[0];
        if (id) return `https://ok.ru/videoembed/${id}`;
-    }
-
-    if (lowUrl.includes('dailymotion.com/video/')) {
-       const id = url.split('/video/')[1]?.split('?')[0];
-       if (id) return `https://www.dailymotion.com/embed/video/${id}`;
     }
 
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
@@ -117,7 +110,8 @@ export default function NewContentPage() {
         for (const match of matches) {
            const possible = match[1] || match[0];
            const pLow = possible.toLowerCase();
-           if (!pLow.includes('.js') && !pLow.includes('.css') && !pLow.includes('analytics') && !pLow.includes('ads.')) {
+           // EXTERMINADOR DE oEmbed v359
+           if (!pLow.includes('.js') && !pLow.includes('.css') && !pLow.includes('analytics') && !pLow.includes('oembed') && !pLow.includes('wp-json')) {
               found = possible;
               break;
            }
@@ -225,7 +219,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v358</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v359</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -234,7 +228,7 @@ export default function NewContentPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
-                <Button type="button" variant="ghost" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-6 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
+                <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-7 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
                    {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir via IA
                 </Button>
               </div>

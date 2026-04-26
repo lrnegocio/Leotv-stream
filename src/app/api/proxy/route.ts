@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v358 - O EXTERMINADOR DE BLOQUEIOS INTERNACIONAL
+ * TÚNEL MASTER SOBERANO v359 - O EXTERMINADOR DE BLOQUEIOS INTERNACIONAL
  * Calibragem especial para sites Vietnamitas, Russos e de Filmes Master.
  */
 export async function GET(req: NextRequest) {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // CALIBRAGEM DE REFERER SOBERANA v358
+    // CALIBRAGEM DE REFERER SOBERANA v359
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v358", { status: 500 });
+    return new Response("Falha no Túnel Master v359", { status: 500 });
   }
 }
 
@@ -99,7 +99,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
-  // DECAPITADOR DE SEGURANÇA v358 - ANTI-TELA-BRANCA
+  // DECAPITADOR DE SEGURANÇA v359 - ANTI-TELA-BRANCA INTERNACIONAL
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');
