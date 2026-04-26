@@ -32,14 +32,23 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 
 ---
 
-### 📡 4. Manual do Mestre: Integrando Receptores de Satélite (Vivensis, etc.)
-Você pode usar aparelhos físicos para alimentar sua grade de canais com sinal 100% estável:
+### 📡 4. Manual do Mestre: Integrando Sinais Externos
 
-1.  **EQUIPAMENTO:** Você precisará de um **IPTV Encoder HDMI** (dispositivo que transforma HDMI em link de internet).
-2.  **CONEXÃO:** Ligue o cabo HDMI do receptor (como o Vivensis Vx10) na entrada do Encoder.
-3.  **GERAÇÃO DE LINK:** O Encoder fornecerá um link no formato `http://seu-ip:porta/stream.m3u8`.
-4.  **CADASTRO:** Vá no seu **Painel Admin -> Novo Conteúdo**, cole esse link e selecione a categoria **LÉO TV AO VIVO**.
-5.  **CONTROLE:** Agora esse canal está sob seu domínio! Você pode bloquear, restringir por senha ou liberar apenas para clientes VIPs.
+**A) Diferença entre Vivensis e Léo TV:**
+- **Vivensis (Receptor):** Pega sinal da antena parabólica. Funciona SEM internet. Sistema FECHADO (Não roda o Léo TV dentro dele).
+- **Léo TV (Seu Sistema):** Funciona COM internet. Sistema ABERTO (Roda em TV Box, Celular e PC).
+
+**B) Como colocar o sinal da Vivensis no seu Painel:**
+Para transformar o sinal da antena em um link que seu sistema aceite, você precisa de um **IPTV ENCODER HDMI**.
+
+1. **EQUIPAMENTO:** Compre um "HDMI Video Encoder" (Mercado Livre/AliExpress).
+2. **CONEXÃO:** 
+   - Ligue a antena no Receptor Vivensis.
+   - Ligue o cabo HDMI do Receptor na ENTRADA do Encoder.
+   - Ligue o Encoder no seu roteador de internet.
+3. **GERAÇÃO DE LINK:** O Encoder vai te dar um endereço (ex: `http://192.168.1.50/stream.m3u8`).
+4. **CADASTRO MASTER:** No seu **Painel Admin**, adicione esse link.
+5. **CONTROLE TOTAL:** Agora você pode cobrar mensalidade (PIN) para liberar esse sinal do satélite para seus clientes via internet!
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`
