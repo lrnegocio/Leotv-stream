@@ -52,10 +52,10 @@ export default function NewContentPage() {
       
       setFormData(prev => ({
         ...prev,
-        title: results[0].translatedText || prev.title,
+        title: results[0].translatedText.toUpperCase() || prev.title,
         description: results[1].translatedText || prev.description
       }));
-      toast({ title: "TRADUÇÃO CONCLUÍDA!" });
+      toast({ title: "TEXTOS TRADUZIDOS VIA IA!" });
     } catch (e) {
       toast({ variant: "destructive", title: "Falha na IA Tradutora" });
     } finally {
@@ -71,7 +71,6 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
-    // TRATAMENTO RÁPIDO XV/OK
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
@@ -93,6 +92,9 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
+      // EXTERMINADOR DE JUNK-LINKS v361
+      const junkPatterns = ['gtag', 'googletagmanager', 'google-analytics', 'wp-json', 'oembed', '.js', '.css', 'pixel', 'facebook.net'];
+      
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
         /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
@@ -110,8 +112,9 @@ export default function NewContentPage() {
         for (const match of matches) {
            const possible = match[1] || match[0];
            const pLow = possible.toLowerCase();
-           // EXTERMINADOR DE oEmbed v359
-           if (!pLow.includes('.js') && !pLow.includes('.css') && !pLow.includes('analytics') && !pLow.includes('oembed') && !pLow.includes('wp-json')) {
+           
+           const isJunk = junkPatterns.some(junk => pLow.includes(junk));
+           if (!isJunk) {
               found = possible;
               break;
            }
@@ -219,7 +222,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v359</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v361</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -229,7 +232,7 @@ export default function NewContentPage() {
               <div className="flex items-center justify-between">
                 <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-7 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir via IA
+                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
                 </Button>
               </div>
               <Input 
@@ -294,7 +297,7 @@ export default function NewContentPage() {
                   </Button>
                 </h3>
                 <div className="flex gap-2">
-                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link vietnamita, russo ou direto aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
+                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link original aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
               </div>

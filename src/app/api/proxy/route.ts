@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v360 - O EXTERMINADOR DE CLOUDFLARE PARA SMART TVS
- * Calibragem especial para googleapis.com.de e sites de alta proteção.
+ * TÚNEL MASTER SOBERANO v361 - O EXTERMINADOR DE BLOQUEIOS E JUNK-LINKS
+ * Calibragem especial para googleapis.com.de e mascaramento de TV.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -14,7 +14,14 @@ export async function GET(req: NextRequest) {
 
   if (!targetUrl) return new NextResponse("Sinal Master Ausente", { status: 400 });
 
-  if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
+  const lowTarget = targetUrl.toLowerCase();
+
+  // EXTERMINADOR DE JUNK v361: Bloqueia analytics e junk links que travam o painel
+  if (lowTarget.includes('googletagmanager') || lowTarget.includes('analytics') || lowTarget.includes('facebook.net') || lowTarget.includes('pixel')) {
+    return new NextResponse("Link de Junk Bloqueado", { status: 403 });
+  }
+
+  if (lowTarget.includes('youtube.com') || lowTarget.includes('youtu.be')) {
     return new NextResponse("YouTube deve ser carregado diretamente.", { status: 403 });
   }
 
@@ -22,7 +29,6 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // Encaminha headers essenciais do cliente
     const headersToForward = ['range', 'cookie', 'accept-language'];
     headersToForward.forEach(h => {
       const val = req.headers.get(h);
@@ -38,12 +44,13 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Sec-Fetch-Site', 'none');
     requestHeaders.set('Upgrade-Insecure-Requests', '1');
     
-    const lowTarget = targetUrl.toLowerCase();
-    
-    // CALIBRAGEM DE REFERER SOBERANA v360
+    // CALIBRAGEM DE REFERER SOBERANA v361
     if (lowTarget.includes('googleapis.com.de')) {
       requestHeaders.set('Referer', 'https://googleapis.com.de/');
       requestHeaders.set('Origin', 'https://googleapis.com.de');
+    } else if (lowTarget.includes('hoathinh3d')) {
+      requestHeaders.set('Referer', 'https://hoathinh3d.co.in/');
+      requestHeaders.set('Origin', 'https://hoathinh3d.co.in');
     } else if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
@@ -69,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v360", { status: 500 });
+    return new Response("Falha no Túnel Master v361", { status: 500 });
   }
 }
 
@@ -101,7 +108,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
-  // DECAPITADOR DE SEGURANÇA v360 - ANTI-TELA-BRANCA INTERNACIONAL
+  // DECAPITADOR DE SEGURANÇA v361
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');

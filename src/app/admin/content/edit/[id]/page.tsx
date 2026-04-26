@@ -66,10 +66,10 @@ export default function EditContentPage() {
       
       setFormData(prev => prev ? ({
         ...prev,
-        title: results[0].translatedText || prev.title,
+        title: results[0].translatedText.toUpperCase() || prev.title,
         description: results[1].translatedText || prev.description
       }) : null);
-      toast({ title: "TRADUÇÃO CONCLUÍDA!" });
+      toast({ title: "TEXTOS TRADUZIDOS VIA IA!" });
     } catch (e) {
       toast({ variant: "destructive", title: "Falha na IA Tradutora" });
     } finally {
@@ -105,6 +105,9 @@ export default function EditContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
+      // EXTERMINADOR DE JUNK-LINKS v361
+      const junkPatterns = ['gtag', 'googletagmanager', 'google-analytics', 'wp-json', 'oembed', '.js', '.css', 'pixel', 'facebook.net'];
+
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
         /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
@@ -122,8 +125,9 @@ export default function EditContentPage() {
         for (const match of matches) {
            const possible = match[1] || match[0];
            const pLow = possible.toLowerCase();
-           // EXTERMINADOR DE oEmbed v359
-           if (!pLow.includes('.js') && !pLow.includes('.css') && !pLow.includes('analytics') && !pLow.includes('oembed') && !pLow.includes('wp-json')) {
+           
+           const isJunk = junkPatterns.some(junk => pLow.includes(junk));
+           if (!isJunk) {
               found = possible;
               break;
            }
@@ -235,7 +239,7 @@ export default function EditContentPage() {
               <div className="flex items-center justify-between">
                 <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-7 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir via IA
+                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
                 </Button>
               </div>
               <Input 
