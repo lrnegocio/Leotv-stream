@@ -9,7 +9,7 @@ firewall-cmd --permanent --add-port=443/tcp
 firewall-cmd --reload
 ```
 
-### 📦 2. Atualização e Ativação do Sistema (Sincronização v352):
+### 📦 2. Atualização e Ativação do Sistema (Sincronização v353):
 ```bash
 cd ~/leotv
 git fetch origin main
@@ -32,23 +32,22 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 
 ---
 
-### 📡 4. Manual do Mestre: Integrando Sinais Externos
+### 📡 4. Manual do Mestre: Integrando Sinais Externos (Vivensis/Encoder)
 
-**A) Diferença entre Vivensis e Léo TV:**
-- **Vivensis (Receptor):** Pega sinal da antena parabólica. Funciona SEM internet. Sistema FECHADO (Não roda o Léo TV dentro dele).
-- **Léo TV (Seu Sistema):** Funciona COM internet. Sistema ABERTO (Roda em TV Box, Celular e PC).
+**A) A Regra de Ouro (1 pra 1):**
+- **1 Receptor + 1 Encoder = 1 Canal Ativo.**
+- Se você mudar o canal no controle remoto da Vivensis, o link no seu painel muda automaticamente para o novo canal. O sinal anterior é substituído. Não existem "links permanentes para 80 canais" com apenas um aparelho.
 
-**B) Como colocar o sinal da Vivensis no seu Painel:**
-Para transformar o sinal da antena em um link que seu sistema aceite, você precisa de um **IPTV ENCODER HDMI**.
+**B) Como achar o link no seu PC:**
+1. Conecte o Encoder no seu Roteador via cabo de rede.
+2. No seu computador, abra o navegador e digite o IP do Encoder (ex: `192.168.1.168`). Esse IP vem no manual do aparelho.
+3. Entre com o usuário e senha (geralmente `admin` / `admin`).
+4. Procure a aba **"Main Stream"** ou **"HLS"**. 
+5. Lá estará o seu link master (ex: `http://192.168.1.168:8080/live/stream.m3u8`).
+6. **IMPORTANTE:** Para esse link funcionar na internet para seus clientes, você precisa fazer o "Redirecionamento de Portas" (Port Forwarding) no seu roteador para a porta 8080.
 
-1. **EQUIPAMENTO:** Compre um "HDMI Video Encoder" (Mercado Livre/AliExpress).
-2. **CONEXÃO:** 
-   - Ligue a antena no Receptor Vivensis.
-   - Ligue o cabo HDMI do Receptor na ENTRADA do Encoder.
-   - Ligue o Encoder no seu roteador de internet.
-3. **GERAÇÃO DE LINK:** O Encoder vai te dar um endereço (ex: `http://192.168.1.50/stream.m3u8`).
-4. **CADASTRO MASTER:** No seu **Painel Admin**, adicione esse link.
-5. **CONTROLE TOTAL:** Agora você pode cobrar mensalidade (PIN) para liberar esse sinal do satélite para seus clientes via internet!
+**C) Uso Recomendado:**
+- Use o kit físico para garantir o canal MAIS IMPORTANTE da sua grade com 100% de estabilidade (Ex: Globo da sua cidade). Para os demais canais, continue usando os links de internet sintonizados pelo sistema.
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`
