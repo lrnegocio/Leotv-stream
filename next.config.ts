@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'agropesca.live' },
       { protocol: 'https', hostname: 'acplay.live' },
       { protocol: 'https', hostname: '**.acplay.live' },
+      { protocol: 'https', hostname: 'hoathinh3d.co.in' },
+      { protocol: 'https', hostname: '**.hoathinh3d.co.in' },
+      { protocol: 'https', hostname: 'ok.ru' },
+      { protocol: 'https', hostname: '**.ok.ru' },
       { protocol: 'https', hostname: '**.xn--*' }
     ],
   },

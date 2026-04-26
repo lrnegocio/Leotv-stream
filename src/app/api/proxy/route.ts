@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v355 - EXTERMINADOR DE BLOQUEIOS ELITE
- * Adicionado suporte agressivo para Archive.org e TokyVideo.
+ * TÚNEL MASTER SOBERANO v358 - O EXTERMINADOR DE BLOQUEIOS INTERNACIONAL
+ * Calibragem especial para sites Vietnamitas, Russos e de Filmes Master.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     
     const lowTarget = targetUrl.toLowerCase();
     
-    // CALIBRAGEM DE REFERER POR DOMÍNIO
+    // CALIBRAGEM DE REFERER SOBERANA v358
     if (lowTarget.includes('rdcanais') || lowTarget.includes('reidoscanais') || lowTarget.includes('rdcplayer')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
@@ -46,18 +46,15 @@ export async function GET(req: NextRequest) {
     } else if (lowTarget.includes('xvideos')) {
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
       requestHeaders.set('Origin', 'https://www.xvideos.com');
-      requestHeaders.set('Sec-Fetch-Dest', 'iframe');
-      requestHeaders.set('Sec-Fetch-Mode', 'navigate');
-      requestHeaders.set('Sec-Fetch-Site', 'same-origin');
+    } else if (lowTarget.includes('ok.ru')) {
+      requestHeaders.set('Referer', 'https://ok.ru/');
+      requestHeaders.set('Origin', 'https://ok.ru');
+    } else if (lowTarget.includes('hoathinh3d')) {
+      requestHeaders.set('Referer', 'https://hoathinh3d.co.in/');
+      requestHeaders.set('Origin', 'https://hoathinh3d.co.in');
     } else if (lowTarget.includes('tokyvideo')) {
       requestHeaders.set('Referer', 'https://www.tokyvideo.com/'); 
       requestHeaders.set('Origin', 'https://www.tokyvideo.com');
-    } else if (lowTarget.includes('archive.org')) {
-      requestHeaders.set('Referer', 'https://archive.org/');
-    } else if (lowTarget.includes('ok.ru')) {
-      requestHeaders.set('Referer', 'https://ok.ru/');
-    } else if (lowTarget.includes('shortflix')) {
-      requestHeaders.set('Referer', 'https://www.shortflix.net/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -70,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v355", { status: 500 });
+    return new Response("Falha no Túnel Master v358", { status: 500 });
   }
 }
 
@@ -102,6 +99,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   responseHeaders.set('Access-Control-Allow-Headers', '*');
   
+  // DECAPITADOR DE SEGURANÇA v358 - ANTI-TELA-BRANCA
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');

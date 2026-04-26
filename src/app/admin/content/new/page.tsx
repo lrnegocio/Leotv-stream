@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -69,10 +70,19 @@ export default function NewContentPage() {
     }
     
     const lowUrl = url.toLowerCase();
+    
+    // TRATAMENTO RÁPIDO XVIDEOS
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
     }
+    
+    // TRATAMENTO RÁPIDO OK.RU
+    if (lowUrl.includes('ok.ru/video/')) {
+       const id = url.split('/video/')[1]?.split('/')[0]?.split('?')[0];
+       if (id) return `https://ok.ru/videoembed/${id}`;
+    }
+
     if (lowUrl.includes('dailymotion.com/video/')) {
        const id = url.split('/video/')[1]?.split('?')[0];
        if (id) return `https://www.dailymotion.com/embed/video/${id}`;
@@ -97,6 +107,7 @@ export default function NewContentPage() {
         /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
         /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
         /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
+        /https?:\/\/ok\.ru\/videoembed\/[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
 
@@ -214,7 +225,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v357</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v358</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -289,7 +300,7 @@ export default function NewContentPage() {
                   </Button>
                 </h3>
                 <div className="flex gap-2">
-                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
+                  <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link vietnamita, russo ou direto aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(formData.streamUrl), title: formData.title || 'Teste de Sinal'})} className="h-12 w-12 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"><Play className="h-5 w-5" /></Button>
                 </div>
               </div>
