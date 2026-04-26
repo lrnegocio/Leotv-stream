@@ -71,6 +71,12 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
+    // CASO DAILYMOTION v366
+    if (lowUrl.includes('dailymotion.com/video/')) {
+       const dId = url.split('/video/')[1]?.split('?')[0];
+       if (dId) return `https://www.dailymotion.com/embed/video/${dId}`;
+    }
+
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = url.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `https://www.xvideos.com/embedframe/${match[1]}`;
@@ -92,14 +98,19 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // EXTERMINADOR DE JUNK-LINKS v362 - LISTA NEGRA AGRESSIVA
-      const junkPatterns = ['gtag', 'googletagmanager', 'google-analytics', 'wp-json', 'oembed', '.js', '.css', 'pixel', 'facebook.net', 'adsbygoogle', 'scripts', 'tracking'];
+      // EXTERMINADOR DE JUNK-LINKS v366 - FILTRO DAILYMOTION E VIETNÃ
+      const junkPatterns = [
+        'gtag', 'googletagmanager', 'google-analytics', 'wp-json', 
+        'oembed', '.js', '.css', 'pixel', 'facebook.net', 
+        'adsbygoogle', 'scripts', 'tracking', 'dmcdn.net',
+        '.jpg', '.png', '.webp', '.gif', '60x60', '120x120'
+      ];
       
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
         /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
-        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
         /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
+        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
         /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
         /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
         /https?:\/\/ok\.ru\/videoembed\/[^"']+/i,
@@ -222,7 +233,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v362</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v366</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">

@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v364
- * Inteligência de detecção de links internacional e Arena Games Roblox.
+ * FORMATAÇÃO MASTER SOBERANA v366
+ * Inteligência de detecção de links internacional e Correção Dailymotion.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -97,6 +97,12 @@ export const formatMasterLink = (url: string) => {
     }
 
     let lowUrl = finalUrl.toLowerCase();
+
+    // TRATAMENTO DAILYMOTION v366
+    if (lowUrl.includes('dailymotion.com/video/')) {
+       const id = finalUrl.split('/video/')[1]?.split('?')[0];
+       if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
+    }
 
     // TRATAMENTO XVIDEOS
     if (lowUrl.includes('xvideos.com/')) {
@@ -157,7 +163,6 @@ export const formatGameLink = (input: string) => {
     if (srcMatch && srcMatch[1]) url = srcMatch[1];
   }
   
-  // v364: Roblox sempre passa pelo proxy
   if (url.toLowerCase().includes('roblox.com') && !url.includes('/api/proxy')) {
     return `/api/proxy?url=${encodeURIComponent(url)}`;
   }
