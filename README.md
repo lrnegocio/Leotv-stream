@@ -38,10 +38,10 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 - **1 Receptor + 1 Encoder = 1 Canal Ativo.**
 - Se você mudar o canal no controle remoto da Vivensis, o link no seu painel muda automaticamente para o novo canal.
 
-**B) Como achar o link no seu PC:**
+**B) Como achar le link no seu PC:**
 1. Digite o IP do Encoder no navegador (ex: `192.168.1.168`).
 2. Procure a aba **"Main Stream"** ou **"HLS"**. 
-3. Copie o link `.m3u8` e cole no painel.
+3. Copie le link `.m3u8` e cole no painel.
 
 ---
 
@@ -49,9 +49,9 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 
 Ao escolher entre dois links para seu painel, siga a lógica do Mestre:
 
-1. **Links com TOKEN (Péssimos):** Se o link tiver `?token=` ou `?username=`, ele vai **PARAR** de funcionar assim que o plano expirar. O servidor corta o sinal na hora.
-2. **Links de CAMINHO (Bons):** Se o link for direto (ex: `.../pasta/video.mp4`), ele dura mais, pois não exige login. Mas cuidado: servidores de IPTV mudam as pastas periodicamente.
-3. **Links PERMANENTES (Elite):** Use **Archive.org**, **YouTube** (via nosso sintonizador) ou **TokyVideo**. Esses são sinais que ficam vivos por anos.
+1. **Links com TOKEN (Péssimos):** Se o link tiver `?token=` ou `?username=`, ele vai **PARAR** de funcionar assim que o plano expirar.
+2. **Links de CAMINHO (Bons):** Se o link for direto (ex: `.../pasta/video.mp4`), ele dura mais, mas pode mudar a pasta.
+3. **Links PERMANENTES (Elite):** Use **Archive.org**, **TokyVideo** ou **Ok.ru** (`ok.ru/video/ID`). Esses são sinais que ficam vivos por anos e o nosso sintonizador limpa tudo!
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`

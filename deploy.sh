@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v355..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v356..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -37,7 +37,7 @@ npm run build
 
 # Verifica se o build deu certo
 if [ $? -eq 0 ]; then
-    echo "✅ BUILD CONCLUÍDO COM SUCESSO v355!"
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO v356!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
     pm2 start ecosystem.config.js
@@ -50,7 +50,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v355!"
+echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v356!"
 echo "🔗 AGORA EXECUTE: systemctl restart nginx"
 echo "--------------------------------------------------"
 pm2 list
