@@ -5,9 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANO v352 - PROTOCOLO DE DECAPITAÇÃO DE HEADERS
- * Calibragem extrema para remover bloqueios de segurança (CSP, X-Frame) 
- * que causam tela branca em sites como XVideos e RDC Player.
+ * TÚNEL MASTER SOBERANO v354 - PROTOCOLO DE DECAPITAÇÃO DE HEADERS ELITE
+ * Calibragem extrema para XVideos e sites com proteção CSP agressiva.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -45,8 +44,12 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', origin);
       requestHeaders.set('Origin', origin.replace(/\/$/, ''));
     } else if (lowTarget.includes('xvideos')) {
+      // SPOOFING ELITE PARA XVIDEOS
       requestHeaders.set('Referer', 'https://www.xvideos.com/');
       requestHeaders.set('Origin', 'https://www.xvideos.com');
+      requestHeaders.set('Sec-Fetch-Dest', 'iframe');
+      requestHeaders.set('Sec-Fetch-Mode', 'navigate');
+      requestHeaders.set('Sec-Fetch-Site', 'same-origin');
     } else if (lowTarget.includes('tokyvideo')) {
       requestHeaders.set('Referer', 'https://www.tokyvideo.com/'); 
       requestHeaders.set('Origin', 'https://www.tokyvideo.com');
@@ -64,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     return handleResponse(res, targetUrl, urlObj);
   } catch (error) {
-    return new Response("Falha no Túnel Master v352", { status: 500 });
+    return new Response("Falha no Túnel Master v354", { status: 500 });
   }
 }
 
@@ -88,19 +91,28 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     if (val) responseHeaders.set(h, val);
   });
   
-  // Repassa Cookies para manter sessões ativas (Independência do Admin)
+  // Repassa Cookies para manter sessões ativas
   const setCookies = res.headers.getSetCookie();
   setCookies.forEach(cookie => {
     responseHeaders.append('Set-Cookie', cookie);
   });
   
-  // EXTERMINADOR DE BLOQUEIOS (Resolve Tela Branca)
+  // EXTERMINADOR DE BLOQUEIOS (Resolve Tela Branca XVideos e RDC)
   responseHeaders.set('Access-Control-Allow-Origin', '*');
+  responseHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  responseHeaders.set('Access-Control-Allow-Headers', '*');
+  
+  // DECAPITAÇÃO DE HEADERS DE SEGURANÇA
   responseHeaders.delete('X-Frame-Options');
   responseHeaders.delete('Content-Security-Policy');
   responseHeaders.delete('X-Content-Security-Policy');
   responseHeaders.delete('X-WebKit-CSP');
+  responseHeaders.delete('Report-To');
+  responseHeaders.delete('NEL');
+  
+  // FORÇA LIBERAÇÃO DE IFRAME
   responseHeaders.set('X-Frame-Options', 'ALLOWALL');
+  responseHeaders.set('Content-Security-Policy', "default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *;");
 
   if (isM3u8) {
     const manifestText = await res.text();

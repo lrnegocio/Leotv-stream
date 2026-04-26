@@ -81,9 +81,9 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v352
+ * FORMATAÇÃO MASTER SOBERANA v354
  * Inteligência de detecção de links e extrator de Embed RDC e XVideos integrado.
- * Agora com suporte a limpeza de CSP para evitar tela branca.
+ * Agora com suporte a limpeza de CSP via Proxy para XVideos.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -99,12 +99,15 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // TRATAMENTO XVIDEOS (Embed Frame Limpo)
-    if (lowUrl.includes('xvideos.com/video.')) {
+    // TRATAMENTO XVIDEOS (Embed Frame Limpo via Proxy)
+    if (lowUrl.includes('xvideos.com/')) {
+       let xid = "";
        const match = finalUrl.match(/video\.([a-z0-9]+)/i);
-       if (match && match[1]) {
-          finalUrl = `https://www.xvideos.com/embedframe/${match[1]}`;
-          lowUrl = finalUrl.toLowerCase();
+       if (match && match[1]) xid = match[1];
+       else if (lowUrl.includes('/embedframe/')) xid = finalUrl.split('/embedframe/')[1]?.split('/')[0]?.split('?')[0];
+
+       if (xid) {
+          return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${xid}`)}`;
        }
     }
     
@@ -122,7 +125,7 @@ export const formatMasterLink = (url: string) => {
 
     const domainsNeedingProxy = [
       'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
-      'archive.org', 'xvideos', 'pornhub', 'acplay.live',
+      'archive.org', 'pornhub', 'acplay.live',
       'agropesca.live', 'warez', 'topcanais', 'redecanais', 
       'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
       'shortflix', 'nsstorage'
