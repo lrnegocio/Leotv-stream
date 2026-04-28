@@ -76,43 +76,30 @@ export interface User {
   individualMessage?: string;
   gamePoints?: number;
   created_at?: string;
-  reseller_name?: string; // Virtual field for display
+  reseller_name?: string; 
 }
 
-/**
- * FORMATAÇÃO MASTER SOBERANA v370
- * Inteligência de detecção de links e aplicação de proxy seletivo.
- */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
-
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
-
     let lowUrl = finalUrl.toLowerCase();
 
-    // Tratamento Youtube
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
       else if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
       else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
       else if (lowUrl.includes('/embed/')) return finalUrl;
-      
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
       return finalUrl;
     }
 
-    // Se for link de arquivo direto, não usa proxy por padrão
     const directExtensions = ['.m3u8', '.mp4', '.ts', '.mkv', '.mp3'];
-    const isDirectFile = directExtensions.some(ext => lowUrl.includes(ext));
-
-    if (isDirectFile && !lowUrl.includes('mercadolivre') && !lowUrl.includes('rdcanais')) {
+    if (directExtensions.some(ext => lowUrl.includes(ext)) && !lowUrl.includes('mercadolivre')) {
       return finalUrl;
     }
-
-    // Se for site ou sinal protegido, passa pelo Túnel Master
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   } catch (e) {
     return url || "";
@@ -231,15 +218,28 @@ export async function removeReseller(id: string) {
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
-    const { data } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
-    
-    if (!data) return { error: "PIN INVÁLIDO" };
 
-    // BLINDAGEM MESTRE: Força o papel de admin para o PIN master
+    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO
     if (cleanPin === 'ADM77X2P') {
-      data.role = 'admin';
+      return {
+        user: {
+          id: 'admin_master_leo',
+          pin: 'ADM77X2P',
+          role: 'admin',
+          subscriptionTier: 'lifetime',
+          maxScreens: 99,
+          activeDevices: [],
+          isBlocked: false,
+          isAdultEnabled: true,
+          isGamesEnabled: true,
+          isPpvEnabled: true,
+          isAlacarteEnabled: true
+        }
+      };
     }
 
+    const { data } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    if (!data) return { error: "PIN INVÁLIDO" };
     return { user: data };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
@@ -255,9 +255,7 @@ export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
     return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
-  } catch (e) {
-    return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
-  }
+  } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
 }
 
 export async function updateGlobalSettings(v: any) {

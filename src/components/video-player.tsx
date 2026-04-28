@@ -32,14 +32,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = safeUrl.toLowerCase();
   
-  // Detecção de tipo de player
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
   const isDirectFile = lowUrl.includes('.m3u8') || 
                        lowUrl.includes('.ts') || 
                        lowUrl.includes('.mp4') || 
                        lowUrl.includes('.mkv');
 
-  // Iframes para sites específicos ou embeds
   const isIframe = !isDirectFile || isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
@@ -54,9 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setLoading(true);
 
     if (isIframe) {
-      // Força a recarga do iframe com uma chave única
       setPlayerKey(Date.now());
-      // YouTube e outros iframes costumam demorar um pouco para sinalizar carregamento
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -68,10 +64,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         videoRef.current.play()
           .then(() => setLoading(false))
           .catch(() => {
-            // Autoplay falhou (provavelmente por som), tenta mudo
-            videoRef.current!.muted = true;
-            setIsMuted(true);
-            videoRef.current!.play();
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              setIsMuted(true);
+              videoRef.current.play();
+            }
             setLoading(false);
           });
       } catch (e) {
@@ -118,7 +115,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={safeUrl}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          // YouTube exige referência para não dar erro 153, CDNs exigem no-referrer
           referrerPolicy={isYouTube ? "no-referrer-when-downgrade" : "no-referrer"}
           onLoad={() => setLoading(false)}
         />
@@ -132,7 +128,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls 
-          // CDNs da TokyVideo e Archive.org exigem Referência Zero para liberar o MP4
           referrerPolicy="no-referrer"
         />
       )}
@@ -146,7 +141,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* PAINEL DE CONTROLE MASTER */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5" /></Button>}
         

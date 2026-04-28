@@ -49,6 +49,9 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
+echo "📊 RELATÓRIO DE CAPACIDADE DA VPS:"
+free -h
+echo "--------------------------------------------------"
 echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v370!"
 echo "🔗 AGORA EXECUTE: systemctl restart nginx"
 echo "--------------------------------------------------"
