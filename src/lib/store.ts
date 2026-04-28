@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -81,8 +80,8 @@ export interface User {
 }
 
 /**
- * FORMATAÇÃO MASTER SOBERANA v369
- * Inteligência de detecção de links internacional e Swap Gênio .ts -> .m3u8
+ * FORMATAÇÃO MASTER SOBERANA v370
+ * Inteligência de detecção de links e aplicação de proxy seletivo.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -91,54 +90,9 @@ export const formatMasterLink = (url: string) => {
 
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
 
-    if (finalUrl.includes('<iframe')) {
-      const srcMatch = finalUrl.match(/src=["'](.*?)["']/i);
-      if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
-    }
-
     let lowUrl = finalUrl.toLowerCase();
 
-    // SWAP GÊNIO v369: Converte .ts para .m3u8 automaticamente em IPs de IPTV
-    if (lowUrl.endsWith('.ts') && (lowUrl.includes('http://') || lowUrl.includes('https://'))) {
-       finalUrl = finalUrl.substring(0, finalUrl.length - 3) + ".m3u8";
-       lowUrl = finalUrl.toLowerCase();
-    }
-
-    // TRATAMENTO MERCADO PLAY
-    if (lowUrl.includes('play.mercadolivre.com.br')) {
-       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
-    }
-
-    // TRATAMENTO XVIDEOS
-    if (lowUrl.includes('xvideos.com/')) {
-       let xid = "";
-       const match = finalUrl.match(/video\.([a-z0-9]+)/i);
-       if (match && match[1]) xid = match[1];
-       else if (lowUrl.includes('/embedframe/')) xid = finalUrl.split('/embedframe/')[1]?.split('/')[0]?.split('?')[0];
-
-       if (xid) {
-          return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${xid}`)}`;
-       }
-    }
-
-    // TRATAMENTO ROBLOX
-    if (lowUrl.includes('roblox.com/pt/games/') || lowUrl.includes('roblox.com/games/')) {
-       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
-    }
-
-    // TRATAMENTO DAILYMOTION
-    if (lowUrl.includes('dailymotion.com/video/')) {
-       const id = finalUrl.split('/video/')[1]?.split('?')[0];
-       if (id) return `https://www.dailymotion.com/embed/video/${id}?autoplay=1`;
-    }
-    
-    // TRATAMENTO OK.RU
-    if (lowUrl.includes('ok.ru/video/')) {
-       const id = finalUrl.split('/video/')[1]?.split('/')[0]?.split('?')[0];
-       if (id) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${id}`)}`;
-    }
-
-    // TRATAMENTO YOUTUBE
+    // Tratamento Youtube
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
@@ -150,45 +104,19 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    const domainsNeedingProxy = [
-      'rdcanais', 'reidoscanais', 'rdcplayer', 'playcnvs', 
-      'archive.org', 'pornhub', 'acplay.live', 'hoathinh3d',
-      'agropesca.live', 'warez', 'topcanais', 'redecanais', 
-      'redecanaistv', 'tokyvideo', 'redecanais.ooo', 'redecanaistv.be',
-      'shortflix', 'nsstorage', 'ok.ru', 'plutotv', 'googleapis.com.de', 
-      'roblox.com', 'mercadolivre.com.br'
-    ];
+    // Se for link de arquivo direto ou Youtube, não usa proxy por padrão
+    const directExtensions = ['.m3u8', '.mp4', '.ts', '.mkv', '.mp3'];
+    const isDirectFile = directExtensions.some(ext => lowUrl.includes(ext));
 
-    // IPs diretos geralmente precisam de proxy para resolver problemas de Mixed Content (HTTP em HTTPS)
-    const isIpLink = /^(https?:\/\/)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lowUrl);
-
-    const needsProxy = domainsNeedingProxy.some(domain => lowUrl.includes(domain)) || 
-                      isIpLink ||
-                      (lowUrl.startsWith('http://') && !lowUrl.includes('localhost'));
-
-    if (needsProxy && !finalUrl.includes('/api/proxy')) {
-      return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    if (isDirectFile && !lowUrl.includes('mercadolivre') && !lowUrl.includes('rdcanais')) {
+      return finalUrl;
     }
-    
-    return finalUrl;
+
+    // Se for site ou sinal protegido, passa pelo Túnel Master
+    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   } catch (e) {
     return url || "";
   }
-};
-
-export const formatGameLink = (input: string) => {
-  if (!input) return "";
-  let url = input.trim();
-  if (url.includes('<iframe') && url.includes('src=')) {
-    const srcMatch = url.match(/src=["'](.*?)["']/);
-    if (srcMatch && srcMatch[1]) url = srcMatch[1];
-  }
-  
-  if (url.toLowerCase().includes('roblox.com') && !url.includes('/api/proxy')) {
-    return `/api/proxy?url=${encodeURIComponent(url)}`;
-  }
-  
-  return url;
 };
 
 export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -201,8 +129,6 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     if (error) throw error;
     return (data || []).map(item => ({
       ...item,
-      streamUrl: item.streamUrl || "",
-      imageUrl: item.imageUrl || "",
       isRestricted: !!item.isRestricted,
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
@@ -212,182 +138,31 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const payload: any = {
-      id: item.id || "str_" + Math.random().toString(36).substring(2, 12), 
-      title: (item.title || "NOVO").toUpperCase().trim(),
-      genre: (item.genre || "LÉO TV AO VIVO").toUpperCase().trim(),
-      type: item.type || 'channel', 
-      description: item.description || "Sinal Master",
-      imageUrl: item.imageUrl || "", 
-      isRestricted: !!item.isRestricted,
-      streamUrl: item.streamUrl || "",
-      episodes: (item.type === 'series') ? (item.episodes || []) : [],
-      seasons: (item.type === 'multi-season') ? (item.seasons || []) : []
+    const payload = {
+      ...item,
+      title: item.title?.toUpperCase().trim(),
+      genre: item.genre?.toUpperCase().trim()
     };
-    
-    const { error } = await supabase.from('content').upsert(payload, { onConflict: 'id' });
-    if (error) return false;
-    return true;
+    const { error } = await supabase.from('content').upsert(payload);
+    return !error;
   } catch (e) { return false; }
 }
 
 export async function getContentById(id: string) {
   try {
     const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    if (data) {
-      return {
-        ...data,
-        episodes: Array.isArray(data.episodes) ? data.episodes : [],
-        seasons: Array.isArray(data.seasons) ? data.seasons : []
-      };
-    }
-  } catch (e) {}
-  return null;
+    return data;
+  } catch (e) { return null; }
 }
 
-export async function validateDeviceLogin(pin: string, deviceId: string) {
-  try {
-    const cleanPin = pin?.trim().toUpperCase();
-    if (cleanPin === 'ADM77X2P') return { user: { id: 'master', pin: 'ADM77X2P', role: 'admin', isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, maxScreens: 999 } };
-    
-    const { data: users } = await supabase.from('users').select('*').eq('pin', cleanPin);
-    const user = users?.[0];
-    
-    if (!user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
-    
-    const now = new Date();
-    if (user.expiryDate && new Date(user.expiryDate) < now) return { error: "ACESSO EXPIRADO" };
-    
-    let devices = user.activeDevices || [];
-    if (!devices.includes(deviceId)) {
-      if (devices.length >= (user.maxScreens || 1)) {
-        devices = [deviceId]; 
-      } else {
-        devices.push(deviceId);
-      }
-      await supabase.from('users').update({ activeDevices: devices }).eq('id', user.id);
-    }
-    
-    return { user: { ...user, activeDevices: devices } };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
-}
-
-export async function saveUser(user: Partial<User>) {
-  try {
-    const cleanPin = user.pin?.trim().toUpperCase();
-    if (!cleanPin) return false;
-
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('pin', cleanPin)
-      .maybeSingle();
-
-    const payload: any = {
-      id: existing?.id || user.id || "user_" + Date.now() + Math.random().toString(36).substring(2, 7),
-      pin: cleanPin,
-      role: user.role || 'user',
-      subscriptionTier: user.subscriptionTier || 'monthly',
-      expiryDate: user.expiryDate || null,
-      maxScreens: user.maxScreens || 1,
-      activeDevices: user.activeDevices || [],
-      isBlocked: !!user.isBlocked,
-      resellerId: user.resellerId || null,
-      activatedAt: user.activatedAt || null,
-      individualMessage: user.individualMessage || "",
-      gamePoints: user.gamePoints || 0,
-      isAdultEnabled: !!user.isAdultEnabled,
-      isGamesEnabled: !!user.isGamesEnabled,
-      isPpvEnabled: !!user.isPpvEnabled,
-      isAlacarteEnabled: !!user.isAlacarteEnabled
-    };
-
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'pin' });
-    
-    if (error) {
-      if (error.message.includes("column") || error.code === "42703") {
-        const fallback = { ...payload };
-        delete fallback.isPpvEnabled;
-        delete fallback.isAlacarteEnabled;
-        delete fallback.individualMessage;
-        
-        const { error: retryError } = await supabase.from('users').upsert(fallback, { onConflict: 'pin' });
-        if (retryError) return false;
-        return true;
-      }
-      return false;
-    }
-    return true;
-  } catch (e) { 
-    return false; 
-  }
-}
-
-export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select('*')
-      .order('id', { ascending: false });
-    
-    if (usersError) throw usersError;
-
-    const { data: resellersData } = await supabase.from('resellers').select('id, name');
-    const resMap: Record<string, string> = {};
-    (resellersData || []).forEach(r => { resMap[r.id] = r.name; });
-    
-    return (usersData || []).map(u => ({
-      id: u.id,
-      pin: u.pin || "00000000000",
-      role: u.role || 'user',
-      subscriptionTier: u.subscriptionTier || 'monthly',
-      expiryDate: u.expiryDate,
-      maxScreens: u.maxScreens || 1,
-      activeDevices: u.activeDevices || [],
-      isBlocked: !!u.isBlocked,
-      isAdultEnabled: !!u.isAdultEnabled,
-      isGamesEnabled: !!u.isGamesEnabled,
-      isPpvEnabled: !!u.isPpvEnabled,
-      isAlacarteEnabled: !!u.isAlacarteEnabled,
-      resellerId: u.resellerId,
-      activatedAt: u.activatedAt,
-      individualMessage: u.individualMessage,
-      gamePoints: u.gamePoints || 0,
-      reseller_name: u.resellerId ? (resMap[u.resellerId] || 'REVENDEDOR') : 'ADMIN'
-    }));
-  } catch (e) { 
-    return []; 
-  }
-}
-
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
+export async function removeContent(id: string) { 
+  const { error } = await supabase.from('content').delete().eq('id', id);
   return !error;
 }
 
-export async function getRemoteResellers(): Promise<Reseller[]> {
-  try {
-    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
-  } catch (e) { return []; }
-}
-
-export async function saveReseller(r: Partial<Reseller>) {
-  const { error } = await supabase.from('resellers').upsert(r);
+export async function removeGame(id: string) {
+  const { error } = await supabase.from('content').delete().eq('id', id);
   return !error;
-}
-
-export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
-export async function validateResellerLogin(u: string, p: string) {
-  try {
-    const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
-    return data ? { reseller: data } : { error: "INVÁLIDO" };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
@@ -413,31 +188,72 @@ export async function saveGame(g: any) {
     streamUrl: g.url, 
     description: 'GAME', 
     isRestricted: true 
-  }, { onConflict: 'id' });
+  });
   return !error;
 }
 
-export async function removeGame(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
+export async function getRemoteUsers(): Promise<User[]> {
+  try {
+    const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
+    return data || [];
+  } catch (e) { return []; }
+}
+
+export async function saveUser(user: Partial<User>) {
+  try {
+    const { error } = await supabase.from('users').upsert(user);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
   return !error;
+}
+
+export async function getRemoteResellers(): Promise<Reseller[]> {
+  try {
+    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
+    return data || [];
+  } catch (e) { return []; }
+}
+
+export async function saveReseller(r: Partial<Reseller>) {
+  const { error } = await supabase.from('resellers').upsert(r);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
+}
+
+export async function validateDeviceLogin(pin: string, deviceId: string) {
+  try {
+    const { data } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
+    if (!data) return { error: "PIN INVÁLIDO" };
+    return { user: data };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
+}
+
+export async function validateResellerLogin(u: string, p: string) {
+  try {
+    const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
+    return data ? { reseller: data } : { error: "INVÁLIDO" };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return { 
-      parentalPin: data?.value?.parentalPin || "1234", 
-      announcement: data?.value?.announcement || "",
-      bannerUrl: data?.value?.bannerUrl || "",
-      bannerLink: data?.value?.bannerLink || ""
-    };
+    return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
   } catch (e) {
     return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
   }
 }
 
 export async function updateGlobalSettings(v: any) {
-  const { error } = await supabase.from('settings').upsert({ key: 'global', value: v }, { onConflict: 'key' });
+  const { error } = await supabase.from('settings').upsert({ key: 'global', value: v });
   return !error;
 }
 
@@ -462,11 +278,6 @@ export async function getTotalContentCount() {
   } catch (e) { return 0; }
 }
 
-export async function removeContent(id: string) { 
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
-
 export async function bulkRemoveContent(ids: string[]) {
   const { error } = await supabase.from('content').delete().in('id', ids);
   return !error;
@@ -480,9 +291,4 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function getGameRankings() { return []; }
-export const getExpiryMessage = (p: string, d: number) => `⚠️ *AVISO DE VENCIMENTO*\n\nSeu PIN *${p}* vence em *${d} dias*.`;
-
-export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => {
-  const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-  return `🎬 *LÉO TV STREAM!*\n👤 *PIN:* \`${pin}\`\n📅 *PLANO:* ${tier.toUpperCase()}\n🔗 http://${domain}`;
-};
+export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `🎬 *LÉO TV STREAM!* \n👤 *PIN:* \`${pin}\` \n📅 *PLANO:* ${tier.toUpperCase()} \n🔗 ${url}`;
