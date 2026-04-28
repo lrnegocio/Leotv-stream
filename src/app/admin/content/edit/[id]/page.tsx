@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -86,10 +85,9 @@ export default function EditContentPage() {
     let currentUrl = url.trim();
     const lowUrl = currentUrl.toLowerCase();
     
-    // SWAP GÊNIO v369: Se for .ts, converte para .m3u8 na hora da sintonia
     if (lowUrl.endsWith('.ts')) {
        const swapped = currentUrl.substring(0, currentUrl.length - 3) + ".m3u8";
-       toast({ title: "SWAP GÊNIO v369 ATIVO!", description: "Convertido .ts para .m3u8 para liberar o sinal." });
+       toast({ title: "SWAP GÊNIO ATIVO!", description: "Convertido .ts para .m3u8 para liberar o sinal." });
        return swapped;
     }
 
@@ -252,7 +250,7 @@ export default function EditContentPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal Master</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v370</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -337,7 +335,7 @@ export default function EditContentPage() {
           {isSeriesMode && (
             <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="uppercase text-[10px] font-black opacity-60">IA TRADUTORA PARA SÉRIES</Label>
+                <Label className="uppercase text-[10px] font-black opacity-60">IA TRADUTORA v370</Label>
                 <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
                   {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Título e Sinopse
                 </Button>

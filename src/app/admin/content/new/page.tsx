@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -71,7 +70,6 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
-    // CASO DAILYMOTION v366
     if (lowUrl.includes('dailymotion.com/video/')) {
        const dId = url.split('/video/')[1]?.split('?')[0];
        if (dId) return `https://www.dailymotion.com/embed/video/${dId}`;
@@ -98,7 +96,6 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      // EXTERMINADOR DE JUNK-LINKS v366 - FILTRO DAILYMOTION E VIETNÃ
       const junkPatterns = [
         'gtag', 'googletagmanager', 'google-analytics', 'wp-json', 
         'oembed', '.js', '.css', 'pixel', 'facebook.net', 
@@ -200,8 +197,10 @@ export default function NewContentPage() {
     setLoading(true)
     
     const isSeriesMode = formData.type === 'series' || formData.type === 'multi-season'
-    
+    const newId = "cont_" + Date.now() + Math.random().toString(36).substring(7);
+
     const success = await saveContent({
+      id: newId,
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
@@ -233,7 +232,7 @@ export default function NewContentPage() {
           </Button>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v366</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v370</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
