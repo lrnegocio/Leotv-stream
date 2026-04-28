@@ -104,7 +104,7 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    // Se for link de arquivo direto ou Youtube, não usa proxy por padrão
+    // Se for link de arquivo direto, não usa proxy por padrão
     const directExtensions = ['.m3u8', '.mp4', '.ts', '.mkv', '.mp3'];
     const isDirectFile = directExtensions.some(ext => lowUrl.includes(ext));
 

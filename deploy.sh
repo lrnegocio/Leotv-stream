@@ -1,7 +1,6 @@
-
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v366..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v370..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -14,7 +13,7 @@ git reset --hard origin/main
 # Liberação agressiva de RAM (Drop Caches)
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-# PAUSA PARA RESPIRAR: Para o serviço para tel RAM pro Build
+# PAUSA PARA RESPIRAR: Para o serviço para ter RAM pro Build
 echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
 pm2 stop all 2>/dev/null || true
 pm2 delete all 2>/dev/null || true
@@ -32,12 +31,12 @@ npm install --no-audit --no-fund --prefer-offline
 
 # Build ultra-otimizado para 1GB de RAM
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
-export NODE_OPTIONS="--max-old-space-size=512"
+export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
 
 # Verifica se o build deu certo
 if [ $? -eq 0 ]; then
-    echo "✅ BUILD CONCLUÍDO COM SUCESSO v366!"
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO v370!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
     pm2 start ecosystem.config.js
@@ -50,7 +49,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v366!"
+echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v370!"
 echo "🔗 AGORA EXECUTE: systemctl restart nginx"
 echo "--------------------------------------------------"
 pm2 list
