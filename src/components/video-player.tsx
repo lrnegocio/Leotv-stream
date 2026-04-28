@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Volume2, VolumeX } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getGlobalSettings } from "@/lib/store"
 
 interface VideoPlayerProps {
   url: string
@@ -15,7 +14,7 @@ interface VideoPlayerProps {
 
 /**
  * PLAYER MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
- * Sincronizado para YouTube e CDNs diretas.
+ * Sincronizado para YouTube, CDNs diretas e Iframes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -25,7 +24,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
-  const [error, setError] = React.useState<string | null>(null)
   
   const safeUrl = React.useMemo(() => {
     if (!url) return "";
@@ -34,26 +32,31 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
   const lowUrl = safeUrl.toLowerCase();
   
+  // Detecção de tipo de player
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
   const isDirectFile = lowUrl.includes('.m3u8') || 
                        lowUrl.includes('.ts') || 
                        lowUrl.includes('.mp4') || 
                        lowUrl.includes('.mkv');
 
+  // Iframes para sites específicos ou embeds
   const isIframe = !isDirectFile || isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
                    lowUrl.includes('playcnvs') || 
                    lowUrl.includes('xvideos') ||
-                   lowUrl.includes('dailymotion');
+                   lowUrl.includes('dailymotion') ||
+                   lowUrl.includes('ok.ru') ||
+                   lowUrl.includes('tokyvideo');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !safeUrl) return;
     setLoading(true);
-    setError(null);
 
     if (isIframe) {
+      // Força a recarga do iframe com uma chave única
       setPlayerKey(Date.now());
+      // YouTube e outros iframes costumam demorar um pouco para sinalizar carregamento
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -65,6 +68,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         videoRef.current.play()
           .then(() => setLoading(false))
           .catch(() => {
+            // Autoplay falhou (provavelmente por som), tenta mudo
             videoRef.current!.muted = true;
             setIsMuted(true);
             videoRef.current!.play();
@@ -113,7 +117,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           key={playerKey}
           src={safeUrl}
           className="w-full h-full border-0"
-          allow="autoplay; encrypted-media; fullscreen"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          // YouTube exige referência para não dar erro 153, CDNs exigem no-referrer
           referrerPolicy={isYouTube ? "no-referrer-when-downgrade" : "no-referrer"}
           onLoad={() => setLoading(false)}
         />
@@ -127,6 +132,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls 
+          // CDNs da TokyVideo e Archive.org exigem Referência Zero para liberar o MP4
           referrerPolicy="no-referrer"
         />
       )}
@@ -140,22 +146,23 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
+      {/* PAINEL DE CONTROLE MASTER */}
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
-        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary"><ChevronLeft className="h-5 w-5" /></Button>}
+        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5" /></Button>}
         
-        <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20">
+        <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
           {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
         </Button>
 
-        <Button size="icon" onClick={() => initPlayer()} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-emerald-500">
+        <Button size="icon" onClick={() => initPlayer()} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-emerald-500 transition-all">
           <RefreshCcw className="h-5 w-5" />
         </Button>
 
-        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary">
+        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all">
           {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
         </Button>
         
-        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary"><ChevronRight className="h-5 w-5" /></Button>}
+        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-5 w-5" /></Button>}
       </div>
 
       <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -202,7 +201,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v345...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
         </div>
       )}
 
@@ -354,7 +353,7 @@ export default function HomeContent() {
                     className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
-                    {expandedConsole === consoleName ? <ChevronUp className="h-5 w-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
+                    {expandedConsole === consoleName ? <ChevronUp className="h-5 v-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
                   </button>
                   {expandedConsole === consoleName && (
                     <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
@@ -400,7 +399,14 @@ export default function HomeContent() {
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-          {activeVideo && activeVideo.items[activeVideo.index] && <VideoPlayer url={activeVideo.items[activeVideo.index].streamUrl} title={activeVideo.items[activeVideo.index].title} onNext={() => activeVideo.index < activeVideo.items.length - 1 && setActiveVideo({...activeVideo, index: activeVideo.index + 1})} onPrev={() => activeVideo.index > 0 && setActiveVideo({...activeVideo, index: activeVideo.index - 1})} />}
+          {activeVideo && activeVideo.items && activeVideo.items[activeVideo.index] && (
+            <VideoPlayer 
+              url={activeVideo.items[activeVideo.index].streamUrl} 
+              title={activeVideo.items[activeVideo.index].title} 
+              onNext={activeVideo.index < activeVideo.items.length - 1 ? () => setActiveVideo({...activeVideo, index: activeVideo.index + 1}) : undefined} 
+              onPrev={activeVideo.index > 0 ? () => setActiveVideo({...activeVideo, index: activeVideo.index - 1}) : undefined} 
+            />
+          )}
         </DialogContent>
       </Dialog>
 
