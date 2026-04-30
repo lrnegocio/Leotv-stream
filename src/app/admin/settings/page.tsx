@@ -302,10 +302,11 @@ export default function SettingsPage() {
                             <SelectItem value="channel">Canal Único</SelectItem>
                             <SelectItem value="movie">Filmes</SelectItem>
                             <SelectItem value="series">Série (Episódios)</SelectItem>
+                            <SelectItem value="multi-season">Série Master (Temporadas)</SelectItem>
                          </SelectContent>
                       </Select>
                    </div>
-                   {(importType === 'series') && (
+                   {(importType === 'series' || importType === 'multi-season') && (
                     <div className="space-y-2 col-span-full">
                        <Label className="text-[9px] font-black uppercase text-primary">3. Nome da Nova Série / Dorama</Label>
                        <Input value={seriesTitle} onChange={e => setSeriesTitle(e.target.value)} placeholder="EX: ROUND 6" className="bg-black/40 h-12 border-primary/20 font-black uppercase" />

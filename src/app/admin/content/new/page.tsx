@@ -355,7 +355,7 @@ export default function NewContentPage() {
                            <Label className="text-[8px] font-black uppercase opacity-40 flex items-center justify-between">
                              Link do Episódio
                              <Button type="button" variant="ghost" size="sm" onClick={() => handleFixEpisodeLink(idx)} disabled={isFixing} className="h-5 text-primary font-black uppercase text-[7px] hover:bg-primary/10">
-                                {isFixing ? <Loader2 className="animate-spin h-2 w-2 mr-1" /> : <Wand2 className="h-2 w-2 mr-1" />} Sintonizar
+                                {isFixing ? <Loader2 className="animate-spin h-2 w-2 mr-1" /> : <Wand2 className="mr-1 h-2 w-2 mr-1" />} Sintonizar
                              </Button>
                            </Label>
                            <div className="flex gap-2">
