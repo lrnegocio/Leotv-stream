@@ -65,7 +65,7 @@ export interface User {
   subscriptionTier: SubscriptionTier;
   expiryDate?: string | null; 
   maxScreens: number; 
-  activeDevices: any[]; 
+  activeDevices: string[]; 
   isBlocked: boolean;
   isAdultEnabled: boolean; 
   isGamesEnabled: boolean;
@@ -127,6 +127,7 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload = {
       ...item,
+      id: item.id || "cont_" + Date.now() + Math.random().toString(36).substring(7),
       title: item.title?.toUpperCase().trim(),
       genre: item.genre?.toUpperCase().trim()
     };
@@ -228,7 +229,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
           role: 'admin',
           subscriptionTier: 'lifetime',
           maxScreens: 99,
-          activeDevices: [],
+          activeDevices: [deviceId],
           isBlocked: false,
           isAdultEnabled: true,
           isGamesEnabled: true,
@@ -238,9 +239,24 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
       };
     }
 
-    const { data } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
-    if (!data) return { error: "PIN INVÁLIDO" };
-    return { user: data };
+    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    if (!user) return { error: "PIN INVÁLIDO" };
+    if (user.isBlocked) return { error: "PIN BLOQUEADO" };
+
+    const activeDevices = user.activeDevices || [];
+    const isDeviceRegistered = activeDevices.includes(deviceId);
+
+    if (!isDeviceRegistered) {
+      if (activeDevices.length >= user.maxScreens) {
+        return { error: "LIMITE DE TELAS ATINGIDO" };
+      }
+      // Registra o novo dispositivo
+      const updatedDevices = [...activeDevices, deviceId];
+      await supabase.from('users').update({ activeDevices: updatedDevices }).eq('id', user.id);
+      user.activeDevices = updatedDevices;
+    }
+
+    return { user };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
