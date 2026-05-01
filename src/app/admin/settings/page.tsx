@@ -123,6 +123,7 @@ export default function SettingsPage() {
           });
         } else if (originalItem.type === 'multi-season') {
           const seasons = originalItem.seasons || [{ id: 's1', number: 1, episodes: [] }];
+          // Adiciona na última temporada disponível
           seasons[seasons.length - 1].episodes.push(...newEpisodes);
           success = await saveContent({ ...originalItem, seasons });
         }
@@ -217,11 +218,11 @@ export default function SettingsPage() {
                 <div className="space-y-6 animate-in fade-in zoom-in-95">
                    <div className="space-y-2">
                      <Label className="uppercase text-[10px] font-black text-primary">Digite a Senha Atual</Label>
-                     <Input type="password" value={confirmCurrent} onChange={e => setConfirmCurrent(e.target.value)} className="h-16 text-center text-4xl font-black tracking-[0.5em] bg-black/40" maxLength={4} />
+                     <Input type="password" title="PIN Atual" value={confirmCurrent} onChange={e => setConfirmCurrent(e.target.value)} className="h-16 text-center text-4xl font-black tracking-[0.5em] bg-black/40" maxLength={4} />
                    </div>
                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Nova Senha</Label><Input type="password" value={newPin} onChange={e => setNewPin(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
-                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Confirmar</Label><Input type="password" value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
+                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Nova Senha</Label><Input type="password" title="Novo PIN" value={newPin} onChange={e => setNewPin(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
+                      <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Confirmar</Label><Input type="password" title="Confirmar PIN" value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} className="h-12 text-center text-xl font-black bg-black/40" maxLength={4} /></div>
                    </div>
                    <div className="flex gap-2">
                       <Button onClick={() => setIsChangingPin(false)} variant="outline" className="flex-1 h-12 font-black uppercase text-[10px]">Cancelar</Button>
@@ -275,7 +276,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[9px] font-black uppercase opacity-60">Começar do Episódio Número:</Label>
-                    <Input type="number" value={startEpisodeNum} onChange={e => setStartEpisodeNum(parseInt(e.target.value) || 1)} className="bg-black/40 h-10 border-white/5 font-black" />
+                    <Input type="number" title="Num Episódio Inicial" value={startEpisodeNum} onChange={e => setStartEpisodeNum(parseInt(e.target.value) || 1)} className="bg-black/40 h-10 border-white/5 font-black" />
                   </div>
                 </div>
               ) : (

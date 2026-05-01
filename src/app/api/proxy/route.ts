@@ -30,11 +30,12 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Accept', '*/*');
     
     // PROTOCOLO DE BYPASS DE DOMÍNIO v370
-    if (lowTarget.includes('mercadolivre')) {
-      requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
-    } else if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
+    // Remove cabeçalhos que revelam a origem do site leotv.fun
+    if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
+    } else if (lowTarget.includes('mercadolivre')) {
+      requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -104,8 +105,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     `;
 
     // Protocolo de reescrita de links de vídeo dentro do HTML (Evita loading infinito)
-    // Procura por links .m3u8 ou .mp4 e injeta o proxy neles
-    htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4))/gi, (match) => {
+    htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4|ts))/gi, (match) => {
       if (match.includes('api/proxy')) return match;
       return `/api/proxy?url=${encodeURIComponent(match)}`;
     });

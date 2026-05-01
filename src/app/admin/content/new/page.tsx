@@ -220,9 +220,9 @@ export default function NewContentPage() {
           <Button variant="ghost" size="icon" asChild>
             <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
           </Button>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master v370</h1>
         </div>
-        <p className="text-[10px] font-black uppercase text-primary animate-pulse">Sincronização v370</p>
+        <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sincronização Ativa</p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
