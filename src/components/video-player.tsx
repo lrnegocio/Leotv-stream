@@ -13,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
+ * PLAYER MASTER SOBERANA v370
  * Sincronizado para YouTube, CDNs diretas e Iframes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -41,11 +41,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isIframe = !isDirectFile || isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
-                   lowUrl.includes('playcnvs') || 
+                   lowUrl.includes('streamrdc') ||
                    lowUrl.includes('xvideos') ||
+                   lowUrl.includes('pornhub') ||
                    lowUrl.includes('dailymotion') ||
-                   lowUrl.includes('ok.ru') ||
-                   lowUrl.includes('tokyvideo');
+                   lowUrl.includes('ok.ru');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !safeUrl) return;
@@ -53,7 +53,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      setTimeout(() => setLoading(false), 2000);
+      setTimeout(() => setLoading(false), 2500);
       return;
     }
 
@@ -115,7 +115,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={safeUrl}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          referrerPolicy={isYouTube ? "no-referrer-when-downgrade" : "no-referrer"}
+          referrerPolicy="no-referrer"
           onLoad={() => setLoading(false)}
         />
       )}

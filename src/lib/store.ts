@@ -86,9 +86,22 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // PROTOCOLO RDCANAIS v370
+    // 🛡️ PROTOCOLO RDCANAIS v370
     if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
+    // 🔞 PROTOCOLO ADULTO v370
+    if (lowUrl.includes('xvideos.com/video.')) {
+      const match = finalUrl.match(/video\.([a-z0-9]+)/i);
+      if (match && match[1]) {
+        return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;
+      }
+    }
+    
+    if (lowUrl.includes('pornhub.com/view_video.php')) {
+      const vId = new URL(finalUrl).searchParams.get('viewkey');
+      if (vId) return `https://www.pornhub.com/embed/${vId}`;
     }
 
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
@@ -102,10 +115,11 @@ export const formatMasterLink = (url: string) => {
     }
 
     const directExtensions = ['.m3u8', '.mp4', '.ts', '.mkv', '.mp3'];
-    if (directExtensions.some(ext => lowUrl.includes(ext)) && !lowUrl.includes('mercadolivre')) {
+    if (directExtensions.some(ext => lowUrl.includes(ext))) {
       return finalUrl;
     }
-    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    
+    return finalUrl;
   } catch (e) {
     return url || "";
   }

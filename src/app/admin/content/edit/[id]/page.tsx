@@ -85,29 +85,13 @@ export default function EditContentPage() {
     let currentUrl = url.trim();
     const lowUrl = currentUrl.toLowerCase();
     
-    if (lowUrl.endsWith('.ts')) {
-       const swapped = currentUrl.substring(0, currentUrl.length - 3) + ".m3u8";
-       toast({ title: "SWAP GÊNIO ATIVO!", description: "Convertido .ts para .m3u8 para liberar o sinal." });
-       return swapped;
-    }
-
-    if (lowUrl.includes('mercadolivre.com.br')) {
+    if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
        return `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
     }
 
     if (lowUrl.includes('xvideos.com/video.')) {
        const match = currentUrl.match(/video\.([a-z0-9]+)/i);
        if (match && match[1]) return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;
-    }
-
-    if (lowUrl.includes('dailymotion.com/video/')) {
-       const dId = currentUrl.split('/video/')[1]?.split('?')[0];
-       if (dId) return `https://www.dailymotion.com/embed/video/${dId}?autoplay=1`;
-    }
-
-    if (lowUrl.includes('ok.ru/video/')) {
-       const vId = currentUrl.split('/video/')[1]?.split('/')[0]?.split('?')[0];
-       if (vId) return `/api/proxy?url=${encodeURIComponent(`https://ok.ru/videoembed/${vId}`)}`;
     }
 
     const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
@@ -122,21 +106,8 @@ export default function EditContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      const junkPatterns = [
-        'gtag', 'googletagmanager', 'google-analytics', 'wp-json', 
-        'oembed', '.js', '.css', 'pixel', 'facebook.net', 
-        'adsbygoogle', 'scripts', 'tracking', 'dmcdn.net',
-        '.jpg', '.png', '.webp', '.gif', '60x60', '120x120'
-      ];
-
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
-        /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
-        /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
-        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
-        /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
-        /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
-        /https?:\/\/ok\.ru\/videoembed\/[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
 
@@ -145,10 +116,7 @@ export default function EditContentPage() {
         const matches = html.matchAll(new RegExp(pattern, 'gi'));
         for (const match of matches) {
            const possible = match[1] || match[0];
-           const pLow = possible.toLowerCase();
-           
-           const isJunk = junkPatterns.some(junk => pLow.includes(junk));
-           if (!isJunk && pLow.startsWith('http')) {
+           if (possible.startsWith('http')) {
               found = possible;
               break;
            }
@@ -174,50 +142,6 @@ export default function EditContentPage() {
     }
   }
 
-  const handleFixEpisodeLink = async (idx: number) => {
-    const fixed = await runTuner(episodes[idx].streamUrl);
-    if (fixed) {
-      const newEps = [...episodes];
-      newEps[idx].streamUrl = fixed;
-      setEpisodes(newEps);
-      toast({ title: "EPISÓDIO SINTONIZADO!" });
-    }
-  }
-
-  const handleFixSeasonEpisodeLink = async (sIdx: number, eIdx: number) => {
-    const fixed = await runTuner(seasons[sIdx].episodes[eIdx].streamUrl);
-    if (fixed) {
-      const newSeasons = [...seasons];
-      newSeasons[sIdx].episodes[eIdx].streamUrl = fixed;
-      setSeasons(newSeasons);
-      toast({ title: "EPISÓDIO SINTONIZADO!" });
-    }
-  }
-
-  const addEpisode = () => {
-    const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
-    setEpisodes([...episodes, newEp])
-  }
-
-  const removeEpisode = (eid: string) => setEpisodes(episodes.filter(e => e.id !== eid))
-
-  const addSeason = () => {
-    const newSeason: Season = { id: 'sea_' + Date.now(), number: seasons.length + 1, episodes: [] }
-    setSeasons([...seasons, newSeason])
-  }
-
-  const removeSeason = (sid: string) => setSeasons(seasons.filter(s => s.id !== sid))
-
-  const addEpisodeToSeason = (sid: string) => {
-    setSeasons(seasons.map(s => {
-      if (s.id === sid) {
-        const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: s.episodes.length + 1, streamUrl: '' }
-        return { ...s, episodes: [...s.episodes, newEp] }
-      }
-      return s
-    }))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData) return
@@ -238,7 +162,7 @@ export default function EditContentPage() {
     }
   }
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando Banco Master Léo TV...</p></div>
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v370...</p></div>
 
   if (!formData) return null;
 
@@ -331,130 +255,6 @@ export default function EditContentPage() {
               </div>
             </div>
           )}
-
-          {isSeriesMode && (
-            <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="uppercase text-[10px] font-black opacity-60">IA TRADUTORA v370</Label>
-                <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                  {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Título e Sinopse
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {formData.type === 'series' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black uppercase text-xs text-primary italic">Episódios da Série</h3>
-                <Button type="button" size="sm" onClick={addEpisode} className="bg-primary h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Adicionar Ep</Button>
-              </div>
-              <div className="grid gap-3">
-                {episodes.map((ep, idx) => (
-                  <div key={ep.id} className="p-4 bg-card/50 border border-white/5 rounded-xl space-y-4">
-                    <div className="flex gap-4 items-end">
-                      <div className="w-12 space-y-2 text-center">
-                        <Label className="text-[8px] font-black uppercase opacity-40">Num</Label>
-                        <Input type="number" value={ep.number} onChange={e => {
-                          const newEps = [...episodes]
-                          newEps[idx].number = parseInt(e.target.value) || 0
-                          setEpisodes(newEps)
-                        }} className="h-10 text-center font-black bg-black/40" />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <Label className="text-[8px] font-black uppercase opacity-40">Título do Ep</Label>
-                        <Input value={ep.title} onChange={e => {
-                          const newEps = [...episodes]
-                          newEps[idx].title = e.target.value
-                          setEpisodes(newEps)
-                        }} className="h-10 bg-black/40" />
-                      </div>
-                      <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                    <div className="space-y-2">
-                       <Label className="text-[8px] font-black uppercase opacity-40 flex items-center justify-between">
-                         Link Master do Episódio
-                         <Button type="button" variant="ghost" size="sm" onClick={() => handleFixEpisodeLink(idx)} disabled={isFixing} className="h-5 text-primary font-black uppercase text-[7px] hover:bg-primary/10">
-                            {isFixing ? <Loader2 className="animate-spin h-2 w-2 mr-1" /> : <Wand2 className="h-2 w-2 mr-1" />} Sintonizar
-                         </Button>
-                       </Label>
-                       <div className="flex gap-2">
-                         <Input value={ep.streamUrl} placeholder="Link Único do Episódio" onChange={e => {
-                            const newEps = [...episodes]
-                            newEps[idx].streamUrl = e.target.value
-                            setEpisodes(newEps)
-                          }} className="h-10 bg-black/40 font-mono text-[9px] flex-1" />
-                         <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `EP ${ep.number} - ${ep.title || formData.title}`})} className="h-10 w-10 bg-emerald-500 hover:bg-emerald-600 shadow-md"><Play className="h-4 w-4 text-white" /></Button>
-                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {formData.type === 'multi-season' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black uppercase text-xs text-primary italic">Temporadas Master</h3>
-                <Button type="button" size="sm" onClick={addSeason} className="bg-primary h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Adicionar Temp</Button>
-              </div>
-              <div className="space-y-8">
-                {seasons.map((season, sIdx) => (
-                  <div key={season.id} className="p-6 bg-card/50 border border-white/5 rounded-2xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <Label className="uppercase text-[10px] font-black">Temp</Label>
-                        <Input type="number" value={season.number} onChange={e => {
-                          const newSeasons = [...seasons]
-                          newSeasons[sIdx].number = parseInt(e.target.value) || 0
-                          setSeasons(newSeasons)
-                        }} className="w-16 h-10 bg-black/40 text-center font-black" />
-                      </div>
-                      <div className="flex gap-2">
-                         <Button type="button" size="sm" onClick={() => addEpisodeToSeason(season.id)} className="bg-emerald-500 h-8 px-4 rounded-lg font-black uppercase text-[10px]"><Plus className="mr-2 h-3 w-3" /> Add Ep na T{season.number}</Button>
-                         <Button type="button" variant="destructive" size="icon" onClick={() => removeSeason(season.id)} className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                    <div className="grid gap-3">
-                      {season.episodes.map((ep, eIdx) => (
-                        <div key={ep.id} className="bg-black/20 p-3 rounded-lg space-y-2">
-                           <div className="flex gap-2 items-center">
-                              <Input type="number" value={ep.number} onChange={e => {
-                                 const newSeasons = [...seasons]
-                                 newSeasons[sIdx].episodes[eIdx].number = parseInt(e.target.value) || 0
-                                 setSeasons(newSeasons)
-                              }} className="w-12 h-8 bg-black/40 text-[10px] font-black" />
-                              <Input value={ep.title} placeholder="Título" onChange={e => {
-                                 const newSeasons = [...seasons]
-                                 newSeasons[sIdx].episodes[eIdx].title = e.target.value
-                                 setSeasons(newSeasons)
-                              }} className="flex-1 h-8 bg-black/40 text-[10px]" />
-                              <Button type="button" variant="ghost" size="sm" onClick={() => handleFixSeasonEpisodeLink(sIdx, eIdx)} disabled={isFixing} className="h-8 text-primary px-2 hover:bg-primary/10">
-                                 {isFixing ? <Loader2 className="animate-spin h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
-                              </Button>
-                              <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => {
-                                const newSeasons = [...seasons]
-                                newSeasons[sIdx].episodes = newSeasons[sIdx].episodes.filter(i => i.id !== ep.id)
-                                setSeasons(newSeasons)
-                              }} className="h-8 w-8 text-destructive"><Trash2 className="h-3 w-3" /></Button>
-                           </div>
-                           <div className="space-y-1">
-                              <Input value={ep.streamUrl} placeholder="Link Master do Episódio" onChange={e => {
-                                 const newSeasons = [...seasons]
-                                 newSeasons[sIdx].episodes[eIdx].streamUrl = e.target.value
-                                 setSeasons(newSeasons)
-                              }} className="h-7 bg-black/40 text-[9px] font-mono" />
-                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">
@@ -469,14 +269,6 @@ export default function EditContentPage() {
                 placeholder="https://..."
                 className="h-10 bg-black/40 border-white/5 text-[10px] font-mono"
               />
-          </div>
-
-          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Lock className="h-4 w-4" /> Segurança</h3>
-            <div className="flex items-center justify-between">
-              <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Restrito</Label>
-              <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
-            </div>
           </div>
           
           <Button type="submit" className="w-full h-16 bg-primary font-black text-sm uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>
