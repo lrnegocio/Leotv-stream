@@ -80,6 +80,10 @@ export interface User {
   reseller_name?: string; 
 }
 
+/**
+ * FORMATADOR MASTER SOBERANO v370
+ * Converte links de RDCanais, XVideos e Pornhub automaticamente.
+ */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
@@ -87,7 +91,7 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 🛡️ PROTOCOLO RDCANAIS v370
+    // 🛡️ PROTOCOLO RDCANAIS v370 (Brave Bypass)
     if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -163,6 +167,16 @@ export async function removeContent(id: string) {
   return !error;
 }
 
+export async function removeUser(id: string) {
+  const { error } = await supabase.from('users').delete().eq('id', id);
+  return !error;
+}
+
+export async function removeReseller(id: string) {
+  const { error } = await supabase.from('resellers').delete().eq('id', id);
+  return !error;
+}
+
 export async function removeGame(id: string) {
   const { error } = await supabase.from('content').delete().eq('id', id);
   return !error;
@@ -209,11 +223,6 @@ export async function saveUser(user: Partial<User>) {
   } catch (e) { return false; }
 }
 
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
-}
-
 export async function getRemoteResellers(): Promise<Reseller[]> {
   try {
     const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
@@ -226,16 +235,11 @@ export async function saveReseller(r: Partial<Reseller>) {
   return !error;
 }
 
-export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
 
-    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO
+    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO (Blindado)
     if (cleanPin === 'ADM77X2P') {
       return {
         user: {

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Languages } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { getContentById, saveContent, Season, Episode, ContentItem, formatMasterLink } from "@/lib/store"
-import { translateMetadata } from "@/ai/flows/translate-metadata-flow"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -24,7 +23,6 @@ export default function EditContentPage() {
   
   const [loading, setLoading] = React.useState(false)
   const [fetching, setFetching] = React.useState(true)
-  const [isTranslating, setIsTranslating] = React.useState(false)
   const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
   const [formData, setFormData] = React.useState<ContentItem | null>(null)

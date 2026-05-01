@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
- * Calibrado para RDCanais e camuflagem total de domínios.
+ * TÚNEL MASTER SOBERANA v370 - PROTOCOLO SUPREMO BRAVE/RDC
+ * Calibrado para remover rastros da VPS e enganar bloqueios de domínio.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,15 +25,24 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM PLAYER OFICIAL DE IPTV
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    // MASCARAMENTO SOBERANO v370 - FINGE SER UM ACESSO ORIGINAL DO BRAVE/IOS
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // PROTOCOLO BYPASS RDCANAIS v370: Remove qualquer rastro da VPS leotv.fun
+    // 🛡️ EXTERMINADOR DE RASTROS: Remove cabeçalhos que revelam a VPS leotv.fun
+    requestHeaders.delete('Origin');
+    requestHeaders.delete('Referer');
+    requestHeaders.delete('Sec-Fetch-Dest');
+    requestHeaders.delete('Sec-Fetch-Mode');
+    requestHeaders.delete('Sec-Fetch-Site');
+
+    // PROTOCOLO BYPASS RDCANAIS v370: Camuflagem total
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
+    } else if (lowTarget.includes('mercadolivre') || lowTarget.includes('mercadopago')) {
+      requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -47,7 +56,7 @@ export async function GET(req: NextRequest) {
     const finalUrl = res.url;
     return handleResponse(res, finalUrl, new URL(finalUrl));
   } catch (error) {
-    return new Response("Falha no Túnel Deep-Trace v370", { status: 500 });
+    return new Response("Falha no Túnel Soberano v370", { status: 500 });
   }
 }
 
@@ -93,15 +102,16 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   if (isHtml) {
     let htmlText = await res.text();
     
-    // INJEÇÃO DE LIMPEZA E BYPASS v370
+    // INJEÇÃO DE LIMPEZA SOBERANA v370
     const cleanCss = `
       <style>
         header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav, .footer-content { display: none !important; visibility: hidden !important; }
         body, html { overflow: hidden !important; background: black !important; margin: 0 !important; padding: 0 !important; }
+        iframe, video { width: 100% !important; height: 100% !important; }
       </style>
     `;
 
-    // Protocolo de reescrita de links de vídeo internos no HTML
+    // Protocolo de reescrita de links de vídeo internos no HTML para passar pelo proxy
     htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4|ts))/gi, (match) => {
       return `/api/proxy?url=${encodeURIComponent(match)}`;
     });
