@@ -1,8 +1,9 @@
+
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2, Languages } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,7 +12,6 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { saveContent, ContentType, cleanName, Episode, Season, formatMasterLink } from "@/lib/store"
-import { translateMetadata } from "@/ai/flows/translate-metadata-flow"
 import Link from "next/link"
 import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -20,8 +20,6 @@ import { VideoPlayer } from "@/components/video-player"
 export default function NewContentPage() {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
-  const [isFixing, setIsFixing] = React.useState(false)
-  const [isTranslating, setIsTranslating] = React.useState(false)
   const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
   const [formData, setFormData] = React.useState({
@@ -36,115 +34,6 @@ export default function NewContentPage() {
 
   const [episodes, setEpisodes] = React.useState<Episode[]>([])
   const [seasons, setSeasons] = React.useState<Season[]>([])
-
-  const handleTranslate = async () => {
-    if (!formData.title && !formData.description) {
-      toast({ variant: "destructive", title: "Nada para traduzir!" });
-      return;
-    }
-    setIsTranslating(true);
-    try {
-      const results = await Promise.all([
-        formData.title ? translateMetadata({ text: formData.title, context: 'title' }) : Promise.resolve({ translatedText: "" }),
-        formData.description ? translateMetadata({ text: formData.description, context: 'description' }) : Promise.resolve({ translatedText: "" })
-      ]);
-      
-      setFormData(prev => ({
-        ...prev,
-        title: results[0].translatedText.toUpperCase() || prev.title,
-        description: results[1].translatedText || prev.description
-      }));
-      toast({ title: "TEXTOS TRADUZIDOS VIA IA!" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Falha na IA Tradutora" });
-    } finally {
-      setIsTranslating(false);
-    }
-  }
-
-  const runTuner = async (url: string) => {
-    if (!url) {
-      toast({ variant: "destructive", title: "Cole um link primeiro!" });
-      return null;
-    }
-    
-    const lowUrl = url.toLowerCase();
-    
-    if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
-       return `/api/proxy?url=${encodeURIComponent(url)}`;
-    }
-
-    if (lowUrl.includes('xvideos.com/video.')) {
-       const match = url.match(/video\.([a-z0-9]+)/i);
-       if (match && match[1]) return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;
-    }
-
-    const isDirect = lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('.ts') || lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-    if (isDirect) {
-      toast({ title: "SINAL JÁ É DIRETO!" });
-      return null;
-    }
-
-    setIsFixing(true);
-    try {
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}&t=${Date.now()}`;
-      const res = await fetch(proxyUrl);
-      const html = await res.text();
-      
-      const patterns = [
-        /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
-        /src=["'](https?:\/\/[^"']+)["']/i
-      ];
-
-      let found = "";
-      for (const pattern of patterns) {
-        const matches = html.matchAll(new RegExp(pattern, 'gi'));
-        for (const match of matches) {
-           const possible = match[1] || match[0];
-           if (possible.startsWith('http') && !possible.includes('google') && !possible.includes('facebook')) {
-              found = possible;
-              break;
-           }
-        }
-        if (found) break;
-      }
-      return found || null;
-    } catch (e) {
-      return null;
-    } finally {
-      setIsFixing(false);
-    }
-  }
-
-  const handleFixMainLink = async () => {
-    const fixed = await runTuner(formData.streamUrl);
-    if (fixed) {
-      setFormData(prev => ({ ...prev, streamUrl: fixed }));
-      toast({ title: "SINAL SINTONIZADO!" });
-    } else if (!isFixing) {
-      toast({ variant: "destructive", title: "Sintonização Falhou" });
-    }
-  }
-
-  const handleFixEpisodeLink = async (idx: number) => {
-    const fixed = await runTuner(episodes[idx].streamUrl);
-    if (fixed) {
-      const newEps = [...episodes];
-      newEps[idx].streamUrl = fixed;
-      setEpisodes(newEps);
-      toast({ title: "EPISÓDIO SINTONIZADO!" });
-    }
-  }
-
-  const handleFixSeasonEpisodeLink = async (sIdx: number, eIdx: number) => {
-    const fixed = await runTuner(seasons[sIdx].episodes[eIdx].streamUrl);
-    if (fixed) {
-      const newSeasons = [...seasons];
-      newSeasons[sIdx].episodes[eIdx].streamUrl = fixed;
-      setSeasons(newSeasons);
-      toast({ title: "EPISÓDIO SINTONIZADO!" });
-    }
-  }
 
   const addEpisode = () => {
     const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
@@ -176,10 +65,7 @@ export default function NewContentPage() {
     setLoading(true)
     
     const isSeriesMode = formData.type === 'series' || formData.type === 'multi-season'
-    const newId = "cont_" + Date.now() + Math.random().toString(36).substring(7);
-
     const success = await saveContent({
-      id: newId,
       title: cleanName(formData.title),
       type: formData.type,
       genre: formData.genre.toUpperCase(),
@@ -218,12 +104,7 @@ export default function NewContentPage() {
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
-              <Input 
-                value={formData.title} 
-                onChange={e => setFormData({...formData, title: e.target.value})} 
-                required
-                className="h-12 bg-black/40 border-white/5 font-bold uppercase"
-              />
+              <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -258,7 +139,6 @@ export default function NewContentPage() {
                     <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
-                    <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -275,14 +155,6 @@ export default function NewContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                   <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                      {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={handleFixMainLink} disabled={isFixing} className="h-8 border-primary/20 text-primary hover:bg-primary/10 font-black uppercase text-[8px]">
-                      {isFixing ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Wand2 className="mr-1 h-3 w-3" />} Sintonizar Sinal
-                    </Button>
-                  </div>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl} onChange={e => setFormData({...formData, streamUrl: e.target.value})} placeholder="Cole o link original aqui..." className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" />
@@ -292,15 +164,6 @@ export default function NewContentPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="uppercase text-[10px] font-black opacity-60">IA TRADUTORA</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                    {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Título e Sinopse
-                  </Button>
-                </div>
-              </div>
-
               {formData.type === 'series' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -330,12 +193,7 @@ export default function NewContentPage() {
                           <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         <div className="space-y-2">
-                           <Label className="text-[8px] font-black uppercase opacity-40 flex items-center justify-between">
-                             Link do Episódio
-                             <Button type="button" variant="ghost" size="sm" onClick={() => handleFixEpisodeLink(idx)} disabled={isFixing} className="h-5 text-primary font-black uppercase text-[7px] hover:bg-primary/10">
-                                {isFixing ? <Loader2 className="animate-spin h-2 w-2 mr-1" /> : <Wand2 className="mr-1 h-2 w-2 mr-1" />} Sintonizar
-                             </Button>
-                           </Label>
+                           <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
                            <div className="flex gap-2">
                              <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
                                 const newEps = [...episodes]
@@ -388,9 +246,6 @@ export default function NewContentPage() {
                                      newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                      setSeasons(newSeasons)
                                   }} className="flex-1 h-8 bg-black/40 text-[10px]" />
-                                  <Button type="button" variant="ghost" size="sm" onClick={() => handleFixSeasonEpisodeLink(sIdx, eIdx)} disabled={isFixing} className="h-8 text-primary px-2 hover:bg-primary/10">
-                                     {isFixing ? <Loader2 className="animate-spin h-3 w-3" /> : <Wand2 className="h-3 w-3" />}
-                                  </Button>
                                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                                   <Button type="button" variant="ghost" size="icon" onClick={() => {
                                     const newSeasons = [...seasons]
@@ -423,16 +278,11 @@ export default function NewContentPage() {
              <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
                 {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20 text-[10px] font-black uppercase italic">Sinal sem Capa</div>}
              </div>
-             <Input 
-              value={formData.imageUrl} 
-              onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
-              placeholder="URL da Imagem..."
-              className="h-10 bg-black/40 border-white/5 text-[10px] font-mono"
-            />
+             <Input value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="URL da Imagem..." className="h-10 bg-black/40 border-white/5 text-[10px] font-mono" />
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Lock className="h-4 w-4" /> Segurança</h3>
+            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Segurança</h3>
             <div className="flex items-center justify-between">
               <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Restrito</Label>
               <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />

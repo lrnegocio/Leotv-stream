@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -114,11 +115,6 @@ export const formatMasterLink = (url: string) => {
       return finalUrl;
     }
 
-    const directExtensions = ['.m3u8', '.mp4', '.ts', '.mkv', '.mp3'];
-    if (directExtensions.some(ext => lowUrl.includes(ext))) {
-      return finalUrl;
-    }
-    
     return finalUrl;
   } catch (e) {
     return url || "";

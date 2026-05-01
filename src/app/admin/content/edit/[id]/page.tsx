@@ -1,13 +1,13 @@
+
 "use client"
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Globe, Lock, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2, Languages } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Languages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { getContentById, saveContent, Season, Episode, ContentItem, formatMasterLink } from "@/lib/store"
@@ -24,7 +24,6 @@ export default function EditContentPage() {
   
   const [loading, setLoading] = React.useState(false)
   const [fetching, setFetching] = React.useState(true)
-  const [isFixing, setIsFixing] = React.useState(false)
   const [isTranslating, setIsTranslating] = React.useState(false)
   const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
   
@@ -53,28 +52,6 @@ export default function EditContentPage() {
     }
     load()
   }, [id, router])
-
-  const handleTranslate = async () => {
-    if (!formData) return;
-    setIsTranslating(true);
-    try {
-      const results = await Promise.all([
-        formData.title ? translateMetadata({ text: formData.title, context: 'title' }) : Promise.resolve({ translatedText: "" }),
-        formData.description ? translateMetadata({ text: formData.description, context: 'description' }) : Promise.resolve({ translatedText: "" })
-      ]);
-      
-      setFormData(prev => prev ? ({
-        ...prev,
-        title: results[0].translatedText.toUpperCase() || prev.title,
-        description: results[1].translatedText || prev.description
-      }) : null);
-      toast({ title: "TEXTOS TRADUZIDOS VIA IA!" });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Falha na IA Tradutora" });
-    } finally {
-      setIsTranslating(false);
-    }
-  }
 
   const addEpisode = () => {
     const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
@@ -140,12 +117,7 @@ export default function EditContentPage() {
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
-              <Input 
-                value={formData.title || ""} 
-                onChange={e => setFormData({...formData, title: e.target.value})} 
-                required
-                className="h-12 bg-black/40 border-white/5 font-bold uppercase"
-              />
+              <Input value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} required className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -180,7 +152,6 @@ export default function EditContentPage() {
                     <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
-                    <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -197,11 +168,6 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                    <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                   <div className="flex gap-2">
-                     <Button type="button" variant="outline" size="sm" onClick={handleTranslate} disabled={isTranslating} className="h-8 border-emerald-500/20 text-emerald-500 font-black uppercase text-[8px] hover:bg-emerald-500/10">
-                        {isTranslating ? <Loader2 className="animate-spin mr-1 h-3 w-3" /> : <Languages className="mr-1 h-3 w-3" />} Traduzir Texto via IA
-                     </Button>
-                   </div>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" placeholder="Link único para Web e IPTV" />
@@ -325,12 +291,7 @@ export default function EditContentPage() {
              <div className="aspect-[2/3] relative bg-black/40 rounded-2xl overflow-hidden border border-white/5 shadow-inner">
                 {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20 text-[10px] font-black uppercase italic">Sinal sem Capa</div>}
              </div>
-             <Input 
-                value={formData.imageUrl || ""} 
-                onChange={e => setFormData({...formData, imageUrl: e.target.value})} 
-                placeholder="https://..."
-                className="h-10 bg-black/40 border-white/5 text-[10px] font-mono"
-              />
+             <Input value={formData.imageUrl || ""} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." className="h-10 bg-black/40 border-white/5 text-[10px] font-mono" />
           </div>
           
           <Button type="submit" className="w-full h-16 bg-primary font-black text-sm uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>
