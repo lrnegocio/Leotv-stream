@@ -82,7 +82,7 @@ export interface User {
 
 /**
  * FORMATADOR MASTER SOBERANO v370
- * Converte links de RDCanais, XVideos e Pornhub automaticamente.
+ * Converte links de RDCanais, XVideos e Pornhub automaticamente para bypassar o Brave.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -91,12 +91,12 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 🛡️ PROTOCOLO RDCANAIS v370 (Brave Bypass)
+    // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS)
     if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 🔞 PROTOCOLO ADULTO v370 (XVideos / Pornhub)
+    // 🔞 PROTOCOLO ADULTO (XVideos / Pornhub)
     if (lowUrl.includes('xvideos.com/video.')) {
       const match = finalUrl.match(/video\.([a-z0-9]+)/i);
       if (match && match[1]) {
@@ -239,7 +239,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
 
-    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO (Blindado)
+    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO
     if (cleanPin === 'ADM77X2P') {
       return {
         user: {

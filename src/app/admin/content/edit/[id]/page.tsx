@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -51,6 +51,14 @@ export default function EditContentPage() {
     load()
   }, [id, router])
 
+  const handleSintonizar = () => {
+    if (formData) {
+      const formatted = formatMasterLink(formData.streamUrl);
+      setFormData({ ...formData, streamUrl: formatted });
+      toast({ title: "SINAL SINTONIZADO v370" });
+    }
+  }
+
   const addEpisode = () => {
     const newEp: Episode = { id: 'ep_' + Date.now(), title: '', number: episodes.length + 1, streamUrl: '' }
     setEpisodes(prev => [...prev, newEp])
@@ -82,7 +90,7 @@ export default function EditContentPage() {
     
     const success = await saveContent({
       ...formData,
-      episodes: (formData.type === 'series') ? episodes : [],
+      episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : [],
       seasons: (formData.type === 'multi-season') ? seasons : [],
     })
     
@@ -166,6 +174,7 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                    <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
+                   <Button type="button" variant="outline" size="sm" onClick={handleSintonizar} className="h-7 text-[8px] border-primary/20 text-primary hover:bg-primary/10"><Wand2 className="h-3 w-3 mr-1" /> SINTONIZAR BRAVE</Button>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" placeholder="Link único para Web e IPTV" />

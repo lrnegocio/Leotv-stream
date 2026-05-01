@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v370 - PROTOCOLO SUPREMO BRAVE/RDC
- * Calibrado para remover rastros da VPS e enganar bloqueios de domínio.
+ * TÚNEL MASTER SOBERANA v370 - PROTOCOLO BRAVE GHOST
+ * Calibrado para remover rastros da VPS e enganar bloqueios de navegadores como Brave.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,22 +25,22 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO v370 - FINGE SER UM ACESSO ORIGINAL DO BRAVE/IOS
+    // MASCARAMENTO SOBERANO - FINGE SER UM ACESSO ORIGINAL DO BRAVE/IOS
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // 🛡️ EXTERMINADOR DE RASTROS: Remove cabeçalhos que revelam a VPS leotv.fun
+    // 🛡️ EXTERMINADOR DE RASTROS (PROTOCOLO GHOST): Remove cabeçalhos que revelam a VPS e o site
     requestHeaders.delete('Origin');
     requestHeaders.delete('Referer');
     requestHeaders.delete('Sec-Fetch-Dest');
     requestHeaders.delete('Sec-Fetch-Mode');
     requestHeaders.delete('Sec-Fetch-Site');
+    requestHeaders.delete('Sec-Fetch-User');
 
-    // PROTOCOLO BYPASS RDCANAIS v370: Camuflagem total
+    // BYPASS ESPECÍFICO RDCANAIS
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
-      requestHeaders.set('Origin', 'https://rdcanais.com');
     } else if (lowTarget.includes('mercadolivre') || lowTarget.includes('mercadopago')) {
       requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
     } else {
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const finalUrl = res.url;
     return handleResponse(res, finalUrl, new URL(finalUrl));
   } catch (error) {
-    return new Response("Falha no Túnel Soberano v370", { status: 500 });
+    return new Response("Falha no Túnel Ghost v370", { status: 500 });
   }
 }
 
@@ -102,20 +102,15 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   if (isHtml) {
     let htmlText = await res.text();
     
-    // INJEÇÃO DE LIMPEZA SOBERANA v370
     const cleanCss = `
       <style>
-        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav, .footer-content { display: none !important; visibility: hidden !important; }
-        body, html { overflow: hidden !important; background: black !important; margin: 0 !important; padding: 0 !important; }
+        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav { display: none !important; visibility: hidden !important; }
+        body, html { overflow: hidden !important; background: black !important; margin: 0 !important; }
         iframe, video { width: 100% !important; height: 100% !important; }
       </style>
     `;
 
-    // Protocolo de reescrita de links de vídeo internos no HTML para passar pelo proxy
-    htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4|ts))/gi, (match) => {
-      return `/api/proxy?url=${encodeURIComponent(match)}`;
-    });
-
+    // Reescrita agressiva para o Brave
     htmlText = htmlText.replace('<head>', `<head><base href="${urlObj.origin}${urlObj.pathname}">${cleanCss}`);
 
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
