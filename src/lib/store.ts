@@ -91,7 +91,7 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 🔞 PROTOCOLO ADULTO v370
+    // 🔞 PROTOCOLO ADULTO v370 (XVideos / Pornhub)
     if (lowUrl.includes('xvideos.com/video.')) {
       const match = finalUrl.match(/video\.([a-z0-9]+)/i);
       if (match && match[1]) {
@@ -269,7 +269,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
       if (activeDevices.length >= user.maxScreens) {
         return { error: "LIMITE DE TELAS ATINGIDO" };
       }
-      // Registra o novo dispositivo
       const updatedDevices = [...activeDevices, deviceId];
       await supabase.from('users').update({ activeDevices: updatedDevices }).eq('id', user.id);
       user.activeDevices = updatedDevices;

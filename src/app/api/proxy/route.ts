@@ -5,7 +5,7 @@ export const fetchCache = 'force-no-store';
 
 /**
  * TÚNEL MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
- * Calibrado para RDCanais e CDNs externas.
+ * Calibrado para RDCanais e camuflagem total de domínios.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,11 +24,12 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM PLAYER OFICIAL
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    // MASCARAMENTO SOBERANO - FINGE SER UM PLAYER OFICIAL DE IPTV
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Connection', 'keep-alive');
     
-    // PROTOCOLO BYPASS RDCANAIS v370
+    // PROTOCOLO BYPASS RDCANAIS v370: Remove qualquer rastro da VPS leotv.fun
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
@@ -99,7 +100,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
       </style>
     `;
 
-    // Protocolo de reescrita de links de vídeo dentro do HTML para evitar loading infinito
+    // Protocolo de reescrita de links de vídeo internos no HTML
     htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4|ts))/gi, (match) => {
       return `/api/proxy?url=${encodeURIComponent(match)}`;
     });
