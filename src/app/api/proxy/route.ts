@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
- * Calibrado para seguir redirecionamentos e extrair a fonte final do sinal.
- * Adicionado: Protocolo RDC-Bypass para liberar sinais da RDCanais e StreamRDC.
+ * TÚNEL MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE ULTIMATE
+ * Calibrado para RDCanais, StreamRDC, Mercado Livre e XVideos.
+ * Realiza reescrita de fontes de vídeo em tempo real para evitar carregamento infinito.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,23 +25,20 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM PLAYER OFICIAL DE IPTV
-    requestHeaders.set('User-Agent', 'IPTVSmarters/1.0.3 (iPad; iOS 16.1; Scale/2.00)');
+    // MASCARAMENTO SOBERANO - FINGE SER UM PLAYER OFICIAL
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
-    requestHeaders.set('Connection', 'keep-alive');
     
     // PROTOCOLO DE BYPASS DE DOMÍNIO v370
     if (lowTarget.includes('mercadolivre')) {
       requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
     } else if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
-      // Engana o servidor fazendo-o pensar que o acesso vem do site oficial autorizado
       requestHeaders.set('Referer', 'https://rdcanais.com/');
       requestHeaders.set('Origin', 'https://rdcanais.com');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
 
-    // PROTOCOLO DEEP-TRACE: Segue o sinal até a CDN final
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
@@ -97,15 +94,25 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   if (isHtml) {
     let htmlText = await res.text();
     
-    // INJEÇÃO DE LIMPEZA UNIVERSAL v370
+    // INJEÇÃO DE LIMPEZA E BYPASS v370
     const cleanCss = `
       <style>
-        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav, .footer-content { display: none !important; visibility: hidden !important; }
-        body, html { overflow: hidden !important; background: black !important; }
+        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav, .footer-content, .reidoscanais-ads { display: none !important; visibility: hidden !important; }
+        body, html { overflow: hidden !important; background: black !important; margin: 0 !important; padding: 0 !important; }
         #over-video, .video-ads, .ads-wrapper { display: none !important; }
       </style>
     `;
-    htmlText = htmlText.replace('<head>', `<head>${cleanCss}<base href="${urlObj.origin}${urlObj.pathname}">`);
+
+    // Protocolo de reescrita de links de vídeo dentro do HTML (Evita loading infinito)
+    // Procura por links .m3u8 ou .mp4 e injeta o proxy neles
+    htmlText = htmlText.replace(/(https?:\/\/[^"']+\.(?:m3u8|mp4))/gi, (match) => {
+      if (match.includes('api/proxy')) return match;
+      return `/api/proxy?url=${encodeURIComponent(match)}`;
+    });
+
+    // Define a base URL correta para os scripts carregarem
+    const baseDir = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+    htmlText = htmlText.replace('<head>', `<head><base href="${baseDir}">${cleanCss}`);
 
     responseHeaders.set('Content-Type', 'text/html; charset=utf-8');
     return new Response(htmlText, { headers: responseHeaders, status: 200 });

@@ -86,6 +86,11 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
+    // PROTOCOLO RDCANAIS v370
+    if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
+      return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
@@ -314,3 +319,4 @@ export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Mat
 export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function getGameRankings() { return []; }
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `🎬 *LÉO TV STREAM!* \n👤 *PIN:* \`${pin}\` \n📅 *PLANO:* ${tier.toUpperCase()} \n🔗 ${url}`;
+export const getExpiryMessage = (pin: string, days: number) => `⚠️ *AVISO LÉO TV!* \n👤 *PIN:* \`${pin}\` \n⏳ Seu acesso expira em ${days} dia(s).`;

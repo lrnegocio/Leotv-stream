@@ -102,21 +102,8 @@ export default function NewContentPage() {
       const res = await fetch(proxyUrl);
       const html = await res.text();
       
-      const junkPatterns = [
-        'gtag', 'googletagmanager', 'google-analytics', 'wp-json', 
-        'oembed', '.js', '.css', 'pixel', 'facebook.net', 
-        'adsbygoogle', 'scripts', 'tracking', 'dmcdn.net',
-        '.jpg', '.png', '.webp', '.gif', '60x60', '120x120'
-      ];
-      
       const patterns = [
         /https?:\/\/[^"']+\.(?:m3u8|mp4|ts|mkv)(?:\?[^"']*)?/i,
-        /https?:\/\/cdn[^"']+\.(?:m3u8|mp4|ts|mkv)/i,
-        /https?:\/\/www\.dailymotion\.com\/embed\/video\/[^"']+/i,
-        /https?:\/\/www\.retrogames\.cc\/embed\/[^"']+/i,
-        /https?:\/\/www\.tokyvideo\.com\/br\/embed\/[^"']+/i,
-        /https?:\/\/www\.xvideos\.com\/embedframe\/[^"']+/i,
-        /https?:\/\/ok\.ru\/videoembed\/[^"']+/i,
         /src=["'](https?:\/\/[^"']+)["']/i
       ];
 
@@ -125,10 +112,7 @@ export default function NewContentPage() {
         const matches = html.matchAll(new RegExp(pattern, 'gi'));
         for (const match of matches) {
            const possible = match[1] || match[0];
-           const pLow = possible.toLowerCase();
-           
-           const isJunk = junkPatterns.some(junk => pLow.includes(junk));
-           if (!isJunk && pLow.startsWith('http')) {
+           if (possible.startsWith('http') && !possible.includes('google') && !possible.includes('facebook')) {
               found = possible;
               break;
            }
