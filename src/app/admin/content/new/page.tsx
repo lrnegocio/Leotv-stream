@@ -70,6 +70,12 @@ export default function NewContentPage() {
     
     const lowUrl = url.toLowerCase();
     
+    // PROTOCOLO BYPASS RDCANAIS v370
+    if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
+       toast({ title: "PROTOCOLO RDC ATIVO!", description: "Sinal tunelado via Bypass Master." });
+       return `/api/proxy?url=${encodeURIComponent(url)}`;
+    }
+
     if (lowUrl.includes('dailymotion.com/video/')) {
        const dId = url.split('/video/')[1]?.split('?')[0];
        if (dId) return `https://www.dailymotion.com/embed/video/${dId}`;

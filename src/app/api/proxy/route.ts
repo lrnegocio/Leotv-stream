@@ -6,6 +6,7 @@ export const fetchCache = 'force-no-store';
 /**
  * TÚNEL MASTER SOBERANA v370 - PROTOCOLO DEEP-TRACE
  * Calibrado para seguir redirecionamentos e extrair a fonte final do sinal.
+ * Adicionado: Protocolo RDC-Bypass para liberar sinais da RDCanais e StreamRDC.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -29,8 +30,13 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
+    // PROTOCOLO DE BYPASS DE DOMÍNIO v370
     if (lowTarget.includes('mercadolivre')) {
       requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
+    } else if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
+      // Engana o servidor fazendo-o pensar que o acesso vem do site oficial autorizado
+      requestHeaders.set('Referer', 'https://rdcanais.com/');
+      requestHeaders.set('Origin', 'https://rdcanais.com');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -39,12 +45,10 @@ export async function GET(req: NextRequest) {
     const res = await fetch(targetUrl, { 
       headers: requestHeaders,
       cache: 'no-store',
-      redirect: 'follow' // Segue todos os pulos do servidor
+      redirect: 'follow'
     });
 
-    // Se o servidor tentou nos jogar para outro lugar, pegamos o destino final
     const finalUrl = res.url;
-    
     return handleResponse(res, finalUrl, new URL(finalUrl));
   } catch (error) {
     return new Response("Falha no Túnel Deep-Trace v370", { status: 500 });
@@ -96,8 +100,9 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
     // INJEÇÃO DE LIMPEZA UNIVERSAL v370
     const cleanCss = `
       <style>
-        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header { display: none !important; visibility: hidden !important; }
+        header, footer, nav, aside, .ads, .sidebar, #navbar, .rbx-header, .top-nav, .footer-content { display: none !important; visibility: hidden !important; }
         body, html { overflow: hidden !important; background: black !important; }
+        #over-video, .video-ads, .ads-wrapper { display: none !important; }
       </style>
     `;
     htmlText = htmlText.replace('<head>', `<head>${cleanCss}<base href="${urlObj.origin}${urlObj.pathname}">`);
