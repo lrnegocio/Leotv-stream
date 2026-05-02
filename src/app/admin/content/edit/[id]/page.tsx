@@ -174,7 +174,7 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                    <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                   <Button type="button" variant="outline" size="sm" onClick={handleSintonizar} className="h-7 text-[8px] border-primary/20 text-primary hover:bg-primary/10"><Wand2 className="h-3 w-3 mr-1" /> SINTONIZAR BRAVE</Button>
+                   <Button type="button" variant="outline" size="sm" onClick={handleSintonizar} className="h-7 text-[8px] border-primary/20 text-primary hover:bg-primary/10"><Wand2 className="h-3 w-3 mr-1" /> SINTONIZAR MASTER</Button>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" placeholder="Link único para Web e IPTV" />

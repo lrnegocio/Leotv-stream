@@ -91,11 +91,11 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS
+    // 📺 PROTOCOLO YOUTUBE & SHORTS (FIM DO ERRO 153)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
-        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
+        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0]?.split('&')[0];
       } else if (lowUrl.includes('watch?v=')) {
         videoId = finalUrl.split('v=')[1]?.split('&')[0];
       } else if (lowUrl.includes('youtu.be/')) {
@@ -103,10 +103,10 @@ export const formatMasterLink = (url: string) => {
       } else if (lowUrl.includes('/embed/')) {
         return finalUrl;
       }
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1&enablejsapi=1`;
     }
 
-    // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS)
+    // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS & STREAMRDC)
     if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
