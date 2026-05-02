@@ -83,7 +83,7 @@ export interface User {
 
 /**
  * FORMATADOR MASTER SOBERANO v371 - VACINA ANTI-ERRO 153
- * Formato simplificado e robusto para YouTube e Shorts.
+ * Formato robusto com origin e API ativa para YouTube e Shorts.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -92,7 +92,7 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS (FIM DO ERRO 153)
+    // 📺 PROTOCOLO YOUTUBE & SHORTS (VACINA ERRO 153)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -106,13 +106,14 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Link limpo para evitar Erro 153 e problemas de política de origem
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        // Pega a origem do site para o YouTube autorizar o player
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
 
     // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS & STREAMRDC)
-    if (lowUrl.includes('rdcanais') || lowUrl.includes('streamrdc')) {
+    if (lowUrl.includes('rdcanais') || lowUrl.includes('streamrdc') || lowUrl.includes('redecanais')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -140,7 +141,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
     if (!showInactive) {
-      // Filtra apenas os ativos. Se isActive for null, considera ativo (default)
       query = query.or('isActive.is.null,isActive.eq.true');
     }
 
@@ -171,7 +171,7 @@ export async function saveContent(item: Partial<ContentItem>) {
 
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
-      console.error("Erro Supabase:", error);
+      console.error("Erro Supabase:", error.message || error);
       return false;
     }
     return true;
@@ -347,14 +347,16 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
-  // Limpa o objeto de updates para garantir que o Supabase entenda
   const finalUpdates: any = {};
   if (updates.genre !== undefined && updates.genre !== "") finalUpdates.genre = updates.genre;
   if (updates.isRestricted !== undefined) finalUpdates.isRestricted = !!updates.isRestricted;
   if (updates.isActive !== undefined) finalUpdates.isActive = !!updates.isActive;
 
+  // Evita erro se não houver campos para atualizar
+  if (Object.keys(finalUpdates).length === 0) return true;
+
   const { error } = await supabase.from('content').update(finalUpdates).in('id', ids);
-  if (error) console.error("Erro Bulk Update:", error);
+  if (error) console.error("Erro Bulk Update:", error.message || error);
   return !error;
 }
 

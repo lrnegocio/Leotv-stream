@@ -31,7 +31,6 @@ export default function ContentManagementPage() {
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
-      // Para admin, showInactive = true para ver tudo
       const data = await getRemoteContent(true, query)
       setItems(data)
     } catch (error) {
@@ -77,13 +76,14 @@ export default function ContentManagementPage() {
     updates.isRestricted = bulkUpdates.isRestricted
     updates.isActive = bulkUpdates.isActive
 
-    if (await bulkUpdateContent(selectedIds, updates)) {
+    const success = await bulkUpdateContent(selectedIds, updates)
+    if (success) {
       setIsBulkEditing(false)
       setSelectedIds([])
       await loadItems(searchTerm)
       toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA!" })
     } else {
-      toast({ variant: "destructive", title: "Erro ao atualizar em massa." })
+      toast({ variant: "destructive", title: "Erro ao atualizar em massa.", description: "Verifique o banco de dados." })
     }
     setIsDeleting(false)
   }

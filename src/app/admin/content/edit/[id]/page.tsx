@@ -103,7 +103,7 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique a conexão." })
     }
   }
 
