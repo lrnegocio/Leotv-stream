@@ -82,7 +82,7 @@ export interface User {
 
 /**
  * FORMATADOR MASTER SOBERANO v370
- * Converte links de RDCanais, XVideos e Pornhub automaticamente para bypassar o Brave.
+ * Sincronizado para YouTube (Shorts), RDCanais, XVideos e Pornhub.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -90,6 +90,21 @@ export const formatMasterLink = (url: string) => {
     let finalUrl = url.trim();
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
+
+    // 📺 PROTOCOLO YOUTUBE & SHORTS
+    if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
+      let videoId = "";
+      if (lowUrl.includes('/shorts/')) {
+        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
+      } else if (lowUrl.includes('watch?v=')) {
+        videoId = finalUrl.split('v=')[1]?.split('&')[0];
+      } else if (lowUrl.includes('youtu.be/')) {
+        videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+      } else if (lowUrl.includes('/embed/')) {
+        return finalUrl;
+      }
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
+    }
 
     // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS)
     if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
@@ -107,16 +122,6 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('pornhub.com/view_video.php')) {
       const vId = new URL(finalUrl).searchParams.get('viewkey');
       if (vId) return `https://www.pornhub.com/embed/${vId}`;
-    }
-
-    if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
-      let videoId = "";
-      if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split('?')[0];
-      else if (lowUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-      else if (lowUrl.includes('/embed/')) return finalUrl;
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
-      return finalUrl;
     }
 
     return finalUrl;

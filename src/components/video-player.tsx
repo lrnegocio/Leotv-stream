@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -14,7 +15,7 @@ interface VideoPlayerProps {
 
 /**
  * PLAYER MASTER SOBERANA v370
- * Sincronizado para YouTube, CDNs diretas e Iframes.
+ * Sincronizado para YouTube (Shorts), CDNs diretas e Iframes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -33,10 +34,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isDirectFile = lowUrl.includes('.m3u8') || 
+  const isDirectFile = (lowUrl.includes('.m3u8') || 
                        lowUrl.includes('.ts') || 
                        lowUrl.includes('.mp4') || 
-                       lowUrl.includes('.mkv');
+                       lowUrl.includes('.mkv')) && !isYouTube;
 
   const isIframe = !isDirectFile || isYouTube || 
                    lowUrl.includes('rdcanais') || 
@@ -45,7 +46,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                    lowUrl.includes('xvideos') ||
                    lowUrl.includes('pornhub') ||
                    lowUrl.includes('dailymotion') ||
-                   lowUrl.includes('ok.ru');
+                   lowUrl.includes('ok.ru') ||
+                   lowUrl.includes('/api/proxy');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !safeUrl) return;
@@ -53,7 +55,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      setTimeout(() => setLoading(false), 2500);
+      // YouTube Embeds as vezes demoram mais no Brave
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
@@ -144,9 +147,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5" /></Button>}
         
-        <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
-          {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
-        </Button>
+        {!isIframe && (
+          <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
+            {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
+          </Button>
+        )}
 
         <Button size="icon" onClick={() => initPlayer()} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-emerald-500 transition-all">
           <RefreshCcw className="h-5 w-5" />
