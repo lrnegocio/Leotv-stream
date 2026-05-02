@@ -38,7 +38,7 @@ export default function EditContentPage() {
         if (item) {
           setFormData({
             ...item,
-            isActive: item.isActive !== false // Default true if undefined
+            isActive: item.isActive !== false
           })
           setEpisodes(item.episodes || [])
           setSeasons(item.seasons || [])
@@ -59,7 +59,7 @@ export default function EditContentPage() {
     if (formData) {
       const formatted = formatMasterLink(formData.streamUrl);
       setFormData({ ...formData, streamUrl: formatted });
-      toast({ title: "SINAL SINTONIZADO v370" });
+      toast({ title: "SINAL SINTONIZADO v371" });
     }
   }
 
@@ -107,7 +107,7 @@ export default function EditContentPage() {
     }
   }
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v370...</p></div>
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v371...</p></div>
 
   if (!formData) return null;
 
@@ -119,7 +119,7 @@ export default function EditContentPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v370</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v371</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">

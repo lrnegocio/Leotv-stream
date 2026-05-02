@@ -23,7 +23,7 @@ export interface ContentItem {
   description: string; 
   genre: string;
   isRestricted: boolean; 
-  isActive?: boolean; // NOVO: Controle de sinal ativo
+  isActive?: boolean; 
   streamUrl: string; 
   imageUrl?: string;
   seasons?: Season[] | null; 
@@ -82,8 +82,8 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v370 - PROTOCOLO YOUTUBE LIMPO
- * Remove parâmetros conflitantes para exterminar o Erro 153.
+ * FORMATADOR MASTER SOBERANO v371 - VACINA ANTI-ERRO 153
+ * Formato simplificado e robusto para YouTube e Shorts.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -106,13 +106,13 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Embed limpo sem parâmetros que causam o Erro 153
-        return `https://www.youtube.com/embed/${videoId}`;
+        // Link limpo para evitar Erro 153 e problemas de política de origem
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
       }
     }
 
     // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS & STREAMRDC)
-    if (lowUrl.includes('rdcanais.com') || lowUrl.includes('streamrdc.xyz')) {
+    if (lowUrl.includes('rdcanais') || lowUrl.includes('streamrdc')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -139,9 +139,9 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
-    // Se não for admin, mostra apenas sinais ativos
     if (!showInactive) {
-      query = query.not('isActive', 'is', false);
+      // Filtra apenas os ativos. Se isActive for null, considera ativo (default)
+      query = query.or('isActive.is.null,isActive.eq.true');
     }
 
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
@@ -152,7 +152,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
-      isActive: item.isActive !== false, // Default true
+      isActive: item.isActive !== false,
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
@@ -161,15 +161,20 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
 
 export async function saveContent(item: Partial<ContentItem>) {
   try {
-    const payload = {
-      ...item,
-      id: item.id || "cont_" + Date.now() + Math.random().toString(36).substring(7),
-      title: item.title?.toUpperCase().trim(),
-      genre: item.genre?.toUpperCase().trim(),
-      isActive: item.isActive !== false // Mantém ativo por padrão
-    };
+    const payload: any = { ...item };
+    if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
+    if (payload.title) payload.title = payload.title.toUpperCase().trim();
+    if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
+    
+    // Força isActive ser booleano para o banco
+    payload.isActive = payload.isActive !== false;
+
     const { error } = await supabase.from('content').upsert(payload);
-    return !error;
+    if (error) {
+      console.error("Erro Supabase:", error);
+      return false;
+    }
+    return true;
   } catch (e) { return false; }
 }
 
@@ -258,7 +263,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
 
-    // 🏆 MASTER OVERRIDE v370: ACESSO SUPREMO MESTRE LÉO
     if (cleanPin === 'ADM77X2P') {
       return {
         user: {
@@ -318,21 +322,21 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()).eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()).or('isActive.is.null,isActive.eq.true');
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getTopContent(l = 10) {
   try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').eq('isActive', true).order('views', { ascending: false }).limit(l);
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').or('isActive.is.null,isActive.eq.true').order('views', { ascending: false }).limit(l);
     return data || [];
   } catch (e) { return []; }
 }
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %').eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %').or('isActive.is.null,isActive.eq.true');
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -343,7 +347,14 @@ export async function bulkRemoveContent(ids: string[]) {
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
-  const { error } = await supabase.from('content').update(updates).in('id', ids);
+  // Limpa o objeto de updates para garantir que o Supabase entenda
+  const finalUpdates: any = {};
+  if (updates.genre !== undefined && updates.genre !== "") finalUpdates.genre = updates.genre;
+  if (updates.isRestricted !== undefined) finalUpdates.isRestricted = !!updates.isRestricted;
+  if (updates.isActive !== undefined) finalUpdates.isActive = !!updates.isActive;
+
+  const { error } = await supabase.from('content').update(finalUpdates).in('id', ids);
+  if (error) console.error("Erro Bulk Update:", error);
   return !error;
 }
 
