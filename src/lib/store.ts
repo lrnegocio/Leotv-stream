@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v376 - VACINA DEFINITIVA YOUTUBE & ORIGIN
+ * FORMATADOR MASTER SOBERANO v377 - VACINA DEFINITIVA YOUTUBE & ORIGIN
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,8 +105,8 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
+        // DETECÇÃO DE ORIGEM PARA MATAR ERRO 153
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
-        // O YouTube exige o origin para autorizar o player em Iframes e evitar erro 153
         return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
@@ -137,7 +137,6 @@ export const formatMasterLink = (url: string) => {
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    // Seleção robusta para evitar erro se a coluna isActive não existir no cache do Supabase
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
     if (searchQuery) {
@@ -151,27 +150,23 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
 
     const { data, error } = await query.order('title', { ascending: true });
     
-    if (error) {
-      console.error("Erro Supabase Fetch:", error.message);
-      return [];
-    }
+    if (error) throw error;
 
     let items = (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
-      isActive: item.isActive !== false, // Fallback: se for null ou true, assume ativo
+      isActive: item.isActive !== false,
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
 
-    // Filtra localmente se não for admin
     if (!showInactive) {
       items = items.filter(i => i.isActive !== false);
     }
 
     return items;
   } catch (e: any) { 
-    console.error("Erro Fatal ao buscar conteúdo:", e.message || e);
+    console.error("Erro ao buscar conteúdo:", e.message || e);
     return []; 
   }
 }
@@ -191,8 +186,6 @@ export async function saveContent(item: Partial<ContentItem>) {
       const { isActive, ...cleanPayload } = payload;
       const { error: retryError } = await supabase.from('content').upsert(cleanPayload);
       if (retryError) return false;
-      // Retorna true mas sabemos que isActive não foi salvo. 
-      // O Admin tratará isso avisando o usuário.
       return "NEED_COLUMN"; 
     }
     
