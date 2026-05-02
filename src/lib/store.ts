@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v370 - FOCO YOUTUBE & SHORTS
- * Blindado contra Erro 153 - Removido enablejsapi para máxima compatibilidade.
+ * FORMATADOR MASTER SOBERANO v370 - PROTOCOLO YOUTUBE LIMPO
+ * Remove parâmetros conflitantes para exterminar o Erro 153.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -92,6 +92,7 @@ export const formatMasterLink = (url: string) => {
     let lowUrl = finalUrl.toLowerCase();
 
     // 📺 PROTOCOLO YOUTUBE & SHORTS (FIM DO ERRO 153)
+    // Formato ultra-simplificado para garantir que o YouTube não bloqueie por erro de config
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -101,12 +102,11 @@ export const formatMasterLink = (url: string) => {
       } else if (lowUrl.includes('youtu.be/')) {
         videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       } else if (lowUrl.includes('/embed/')) {
-        return finalUrl;
+        return finalUrl.split('?')[0]; // Remove parâmetros que causam o Erro 153
       }
       
       if (videoId) {
-        // Formato ultra-limpo para evitar erro de configuração 153
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
       }
     }
 
