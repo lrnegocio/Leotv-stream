@@ -92,7 +92,6 @@ export const formatMasterLink = (url: string) => {
     let lowUrl = finalUrl.toLowerCase();
 
     // 📺 PROTOCOLO YOUTUBE & SHORTS (FIM DO ERRO 153)
-    // Formato ultra-simplificado para garantir que o YouTube não bloqueie por erro de config
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -106,7 +105,7 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        return `https://www.youtube.com/embed/${videoId}`;
       }
     }
 

@@ -12,15 +12,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    // LIBERAÇÃO SOBERANA v199: Remove bloqueios de mouse e teclado
-    const enableInspector = (e: any) => {
-      e.stopPropagation();
-      return true;
-    };
-    document.addEventListener("contextmenu", enableInspector, true);
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "F12") e.stopPropagation();
-    }, true);
+    // ACESSO LIBERADO: Sem bloqueios de mouse ou teclado neste projeto.
   }, [])
 
   if (!isMounted) {
