@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
@@ -27,6 +27,7 @@ export default function ContentManagementPage() {
   
   const [isBulkEditing, setIsBulkEditing] = React.useState(false)
   const [bulkUpdates, setBulkUpdates] = React.useState({ genre: "", isRestricted: false, isActive: true })
+  const [updateFlags, setUpdateFlags] = React.useState({ genre: false, isRestricted: false, isActive: false })
 
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
@@ -69,17 +70,26 @@ export default function ContentManagementPage() {
 
   const handleBulkUpdate = async () => {
     if (selectedIds.length === 0) return
-    setIsDeleting(true)
     
-    const updates: any = {}
-    if (bulkUpdates.genre) updates.genre = bulkUpdates.genre
-    updates.isRestricted = bulkUpdates.isRestricted
-    updates.isActive = bulkUpdates.isActive
+    const finalPayload: any = {}
+    let hasSomething = false
+    
+    if (updateFlags.genre && bulkUpdates.genre) { finalPayload.genre = bulkUpdates.genre; hasSomething = true; }
+    if (updateFlags.isRestricted) { finalPayload.isRestricted = bulkUpdates.isRestricted; hasSomething = true; }
+    if (updateFlags.isActive) { finalPayload.isActive = bulkUpdates.isActive; hasSomething = true; }
 
-    const success = await bulkUpdateContent(selectedIds, updates)
+    if (!hasSomething) {
+      toast({ variant: "destructive", title: "Nenhuma alteração selecionada!" })
+      return
+    }
+
+    setIsDeleting(true)
+    const success = await bulkUpdateContent(selectedIds, finalPayload)
+    
     if (success) {
       setIsBulkEditing(false)
       setSelectedIds([])
+      setUpdateFlags({ genre: false, isRestricted: false, isActive: false })
       await loadItems(searchTerm)
       toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA!" })
     } else {
@@ -186,52 +196,65 @@ export default function ContentManagementPage() {
 
       <Dialog open={isBulkEditing} onOpenChange={setIsBulkEditing}>
         <DialogContent className="max-w-md bg-card border-white/10 rounded-[2rem] p-8 shadow-2xl">
-          <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem em Massa ({selectedIds.length})</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem Blindada ({selectedIds.length})</DialogTitle></DialogHeader>
           <div className="space-y-6 py-4">
-             <div className="space-y-2">
-                <Label className="uppercase text-[10px] font-black opacity-60">Nova Categoria (Opcional)</Label>
-                <Select value={bulkUpdates.genre} onValueChange={v => setBulkUpdates({...bulkUpdates, genre: v})}>
-                  <SelectTrigger className="h-12 bg-black/40 border-white/5 font-bold"><SelectValue placeholder="Manter atual" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
-                    <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
-                    <SelectItem value="LÉO TV SÉRIES">LÉO TV SÉRIES</SelectItem>
-                    <SelectItem value="LÉO TV PAY PER VIEW">LÉO TV PAY PER VIEW</SelectItem>
-                    <SelectItem value="LÉO TV ALACARTES">LÉO TV ALACARTES</SelectItem>
-                    <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
-                    <SelectItem value="LÉO TV MUSICAS">LÉO TV MÚSICAS</SelectItem>
-                    <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
-                    <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
-                    <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
-                    <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
-                    <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
-                    <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
-                    <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
-                  </SelectContent>
-                </Select>
+             <p className="text-[9px] font-bold uppercase text-primary/60 italic text-center">Marque apenas o que deseja alterar nos {selectedIds.length} itens.</p>
+             
+             <div className="space-y-3 p-4 bg-black/20 rounded-2xl border border-white/5">
+                <div className="flex items-center gap-3">
+                   <Checkbox checked={updateFlags.genre} onCheckedChange={(v) => setUpdateFlags({...updateFlags, genre: !!v})} className="h-5 w-5" />
+                   <Label className="uppercase text-[10px] font-black opacity-60">Alterar Categoria?</Label>
+                </div>
+                {updateFlags.genre && (
+                  <Select value={bulkUpdates.genre} onValueChange={v => setBulkUpdates({...bulkUpdates, genre: v})}>
+                    <SelectTrigger className="h-10 bg-black/40 border-white/5 font-bold text-[10px]"><SelectValue placeholder="Escolha a pasta..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LÉO TV AO VIVO">LÉO TV AO VIVO</SelectItem>
+                      <SelectItem value="LÉO TV FILMES">LÉO TV FILMES</SelectItem>
+                      <SelectItem value="LÉO TV SÉRIES">LÉO TV SÉRIES</SelectItem>
+                      <SelectItem value="LÉO TV PAY PER VIEW">LÉO TV PAY PER VIEW</SelectItem>
+                      <SelectItem value="LÉO TV ALACARTES">LÉO TV ALACARTES</SelectItem>
+                      <SelectItem value="LÉO TV ESPORTES">LÉO TV ESPORTES</SelectItem>
+                      <SelectItem value="LÉO TV MUSICAS">LÉO TV MÚSICAS</SelectItem>
+                      <SelectItem value="LÉO TV VÍDEO CLIPES">LÉO TV VÍDEO CLIPES</SelectItem>
+                      <SelectItem value="LÉO TV PIADAS">LÉO TV PIADAS</SelectItem>
+                      <SelectItem value="LÉO TV REELS">LÉO TV REELS</SelectItem>
+                      <SelectItem value="LÉO TV NOVELAS">LÉO TV NOVELAS</SelectItem>
+                      <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
+                      <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
+                      <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
              </div>
 
              <div className="grid gap-3">
-                <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Power className="h-4 w-4 text-emerald-500" />
-                    <Label className="uppercase text-[10px] font-black italic">Ativar Todos?</Label>
+                <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${updateFlags.isActive ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-primary/5 border-primary/10 opacity-40'}`}>
+                  <div className="flex items-center gap-3">
+                    <Checkbox checked={updateFlags.isActive} onCheckedChange={(v) => setUpdateFlags({...updateFlags, isActive: !!v})} />
+                    <div className="flex flex-col">
+                       <Label className="uppercase text-[10px] font-black italic">Mudar Ativação?</Label>
+                       {updateFlags.isActive && <span className="text-[8px] font-bold text-emerald-500">{bulkUpdates.isActive ? 'VÃO FICAR ATIVOS' : 'VÃO FICAR DESLIGADOS'}</span>}
+                    </div>
                   </div>
-                  <Switch checked={bulkUpdates.isActive} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isActive: v})} />
+                  <Switch checked={bulkUpdates.isActive} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isActive: v})} disabled={!updateFlags.isActive} />
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-primary" />
-                    <Label className="uppercase text-[10px] font-black italic">Restringir Todos?</Label>
+                <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${updateFlags.isRestricted ? 'bg-amber-500/10 border-amber-500/30' : 'bg-primary/5 border-primary/10 opacity-40'}`}>
+                  <div className="flex items-center gap-3">
+                    <Checkbox checked={updateFlags.isRestricted} onCheckedChange={(v) => setUpdateFlags({...updateFlags, isRestricted: !!v})} />
+                    <div className="flex flex-col">
+                       <Label className="uppercase text-[10px] font-black italic">Mudar Restrição?</Label>
+                       {updateFlags.isRestricted && <span className="text-[8px] font-bold text-amber-500">{bulkUpdates.isRestricted ? 'VÃO FICAR COM SENHA' : 'VÃO FICAR LIVRES'}</span>}
+                    </div>
                   </div>
-                  <Switch checked={bulkUpdates.isRestricted} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isRestricted: v})} />
+                  <Switch checked={bulkUpdates.isRestricted} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isRestricted: v})} disabled={!updateFlags.isRestricted} />
                 </div>
              </div>
           </div>
           <DialogFooter>
-             <Button onClick={handleBulkUpdate} className="w-full h-14 bg-amber-500 font-black uppercase rounded-xl" disabled={isDeleting}>
-                {isDeleting ? <Loader2 className="animate-spin" /> : 'APLICAR MUDANÇAS AGORA'}
+             <Button onClick={handleBulkUpdate} className="w-full h-14 bg-amber-500 font-black uppercase rounded-xl shadow-xl" disabled={isDeleting}>
+                {isDeleting ? <Loader2 className="animate-spin" /> : <><CheckCircle2 className="mr-2 h-5 w-5" /> APLICAR RECALIBRAGEM</>}
              </Button>
           </DialogFooter>
         </DialogContent>

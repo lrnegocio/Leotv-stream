@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v372 - VACINA DEFINITIVA YOUTUBE
+ * FORMATADOR MASTER SOBERANO v373 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -91,7 +91,7 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS (ELIMINA ERRO 153)
+    // 📺 PROTOCOLO YOUTUBE & SHORTS (EXTERMINA ERRO 153)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -105,7 +105,8 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        // Formato blindado para compatibilidade total com Iframes e Brave
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0`;
       }
     }
 
@@ -136,9 +137,6 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    
-    // Se a coluna isActive existir no futuro, o filtro funcionará. 
-    // Por enquanto, removemos a falha.
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
@@ -161,16 +159,29 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // REMOVIDO isActive DA PERSISTÊNCIA PARA EVITAR ERRO DE COLUNA NO SUPABASE
-    // Você deve adicionar a coluna 'isActive' (boolean) na tabela 'content' para funcionar.
-    delete payload.isActive; 
-
+    // Tenta salvar com isActive. Se falhar, o Supabase retornará erro de coluna.
     const { error } = await supabase.from('content').upsert(payload);
-    if (error) {
-      console.error("Erro Supabase:", error.message || error);
-      return false;
+    
+    if (error && error.message.includes('isActive')) {
+      delete payload.isActive;
+      const { error: retryError } = await supabase.from('content').upsert(payload);
+      return !retryError;
     }
-    return true;
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function bulkUpdateContent(ids: string[], updates: any) {
+  if (!ids || ids.length === 0) return true;
+  try {
+    const { error } = await supabase.from('content').update(updates).in('id', ids);
+    if (error && error.message.includes('isActive')) {
+      delete updates.isActive;
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('content').update(updates).in('id', ids);
+      }
+    }
+    return !error;
   } catch (e) { return false; }
 }
 
@@ -193,11 +204,6 @@ export async function removeUser(id: string) {
 
 export async function removeReseller(id: string) {
   const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
-export async function removeGame(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
   return !error;
 }
 
@@ -339,20 +345,6 @@ export async function getTotalContentCount() {
 
 export async function bulkRemoveContent(ids: string[]) {
   const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
-}
-
-export async function bulkUpdateContent(ids: string[], updates: any) {
-  const finalUpdates: any = {};
-  if (updates.genre !== undefined && updates.genre !== "") finalUpdates.genre = updates.genre;
-  if (updates.isRestricted !== undefined) finalUpdates.isRestricted = !!updates.isRestricted;
-  
-  // REMOVIDO isActive DO BULK PARA EVITAR ERRO DE COLUNA NO SUPABASE
-  // delete finalUpdates.isActive; 
-
-  if (Object.keys(finalUpdates).length === 0) return true;
-
-  const { error } = await supabase.from('content').update(finalUpdates).in('id', ids);
   return !error;
 }
 
