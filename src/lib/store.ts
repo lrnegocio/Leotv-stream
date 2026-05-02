@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v375 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
+ * FORMATADOR MASTER SOBERANO v376 - VACINA DEFINITIVA YOUTUBE & ORIGIN
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -106,6 +106,7 @@ export const formatMasterLink = (url: string) => {
       
       if (videoId) {
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
+        // O YouTube exige o origin para autorizar o player em Iframes e evitar erro 153
         return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
@@ -136,31 +137,41 @@ export const formatMasterLink = (url: string) => {
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
+    // Seleção robusta para evitar erro se a coluna isActive não existir no cache do Supabase
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
-    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
+
     const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
+    if (trimmedGenre) {
+      query = query.eq('genre', trimmedGenre);
+    }
 
     const { data, error } = await query.order('title', { ascending: true });
-    if (error) throw error;
+    
+    if (error) {
+      console.error("Erro Supabase Fetch:", error.message);
+      return [];
+    }
 
     let items = (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
-      isActive: item.isActive !== false,
+      isActive: item.isActive !== false, // Fallback: se for null ou true, assume ativo
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
 
-    // FILTRO SOBERANO: Se não for admin, oculta os inativos
+    // Filtra localmente se não for admin
     if (!showInactive) {
       items = items.filter(i => i.isActive !== false);
     }
 
     return items;
-  } catch (e) { 
-    console.error("Erro ao buscar conteúdo:", e);
+  } catch (e: any) { 
+    console.error("Erro Fatal ao buscar conteúdo:", e.message || e);
     return []; 
   }
 }
@@ -172,29 +183,46 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Tenta salvar. Se a coluna isActive não existir, remove do payload e tenta de novo.
+    // Tenta salvar com todos os campos
     const { error } = await supabase.from('content').upsert(payload);
-    if (error && error.message.includes('isActive')) {
-      delete payload.isActive;
-      const { error: retryError } = await supabase.from('content').upsert(payload);
-      return !retryError;
+    
+    // Se der erro de coluna não encontrada (isActive), remove ela e tenta de novo
+    if (error && (error.message?.includes('isActive') || error.code === '42703')) {
+      const { isActive, ...cleanPayload } = payload;
+      const { error: retryError } = await supabase.from('content').upsert(cleanPayload);
+      if (retryError) return false;
+      // Retorna true mas sabemos que isActive não foi salvo. 
+      // O Admin tratará isso avisando o usuário.
+      return "NEED_COLUMN"; 
     }
+    
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("Erro SaveContent:", e);
+    return false; 
+  }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   if (!ids || ids.length === 0) return true;
   try {
     const { error } = await supabase.from('content').update(updates).in('id', ids);
-    if (error && error.message.includes('isActive')) {
-      delete updates.isActive;
-      if (Object.keys(updates).length > 0) {
-        await supabase.from('content').update(updates).in('id', ids);
+    
+    if (error && (error.message?.includes('isActive') || error.code === '42703')) {
+      const { isActive, ...cleanUpdates } = updates;
+      if (Object.keys(cleanUpdates).length > 0) {
+        const { error: retryError } = await supabase.from('content').update(cleanUpdates).in('id', ids);
+        if (retryError) return false;
+        return "NEED_COLUMN";
       }
+      return "NEED_COLUMN";
     }
+    
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("Erro BulkUpdate:", e);
+    return false; 
+  }
 }
 
 export async function getContentById(id: string) {

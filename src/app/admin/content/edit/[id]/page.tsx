@@ -69,7 +69,7 @@ export default function EditContentPage() {
       newSeasons[target.sIdx].episodes[target.eIdx].streamUrl = formatMasterLink(newSeasons[target.sIdx].episodes[target.eIdx].streamUrl);
       setSeasons(newSeasons);
     }
-    toast({ title: "SINAL SINTONIZADO v375" });
+    toast({ title: "SINAL SINTONIZADO v376" });
   }
 
   const addEpisode = () => {
@@ -101,22 +101,29 @@ export default function EditContentPage() {
     if (!formData) return
     setLoading(true)
     
-    const success = await saveContent({
+    const result = await saveContent({
       ...formData,
       episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : [],
       seasons: (formData.type === 'multi-season') ? seasons : [],
     })
     
-    if (success) {
-      toast({ title: "SINAL ATUALIZADO" })
+    if (result === true) {
+      toast({ title: "SINAL ATUALIZADO v376" })
+      router.push("/admin/content")
+    } else if (result === "NEED_COLUMN") {
+      toast({ 
+        title: "SINAL SALVO (PARCIAL)", 
+        description: "Adicione a coluna 'isActive' no Supabase para salvar este status.",
+        variant: "destructive" 
+      })
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Adicione a coluna 'isActive' no Supabase para salvar este status." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique a conexão com o Supabase." })
     }
   }
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v375...</p></div>
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v376...</p></div>
 
   if (!formData) return null;
 
@@ -128,7 +135,7 @@ export default function EditContentPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v375</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v376</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
