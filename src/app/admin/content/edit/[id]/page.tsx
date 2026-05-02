@@ -55,12 +55,21 @@ export default function EditContentPage() {
     load()
   }, [id, router])
 
-  const handleSintonizar = () => {
-    if (formData) {
-      const formatted = formatMasterLink(formData.streamUrl);
-      setFormData({ ...formData, streamUrl: formatted });
-      toast({ title: "SINAL SINTONIZADO v371" });
+  const handleSintonizar = (target: 'main' | {type: 'ep', idx: number} | {type: 'season', sIdx: number, eIdx: number}) => {
+    if (!formData) return;
+
+    if (target === 'main') {
+      setFormData({ ...formData, streamUrl: formatMasterLink(formData.streamUrl) });
+    } else if (target.type === 'ep') {
+      const newEps = [...episodes];
+      newEps[target.idx].streamUrl = formatMasterLink(newEps[target.idx].streamUrl);
+      setEpisodes(newEps);
+    } else if (target.type === 'season') {
+      const newSeasons = [...seasons];
+      newSeasons[target.sIdx].episodes[target.eIdx].streamUrl = formatMasterLink(newSeasons[target.sIdx].episodes[target.eIdx].streamUrl);
+      setSeasons(newSeasons);
     }
+    toast({ title: "SINAL SINTONIZADO v372" });
   }
 
   const addEpisode = () => {
@@ -103,11 +112,11 @@ export default function EditContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "Verifique a conexão." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O Banco de Dados impediu a gravação." })
     }
   }
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v371...</p></div>
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v372...</p></div>
 
   if (!formData) return null;
 
@@ -119,7 +128,7 @@ export default function EditContentPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v371</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v372</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -178,7 +187,7 @@ export default function EditContentPage() {
               <div className="space-y-2">
                 <h3 className="font-black uppercase text-[10px] flex items-center justify-between text-primary tracking-widest">
                    <div className="flex items-center gap-2"><Zap className="h-4 w-4" /> Link Master Soberano</div>
-                   <Button type="button" variant="outline" size="sm" onClick={handleSintonizar} className="h-7 text-[8px] border-primary/20 text-primary hover:bg-primary/10"><Wand2 className="h-3 w-3 mr-1" /> SINTONIZAR MASTER</Button>
+                   <Button type="button" variant="outline" size="sm" onClick={() => handleSintonizar('main')} className="h-7 text-[8px] border-primary/20 text-primary hover:bg-primary/10"><Wand2 className="h-3 w-3 mr-1" /> SINTONIZAR MASTER</Button>
                 </h3>
                 <div className="flex gap-2">
                   <Input value={formData.streamUrl || ""} onChange={e => setFormData({...formData, streamUrl: e.target.value})} className="h-12 bg-black/40 border-white/5 font-mono text-[10px] flex-1" placeholder="Link único para Web e IPTV" />
@@ -217,7 +226,10 @@ export default function EditContentPage() {
                           <Button type="button" variant="destructive" size="icon" onClick={() => removeEpisode(ep.id)} className="h-10 w-10"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         <div className="space-y-2">
-                           <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
+                           <div className="flex items-center justify-between">
+                              <Label className="text-[8px] font-black uppercase opacity-40">Link do Episódio</Label>
+                              <Button type="button" variant="link" onClick={() => handleSintonizar({type: 'ep', idx})} className="h-4 p-0 text-[8px] text-primary uppercase font-black"><Wand2 className="h-2 w-2 mr-1" /> Sintonizar Ep</Button>
+                           </div>
                            <div className="flex gap-2">
                              <Input value={ep.streamUrl} placeholder="Link do vídeo" onChange={e => {
                                 const newEps = [...episodes]
@@ -270,6 +282,7 @@ export default function EditContentPage() {
                                      newSeasons[sIdx].episodes[eIdx].title = e.target.value
                                      setSeasons(newSeasons)
                                   }} className="flex-1 h-8 bg-black/40 text-[10px]" />
+                                  <Button type="button" variant="ghost" size="icon" onClick={() => handleSintonizar({type: 'season', sIdx, eIdx})} className="h-8 w-8 text-primary"><Wand2 className="h-3 w-3" /></Button>
                                   <Button type="button" size="icon" onClick={() => setTestVideo({url: formatMasterLink(ep.streamUrl), title: `T${season.number} EP ${ep.number} - ${ep.title || formData.title}`})} className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600"><Play className="h-3 w-3 text-white" /></Button>
                                   <Button type="button" variant="ghost" size="icon" onClick={() => {
                                     const newSeasons = [...seasons]

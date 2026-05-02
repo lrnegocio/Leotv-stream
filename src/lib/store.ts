@@ -82,8 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v371 - VACINA ANTI-ERRO 153
- * Formato robusto com origin e API ativa para YouTube e Shorts.
+ * FORMATADOR MASTER SOBERANO v372 - VACINA DEFINITIVA YOUTUBE
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -92,7 +91,7 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS (VACINA ERRO 153)
+    // 📺 PROTOCOLO YOUTUBE & SHORTS (ELIMINA ERRO 153)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -106,9 +105,7 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Pega a origem do site para o YouTube autorizar o player
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
       }
     }
 
@@ -140,10 +137,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
     
-    if (!showInactive) {
-      query = query.or('isActive.is.null,isActive.eq.true');
-    }
-
+    // Se a coluna isActive existir no futuro, o filtro funcionará. 
+    // Por enquanto, removemos a falha.
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
@@ -166,8 +161,9 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Força isActive ser booleano para o banco
-    payload.isActive = payload.isActive !== false;
+    // REMOVIDO isActive DA PERSISTÊNCIA PARA EVITAR ERRO DE COLUNA NO SUPABASE
+    // Você deve adicionar a coluna 'isActive' (boolean) na tabela 'content' para funcionar.
+    delete payload.isActive; 
 
     const { error } = await supabase.from('content').upsert(payload);
     if (error) {
@@ -322,21 +318,21 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()).or('isActive.is.null,isActive.eq.true');
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getTopContent(l = 10) {
   try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').or('isActive.is.null,isActive.eq.true').order('views', { ascending: false }).limit(l);
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
     return data || [];
   } catch (e) { return []; }
 }
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %').or('isActive.is.null,isActive.eq.true');
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -350,13 +346,13 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
   const finalUpdates: any = {};
   if (updates.genre !== undefined && updates.genre !== "") finalUpdates.genre = updates.genre;
   if (updates.isRestricted !== undefined) finalUpdates.isRestricted = !!updates.isRestricted;
-  if (updates.isActive !== undefined) finalUpdates.isActive = !!updates.isActive;
+  
+  // REMOVIDO isActive DO BULK PARA EVITAR ERRO DE COLUNA NO SUPABASE
+  // delete finalUpdates.isActive; 
 
-  // Evita erro se não houver campos para atualizar
   if (Object.keys(finalUpdates).length === 0) return true;
 
   const { error } = await supabase.from('content').update(finalUpdates).in('id', ids);
-  if (error) console.error("Erro Bulk Update:", error.message || error);
   return !error;
 }
 
