@@ -82,7 +82,7 @@ export interface User {
 
 /**
  * FORMATADOR MASTER SOBERANO v370 - FOCO YOUTUBE & SHORTS
- * Blindado contra Erro 153.
+ * Blindado contra Erro 153 - Removido enablejsapi para máxima compatibilidade.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,8 +105,8 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Removido enablejsapi para evitar Erro 153 de configuração
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1&mute=0`;
+        // Formato ultra-limpo para evitar erro de configuração 153
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1`;
       }
     }
 

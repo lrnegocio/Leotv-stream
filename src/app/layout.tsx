@@ -92,8 +92,22 @@ export default function RootLayout({
           }
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
-          /* BLINDAGEM DIAMANTE ANTI-NOVA-ABA */
+          /* BLINDAGEM DIAMANTE ANTI-HACKER v370 */
           (function() {
+            // Bloqueio de Botão Direito
+            document.addEventListener('contextmenu', event => event.preventDefault());
+
+            // Bloqueio de Teclas de Inspeção (F12, Ctrl+U, Ctrl+Shift+I, etc)
+            document.onkeydown = function(e) {
+              if(e.keyCode == 123) return false; // F12
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false; 
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false; 
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false; 
+              if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; 
+              if(e.ctrlKey && e.keyCode == 'S'.charCodeAt(0)) return false; 
+            };
+
+            // Anti-Nova-Aba
             const originalOpen = window.open;
             window.open = function() {
               console.log('Tentativa de nova aba bloqueada pelo Mestre Léo.');
