@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v374 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
+ * FORMATADOR MASTER SOBERANO v375 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -137,19 +137,32 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
+    
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
+
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
-    return (data || []).map(item => ({
+
+    let items = (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
       isActive: item.isActive !== false,
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
-  } catch (e) { return []; }
+
+    // FILTRO SOBERANO: Se não for admin, oculta os inativos
+    if (!showInactive) {
+      items = items.filter(i => i.isActive !== false);
+    }
+
+    return items;
+  } catch (e) { 
+    console.error("Erro ao buscar conteúdo:", e);
+    return []; 
+  }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
@@ -159,7 +172,7 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Tenta salvar respeitando a coluna isActive se existir
+    // Tenta salvar. Se a coluna isActive não existir, remove do payload e tenta de novo.
     const { error } = await supabase.from('content').upsert(payload);
     if (error && error.message.includes('isActive')) {
       delete payload.isActive;

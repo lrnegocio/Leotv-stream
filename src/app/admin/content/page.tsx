@@ -93,7 +93,7 @@ export default function ContentManagementPage() {
       await loadItems(searchTerm)
       toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA!" })
     } else {
-      toast({ variant: "destructive", title: "Erro ao atualizar em massa.", description: "Verifique o banco de dados." })
+      toast({ variant: "destructive", title: "Erro ao atualizar.", description: "Adicione a coluna 'isActive' no Supabase para desativar canais." })
     }
     setIsDeleting(false)
   }
