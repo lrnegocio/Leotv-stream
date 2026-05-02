@@ -48,7 +48,7 @@ export default function NewContentPage() {
       newSeasons[target.sIdx].episodes[target.eIdx].streamUrl = formatMasterLink(newSeasons[target.sIdx].episodes[target.eIdx].streamUrl);
       setSeasons(newSeasons);
     }
-    toast({ title: "SINAL SINTONIZADO v372" });
+    toast({ title: "SINAL SINTONIZADO v374" });
   }
 
   const addEpisode = () => {
@@ -99,7 +99,7 @@ export default function NewContentPage() {
       router.push("/admin/content")
     } else {
       setLoading(false)
-      toast({ variant: "destructive", title: "ERRO AO SALVAR", description: "O Banco de Dados impediu a gravação." })
+      toast({ variant: "destructive", title: "ERRO AO SALVAR" })
     }
   }
 
@@ -112,7 +112,7 @@ export default function NewContentPage() {
           <Button variant="ghost" size="icon" asChild>
             <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
           </Button>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master v372</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master v374</h1>
         </div>
       </div>
 

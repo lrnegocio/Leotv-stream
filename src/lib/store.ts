@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v373 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
+ * FORMATADOR MASTER SOBERANO v374 - VACINA DEFINITIVA YOUTUBE (ERRO 153)
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,8 +105,8 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Formato blindado para compatibilidade total com Iframes e Brave
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0`;
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
 
@@ -115,7 +115,7 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 🔞 PROTOCOLO ADULTO (XVideos / Pornhub)
+    // 🔞 PROTOCOLO ADULTO
     if (lowUrl.includes('xvideos.com/video.')) {
       const match = finalUrl.match(/video\.([a-z0-9]+)/i);
       if (match && match[1]) {
@@ -159,9 +159,8 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Tenta salvar com isActive. Se falhar, o Supabase retornará erro de coluna.
+    // Tenta salvar respeitando a coluna isActive se existir
     const { error } = await supabase.from('content').upsert(payload);
-    
     if (error && error.message.includes('isActive')) {
       delete payload.isActive;
       const { error: retryError } = await supabase.from('content').upsert(payload);
@@ -245,6 +244,13 @@ export async function getRemoteUsers(): Promise<User[]> {
 export async function saveUser(user: Partial<User>) {
   try {
     const { error } = await supabase.from('users').upsert(user);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function resetUserDevices(userId: string) {
+  try {
+    const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId);
     return !error;
   } catch (e) { return false; }
 }

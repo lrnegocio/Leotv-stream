@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star, MonitorX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage } from "@/lib/store"
+import { getRemoteUsers, generateRandomPin, saveUser, removeUser, User, SubscriptionTier, getBeautifulMessage, resetUserDevices } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function UserManagementPage() {
@@ -49,6 +49,18 @@ export default function UserManagementPage() {
 
   React.useEffect(() => { loadUsers() }, [loadUsers])
 
+  const handleResetDevices = async (userId: string) => {
+    if (confirm("Deseja limpar as telas deste cliente? Ele poderá logar novamente em novos aparelhos.")) {
+      const success = await resetUserDevices(userId);
+      if (success) {
+        toast({ title: "TELAS LIBERADAS!", description: "O cliente agora pode logar em novos aparelhos." });
+        loadUsers();
+      } else {
+        toast({ variant: "destructive", title: "FALHA AO RESETAR" });
+      }
+    }
+  };
+
   const getExpiryDays = (expiryDate?: string | null) => {
     if (!expiryDate) return null;
     const now = new Date();
@@ -71,7 +83,6 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // Busca o usuário existente para preservar dados que não estão no form
     const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === newUser.pin.toUpperCase().trim());
     
     const userData: Partial<User> = {
@@ -94,7 +105,6 @@ export default function UserManagementPage() {
     }
 
     const success = await saveUser(userData);
-    
     if (success) {
       toast({ title: "SINAL SINCRONIZADO!" });
       setIsDialogOpen(false);
@@ -108,11 +118,7 @@ export default function UserManagementPage() {
 
   const handleToggleSpecial = async (user: User, field: string) => {
     const updated = { ...user, [field]: !(user as any)[field] };
-    if (await saveUser(updated)) {
-      loadUsers();
-    } else {
-      toast({ variant: "destructive", title: "Falha ao ativar VIP" });
-    }
+    if (await saveUser(updated)) { loadUsers(); }
   }
 
   const toggleBlock = async (user: User) => {
@@ -192,13 +198,14 @@ export default function UserManagementPage() {
                 <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VALIDADE</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">ACESSO VIP</TableHead>
-                <TableHead className="uppercase text-[10px] font-black text-center">MSG VIP</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-center">TELAS</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.sort((a,b) => (b.id || '').localeCompare(a.id || '')).map((u) => {
                 const status = getExpiryStatus(u.expiryDate);
+                const activeCount = u.activeDevices?.length || 0;
                 return (
                   <TableRow key={u.id} className="border-white/5 hover:bg-white/5 transition-colors h-24">
                     <TableCell className="px-8">
@@ -221,7 +228,8 @@ export default function UserManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                       {u.individualMessage ? <MessageSquare className="h-4 w-4 text-emerald-500 mx-auto animate-pulse" /> : <span className="opacity-10">—</span>}
+                       <p className="text-[10px] font-black text-primary">{activeCount} / {u.maxScreens}</p>
+                       <Button variant="ghost" size="sm" onClick={() => handleResetDevices(u.id)} className="h-6 text-[7px] uppercase font-black text-destructive hover:bg-destructive/10 mt-1"><MonitorX className="h-3 w-3 mr-1" /> Resetar</Button>
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-1">
@@ -286,7 +294,7 @@ export default function UserManagementPage() {
             </div>
 
             <div className="space-y-2">
-               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP (Bloco de Notas)</Label>
+               <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP</Label>
                <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura está pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
           </div>
