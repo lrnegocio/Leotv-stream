@@ -5,9 +5,8 @@ import { getRemoteContent, formatMasterLink } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 
 /**
- * MOTOR DE PLAYLIST M3U SOBERANO v301
- * Ajustado para detectar automaticamente se o site usa HTTP ou HTTPS (Domínio).
- * Agora filtra canais inativos.
+ * MOTOR DE PLAYLIST M3U SOBERANO v378
+ * Filtra apenas canais ativos (isActive: true).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +22,8 @@ export async function GET(req: NextRequest) {
     let m3u = "#EXTM3U\n";
 
     items.forEach(item => {
-      if (item.isActive === false) return; // Segurança extra
+      // Filtro extra de segurança
+      if (item.isActive === false) return;
 
       const category = item.genre || "LÉO TV AO VIVO";
       const logo = item.imageUrl || "";

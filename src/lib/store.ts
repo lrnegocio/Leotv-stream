@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v377 - VACINA DEFINITIVA YOUTUBE & ORIGIN
+ * FORMATADOR MASTER SOBERANO v378 - VACINA DEFINITIVA YOUTUBE (FIM ERRO 153)
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,9 +105,8 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // DETECÇÃO DE ORIGEM PARA MATAR ERRO 153
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
+        // Formato ultra-limpo para evitar Erro 153
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
       }
     }
 
@@ -160,6 +159,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
 
+    // Filtra apenas ativos se não for modo Admin
     if (!showInactive) {
       items = items.filter(i => i.isActive !== false);
     }
@@ -178,7 +178,7 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Tenta salvar com todos os campos
+    // Tenta salvar com todos os campos (incluindo isActive)
     const { error } = await supabase.from('content').upsert(payload);
     
     // Se der erro de coluna não encontrada (isActive), remove ela e tenta de novo
