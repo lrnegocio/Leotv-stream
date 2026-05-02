@@ -11,9 +11,12 @@
         "type": { "type": "string", "enum": ["movie", "series", "multi-season", "channel"] },
         "genre": { "type": "string" },
         "isRestricted": { "type": "boolean" },
+        "isActive": { "type": "boolean", "default": true },
         "streamUrl": { "type": "string" },
         "imageUrl": { "type": "string" },
-        "views": { "type": "number" }
+        "views": { "type": "number" },
+        "episodes": { "type": "array" },
+        "seasons": { "type": "array" }
       }
     },
     "User": {

@@ -3,11 +3,12 @@
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2 } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2, Power } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/hooks/use-toast"
 import { getContentById, saveContent, Season, Episode, ContentItem, formatMasterLink } from "@/lib/store"
@@ -35,7 +36,10 @@ export default function EditContentPage() {
       try {
         const item = await getContentById(id)
         if (item) {
-          setFormData(item)
+          setFormData({
+            ...item,
+            isActive: item.isActive !== false // Default true if undefined
+          })
           setEpisodes(item.episodes || [])
           setSeasons(item.seasons || [])
         } else {
@@ -299,6 +303,26 @@ export default function EditContentPage() {
                 {formData.imageUrl ? <Image src={formData.imageUrl} alt="Capa" fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20 text-[10px] font-black uppercase italic">Sinal sem Capa</div>}
              </div>
              <Input value={formData.imageUrl || ""} onChange={e => setFormData({...formData, imageUrl: e.target.value})} placeholder="https://..." className="h-10 bg-black/40 border-white/5 text-[10px] font-mono" />
+          </div>
+
+          <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
+            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Configurações de Sinal</h3>
+            
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+              <div className="flex items-center gap-2">
+                <Power className={`h-4 w-4 ${formData.isActive ? 'text-emerald-500' : 'text-zinc-500'}`} />
+                <Label className="uppercase text-[9px] font-black tracking-widest italic">Sinal Ativo na Rede</Label>
+              </div>
+              <Switch checked={formData.isActive} onCheckedChange={val => setFormData({...formData, isActive: val})} />
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <Label className="uppercase text-[9px] font-black tracking-widest italic">Conteúdo Restrito</Label>
+              </div>
+              <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
+            </div>
           </div>
           
           <Button type="submit" className="w-full h-16 bg-primary font-black text-sm uppercase italic shadow-2xl shadow-primary/20 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all" disabled={loading}>

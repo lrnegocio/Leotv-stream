@@ -23,6 +23,7 @@ export interface ContentItem {
   description: string; 
   genre: string;
   isRestricted: boolean; 
+  isActive?: boolean; // NOVO: Controle de sinal ativo
   streamUrl: string; 
   imageUrl?: string;
   seasons?: Season[] | null; 
@@ -101,10 +102,11 @@ export const formatMasterLink = (url: string) => {
       } else if (lowUrl.includes('youtu.be/')) {
         videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       } else if (lowUrl.includes('/embed/')) {
-        return finalUrl.split('?')[0]; // Remove parâmetros que causam o Erro 153
+        videoId = finalUrl.split('/embed/')[1]?.split(/[?#&]/)[0];
       }
       
       if (videoId) {
+        // Embed limpo sem parâmetros que causam o Erro 153
         return `https://www.youtube.com/embed/${videoId}`;
       }
     }
@@ -133,9 +135,15 @@ export const formatMasterLink = (url: string) => {
   }
 };
 
-export async function getRemoteContent(isIptv = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
+export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
+    
+    // Se não for admin, mostra apenas sinais ativos
+    if (!showInactive) {
+      query = query.not('isActive', 'is', false);
+    }
+
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
@@ -144,6 +152,7 @@ export async function getRemoteContent(isIptv = false, searchQuery = "", categor
     return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
+      isActive: item.isActive !== false, // Default true
       episodes: Array.isArray(item.episodes) ? item.episodes : [],
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
@@ -156,7 +165,8 @@ export async function saveContent(item: Partial<ContentItem>) {
       ...item,
       id: item.id || "cont_" + Date.now() + Math.random().toString(36).substring(7),
       title: item.title?.toUpperCase().trim(),
-      genre: item.genre?.toUpperCase().trim()
+      genre: item.genre?.toUpperCase().trim(),
+      isActive: item.isActive !== false // Mantém ativo por padrão
     };
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
@@ -212,7 +222,8 @@ export async function saveGame(g: any) {
     genre: `ARENA: ${g.console}`, 
     streamUrl: g.url, 
     description: 'GAME', 
-    isRestricted: true 
+    isRestricted: true,
+    isActive: true 
   });
   return !error;
 }
@@ -307,21 +318,21 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase()).eq('isActive', true);
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getTopContent(l = 10) {
   try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').eq('isActive', true).order('views', { ascending: false }).limit(l);
     return data || [];
   } catch (e) { return []; }
 }
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %').eq('isActive', true);
     return count || 0;
   } catch (e) { return 0; }
 }

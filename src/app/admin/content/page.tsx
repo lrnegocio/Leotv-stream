@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
@@ -26,12 +26,13 @@ export default function ContentManagementPage() {
   const [isDeleting, setIsDeleting] = React.useState(false)
   
   const [isBulkEditing, setIsBulkEditing] = React.useState(false)
-  const [bulkUpdates, setBulkUpdates] = React.useState({ genre: "", isRestricted: false })
+  const [bulkUpdates, setBulkUpdates] = React.useState({ genre: "", isRestricted: false, isActive: true })
 
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
     try {
-      const data = await getRemoteContent(false, query)
+      // Para admin, showInactive = true para ver tudo
+      const data = await getRemoteContent(true, query)
       setItems(data)
     } catch (error) {
       toast({ variant: "destructive", title: "Erro de Conexão Master" })
@@ -74,6 +75,7 @@ export default function ContentManagementPage() {
     const updates: any = {}
     if (bulkUpdates.genre) updates.genre = bulkUpdates.genre
     updates.isRestricted = bulkUpdates.isRestricted
+    updates.isActive = bulkUpdates.isActive
 
     if (await bulkUpdateContent(selectedIds, updates)) {
       setIsBulkEditing(false)
@@ -138,24 +140,33 @@ export default function ContentManagementPage() {
             const isSelected = selectedIds.includes(item.id);
             const isSeries = item.type === 'series' || item.type === 'multi-season';
             const epCount = isSeries ? (item.episodes?.length || item.seasons?.reduce((acc, s) => acc + (s.episodes?.length || 0), 0) || 0) : 0;
+            const isActive = item.isActive !== false;
             
             return (
-              <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl overflow-hidden relative group transition-all flex flex-col shadow-lg`}>
+              <div key={item.id} className={`bg-card border ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-white/5'} rounded-xl overflow-hidden relative group transition-all flex flex-col shadow-lg ${!isActive ? 'opacity-50 grayscale' : ''}`}>
                 <div className="absolute top-2 left-2 z-10">
                   <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(item.id)} className="bg-black/60 border-white/20" />
                 </div>
                 <div className="aspect-[2/3] relative bg-black/40 cursor-pointer" onClick={() => toggleSelect(item.id)}>
                   {item.imageUrl ? <Image src={item.imageUrl} alt={item.title} fill className="object-cover" unoptimized /> : <div className="flex items-center justify-center h-full opacity-20"><Tv className="h-8 w-8" /></div>}
-                  <div className="absolute top-3 right-3">{item.isRestricted && <Lock className="h-4 w-4 text-primary bg-black/60 p-1 rounded-full shadow-lg" />}</div>
+                  <div className="absolute top-3 right-3 flex flex-col gap-1">
+                    {item.isRestricted && <Lock className="h-4 w-4 text-primary bg-black/60 p-1 rounded-full shadow-lg" />}
+                    {!isActive && <PowerOff className="h-4 w-4 text-red-500 bg-black/60 p-1 rounded-full shadow-lg" />}
+                  </div>
                 </div>
                 <div className="p-3 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="font-bold text-[10px] uppercase truncate text-primary">{item.title}</h3>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase truncate">{item.genre}</p>
                   </div>
-                  {isSeries && epCount > 0 && (
-                    <p className="text-[8px] font-black text-primary uppercase mt-1 opacity-60">{epCount} EPISÓDIOS</p>
-                  )}
+                  <div className="mt-1 flex items-center justify-between">
+                    {isSeries && epCount > 0 && (
+                      <p className="text-[8px] font-black text-primary uppercase opacity-60">{epCount} EPISÓDIOS</p>
+                    )}
+                    <span className={`text-[7px] font-black px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {isActive ? 'ATIVO' : 'DESATIVADO'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex justify-between p-2 border-t border-white/5 bg-black/20">
                   <div className="flex gap-1">
@@ -199,12 +210,23 @@ export default function ContentManagementPage() {
                   </SelectContent>
                 </Select>
              </div>
-             <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                <div className="flex items-center gap-2">
-                   <Lock className="h-4 w-4 text-primary" />
-                   <Label className="uppercase text-[10px] font-black italic">Restringir Conteúdo?</Label>
+
+             <div className="grid gap-3">
+                <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Power className="h-4 w-4 text-emerald-500" />
+                    <Label className="uppercase text-[10px] font-black italic">Ativar Todos?</Label>
+                  </div>
+                  <Switch checked={bulkUpdates.isActive} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isActive: v})} />
                 </div>
-                <Switch checked={bulkUpdates.isRestricted} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isRestricted: v})} />
+
+                <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" />
+                    <Label className="uppercase text-[10px] font-black italic">Restringir Todos?</Label>
+                  </div>
+                  <Switch checked={bulkUpdates.isRestricted} onCheckedChange={v => setBulkUpdates({...bulkUpdates, isRestricted: v})} />
+                </div>
              </div>
           </div>
           <DialogFooter>

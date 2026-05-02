@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2 } from "lucide-react"
+import { ChevronLeft, Loader2, Save, Image as ImageIcon, Plus, Trash2, Zap, Play, Wand2, Power } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,6 +29,7 @@ export default function NewContentPage() {
     description: "",
     streamUrl: "",
     isRestricted: false,
+    isActive: true, // NOVO: Inicializa ativo
     imageUrl: ""
   })
 
@@ -77,6 +78,7 @@ export default function NewContentPage() {
       genre: formData.genre.toUpperCase(),
       description: formData.description,
       isRestricted: !!formData.isRestricted,
+      isActive: !!formData.isActive,
       streamUrl: isSeriesMode ? "" : formData.streamUrl,
       imageUrl: formData.imageUrl,
       episodes: (formData.type === 'series' || formData.type === 'multi-season') ? episodes : [],
@@ -289,9 +291,21 @@ export default function NewContentPage() {
           </div>
 
           <div className="p-6 bg-card/50 border border-white/5 rounded-xl space-y-4 shadow-2xl">
-            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Segurança</h3>
-            <div className="flex items-center justify-between">
-              <Label className="uppercase text-[10px] font-black tracking-widest italic">Conteúdo Restrito</Label>
+            <h3 className="font-black uppercase text-[10px] flex items-center gap-2 text-primary tracking-widest"><Zap className="h-4 w-4" /> Configurações de Sinal</h3>
+            
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+              <div className="flex items-center gap-2">
+                <Power className={`h-4 w-4 ${formData.isActive ? 'text-emerald-500' : 'text-zinc-500'}`} />
+                <Label className="uppercase text-[9px] font-black tracking-widest italic">Sinal Ativo na Rede</Label>
+              </div>
+              <Switch checked={formData.isActive} onCheckedChange={val => setFormData({...formData, isActive: val})} />
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <Label className="uppercase text-[9px] font-black tracking-widest italic">Conteúdo Restrito</Label>
+              </div>
               <Switch checked={formData.isRestricted} onCheckedChange={val => setFormData({...formData, isRestricted: val})} />
             </div>
           </div>

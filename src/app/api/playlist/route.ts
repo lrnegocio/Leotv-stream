@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 /**
  * MOTOR DE PLAYLIST M3U SOBERANO v301
  * Ajustado para detectar automaticamente se o site usa HTTP ou HTTPS (Domínio).
+ * Agora filtra canais inativos.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -14,14 +15,16 @@ export async function GET(req: NextRequest) {
     const pin = searchParams.get('pin') || 'ACESSO';
     
     const host = req.headers.get('host');
-    // Detecta se está em domínio com SSL ou IP puro
     const protocol = host?.includes('localhost') || host?.match(/^\d/) ? 'http' : 'https'; 
     const baseUrl = `${protocol}://${host}`;
 
-    const items = await getRemoteContent();
+    // getRemoteContent(false) filtra apenas ativos para a playlist
+    const items = await getRemoteContent(false);
     let m3u = "#EXTM3U\n";
 
     items.forEach(item => {
+      if (item.isActive === false) return; // Segurança extra
+
       const category = item.genre || "LÉO TV AO VIVO";
       const logo = item.imageUrl || "";
 
