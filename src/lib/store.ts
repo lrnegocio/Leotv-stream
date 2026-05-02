@@ -81,8 +81,8 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v370
- * Sincronizado para YouTube (Shorts), RDCanais, XVideos e Pornhub.
+ * FORMATADOR MASTER SOBERANO v370 - FOCO YOUTUBE & SHORTS
+ * Blindado contra Erro 153.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -95,15 +95,19 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
-        videoId = finalUrl.split('/shorts/')[1]?.split('?')[0]?.split('&')[0];
+        videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       } else if (lowUrl.includes('watch?v=')) {
-        videoId = finalUrl.split('v=')[1]?.split('&')[0];
+        videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
       } else if (lowUrl.includes('youtu.be/')) {
-        videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+        videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       } else if (lowUrl.includes('/embed/')) {
         return finalUrl;
       }
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1&enablejsapi=1`;
+      
+      if (videoId) {
+        // Removido enablejsapi para evitar Erro 153 de configuração
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&controls=1&mute=0`;
+      }
     }
 
     // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS & STREAMRDC)

@@ -16,6 +16,7 @@ interface VideoPlayerProps {
 /**
  * PLAYER MASTER SOBERANA v370
  * Sincronizado para YouTube (Shorts), CDNs diretas e Iframes.
+ * Blindado contra Erro 153.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -55,8 +56,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      // YouTube Embeds as vezes demoram mais no Brave
-      setTimeout(() => setLoading(false), 2500);
+      // Aumentado delay para garantir carregamento de YouTube embeds
+      setTimeout(() => setLoading(false), 3000);
       return;
     }
 
@@ -118,7 +119,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           src={safeUrl}
           className="w-full h-full border-0"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write; web-share"
-          referrerPolicy="no-referrer"
+          referrerPolicy="strict-origin-when-cross-origin"
           onLoad={() => setLoading(false)}
         />
       )}
