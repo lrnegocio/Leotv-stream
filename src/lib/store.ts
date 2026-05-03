@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v382 - PROTOCOLO GHOST & YOUTUBE BYPASS
+ * FORMATADOR MASTER SOBERANO v383 - PROTOCOLO GHOST & YOUTUBE BYPASS
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,12 +105,14 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&enablejsapi=1`;
+        // Envia origin para o player autorizar o acesso do site
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
 
     // 🛡️ PROTOCOLO GHOST PARA CDNS INSTÁVEIS (vyds1001, vcdn, etc)
-    const ghostDomains = ['vyds', 'vcdn', 'top', 'stream', 'rdcanais', 'redecanais', 'streamrdc', 'archive.org', 'ok.ru'];
+    const ghostDomains = ['vyds', 'vcdn', 'top', 'stream', 'rdcanais', 'redecanais', 'streamrdc', 'archive.org', 'ok.ru', 'p2p'];
     const needsProxy = ghostDomains.some(d => lowUrl.includes(d));
 
     if (needsProxy || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8')) {
@@ -149,7 +151,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
 }
 
 /**
- * SALVAMENTO ROBUSTO v382: Remove colunas inexistentes se der erro.
+ * SALVAMENTO ROBUSTO v383: Remove colunas inexistentes se der erro.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
@@ -241,20 +243,21 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN ULTRA-ROBUSTO v382
+ * SALVAMENTO DE PIN ULTRA-ROBUSTO v383
+ * Garante que o PIN seja criado mesmo se faltarem colunas no banco.
  */
 export async function saveUser(user: Partial<User>) {
   try {
-    const payload = { ...user };
-    // MESTRE: Garante que todo PIN tenha um ID único de banco
+    const payload: any = { ...user };
+    // MESTRE: Todo PIN precisa de um ID único de banco
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
     const { error } = await supabase.from('users').upsert(payload);
     
-    // Se der erro de coluna (provavelmente por falta de 'individualMessage' ou 'isGamesEnabled')
+    // Se der erro de coluna (provavelmente por falta de permissões especiais)
     if (error && (error.code === '42703' || error.message?.includes('column'))) {
       console.warn("Limpando colunas extras do PIN para salvar no banco...");
-      // Lista de campos que costumam faltar se o Mestre não rodar o SQL
+      // Lista de campos que costumam faltar no banco antigo
       const { individualMessage, isGamesEnabled, isPpvEnabled, isAlacarteEnabled, gamePoints, activatedAt, ...cleanUser } = payload;
       const { error: retryError } = await supabase.from('users').upsert(cleanUser);
       return !retryError;
@@ -281,7 +284,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 /**
- * SALVAMENTO DE REVENDA ROBUSTO v382
+ * SALVAMENTO DE REVENDA ROBUSTO v383
  */
 export async function saveReseller(r: Partial<Reseller>) {
   try {

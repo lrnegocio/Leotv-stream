@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v381
+ * PLAYER MASTER SOBERANA v383
  * Sincronizado para HLS.js (Extermina erro de Fontes não suportadas).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl');
+  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy') && lowUrl.includes('url=');
   
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
@@ -46,7 +46,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      setTimeout(() => setLoading(false), 2500);
+      // Delay curto para o iframe carregar
+      setTimeout(() => setLoading(false), 2000);
       return;
     }
 
@@ -57,7 +58,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
+          enableWorker: true,
+          lowLatencyMode: true
         });
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
@@ -65,22 +68,40 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
           setLoading(false);
         });
-        hls.on(Hls.Events.ERROR, () => setLoading(false));
+        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+          if (data.fatal) {
+            console.warn("HLS Fatal Error, tentando recuperação...");
+            hls.recoverMediaError();
+          }
+        });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = safeUrl;
         video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
       } else {
-        setLoading(false);
+        video.src = safeUrl; // Tenta como MP4 comum
+        video.play().then(() => setLoading(false)).catch(() => setLoading(false));
       }
     } else {
       video.src = safeUrl;
-      video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
+      video.play().then(() => setLoading(false)).catch(() => { 
+        video.muted = true; 
+        setIsMuted(true); 
+        video.play().then(() => setLoading(false)).catch(() => setLoading(false)); 
+      });
     }
   }, [safeUrl, isMounted, isIframe, isM3u8]);
 
   React.useEffect(() => {
     setIsMounted(true);
     initPlayer();
+    
+    return () => {
+      // Limpeza de recursos ao fechar
+      if (videoRef.current) {
+        videoRef.current.src = "";
+        videoRef.current.load();
+      }
+    };
   }, [initPlayer, safeUrl]);
 
   const handleToggleMute = (e?: React.MouseEvent) => {
@@ -132,7 +153,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v381...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v383...</p>
           </div>
         </div>
       )}

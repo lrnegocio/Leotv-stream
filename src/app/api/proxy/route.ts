@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v381 - PROTOCOLO GHOST SUPREMED
- * Blindagem Diamante contra "No Supported Sources".
+ * TÚNEL MASTER SOBERANA v383 - PROTOCOLO GHOST DIAMANTE
+ * Força Content-Type para exterminar "No Supported Sources".
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -54,11 +54,11 @@ export async function GET(req: NextRequest) {
     const finalUrl = res.url;
     const contentType = res.headers.get('content-type') || '';
     
-    // FORCE CONTENT TYPE PARA EVITAR "NOT SUPPORTED SOURCES"
+    // FORCE CONTENT TYPE ULTRA-AGRESSIVO PARA EVITAR "NOT SUPPORTED SOURCES"
     let forcedType = contentType;
-    if (finalUrl.toLowerCase().endsWith('.mp4')) forcedType = 'video/mp4';
-    if (finalUrl.toLowerCase().endsWith('.m3u8')) forcedType = 'application/vnd.apple.mpegurl';
-    if (finalUrl.toLowerCase().endsWith('.ts')) forcedType = 'video/mp2t';
+    if (lowTarget.includes('.mp4') || finalUrl.toLowerCase().endsWith('.mp4')) forcedType = 'video/mp4';
+    if (lowTarget.includes('.m3u8') || finalUrl.toLowerCase().endsWith('.m3u8') || lowTarget.includes('mpegurl')) forcedType = 'application/vnd.apple.mpegurl';
+    if (lowTarget.includes('.ts') || finalUrl.toLowerCase().endsWith('.ts')) forcedType = 'video/mp2t';
 
     const responseHeaders = new Headers();
     const headersToCopy = ['content-length', 'content-range', 'accept-ranges', 'cache-control'];
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
 
-    // Se for M3U8, reescreve os caminhos relativos
+    // Se for M3U8, reescreve os caminhos relativos para passar pelo proxy também
     if (forcedType.includes('mpegurl') || finalUrl.includes('.m3u8')) {
       const manifestText = await res.text();
       const baseUrl = finalUrl.split('?')[0].substring(0, finalUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) return line;
         try {
+          // Garante que segmentos (.ts) e sub-playlists também usem o proxy
           const absoluteUrl = new URL(trimmed, baseUrl).href;
           return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
         } catch (e) { return line; }
@@ -88,8 +89,9 @@ export async function GET(req: NextRequest) {
       return new Response(rewrittenManifest, { headers: responseHeaders });
     }
 
+    // Retorna o fluxo binário do vídeo (MP4 ou TS)
     return new Response(res.body, { status: res.status, headers: responseHeaders });
   } catch (error) {
-    return new Response("Falha no Túnel Ghost v381", { status: 500 });
+    return new Response("Falha no Túnel Ghost v383", { status: 500 });
   }
 }
