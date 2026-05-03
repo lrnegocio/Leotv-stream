@@ -14,9 +14,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v370
- * Sincronizado para YouTube (Shorts), CDNs diretas e Iframes.
- * Blindado contra Erro 153.
+ * PLAYER MASTER SOBERANA v381
+ * Sincronizado para HLS.js (Extermina erro de Fontes não suportadas).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -27,28 +26,19 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const [isMuted, setIsMuted] = React.useState(false)
   const [playerKey, setPlayerKey] = React.useState(0)
   
-  const safeUrl = React.useMemo(() => {
-    if (!url) return "";
-    return url.toString().trim();
-  }, [url]);
-
+  const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isDirectFile = (lowUrl.includes('.m3u8') || 
-                       lowUrl.includes('.ts') || 
-                       lowUrl.includes('.mp4') || 
-                       lowUrl.includes('.mkv')) && !isYouTube;
-
-  const isIframe = !isDirectFile || isYouTube || 
+  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl');
+  
+  const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
                    lowUrl.includes('streamrdc') ||
                    lowUrl.includes('xvideos') ||
                    lowUrl.includes('pornhub') ||
-                   lowUrl.includes('dailymotion') ||
-                   lowUrl.includes('ok.ru') ||
-                   lowUrl.includes('/api/proxy');
+                   lowUrl.includes('ok.ru');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !safeUrl) return;
@@ -56,32 +46,37 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      // Aumentado delay para garantir carregamento de YouTube embeds
-      setTimeout(() => setLoading(false), 3000);
+      setTimeout(() => setLoading(false), 2500);
       return;
     }
 
-    if (isDirectFile && videoRef.current) {
-      try {
-        videoRef.current.src = safeUrl;
-        videoRef.current.load();
-        videoRef.current.play()
-          .then(() => setLoading(false))
-          .catch(() => {
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              setIsMuted(true);
-              videoRef.current.play();
-            }
-            setLoading(false);
-          });
-      } catch (e) {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isM3u8) {
+      const Hls = (window as any).Hls;
+      if (Hls && Hls.isSupported()) {
+        const hls = new Hls({
+          xhrSetup: (xhr: any) => { xhr.withCredentials = false; }
+        });
+        hls.loadSource(safeUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
+          setLoading(false);
+        });
+        hls.on(Hls.Events.ERROR, () => setLoading(false));
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = safeUrl;
+        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
+      } else {
         setLoading(false);
       }
     } else {
-      setLoading(false);
+      video.src = safeUrl;
+      video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
     }
-  }, [safeUrl, isMounted, isDirectFile, isIframe]);
+  }, [safeUrl, isMounted, isIframe, isM3u8]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -113,18 +108,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   return (
     <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
       
-      {isIframe && (
+      {isIframe ? (
         <iframe 
           key={playerKey}
           src={safeUrl}
           className="w-full h-full border-0"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           onLoad={() => setLoading(false)}
         />
-      )}
-
-      {!isIframe && (
+      ) : (
         <video 
           key={safeUrl} 
           ref={videoRef} 
@@ -132,7 +124,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           autoPlay 
           playsInline 
           controls 
-          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
         />
       )}
 
@@ -140,7 +132,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v381...</p>
           </div>
         </div>
       )}

@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v380 - PROTOCOLO GHOST & YOUTUBE BYPASS
+ * FORMATADOR MASTER SOBERANO v381 - PROTOCOLO GHOST & YOUTUBE BYPASS
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,8 +105,7 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Formato simplificado e universal para evitar Erro 153
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0`;
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&enablejsapi=1`;
       }
     }
 
@@ -115,7 +114,6 @@ export const formatMasterLink = (url: string) => {
     const needsProxy = ghostDomains.some(d => lowUrl.includes(d));
 
     if (needsProxy || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8')) {
-      // Força o uso do proxy para evitar bloqueio de Referer/IP da VPS
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -128,18 +126,11 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
-    
-    if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-
+    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) {
-      query = query.eq('genre', trimmedGenre);
-    }
+    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
 
     const { data, error } = await query.order('title', { ascending: true });
-    
     if (error) throw error;
 
     let items = (data || []).map(item => ({
@@ -150,17 +141,16 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
 
-    if (!showInactive) {
-      items = items.filter(i => i.isActive !== false);
-    }
-
+    if (!showInactive) items = items.filter(i => i.isActive !== false);
     return items;
   } catch (e: any) { 
-    console.error("Erro ao buscar conteúdo:", e.message || e);
     return []; 
   }
 }
 
+/**
+ * SALVAMENTO ROBUSTO v381: Remove colunas inexistentes se der erro.
+ */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload: any = { ...item };
@@ -170,40 +160,28 @@ export async function saveContent(item: Partial<ContentItem>) {
     
     const { error } = await supabase.from('content').upsert(payload);
     
-    if (error && (error.message?.includes('isActive') || error.code === '42703')) {
-      const { isActive, ...cleanPayload } = payload;
+    if (error && (error.code === '42703' || error.message?.includes('column'))) {
+      const { isActive, views, ...cleanPayload } = payload;
       const { error: retryError } = await supabase.from('content').upsert(cleanPayload);
       if (retryError) return false;
       return "NEED_COLUMN"; 
     }
-    
     return !error;
-  } catch (e) { 
-    console.error("Erro SaveContent:", e);
-    return false; 
-  }
+  } catch (e) { return false; }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   if (!ids || ids.length === 0) return true;
   try {
     const { error } = await supabase.from('content').update(updates).in('id', ids);
-    
-    if (error && (error.message?.includes('isActive') || error.code === '42703')) {
+    if (error && (error.code === '42703' || error.message?.includes('column'))) {
       const { isActive, ...cleanUpdates } = updates;
-      if (Object.keys(cleanUpdates).length > 0) {
-        const { error: retryError } = await supabase.from('content').update(cleanUpdates).in('id', ids);
-        if (retryError) return false;
-        return "NEED_COLUMN";
-      }
+      const { error: retryError } = await supabase.from('content').update(cleanUpdates).in('id', ids);
+      if (retryError) return false;
       return "NEED_COLUMN";
     }
-    
     return !error;
-  } catch (e) { 
-    console.error("Erro BulkUpdate:", e);
-    return false; 
-  }
+  } catch (e) { return false; }
 }
 
 export async function getContentById(id: string) {
@@ -244,7 +222,7 @@ export async function getRemoteGames(): Promise<GameItem[]> {
 }
 
 export async function saveGame(g: any) {
-  const { error } = await supabase.from('content').upsert({ 
+  return await saveContent({ 
     id: g.id || "game_"+Date.now(), 
     title: g.title.toUpperCase(), 
     genre: `ARENA: ${g.console}`, 
@@ -253,7 +231,6 @@ export async function saveGame(g: any) {
     isRestricted: true,
     isActive: true 
   });
-  return !error;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
@@ -263,9 +240,17 @@ export async function getRemoteUsers(): Promise<User[]> {
   } catch (e) { return []; }
 }
 
+/**
+ * SALVAMENTO DE PIN ROBUSTO v381
+ */
 export async function saveUser(user: Partial<User>) {
   try {
     const { error } = await supabase.from('users').upsert(user);
+    if (error && (error.code === '42703' || error.message?.includes('column'))) {
+      const { individualMessage, isGamesEnabled, isPpvEnabled, isAlacarteEnabled, gamePoints, ...cleanUser } = user;
+      const { error: retryError } = await supabase.from('users').upsert(cleanUser);
+      return !retryError;
+    }
     return !error;
   } catch (e) { return false; }
 }
@@ -284,49 +269,43 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   } catch (e) { return []; }
 }
 
+/**
+ * SALVAMENTO DE REVENDA ROBUSTO v381
+ */
 export async function saveReseller(r: Partial<Reseller>) {
-  const { error } = await supabase.from('resellers').upsert(r);
-  return !error;
+  try {
+    const { error } = await supabase.from('resellers').upsert(r);
+    if (error && (error.code === '42703' || error.message?.includes('column'))) {
+      const { cpf, phone, email, birthDate, ...cleanReseller } = r;
+      const { error: retryError } = await supabase.from('resellers').upsert(cleanReseller);
+      return !retryError;
+    }
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
-
     if (cleanPin === 'ADM77X2P') {
       return {
         user: {
-          id: 'admin_master_leo',
-          pin: 'ADM77X2P',
-          role: 'admin',
-          subscriptionTier: 'lifetime',
-          maxScreens: 99,
-          activeDevices: [deviceId],
-          isBlocked: false,
-          isAdultEnabled: true,
-          isGamesEnabled: true,
-          isPpvEnabled: true,
-          isAlacarteEnabled: true
+          id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime',
+          maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true,
+          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true
         }
       };
     }
-
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
-
     const activeDevices = user.activeDevices || [];
-    const isDeviceRegistered = activeDevices.includes(deviceId);
-
-    if (!isDeviceRegistered) {
-      if (activeDevices.length >= user.maxScreens) {
-        return { error: "LIMITE DE TELAS ATINGIDO" };
-      }
+    if (!activeDevices.includes(deviceId)) {
+      if (activeDevices.length >= user.maxScreens) return { error: "LIMITE DE TELAS ATINGIDO" };
       const updatedDevices = [...activeDevices, deviceId];
       await supabase.from('users').update({ activeDevices: updatedDevices }).eq('id', user.id);
       user.activeDevices = updatedDevices;
     }
-
     return { user };
   } catch (e) { return { error: "ERRO DE REDE" }; }
 }
