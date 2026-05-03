@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -14,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v384 - MOTOR DIAMANTE HLS
+ * PLAYER MASTER SOBERANA v385 - MOTOR DIAMANTE HLS
  * Sincronizado para HLS.js (Extermina erro de Fontes não suportadas).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -30,7 +29,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || (lowTarget.includes('proxy') && lowTarget.includes('url='));
+  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || (lowUrl.includes('proxy') && lowUrl.includes('url='));
   
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
@@ -53,7 +52,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // MOTOR DIAMANTE v384: HLS.JS ATIVADO PARA QUALQUER M3U8 PROXIED
+    // MOTOR DIAMANTE v385: HLS.JS ATIVADO PARA QUALQUER M3U8 PROXIED
     if (isM3u8 || lowUrl.includes('proxy')) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
@@ -66,7 +65,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { video.muted = true; setIsMuted(true); video.play(); });
+          video.play().catch(() => { 
+            if (videoRef.current) {
+              videoRef.current.muted = true; 
+              setIsMuted(true); 
+              videoRef.current.play(); 
+            }
+          });
           setLoading(false);
         });
         hls.on(Hls.Events.ERROR, (event: any, data: any) => {
@@ -76,7 +81,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = safeUrl;
-        video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
+        video.play().then(() => setLoading(false)).catch(() => { 
+          video.muted = true; 
+          setIsMuted(true); 
+          video.play(); 
+          setLoading(false); 
+        });
       } else {
         video.src = safeUrl;
         video.play().then(() => setLoading(false)).catch(() => setLoading(false));
@@ -89,7 +99,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         video.play().then(() => setLoading(false)).catch(() => setLoading(false)); 
       });
     }
-  }, [safeUrl, isMounted, isIframe, isM3u8]);
+  }, [safeUrl, isMounted, isIframe, isM3u8, lowUrl]);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -152,7 +162,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v384 Permanente...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v385 Permanente...</p>
           </div>
         </div>
       )}

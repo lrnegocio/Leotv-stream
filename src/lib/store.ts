@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v384 - PROTOCOLO DIAMANTE ETERNO
+ * FORMATADOR MASTER SOBERANO v385 - PROTOCOLO DIAMANTE ETERNO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -239,11 +239,14 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN BLINDADO v384 - EXTERMINA ERRO DE NÚCLEO
+ * SALVAMENTO DE PIN BLINDADO v385 - EXTERMINA ERRO DE NÚCLEO
+ * Limpa campos de consulta (como reseller_name) antes de enviar ao banco.
  */
 export async function saveUser(user: Partial<User>) {
   try {
-    const payload: any = { ...user };
+    // LIMPEZA SUPREMA: Remove campos de junção que travam o banco
+    const { reseller_name, created_at, ...payload }: any = { ...user };
+    
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
     const { error } = await supabase.from('users').upsert(payload);
@@ -285,9 +288,10 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveReseller(r: Partial<Reseller>) {
   try {
-    const { error } = await supabase.from('resellers').upsert(r);
+    const { created_at, ...payload }: any = { ...r };
+    const { error } = await supabase.from('resellers').upsert(payload);
     if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { cpf, phone, email, birthDate, ...cleanReseller } = r;
+      const { cpf, phone, email, birthDate, ...cleanReseller } = payload;
       const { error: retryError } = await supabase.from('resellers').upsert(cleanReseller);
       return !retryError;
     }
