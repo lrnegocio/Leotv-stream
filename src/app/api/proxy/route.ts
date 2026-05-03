@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v370 - PROTOCOLO BRAVE GHOST SUPREMO
- * Calibrado para remover rastros da VPS e enganar bloqueios agressivos do Brave.
+ * TÚNEL MASTER SOBERANA v380 - PROTOCOLO GHOST SUPREMED
+ * Calibrado para domínios instáveis (vyds1001, vcdn, top).
+ * Remove Referer e mascara a VPS como um dispositivo iOS Safari real.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const lowTarget = targetUrl.toLowerCase();
 
-  // BLOQUEIO DE JUNK v370
+  // BLOQUEIO DE JUNK v380
   if (lowTarget.includes('googletagmanager') || lowTarget.includes('analytics') || lowTarget.includes('facebook.net')) {
     return new NextResponse("Link de Junk Bloqueado", { status: 403 });
   }
@@ -25,24 +26,25 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM ACESSO ORIGINAL DO BRAVE/IOS
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1');
+    // MASCARAMENTO SOBERANO - FINGE SER UM ACESSO ORIGINAL DO SAFARI/IOS
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1');
     requestHeaders.set('Accept', '*/*');
+    requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // 🛡️ EXTERMINADOR DE RASTROS (PROTOCOLO GHOST SUPREMO): Remove o que o Brave usa para bloquear
+    // 🛡️ EXTERMINADOR DE RASTROS GHOST: Remove o que os CDNs usam para bloquear VPS
     requestHeaders.delete('Origin');
-    requestHeaders.delete('Referer');
-    requestHeaders.delete('Sec-Fetch-Dest');
-    requestHeaders.delete('Sec-Fetch-Mode');
-    requestHeaders.delete('Sec-Fetch-Site');
-    requestHeaders.delete('Sec-Fetch-User');
+    requestHeaders.delete('X-Forwarded-For');
+    requestHeaders.delete('Via');
 
-    // BYPASS ESPECÍFICO RDCANAIS
+    // BYPASS DE REFERER (O segredo para links instáveis)
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
     } else if (lowTarget.includes('mercadolivre') || lowTarget.includes('mercadopago')) {
       requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
+    } else if (lowTarget.includes('vyds') || lowTarget.includes('top')) {
+      // Para o domínio vyds1001.top, o ideal é referer vazio ou o próprio domínio
+      requestHeaders.set('Referer', urlObj.origin + '/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -53,10 +55,11 @@ export async function GET(req: NextRequest) {
       redirect: 'follow'
     });
 
+    // Se o link original redirecionou, seguimos o rastro
     const finalUrl = res.url;
     return handleResponse(res, finalUrl, new URL(finalUrl));
   } catch (error) {
-    return new Response("Falha no Túnel Ghost v370", { status: 500 });
+    return new Response("Falha no Túnel Ghost v380", { status: 500 });
   }
 }
 
@@ -64,7 +67,7 @@ async function handleResponse(res: Response, targetUrl: string, urlObj: URL) {
   const contentType = res.headers.get('content-type') || '';
   const lowUrl = targetUrl.toLowerCase();
   
-  const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl');
+  const isM3u8 = lowUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/vnd.apple.mpegurl');
   const isHtml = contentType.includes('text/html');
 
   const responseHeaders = new Headers();

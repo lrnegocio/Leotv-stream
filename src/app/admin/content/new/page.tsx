@@ -48,7 +48,7 @@ export default function NewContentPage() {
       newSeasons[target.sIdx].episodes[target.eIdx].streamUrl = formatMasterLink(newSeasons[target.sIdx].episodes[target.eIdx].streamUrl);
       setSeasons(newSeasons);
     }
-    toast({ title: "SINAL SINTONIZADO v374" });
+    toast({ title: "SINAL SINTONIZADO v380" });
   }
 
   const addEpisode = () => {
@@ -95,7 +95,7 @@ export default function NewContentPage() {
     })
 
     if (success) {
-      toast({ title: "SINAL ADICIONADO A REDE" })
+      toast({ title: "SINAL ADICIONADO A REDE v380" })
       router.push("/admin/content")
     } else {
       setLoading(false)
@@ -112,7 +112,7 @@ export default function NewContentPage() {
           <Button variant="ghost" size="icon" asChild>
             <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
           </Button>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master v374</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Novo Sinal Master v380</h1>
         </div>
       </div>
 

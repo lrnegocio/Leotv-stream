@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v378 - VACINA DEFINITIVA YOUTUBE (FIM ERRO 153)
+ * FORMATADOR MASTER SOBERANO v380 - PROTOCOLO GHOST & YOUTUBE BYPASS
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -105,27 +105,18 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Formato ultra-limpo para evitar Erro 153
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+        // Formato simplificado e universal para evitar Erro 153
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0`;
       }
     }
 
-    // 🛡️ PROTOCOLO BRAVE BYPASS (RDCANAIS & STREAMRDC)
-    if (lowUrl.includes('rdcanais') || lowUrl.includes('streamrdc') || lowUrl.includes('redecanais')) {
+    // 🛡️ PROTOCOLO GHOST PARA CDNS INSTÁVEIS (vyds1001, vcdn, etc)
+    const ghostDomains = ['vyds', 'vcdn', 'top', 'stream', 'rdcanais', 'redecanais', 'streamrdc', 'archive.org', 'ok.ru'];
+    const needsProxy = ghostDomains.some(d => lowUrl.includes(d));
+
+    if (needsProxy || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8')) {
+      // Força o uso do proxy para evitar bloqueio de Referer/IP da VPS
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
-    }
-
-    // 🔞 PROTOCOLO ADULTO
-    if (lowUrl.includes('xvideos.com/video.')) {
-      const match = finalUrl.match(/video\.([a-z0-9]+)/i);
-      if (match && match[1]) {
-        return `/api/proxy?url=${encodeURIComponent(`https://www.xvideos.com/embedframe/${match[1]}`)}`;
-      }
-    }
-    
-    if (lowUrl.includes('pornhub.com/view_video.php')) {
-      const vId = new URL(finalUrl).searchParams.get('viewkey');
-      if (vId) return `https://www.pornhub.com/embed/${vId}`;
     }
 
     return finalUrl;
@@ -159,7 +150,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: Array.isArray(item.seasons) ? item.seasons : []
     }));
 
-    // Filtra apenas ativos se não for modo Admin
     if (!showInactive) {
       items = items.filter(i => i.isActive !== false);
     }
@@ -178,10 +168,8 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.title) payload.title = payload.title.toUpperCase().trim();
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
-    // Tenta salvar com todos os campos (incluindo isActive)
     const { error } = await supabase.from('content').upsert(payload);
     
-    // Se der erro de coluna não encontrada (isActive), remove ela e tenta de novo
     if (error && (error.message?.includes('isActive') || error.code === '42703')) {
       const { isActive, ...cleanPayload } = payload;
       const { error: retryError } = await supabase.from('content').upsert(cleanPayload);
