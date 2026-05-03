@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v383
+ * PLAYER MASTER SOBERANA v384 - MOTOR DIAMANTE HLS
  * Sincronizado para HLS.js (Extermina erro de Fontes não suportadas).
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
@@ -30,7 +30,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy') && lowUrl.includes('url=');
+  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || (lowTarget.includes('proxy') && lowTarget.includes('url='));
   
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
@@ -46,7 +46,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     if (isIframe) {
       setPlayerKey(Date.now());
-      // Delay curto para o iframe carregar
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -54,13 +53,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    if (isM3u8) {
+    // MOTOR DIAMANTE v384: HLS.JS ATIVADO PARA QUALQUER M3U8 PROXIED
+    if (isM3u8 || lowUrl.includes('proxy')) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
           xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
           enableWorker: true,
-          lowLatencyMode: true
+          lowLatencyMode: true,
+          backBufferLength: 90
         });
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
@@ -70,7 +71,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
         hls.on(Hls.Events.ERROR, (event: any, data: any) => {
           if (data.fatal) {
-            console.warn("HLS Fatal Error, tentando recuperação...");
             hls.recoverMediaError();
           }
         });
@@ -78,7 +78,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         video.src = safeUrl;
         video.play().then(() => setLoading(false)).catch(() => { video.muted = true; setIsMuted(true); video.play(); setLoading(false); });
       } else {
-        video.src = safeUrl; // Tenta como MP4 comum
+        video.src = safeUrl;
         video.play().then(() => setLoading(false)).catch(() => setLoading(false));
       }
     } else {
@@ -96,7 +96,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     initPlayer();
     
     return () => {
-      // Limpeza de recursos ao fechar
       if (videoRef.current) {
         videoRef.current.src = "";
         videoRef.current.load();
@@ -153,7 +152,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v383...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v384 Permanente...</p>
           </div>
         </div>
       )}

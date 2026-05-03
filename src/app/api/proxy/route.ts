@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL MASTER SOBERANA v383 - PROTOCOLO GHOST DIAMANTE
- * Força Content-Type para exterminar "No Supported Sources".
+ * TÚNEL GHOST DIAMANTE v384 - PROTOCOLO DE ESTABILIDADE ETERNA
+ * Este túnel reescreve manifestos M3U8 para garantir que todos os segmentos passem pelo proxy.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const lowTarget = targetUrl.toLowerCase();
 
-  // BLOQUEIO DE JUNK
+  // BLOQUEIO DE JUNK E ANALYTICS QUE TRAVAM O PLAYER
   if (lowTarget.includes('googletagmanager') || lowTarget.includes('analytics') || lowTarget.includes('facebook.net')) {
     return new NextResponse("Link de Junk Bloqueado", { status: 403 });
   }
@@ -25,22 +25,19 @@ export async function GET(req: NextRequest) {
     const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM ACESSO ORIGINAL DO SAFARI/IOS
+    // MASCARAMENTO SOBERANO - FINGE SER UM IPHONE 15 PRO MAX ACESSANDO
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // REMOVE RASTROS DA VPS
-    requestHeaders.delete('Origin');
-    requestHeaders.delete('X-Forwarded-For');
-    requestHeaders.delete('Via');
-
-    // BYPASS DE REFERER (O segredo para links instáveis)
+    // BYPASS DE REFERER - O SEGREDO PARA VYDS E CDNS INSTÁVEIS
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
     } else if (lowTarget.includes('mercadolivre') || lowTarget.includes('mercadopago')) {
       requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
+    } else if (lowTarget.includes('vyds')) {
+      requestHeaders.set('Referer', 'https://vyds1001.top/');
     } else {
       requestHeaders.set('Referer', urlObj.origin + '/');
     }
@@ -54,10 +51,10 @@ export async function GET(req: NextRequest) {
     const finalUrl = res.url;
     const contentType = res.headers.get('content-type') || '';
     
-    // FORCE CONTENT TYPE ULTRA-AGRESSIVO PARA EVITAR "NOT SUPPORTED SOURCES"
+    // DETECÇÃO AGRESSIVA DE FORMATO
     let forcedType = contentType;
     if (lowTarget.includes('.mp4') || finalUrl.toLowerCase().endsWith('.mp4')) forcedType = 'video/mp4';
-    if (lowTarget.includes('.m3u8') || finalUrl.toLowerCase().endsWith('.m3u8') || lowTarget.includes('mpegurl')) forcedType = 'application/vnd.apple.mpegurl';
+    if (lowTarget.includes('.m3u8') || finalUrl.toLowerCase().endsWith('.m3u8') || contentType.includes('mpegurl')) forcedType = 'application/vnd.apple.mpegurl';
     if (lowTarget.includes('.ts') || finalUrl.toLowerCase().endsWith('.ts')) forcedType = 'video/mp2t';
 
     const responseHeaders = new Headers();
@@ -71,7 +68,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
 
-    // Se for M3U8, reescreve os caminhos relativos para passar pelo proxy também
+    // SEGREDO v384: REESCRITA DE M3U8 PARA PERMANÊNCIA DO SINAL
     if (forcedType.includes('mpegurl') || finalUrl.includes('.m3u8')) {
       const manifestText = await res.text();
       const baseUrl = finalUrl.split('?')[0].substring(0, finalUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -80,7 +77,7 @@ export async function GET(req: NextRequest) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) return line;
         try {
-          // Garante que segmentos (.ts) e sub-playlists também usem o proxy
+          // Garante que TODOS os segmentos (.ts) e sub-playlists usem o Proxy do Léo TV
           const absoluteUrl = new URL(trimmed, baseUrl).href;
           return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
         } catch (e) { return line; }
@@ -89,9 +86,9 @@ export async function GET(req: NextRequest) {
       return new Response(rewrittenManifest, { headers: responseHeaders });
     }
 
-    // Retorna o fluxo binário do vídeo (MP4 ou TS)
+    // Retorna o binário do vídeo (MP4 ou TS)
     return new Response(res.body, { status: res.status, headers: responseHeaders });
   } catch (error) {
-    return new Response("Falha no Túnel Ghost v383", { status: 500 });
+    return new Response("Falha no Túnel Permanente v384", { status: 500 });
   }
 }

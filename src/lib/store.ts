@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v383 - PROTOCOLO GHOST & YOUTUBE BYPASS
+ * FORMATADOR MASTER SOBERANO v384 - PROTOCOLO DIAMANTE ETERNO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -91,7 +91,7 @@ export const formatMasterLink = (url: string) => {
     if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS (EXTERMINA ERRO 153)
+    // 📺 PROTOCOLO YOUTUBE & SHORTS PERMANENTE
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) {
@@ -105,17 +105,16 @@ export const formatMasterLink = (url: string) => {
       }
       
       if (videoId) {
-        // Envia origin para o player autorizar o acesso do site
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
         return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
       }
     }
 
-    // 🛡️ PROTOCOLO GHOST PARA CDNS INSTÁVEIS (vyds1001, vcdn, etc)
+    // 🛡️ AUTO-PROXY PARA TODOS OS LINKS DE STREAMING (MP4/M3U8/CDNS)
     const ghostDomains = ['vyds', 'vcdn', 'top', 'stream', 'rdcanais', 'redecanais', 'streamrdc', 'archive.org', 'ok.ru', 'p2p'];
-    const needsProxy = ghostDomains.some(d => lowUrl.includes(d));
+    const needsProxy = ghostDomains.some(d => lowUrl.includes(d)) || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8') || lowUrl.includes('.ts');
 
-    if (needsProxy || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8')) {
+    if (needsProxy) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -150,9 +149,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   }
 }
 
-/**
- * SALVAMENTO ROBUSTO v383: Remove colunas inexistentes se der erro.
- */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload: any = { ...item };
@@ -243,28 +239,32 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN ULTRA-ROBUSTO v383
- * Garante que o PIN seja criado mesmo se faltarem colunas no banco.
+ * SALVAMENTO DE PIN BLINDADO v384 - EXTERMINA ERRO DE NÚCLEO
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
-    // MESTRE: Todo PIN precisa de um ID único de banco
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
     const { error } = await supabase.from('users').upsert(payload);
     
-    // Se der erro de coluna (provavelmente por falta de permissões especiais)
+    // SE DER ERRO DE COLUNA, RETENTA APENAS COM O BÁSICO VITAL
     if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      console.warn("Limpando colunas extras do PIN para salvar no banco...");
-      // Lista de campos que costumam faltar no banco antigo
-      const { individualMessage, isGamesEnabled, isPpvEnabled, isAlacarteEnabled, gamePoints, activatedAt, ...cleanUser } = payload;
-      const { error: retryError } = await supabase.from('users').upsert(cleanUser);
+      const basicPayload = {
+        id: payload.id,
+        pin: payload.pin,
+        role: payload.role,
+        subscriptionTier: payload.subscriptionTier,
+        maxScreens: payload.maxScreens,
+        isBlocked: payload.isBlocked,
+        activeDevices: payload.activeDevices || [],
+        resellerId: payload.resellerId
+      };
+      const { error: retryError } = await supabase.from('users').upsert(basicPayload);
       return !retryError;
     }
     return !error;
   } catch (e) { 
-    console.error("Falha fatal no salvamento do PIN:", e);
     return false; 
   }
 }
@@ -283,9 +283,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   } catch (e) { return []; }
 }
 
-/**
- * SALVAMENTO DE REVENDA ROBUSTO v383
- */
 export async function saveReseller(r: Partial<Reseller>) {
   try {
     const { error } = await supabase.from('resellers').upsert(r);
