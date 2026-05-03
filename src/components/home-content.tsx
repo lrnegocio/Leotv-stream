@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -201,7 +202,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v386...</p>
         </div>
       )}
 
@@ -210,7 +211,9 @@ export default function HomeContent() {
           {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-all"><ChevronLeft className="h-6 w-6" /></button>}
           <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
         </div>
-        <div className="flex-1 max-w-xl mx-4"><VoiceSearch /></div>
+        <div className="flex-1 max-w-xl mx-4">
+          {!user?.isGamesOnly && <VoiceSearch />}
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></button>
           <button onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl flex items-center justify-center bg-destructive/10 hover:bg-destructive hover:text-white transition-all"><LogOut className="h-6 w-6" /></button>
@@ -218,7 +221,7 @@ export default function HomeContent() {
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto space-y-8">
-        {user?.individualMessage && !selectedCat && !q && (
+        {user?.individualMessage && !selectedCat && !q && !user.isGamesOnly && (
           <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl">
              <div className="bg-primary p-3 rounded-2xl shadow-lg"><BellRing className="h-6 w-6 text-white" /></div>
              <div className="flex-1">
@@ -228,7 +231,7 @@ export default function HomeContent() {
           </div>
         )}
 
-        {!selectedCat && !q && settings?.bannerUrl && (
+        {!selectedCat && !q && settings?.bannerUrl && !user?.isGamesOnly && (
           <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
              <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
                 <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
@@ -240,6 +243,9 @@ export default function HomeContent() {
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {CATEGORIES.map(c => {
+              // FILTRO EXTREMO v386: Se for PIN GamesOnly, esconde tudo menos o GAMES
+              if (user?.isGamesOnly && c.id !== 'GAMES') return null;
+
               const isVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
               if (!isVisible) return null;
 
@@ -277,7 +283,6 @@ export default function HomeContent() {
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Selecione o Episódio</DialogTitle></DialogHeader>
           
           <div className="mt-6 flex-1 flex flex-col gap-2 overflow-hidden">
-            {/* BOTÃO SETA PARA CIMA */}
             <button 
               onClick={() => scrollContainer(episodeListRef, 'up')}
               className="w-full h-10 flex items-center justify-center bg-primary/5 hover:bg-primary/20 text-primary rounded-xl border border-primary/10 transition-all focus:ring-2 focus:ring-primary outline-none"
@@ -310,7 +315,6 @@ export default function HomeContent() {
               ))}
             </div>
 
-            {/* BOTÃO SETA PARA BAIXO */}
             <button 
               onClick={() => scrollContainer(episodeListRef, 'down')}
               className="w-full h-10 flex items-center justify-center bg-primary/5 hover:bg-primary/20 text-primary rounded-xl border border-primary/10 transition-all focus:ring-2 focus:ring-primary outline-none"
@@ -431,10 +435,16 @@ export default function HomeContent() {
               <div className="space-y-3">
                  <p className="text-[10px] font-black uppercase opacity-40 text-center">Protocolo de Segurança</p>
                  <div className="flex flex-wrap justify-center gap-2">
-                    <Badge className={user?.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-30'}>ADULTO</Badge>
-                    <Badge className={user?.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-30'}>GAMES</Badge>
-                    <Badge className={user?.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-30'}>PPV</Badge>
-                    <Badge className={user?.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-30'}>ALACARTE</Badge>
+                    {user?.isGamesOnly ? (
+                      <Badge className="bg-amber-500">EXCLUSIVO GAMES</Badge>
+                    ) : (
+                      <>
+                        <Badge className={user?.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-30'}>ADULTO</Badge>
+                        <Badge className={user?.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-30'}>GAMES</Badge>
+                        <Badge className={user?.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-30'}>PPV</Badge>
+                        <Badge className={user?.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-30'}>ALACARTE</Badge>
+                      </>
+                    )}
                  </div>
               </div>
            </div>

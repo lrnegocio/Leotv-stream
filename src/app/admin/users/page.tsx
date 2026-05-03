@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star, MonitorX } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star, MonitorX, Ghost } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -32,6 +32,7 @@ export default function UserManagementPage() {
     isGamesEnabled: false,
     isPpvEnabled: false,
     isAlacarteEnabled: false,
+    isGamesOnly: false,
     individualMessage: ""
   })
 
@@ -83,7 +84,6 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    // MESTRE: Limpeza profunda antes de salvar para evitar erros de banco
     const cleanPin = newUser.pin.toUpperCase().trim();
     const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === cleanPin);
     
@@ -100,6 +100,7 @@ export default function UserManagementPage() {
       isGamesEnabled: !!newUser.isGamesEnabled,
       isPpvEnabled: !!newUser.isPpvEnabled,
       isAlacarteEnabled: !!newUser.isAlacarteEnabled,
+      isGamesOnly: !!newUser.isGamesOnly,
       individualMessage: (newUser.individualMessage || "").trim(),
       gamePoints: existingUser?.gamePoints || 0,
       resellerId: existingUser?.resellerId || null
@@ -137,6 +138,7 @@ export default function UserManagementPage() {
       isGamesEnabled: !!user.isGamesEnabled,
       isPpvEnabled: !!user.isPpvEnabled,
       isAlacarteEnabled: !!user.isAlacarteEnabled,
+      isGamesOnly: !!user.isGamesOnly,
       individualMessage: user.individualMessage || ""
     });
     setIsDialogOpen(true);
@@ -173,7 +175,7 @@ export default function UserManagementPage() {
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
-           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(11), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
+           <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(11), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, isGamesOnly: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
           </Button>
         </div>
@@ -212,7 +214,10 @@ export default function UserManagementPage() {
                     <TableCell className="px-8">
                       <p className="text-[8px] font-black text-primary/40 uppercase mb-1">{u.reseller_name || 'ADMIN'}</p>
                       <p className="font-mono font-black text-xl text-primary tracking-[0.2em]">{u.pin}</p>
-                      <Badge variant="outline" className="uppercase text-[8px] font-black border-primary/20 text-primary/60 mt-1">{u.subscriptionTier}</Badge>
+                      <div className="flex gap-1 items-center mt-1">
+                        <Badge variant="outline" className="uppercase text-[8px] font-black border-primary/20 text-primary/60">{u.subscriptionTier}</Badge>
+                        {u.isGamesOnly && <Badge className="bg-amber-500 text-white border-0 text-[7px] font-black">GAMES ONLY</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className={`flex items-center gap-2 px-4 py-2 rounded-xl w-fit font-black text-[10px] uppercase ${status.color}`}>
@@ -275,24 +280,37 @@ export default function UserManagementPage() {
               <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Telas</Label><Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" /></div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-red-500" /><span className="text-[9px] font-black uppercase">Adulto</span></div>
-                <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
-              </div>
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2"><Gamepad2 className="h-4 w-4 text-emerald-500" /><span className="text-[9px] font-black uppercase">Games</span></div>
-                <Switch checked={newUser.isGamesEnabled} onCheckedChange={v => setNewUser({...newUser, isGamesEnabled: v})} />
-              </div>
-              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" /><span className="text-[9px] font-black uppercase">PPV</span></div>
-                <Switch checked={newUser.isPpvEnabled} onCheckedChange={v => setNewUser({...newUser, isPpvEnabled: v})} />
-              </div>
-              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-2"><Star className="h-4 w-4 text-blue-500" /><span className="text-[9px] font-black uppercase">ALACARTE</span></div>
-                <Switch checked={newUser.isAlacarteEnabled} onCheckedChange={v => setNewUser({...newUser, isAlacarteEnabled: v})} />
-              </div>
+            <div className="space-y-2">
+               <Label className="uppercase text-[10px] font-black text-amber-500 flex items-center gap-2"><Ghost className="h-3 w-3" /> Modo Restrição Extrema</Label>
+               <div className={`p-4 rounded-2xl flex items-center justify-between transition-all border ${newUser.isGamesOnly ? 'bg-amber-500/10 border-amber-500/50 shadow-lg shadow-amber-500/10' : 'bg-black/20 border-white/5 opacity-60'}`}>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest italic">Apenas Retro Games</span>
+                    <p className="text-[7px] font-bold uppercase opacity-50">Oculta canais, filmes e séries para este PIN.</p>
+                  </div>
+                  <Switch checked={newUser.isGamesOnly} onCheckedChange={v => setNewUser({...newUser, isGamesOnly: v})} />
+               </div>
             </div>
+
+            {!newUser.isGamesOnly && (
+              <div className="grid grid-cols-2 gap-4 animate-in fade-in duration-300">
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Lock className="h-4 w-4 text-red-500" /><span className="text-[9px] font-black uppercase">Adulto</span></div>
+                  <Switch checked={newUser.isAdultEnabled} onCheckedChange={v => setNewUser({...newUser, isAdultEnabled: v})} />
+                </div>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Gamepad2 className="h-4 w-4 text-emerald-500" /><span className="text-[9px] font-black uppercase">Games</span></div>
+                  <Switch checked={newUser.isGamesEnabled} onCheckedChange={v => setNewUser({...newUser, isGamesEnabled: v})} />
+                </div>
+                <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Zap className="h-4 w-4 text-orange-500" /><span className="text-[9px] font-black uppercase">PPV</span></div>
+                  <Switch checked={newUser.isPpvEnabled} onCheckedChange={v => setNewUser({...newUser, isPpvEnabled: v})} />
+                </div>
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Star className="h-4 w-4 text-blue-500" /><span className="text-[9px] font-black uppercase">ALACARTE</span></div>
+                  <Switch checked={newUser.isAlacarteEnabled} onCheckedChange={v => setNewUser({...newUser, isAlacarteEnabled: v})} />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
                <Label className="uppercase text-[10px] font-black text-primary">Mensagem Individual VIP</Label>

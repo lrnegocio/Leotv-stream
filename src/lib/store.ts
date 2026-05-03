@@ -73,6 +73,7 @@ export interface User {
   isGamesEnabled: boolean;
   isPpvEnabled: boolean;
   isAlacarteEnabled: boolean;
+  isGamesOnly: boolean;
   resellerId?: string | null; 
   activatedAt?: string | null;
   individualMessage?: string;
@@ -82,7 +83,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v385 - PROTOCOLO DIAMANTE ETERNO
+ * FORMATADOR MASTER SOBERANO v386 - PROTOCOLO DIAMANTE ETERNO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -239,7 +240,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN BLINDADO v385 - EXTERMINA ERRO DE NÚCLEO
+ * SALVAMENTO DE PIN BLINDADO v386 - EXTERMINA ERRO DE NÚCLEO
  * Limpa campos de consulta (como reseller_name) antes de enviar ao banco.
  */
 export async function saveUser(user: Partial<User>) {
@@ -307,7 +308,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
         user: {
           id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime',
           maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true,
-          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true
+          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false
         }
       };
     }
