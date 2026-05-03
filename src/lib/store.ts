@@ -82,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v381 - PROTOCOLO GHOST & YOUTUBE BYPASS
+ * FORMATADOR MASTER SOBERANO v382 - PROTOCOLO GHOST & YOUTUBE BYPASS
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -149,7 +149,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
 }
 
 /**
- * SALVAMENTO ROBUSTO v381: Remove colunas inexistentes se der erro.
+ * SALVAMENTO ROBUSTO v382: Remove colunas inexistentes se der erro.
  */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
@@ -241,18 +241,29 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN ROBUSTO v381
+ * SALVAMENTO DE PIN ULTRA-ROBUSTO v382
  */
 export async function saveUser(user: Partial<User>) {
   try {
-    const { error } = await supabase.from('users').upsert(user);
+    const payload = { ...user };
+    // MESTRE: Garante que todo PIN tenha um ID único de banco
+    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+    
+    const { error } = await supabase.from('users').upsert(payload);
+    
+    // Se der erro de coluna (provavelmente por falta de 'individualMessage' ou 'isGamesEnabled')
     if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { individualMessage, isGamesEnabled, isPpvEnabled, isAlacarteEnabled, gamePoints, ...cleanUser } = user;
+      console.warn("Limpando colunas extras do PIN para salvar no banco...");
+      // Lista de campos que costumam faltar se o Mestre não rodar o SQL
+      const { individualMessage, isGamesEnabled, isPpvEnabled, isAlacarteEnabled, gamePoints, activatedAt, ...cleanUser } = payload;
       const { error: retryError } = await supabase.from('users').upsert(cleanUser);
       return !retryError;
     }
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("Falha fatal no salvamento do PIN:", e);
+    return false; 
+  }
 }
 
 export async function resetUserDevices(userId: string) {
@@ -270,7 +281,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 }
 
 /**
- * SALVAMENTO DE REVENDA ROBUSTO v381
+ * SALVAMENTO DE REVENDA ROBUSTO v382
  */
 export async function saveReseller(r: Partial<Reseller>) {
   try {

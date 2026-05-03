@@ -83,12 +83,14 @@ export default function UserManagementPage() {
     if (!newUser.pin) return;
     setIsSaving(true);
     
-    const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === newUser.pin.toUpperCase().trim());
+    // MESTRE: Limpeza profunda antes de salvar para evitar erros de banco
+    const cleanPin = newUser.pin.toUpperCase().trim();
+    const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === cleanPin);
     
     const userData: Partial<User> = {
-      id: editingUserId || existingUser?.id,
-      pin: newUser.pin.toUpperCase().trim(),
-      role: (newUser.pin.toUpperCase() === 'ADM77X2P') ? 'admin' : 'user',
+      id: editingUserId || existingUser?.id || ("user_" + Date.now() + Math.random().toString(36).substring(7)),
+      pin: cleanPin,
+      role: (cleanPin === 'ADM77X2P') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
       expiryDate: existingUser?.expiryDate || null,
       maxScreens: parseInt(newUser.screens) || 1,
@@ -98,8 +100,7 @@ export default function UserManagementPage() {
       isGamesEnabled: !!newUser.isGamesEnabled,
       isPpvEnabled: !!newUser.isPpvEnabled,
       isAlacarteEnabled: !!newUser.isAlacarteEnabled,
-      activatedAt: existingUser?.activatedAt || null,
-      individualMessage: newUser.individualMessage.trim(),
+      individualMessage: (newUser.individualMessage || "").trim(),
       gamePoints: existingUser?.gamePoints || 0,
       resellerId: existingUser?.resellerId || null
     }
@@ -111,7 +112,7 @@ export default function UserManagementPage() {
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO NO NÚCLEO" });
+      toast({ variant: "destructive", title: "ERRO NO NÚCLEO", description: "Verifique as colunas do Supabase." });
     }
     setIsSaving(false);
   }
@@ -131,7 +132,7 @@ export default function UserManagementPage() {
     setNewUser({ 
       pin: user.pin, 
       tier: user.subscriptionTier, 
-      screens: user.maxScreens.toString(), 
+      screens: (user.maxScreens || 1).toString(), 
       isAdultEnabled: !!user.isAdultEnabled,
       isGamesEnabled: !!user.isGamesEnabled,
       isPpvEnabled: !!user.isPpvEnabled,
