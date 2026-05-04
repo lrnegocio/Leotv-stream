@@ -83,39 +83,26 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v388 - PROTOCOLO DIAMANTE ETERNO
+ * FORMATADOR v370 - O MAIS ESTÁVEL
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
-    if (finalUrl.includes('/api/proxy?url=')) return finalUrl;
     let lowUrl = finalUrl.toLowerCase();
 
-    // 📺 PROTOCOLO YOUTUBE & SHORTS PERMANENTE
+    // YouTube Protocol
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
-      if (lowUrl.includes('/shorts/')) {
-        videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
-      } else if (lowUrl.includes('watch?v=')) {
-        videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
-      } else if (lowUrl.includes('youtu.be/')) {
-        videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
-      } else if (lowUrl.includes('/embed/')) {
-        videoId = finalUrl.split('/embed/')[1]?.split(/[?#&]/)[0];
-      }
+      if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
+      else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       
-      if (videoId) {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://leotv.fun';
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&enablejsapi=1&origin=${encodeURIComponent(origin)}`;
-      }
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    // 🛡️ AUTO-PROXY PARA TODOS OS LINKS DE STREAMING (MP4/M3U8/CDNS)
-    const ghostDomains = ['vyds', 'vcdn', 'top', 'stream', 'rdcanais', 'redecanais', 'streamrdc', 'archive.org', 'ok.ru', 'p2p'];
-    const needsProxy = ghostDomains.some(d => lowUrl.includes(d)) || lowUrl.includes('.mp4') || lowUrl.includes('.m3u8') || lowUrl.includes('.ts');
-
-    if (needsProxy) {
+    // Proxy simples para CDNs instáveis (v370 style)
+    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -145,21 +132,93 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
 
     if (!showInactive) items = items.filter(i => i.isActive !== false);
     return items;
-  } catch (e: any) { 
-    return []; 
-  }
+  } catch (e: any) { return []; }
 }
 
+/**
+ * SALVAMENTO DE CONTEÚDO v370-R (Limpeza Total)
+ */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload: any = { ...item };
     if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
-    if (payload.title) payload.title = payload.title.toUpperCase().trim();
-    if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
+    // Remove campos que não existem na tabela para evitar Erro de Núcleo
+    delete payload.reseller_name;
+    delete payload.created_at;
+
     const { error } = await supabase.from('content').upsert(payload);
     return !error;
   } catch (e) { return false; }
+}
+
+export async function getRemoteUsers(): Promise<User[]> {
+  try {
+    // Busca usuários e tenta trazer o nome do revendedor
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, resellers(name)')
+      .order('id', { ascending: false });
+    
+    if (error) throw error;
+    
+    return (data || []).map(u => ({
+      ...u,
+      reseller_name: u.resellers?.name || 'ADMIN'
+    }));
+  } catch (e) { return []; }
+}
+
+/**
+ * SALVAMENTO DE PIN v370-R (LIMPEZA TOTAL CONTRA ERRO DE NÚCLEO)
+ */
+export async function saveUser(user: Partial<User>) {
+  try {
+    const payload: any = { ...user };
+    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+    
+    // EXTERMINADOR DE ERRO DE NÚCLEO: 
+    // Remove campos de "JOIN" ou colunas que não existem fisicamente na tabela
+    delete payload.reseller_name;
+    delete payload.resellers;
+    delete payload.created_at;
+
+    const { error } = await supabase.from('users').upsert(payload);
+    if (error) {
+      console.error("Erro Supabase:", error);
+      return false;
+    }
+    return true;
+  } catch (e) { 
+    return false; 
+  }
+}
+
+export async function validateDeviceLogin(pin: string, deviceId: string) {
+  try {
+    const cleanPin = pin.toUpperCase().trim();
+    if (cleanPin === 'ADM77X2P') {
+      return {
+        user: {
+          id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime',
+          maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true,
+          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false
+        }
+      };
+    }
+    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    if (!user) return { error: "PIN INVÁLIDO" };
+    if (user.isBlocked) return { error: "PIN BLOQUEADO" };
+    
+    const activeDevices = user.activeDevices || [];
+    if (!activeDevices.includes(deviceId)) {
+      if (activeDevices.length >= user.maxScreens) return { error: "LIMITE DE TELAS ATINGIDO" };
+      const updatedDevices = [...activeDevices, deviceId];
+      await supabase.from('users').update({ activeDevices: updatedDevices }).eq('id', user.id);
+      user.activeDevices = updatedDevices;
+    }
+    return { user };
+  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
@@ -219,25 +278,6 @@ export async function saveGame(g: any) {
   });
 }
 
-export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    const { data } = await supabase.from('users').select('*').order('id', { ascending: false });
-    return data || [];
-  } catch (e) { return []; }
-}
-
-/**
- * SALVAMENTO DE PIN UNIFICADO v388
- */
-export async function saveUser(user: Partial<User>) {
-  try {
-    const { reseller_name, created_at, ...payload }: any = { ...user };
-    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
-    const { error } = await supabase.from('users').upsert(payload);
-    return !error;
-  } catch (e) { return false; }
-}
-
 export async function resetUserDevices(userId: string) {
   try {
     const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId);
@@ -254,36 +294,11 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 
 export async function saveReseller(r: Partial<Reseller>) {
   try {
-    const { created_at, ...payload }: any = { ...r };
+    const payload: any = { ...r };
+    delete payload.created_at;
     const { error } = await supabase.from('resellers').upsert(payload);
     return !error;
   } catch (e) { return false; }
-}
-
-export async function validateDeviceLogin(pin: string, deviceId: string) {
-  try {
-    const cleanPin = pin.toUpperCase().trim();
-    if (cleanPin === 'ADM77X2P') {
-      return {
-        user: {
-          id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime',
-          maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true,
-          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false
-        }
-      };
-    }
-    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
-    if (!user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "PIN BLOQUEADO" };
-    const activeDevices = user.activeDevices || [];
-    if (!activeDevices.includes(deviceId)) {
-      if (activeDevices.length >= user.maxScreens) return { error: "LIMITE DE TELAS ATINGIDO" };
-      const updatedDevices = [...activeDevices, deviceId];
-      await supabase.from('users').update({ activeDevices: updatedDevices }).eq('id', user.id);
-      user.activeDevices = updatedDevices;
-    }
-    return { user };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function validateResellerLogin(u: string, p: string) {

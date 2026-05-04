@@ -51,22 +51,9 @@ export default function HomeContent() {
   const [isMounted, setIsMounted] = React.useState(false)
   const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
   
-  const episodeListRef = React.useRef<HTMLDivElement>(null)
-  const gamesListRef = React.useRef<HTMLDivElement>(null)
-
   const router = useRouter()
   const searchParams = useSearchParams()
   const q = searchParams ? (searchParams.get('q') || "") : ""
-
-  const scrollContainer = (ref: React.RefObject<HTMLDivElement>, direction: 'up' | 'down') => {
-    if (ref.current) {
-      const amount = 350;
-      ref.current.scrollBy({
-        top: direction === 'up' ? -amount : amount,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
@@ -197,12 +184,21 @@ export default function HomeContent() {
 
   if (!isMounted) return null;
 
+  // PROTOCOLO ARENA-EXCLUSIVA: Filtra categorias se o PIN for isGamesOnly
+  const visibleCategories = CATEGORIES.filter(c => {
+    if (user?.isGamesOnly) return c.id === 'GAMES';
+    
+    // Filtro normal de permissões
+    const isSpecialVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
+    return isSpecialVisible;
+  });
+
   return (
     <div className="min-h-screen bg-background pb-20 select-none">
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v388...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370-R...</p>
         </div>
       )}
 
@@ -242,23 +238,15 @@ export default function HomeContent() {
 
         {!selectedCat && !q ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {CATEGORIES.map(c => {
-              // FILTRO ARENA-EXCLUSIVA v388
-              if (user?.isGamesOnly && c.id !== 'GAMES') return null;
-
-              const isVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
-              if (!isVisible) return null;
-
-              return (
-                <button key={c.id} onClick={() => handleCategoryClick(c)} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
-                    <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
-                    <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
-                  </div>
-                </button>
-              );
-            })}
+            {visibleCategories.map(c => (
+              <button key={c.id} onClick={() => handleCategoryClick(c)} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
+                  <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
+                  <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
+                </div>
+              </button>
+            ))}
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -311,7 +299,7 @@ export default function HomeContent() {
                 <div key={consoleName} className="space-y-2">
                   <button onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)} className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group">
                     <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
-                    {expandedConsole === consoleName ? <ChevronUp className="h-5 v-5 text-emerald-500" /> : <ChevronDown className="h-5 w-5 opacity-40" />}
+                    {expandedConsole === consoleName ? <ChevronUp className="h-5 v-5 text-emerald-500" /> : <ChevronDown className="h-5 v-5 opacity-40" />}
                   </button>
                   {expandedConsole === consoleName && (
                     <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
