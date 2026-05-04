@@ -62,9 +62,7 @@ export default function HomeContent() {
         setUser(res.user);
         localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId: (currentUser as any).deviceId || "vps_device" }));
       }
-    } catch (e) {
-      console.error("Erro ao sincronizar permissões");
-    }
+    } catch (e) { }
   }, []);
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
@@ -157,21 +155,14 @@ export default function HomeContent() {
 
   const handleCategoryClick = (cat: any) => {
     if (!user) return;
-    
     if (user.role === 'admin') {
       if (cat.special === 'games') setGamesMenuOpen(true);
       else setSelectedCat(cat.id);
       return;
     }
-
-    if (cat.specialAccess) {
-      if (!(user as any)[cat.specialAccess]) {
-        return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor para liberar este sinal." });
-      }
-      setSelectedCat(cat.id);
-      return;
+    if (cat.specialAccess && !(user as any)[cat.specialAccess]) {
+      return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor." });
     }
-
     if (cat.special === 'games' || cat.restricted) {
       if (cat.special === 'games' && !user?.isGamesEnabled) return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
       if (cat.restricted && !user?.isAdultEnabled) return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
@@ -184,11 +175,10 @@ export default function HomeContent() {
 
   if (!isMounted) return null;
 
-  // PROTOCOLO ARENA-EXCLUSIVA: Filtra categorias se o PIN for isGamesOnly
+  // PROTOCOLO ARENA-EXCLUSIVA v370: Filtra TUDO se o PIN for Somente Games
+  const isGamesOnly = user?.isGamesOnly === true;
   const visibleCategories = CATEGORIES.filter(c => {
-    if (user?.isGamesOnly) return c.id === 'GAMES';
-    
-    // Filtro normal de permissões
+    if (isGamesOnly) return c.id === 'GAMES'; // Só permite o botão da Arena
     const isSpecialVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
     return isSpecialVisible;
   });
@@ -208,7 +198,7 @@ export default function HomeContent() {
           <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
         </div>
         <div className="flex-1 max-w-xl mx-4">
-          {!user?.isGamesOnly && <VoiceSearch />}
+          {!isGamesOnly && <VoiceSearch />}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></button>
@@ -217,7 +207,7 @@ export default function HomeContent() {
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto space-y-8">
-        {user?.individualMessage && !selectedCat && !q && !user.isGamesOnly && (
+        {!isGamesOnly && user?.individualMessage && !selectedCat && !q && (
           <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl">
              <div className="bg-primary p-3 rounded-2xl shadow-lg"><BellRing className="h-6 w-6 text-white" /></div>
              <div className="flex-1">
@@ -227,7 +217,7 @@ export default function HomeContent() {
           </div>
         )}
 
-        {!selectedCat && !q && settings?.bannerUrl && !user?.isGamesOnly && (
+        {!isGamesOnly && !selectedCat && !q && settings?.bannerUrl && (
           <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
              <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
                 <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
@@ -237,13 +227,13 @@ export default function HomeContent() {
         )}
 
         {!selectedCat && !q ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={`grid gap-6 ${isGamesOnly ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
             {visibleCategories.map(c => (
-              <button key={c.id} onClick={() => handleCategoryClick(c)} className="group relative h-44 rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl">
+              <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative ${isGamesOnly ? 'h-64' : 'h-44'} rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl`}>
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className="h-8 w-8" /></div>
-                  <span className="text-sm font-black uppercase tracking-widest">{c.name}</span>
-                  <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>
+                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className={`${isGamesOnly ? 'h-16 w-16' : 'h-8 w-8'}`} /></div>
+                  <span className={`${isGamesOnly ? 'text-2xl' : 'text-sm'} font-black uppercase tracking-widest`}>{c.name}</span>
+                  {!isGamesOnly && <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>}
                 </div>
               </button>
             ))}
@@ -367,7 +357,7 @@ export default function HomeContent() {
               <div className="space-y-3">
                  <p className="text-[10px] font-black uppercase opacity-40 text-center">Protocolo de Segurança</p>
                  <div className="flex flex-wrap justify-center gap-2">
-                    {user?.isGamesOnly ? (
+                    {isGamesOnly ? (
                       <Badge className="bg-amber-500">EXCLUSIVO GAMES</Badge>
                     ) : (
                       <>

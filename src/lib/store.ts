@@ -91,18 +91,15 @@ export const formatMasterLink = (url: string) => {
     let finalUrl = url.trim();
     let lowUrl = finalUrl.toLowerCase();
 
-    // YouTube Protocol
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
       else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
-      
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    // Proxy simples para CDNs instáveis (v370 style)
-    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4')) {
+    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('proxy')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -135,15 +132,12 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   } catch (e: any) { return []; }
 }
 
-/**
- * SALVAMENTO DE CONTEÚDO v370-R (Limpeza Total)
- */
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload: any = { ...item };
     if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // Remove campos que não existem na tabela para evitar Erro de Núcleo
+    // LIMPEZA TOTAL ANTES DE SALVAR
     delete payload.reseller_name;
     delete payload.created_at;
 
@@ -154,7 +148,6 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // Busca usuários e tenta trazer o nome do revendedor
     const { data, error } = await supabase
       .from('users')
       .select('*, resellers(name)')
@@ -170,15 +163,15 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370-R (LIMPEZA TOTAL CONTRA ERRO DE NÚCLEO)
+ * SALVAMENTO DE PIN v370 - PROTOCOLO INQUEBRÁVEL
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // EXTERMINADOR DE ERRO DE NÚCLEO: 
-    // Remove campos de "JOIN" ou colunas que não existem fisicamente na tabela
+    // EXTERMINADOR DE ERRO DE NÚCLEO
+    // Removemos qualquer campo que não seja coluna física da tabela users
     delete payload.reseller_name;
     delete payload.resellers;
     delete payload.created_at;

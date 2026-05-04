@@ -41,23 +41,17 @@ export default function UserManagementPage() {
     try {
       const data = await getRemoteUsers()
       setUsers(data)
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erro de conexão Master." })
-    } finally {
-      setLoading(false)
-    }
+    } catch (err) { } finally { setLoading(false) }
   }, [])
 
   React.useEffect(() => { loadUsers() }, [loadUsers])
 
   const handleResetDevices = async (userId: string) => {
-    if (confirm("Deseja limpar as telas deste cliente? Ele poderá logar novamente em novos aparelhos.")) {
+    if (confirm("Deseja limpar as telas deste cliente?")) {
       const success = await resetUserDevices(userId);
       if (success) {
-        toast({ title: "TELAS LIBERADAS!", description: "O cliente agora pode logar em novos aparelhos." });
+        toast({ title: "TELAS LIBERADAS!" });
         loadUsers();
-      } else {
-        toast({ variant: "destructive", title: "FALHA AO RESETAR" });
       }
     }
   };
@@ -88,7 +82,7 @@ export default function UserManagementPage() {
     const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === cleanPin);
     
     const userData: Partial<User> = {
-      id: editingUserId || existingUser?.id || undefined, // undefined para que saveUser gere o ID cont_...
+      id: editingUserId || existingUser?.id || undefined,
       pin: cleanPin,
       role: (cleanPin === 'ADM77X2P') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
@@ -113,7 +107,7 @@ export default function UserManagementPage() {
       setEditingUserId(null);
       await loadUsers();
     } else {
-      toast({ variant: "destructive", title: "ERRO NO NÚCLEO", description: "Verifique as colunas do Supabase." });
+      toast({ variant: "destructive", title: "ERRO NO NÚCLEO v370" });
     }
     setIsSaving(false);
   }
@@ -165,7 +159,7 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle Soberano de PINs</h1>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle v370 de PINs</h1>
           <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Acessos VIP ({users.length} total).</p>
         </div>
         <div className="flex gap-2">
@@ -260,7 +254,7 @@ export default function UserManagementPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano v370</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (11 Dígitos)</Label>
