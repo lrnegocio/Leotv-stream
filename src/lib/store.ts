@@ -240,34 +240,43 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN BLINDADO v386 - EXTERMINA ERRO DE NÚCLEO
- * Limpa campos de consulta (como reseller_name) antes de enviar ao banco.
+ * SALVAMENTO DE PIN BLINDADO v387 - INQUEBRÁVEL
+ * Retenta com carga mínima se houver erro de coluna no Supabase.
  */
 export async function saveUser(user: Partial<User>) {
   try {
     // LIMPEZA SUPREMA: Remove campos de junção que travam o banco
     const { reseller_name, created_at, ...payload }: any = { ...user };
     
-    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+    // Garante um ID único se for novo registro
+    if (!payload.id) {
+      payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+    }
     
+    // Primeira tentativa com todos os dados
     const { error } = await supabase.from('users').upsert(payload);
     
-    // SE DER ERRO DE COLUNA, RETENTA APENAS COM O BÁSICO VITAL
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
+    // Se não deu erro, finaliza
+    if (!error) return true;
+    
+    // SE DER ERRO DE COLUNA (Código 42703), RETENTA APENAS COM O BÁSICO VITAL
+    if (error.code === '42703' || error.message?.toLowerCase().includes('column')) {
       const basicPayload = {
         id: payload.id,
         pin: payload.pin,
-        role: payload.role,
-        subscriptionTier: payload.subscriptionTier,
-        maxScreens: payload.maxScreens,
-        isBlocked: payload.isBlocked,
+        role: payload.role || 'user',
+        subscriptionTier: payload.subscriptionTier || 'monthly',
+        maxScreens: payload.maxScreens || 1,
+        isBlocked: !!payload.isBlocked,
         activeDevices: payload.activeDevices || [],
-        resellerId: payload.resellerId
+        resellerId: payload.resellerId || null
       };
+      
       const { error: retryError } = await supabase.from('users').upsert(basicPayload);
       return !retryError;
     }
-    return !error;
+    
+    return false;
   } catch (e) { 
     return false; 
   }

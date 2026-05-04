@@ -88,7 +88,7 @@ export default function UserManagementPage() {
     const existingUser = users.find(u => (editingUserId && u.id === editingUserId) || u.pin === cleanPin);
     
     const userData: Partial<User> = {
-      id: editingUserId || existingUser?.id || ("user_" + Date.now() + Math.random().toString(36).substring(7)),
+      id: editingUserId || existingUser?.id || undefined, // undefined para que saveUser gere o ID cont_...
       pin: cleanPin,
       role: (cleanPin === 'ADM77X2P') ? 'admin' : 'user',
       subscriptionTier: newUser.tier,
