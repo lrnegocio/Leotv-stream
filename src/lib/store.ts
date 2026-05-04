@@ -83,7 +83,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR MASTER SOBERANO v386 - PROTOCOLO DIAMANTE ETERNO
+ * FORMATADOR MASTER SOBERANO v388 - PROTOCOLO DIAMANTE ETERNO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -158,13 +158,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     if (payload.genre) payload.genre = payload.genre.toUpperCase().trim();
     
     const { error } = await supabase.from('content').upsert(payload);
-    
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { isActive, views, ...cleanPayload } = payload;
-      const { error: retryError } = await supabase.from('content').upsert(cleanPayload);
-      if (retryError) return false;
-      return "NEED_COLUMN"; 
-    }
     return !error;
   } catch (e) { return false; }
 }
@@ -173,12 +166,6 @@ export async function bulkUpdateContent(ids: string[], updates: any) {
   if (!ids || ids.length === 0) return true;
   try {
     const { error } = await supabase.from('content').update(updates).in('id', ids);
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { isActive, ...cleanUpdates } = updates;
-      const { error: retryError } = await supabase.from('content').update(cleanUpdates).in('id', ids);
-      if (retryError) return false;
-      return "NEED_COLUMN";
-    }
     return !error;
   } catch (e) { return false; }
 }
@@ -240,46 +227,15 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN BLINDADO v387 - INQUEBRÁVEL
- * Retenta com carga mínima se houver erro de coluna no Supabase.
+ * SALVAMENTO DE PIN UNIFICADO v388
  */
 export async function saveUser(user: Partial<User>) {
   try {
-    // LIMPEZA SUPREMA: Remove campos de junção que travam o banco
     const { reseller_name, created_at, ...payload }: any = { ...user };
-    
-    // Garante um ID único se for novo registro
-    if (!payload.id) {
-      payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
-    }
-    
-    // Primeira tentativa com todos os dados
+    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     const { error } = await supabase.from('users').upsert(payload);
-    
-    // Se não deu erro, finaliza
-    if (!error) return true;
-    
-    // SE DER ERRO DE COLUNA (Código 42703), RETENTA APENAS COM O BÁSICO VITAL
-    if (error.code === '42703' || error.message?.toLowerCase().includes('column')) {
-      const basicPayload = {
-        id: payload.id,
-        pin: payload.pin,
-        role: payload.role || 'user',
-        subscriptionTier: payload.subscriptionTier || 'monthly',
-        maxScreens: payload.maxScreens || 1,
-        isBlocked: !!payload.isBlocked,
-        activeDevices: payload.activeDevices || [],
-        resellerId: payload.resellerId || null
-      };
-      
-      const { error: retryError } = await supabase.from('users').upsert(basicPayload);
-      return !retryError;
-    }
-    
-    return false;
-  } catch (e) { 
-    return false; 
-  }
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function resetUserDevices(userId: string) {
@@ -300,11 +256,6 @@ export async function saveReseller(r: Partial<Reseller>) {
   try {
     const { created_at, ...payload }: any = { ...r };
     const { error } = await supabase.from('resellers').upsert(payload);
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { cpf, phone, email, birthDate, ...cleanReseller } = payload;
-      const { error: retryError } = await supabase.from('resellers').upsert(cleanReseller);
-      return !retryError;
-    }
     return !error;
   } catch (e) { return false; }
 }
