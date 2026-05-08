@@ -99,7 +99,8 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('proxy')) {
+    // Proxy simples da v370 para links instáveis
+    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -137,11 +138,12 @@ export async function saveContent(item: Partial<ContentItem>) {
     const payload: any = { ...item };
     if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // LIMPEZA TOTAL ANTES DE SALVAR
-    delete payload.reseller_name;
-    delete payload.created_at;
+    // LIMPEZA TOTAL v370: Apenas colunas reais da tabela
+    const validKeys = ['id', 'title', 'type', 'genre', 'description', 'isRestricted', 'isActive', 'streamUrl', 'imageUrl', 'episodes', 'seasons', 'views'];
+    const cleanPayload: any = {};
+    validKeys.forEach(k => { if (payload[k] !== undefined) cleanPayload[k] = payload[k]; });
 
-    const { error } = await supabase.from('content').upsert(payload);
+    const { error } = await supabase.from('content').upsert(cleanPayload);
     return !error;
   } catch (e) { return false; }
 }
@@ -164,21 +166,30 @@ export async function getRemoteUsers(): Promise<User[]> {
 
 /**
  * SALVAMENTO DE PIN v370 - PROTOCOLO INQUEBRÁVEL
+ * Remove campos fantasmas para exterminar Erro de Núcleo.
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // EXTERMINADOR DE ERRO DE NÚCLEO
-    // Removemos qualquer campo que não seja coluna física da tabela users
-    delete payload.reseller_name;
-    delete payload.resellers;
-    delete payload.created_at;
+    // EXTERMINADOR DE ERRO DE NÚCLEO v370
+    // Filtramos apenas as colunas que REALMENTE existem na tabela users
+    const validColumns = [
+      'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
+      'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
+      'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 
+      'activatedAt', 'individualMessage', 'gamePoints'
+    ];
 
-    const { error } = await supabase.from('users').upsert(payload);
+    const cleanPayload: any = {};
+    validColumns.forEach(col => {
+      if (payload[col] !== undefined) cleanPayload[col] = payload[col];
+    });
+
+    const { error } = await supabase.from('users').upsert(cleanPayload);
     if (error) {
-      console.error("Erro Supabase:", error);
+      console.error("Erro Supabase v370:", error);
       return false;
     }
     return true;
@@ -288,8 +299,12 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 export async function saveReseller(r: Partial<Reseller>) {
   try {
     const payload: any = { ...r };
-    delete payload.created_at;
-    const { error } = await supabase.from('resellers').upsert(payload);
+    // Limpeza para evitar erros de núcleo na revenda
+    const validCols = ['id', 'name', 'username', 'password', 'credits', 'totalSold', 'isBlocked', 'cpf', 'phone', 'email', 'birthDate'];
+    const cleanPayload: any = {};
+    validCols.forEach(c => { if(payload[c] !== undefined) cleanPayload[c] = payload[c]; });
+    
+    const { error } = await supabase.from('resellers').upsert(cleanPayload);
     return !error;
   } catch (e) { return false; }
 }

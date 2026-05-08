@@ -45,7 +45,7 @@ export default function AdminGamesPage() {
     setGameData(prev => ({ ...prev, url: val.trim() }));
   }
 
-  // SINTONIZADOR MASTER v367: Deep-Cleaning Roblox v2 Integrado
+  // SINTONIZADOR ARENA v370: Conversão de RetroGames para EMBED REAL
   const handleFixLink = async () => {
     if (!gameData.url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
@@ -55,36 +55,32 @@ export default function AdminGamesPage() {
     setIsFixing(true);
     try {
       const currentUrl = gameData.url;
-      const proxyUrl = `/api/proxy?url=${encodeURIComponent(currentUrl)}&t=${Date.now()}`;
       
-      const res = await fetch(proxyUrl);
-      const html = await res.text();
-      
-      // CASO ROBLOX v367: Extrai título e força Deep-Cleaning via Proxy
-      if (currentUrl.includes('roblox.com')) {
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        let cleanTitle = "JOGO ROBLOX";
-        if (titleMatch && titleMatch[1]) {
-           cleanTitle = titleMatch[1].split(' - Roblox')[0].trim().toUpperCase();
-        }
-
-        // Reconstrói o link injetando o proxy v367
-        const finalLink = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
-
-        setGameData(prev => ({ 
-          ...prev, 
-          title: cleanTitle,
-          console: "ROBLOX",
-          url: finalLink
-        }));
-        toast({ title: "ROBLOX CALIBRADO!", description: "Limpeza profunda v367 aplicada." });
-      } 
-      else if (currentUrl.includes('retrogames.cc')) {
+      // CASO RETROGAMES.CC: Extrai o link de embed real do HTML
+      if (currentUrl.includes('retrogames.cc')) {
+        const proxyUrl = `/api/proxy?url=${encodeURIComponent(currentUrl)}&t=${Date.now()}`;
+        const res = await fetch(proxyUrl);
+        const html = await res.text();
+        
+        // Busca a URL do iframe que contém o jogo
         const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
         if (embedMatch) {
           setGameData(prev => ({ ...prev, url: embedMatch[0] }));
-          toast({ title: "MOTOR SINTONIZADO!" });
+          toast({ title: "ARENA SINTONIZADA!", description: "Link de embed extraído com sucesso." });
+        } else {
+          // Fallback: Tenta converter manualmente se o formato for óbvio
+          if (currentUrl.includes('/arcade-games/')) {
+             // Esta conversão manual é um exemplo, o ideal é o match acima
+             toast({ variant: "destructive", title: "ID do jogo não localizado no site." });
+          } else {
+             toast({ variant: "destructive", title: "Use o link da página do jogo." });
+          }
         }
+      } 
+      else if (currentUrl.includes('roblox.com')) {
+        const finalLink = `/api/proxy?url=${encodeURIComponent(currentUrl)}`;
+        setGameData(prev => ({ ...prev, console: "ROBLOX", url: finalLink }));
+        toast({ title: "ROBLOX CALIBRADO!" });
       } 
       else {
         toast({ title: "SINAL ANALISADO" });
@@ -145,12 +141,12 @@ export default function AdminGamesPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games Master</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Unificada de Biblioteca v367.</p>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games v370</h1>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Sintonizador de RetroGames Embutido.</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
-            <Plus className="mr-2 h-4 w-4" /> Novo Jogo Master
+            <Plus className="mr-2 h-4 w-4" /> Novo Jogo Arena
           </Button>
         </div>
       </div>
@@ -231,7 +227,7 @@ export default function AdminGamesPage() {
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Título do Jogo</Label>
-              <Input value={gameData.title} onChange={e => setGameData({...gameData, title: e.target.value})} className="bg-black/40 border-white/5 h-12 font-bold uppercase" placeholder="DÊ UM NOME OU USE O SINTONIZADOR" />
+              <Input value={gameData.title} onChange={e => setGameData({...gameData, title: e.target.value})} className="bg-black/40 border-white/5 h-12 font-bold uppercase" placeholder="NOME DO JOGO" />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -252,7 +248,7 @@ export default function AdminGamesPage() {
               </div>
               <div className="flex items-end">
                 <Button variant="outline" onClick={handleFixLink} disabled={isFixing} className="h-12 w-full border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase text-[9px]">
-                  {isFixing ? <Loader2 className="animate-spin mr-2 h-3 w-3" /> : <Wand2 className="mr-2 h-3 w-3" />} Sintonizar Jogo Master
+                  {isFixing ? <Loader2 className="animate-spin mr-2 h-3 w-3" /> : <Wand2 className="mr-2 h-3 w-3" />} Sintonizar RetroGames
                 </Button>
               </div>
             </div>
@@ -260,7 +256,7 @@ export default function AdminGamesPage() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Code className="h-3 w-3" /> Link do Jogo (Roblox, RetroGames, etc)
+                  <Code className="h-3 w-3" /> Link do Jogo (Cole o link da página aqui)
                 </div>
               </Label>
               <div className="flex gap-2">
@@ -268,13 +264,14 @@ export default function AdminGamesPage() {
                   value={gameData.url} 
                   onChange={e => handleUrlChange(e.target.value)} 
                   className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" 
-                  placeholder="Cole o link aqui..." 
+                  placeholder="https://www.retrogames.cc/..." 
                 />
               </div>
+              <p className="text-[8px] font-bold uppercase opacity-40">Cole o link da página do jogo e clique em "Sintonizar" para extrair o player real.</p>
             </div>
 
             <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4 shadow-xl shadow-emerald-500/20 rounded-2xl">
-              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR DADOS' : 'INJETAR JOGO NA REDE'}
+              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR DADOS' : 'INJETAR JOGO NA ARENA'}
             </Button>
           </div>
         </DialogContent>
