@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, ChevronDown, ChevronUp } from "lucide-center"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -175,11 +175,10 @@ export default function HomeContent() {
 
   if (!isMounted) return null;
 
-  // PROTOCOLO ARENA-EXCLUSIVA v370: Filtra ABSOLUTAMENTE TUDO se for Somente Games
   const isGamesOnly = user?.isGamesOnly === true;
   
   const visibleCategories = CATEGORIES.filter(c => {
-    if (isGamesOnly) return c.id === 'GAMES'; // Só permite o botão da Arena
+    if (isGamesOnly) return c.id === 'GAMES';
     const isSpecialVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
     return isSpecialVisible;
   });
@@ -189,7 +188,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370-G...</p>
         </div>
       )}
 
@@ -208,7 +207,6 @@ export default function HomeContent() {
       </header>
 
       <main className="p-8 max-w-[1600px] mx-auto space-y-8">
-        {/* BLOQUEIO DE COMPONENTES NA ARENA EXCLUSIVA */}
         {!isGamesOnly && user?.individualMessage && !selectedCat && !q && (
           <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl">
              <div className="bg-primary p-3 rounded-2xl shadow-lg"><BellRing className="h-6 w-6 text-white" /></div>
@@ -223,18 +221,18 @@ export default function HomeContent() {
           <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
              <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
                 <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade v370</span></div>
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade v370-G</span></div>
              </div>
           </div>
         )}
 
         {!selectedCat && !q ? (
-          <div className={`grid gap-6 ${isGamesOnly ? 'grid-cols-1 max-w-lg mx-auto' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+          <div className={`grid gap-6 ${isGamesOnly ? 'grid-cols-1 max-w-lg mx-auto py-20' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
             {visibleCategories.map(c => (
-              <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative ${isGamesOnly ? 'h-64' : 'h-44'} rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl`}>
+              <button key={c.id} onClick={() => handleCategoryClick(c)} className={`group relative ${isGamesOnly ? 'h-80' : 'h-44'} rounded-[2.5rem] overflow-hidden border border-border bg-card hover:border-primary transition-all shadow-xl`}>
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className={`${isGamesOnly ? 'h-16 w-16' : 'h-8 w-8'}`} /></div>
-                  <span className={`${isGamesOnly ? 'text-2xl' : 'text-sm'} font-black uppercase tracking-widest`}>{c.name}</span>
+                  <div className={`p-4 rounded-3xl ${c.color} text-white shadow-lg group-hover:scale-110 transition-transform`}><c.icon className={`${isGamesOnly ? 'h-24 w-16' : 'h-8 w-8'}`} /></div>
+                  <span className={`${isGamesOnly ? 'text-3xl' : 'text-sm'} font-black uppercase tracking-widest`}>{c.name}</span>
                   {!isGamesOnly && <span className="bg-muted px-4 py-1 rounded-full text-[9px] font-black opacity-40">{(catCounts[c.id] || 0).toLocaleString()} Sinais</span>}
                 </div>
               </button>
@@ -320,7 +318,6 @@ export default function HomeContent() {
                    <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">{activeGame.title} - {activeGame.console}</span>
                 </div>
                 <button onClick={() => setActiveGame(null)} className="absolute top-4 right-4 z-50 bg-red-500/80 p-2 rounded-full text-white hover:scale-110 transition-all"><X className="h-5 w-5" /></button>
-                {/* O IFRAME RODA APENAS O EMBED DO JOGO */}
                 <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen />
              </div>
            )}
@@ -342,7 +339,7 @@ export default function HomeContent() {
 
       <Dialog open={showAcesso} onOpenChange={setShowAcesso}>
         <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 shadow-2xl">
-           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v370</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v370-G</DialogTitle></DialogHeader>
            <div className="py-6 space-y-6">
               <div className="flex justify-between items-center p-4 bg-muted rounded-2xl">
                  <span className="text-[10px] font-black uppercase opacity-40">Seu PIN:</span>

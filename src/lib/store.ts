@@ -174,7 +174,6 @@ export async function saveUser(user: Partial<User>) {
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
     // EXTERMINADOR DE ERRO DE NÚCLEO v370
-    // Filtramos apenas as colunas que REALMENTE existem na tabela users
     const validColumns = [
       'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
       'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
@@ -188,10 +187,7 @@ export async function saveUser(user: Partial<User>) {
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    if (error) {
-      console.error("Erro Supabase v370:", error);
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e) { 
     return false; 
@@ -255,6 +251,12 @@ export async function removeReseller(id: string) {
   return !error;
 }
 
+export async function removeGame(id: string) {
+  return await removeContent(id);
+}
+
+export const formatGameLink = (url: string) => url;
+
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
@@ -299,7 +301,6 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 export async function saveReseller(r: Partial<Reseller>) {
   try {
     const payload: any = { ...r };
-    // Limpeza para evitar erros de núcleo na revenda
     const validCols = ['id', 'name', 'username', 'password', 'credits', 'totalSold', 'isBlocked', 'cpf', 'phone', 'email', 'birthDate'];
     const cleanPayload: any = {};
     validCols.forEach(c => { if(payload[c] !== undefined) cleanPayload[c] = payload[c]; });
@@ -359,3 +360,4 @@ export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function getGameRankings() { return []; }
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `🎬 *LÉO TV STREAM!* \n👤 *PIN:* \`${pin}\` \n📅 *PLANO:* ${tier.toUpperCase()} \n🔗 ${url}`;
 export const getExpiryMessage = (pin: string, days: number) => `⚠️ *AVISO LÉO TV!* \n👤 *PIN:* \`${pin}\` \n⏳ Seu acesso expira em ${days} dia(s).`;
+export type GameRanking = any;
