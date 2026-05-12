@@ -69,7 +69,7 @@ export default function EditContentPage() {
       newSeasons[target.sIdx].episodes[target.eIdx].streamUrl = formatMasterLink(newSeasons[target.sIdx].episodes[target.eIdx].streamUrl);
       setSeasons(newSeasons);
     }
-    toast({ title: "SINAL SINTONIZADO v380" });
+    toast({ title: "SINAL SINTONIZADO v370" });
   }
 
   const addEpisode = () => {
@@ -108,14 +108,7 @@ export default function EditContentPage() {
     })
     
     if (result === true) {
-      toast({ title: "SINAL ATUALIZADO v380" })
-      router.push("/admin/content")
-    } else if (result === "NEED_COLUMN") {
-      toast({ 
-        title: "SINAL SALVO (PARCIAL)", 
-        description: "Adicione a coluna 'isActive' no Supabase para salvar este status.",
-        variant: "destructive" 
-      })
+      toast({ title: "SINAL ATUALIZADO v370" })
       router.push("/admin/content")
     } else {
       setLoading(false)
@@ -123,7 +116,7 @@ export default function EditContentPage() {
     }
   }
 
-  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v380...</p></div>
+  if (fetching) return <div className="flex flex-col items-center justify-center py-40 gap-4"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="text-[10px] font-black uppercase italic tracking-widest">Sintonizando v370...</p></div>
 
   if (!formData) return null;
 
@@ -135,7 +128,7 @@ export default function EditContentPage() {
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin/content"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
-        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v380</h1>
+        <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Recalibrar Sinal v370</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-3">
@@ -143,7 +136,7 @@ export default function EditContentPage() {
           <div className="grid gap-4 p-6 bg-card/50 border border-white/5 rounded-xl shadow-2xl">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60 tracking-widest">Nome do Conteúdo</Label>
-              <Input value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} required className="h-12 bg-black/40 border-white/5 font-bold uppercase" />
+              <input value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} required className="flex h-12 w-full rounded-md border border-white/5 bg-black/40 px-3 py-2 text-base font-bold uppercase ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -178,6 +171,7 @@ export default function EditContentPage() {
                     <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                     <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                     <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                    <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -188,7 +188,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370-G...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
         </div>
       )}
 
@@ -221,7 +221,7 @@ export default function HomeContent() {
           <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
              <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
                 <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade v370-G</span></div>
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade v370</span></div>
              </div>
           </div>
         )}
@@ -259,7 +259,7 @@ export default function HomeContent() {
       {/* DIÁLOGOS DE INTERFACE */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v370</DialogTitle></DialogHeader>
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
              {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
                 <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50 outline-none">
@@ -275,7 +275,7 @@ export default function HomeContent() {
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito</div>
+          <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito v370</div>
           <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha Parental</p>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
           <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">DESBLOQUEAR v370</Button>
@@ -339,7 +339,7 @@ export default function HomeContent() {
 
       <Dialog open={showAcesso} onOpenChange={setShowAcesso}>
         <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 shadow-2xl">
-           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v370-G</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v370</DialogTitle></DialogHeader>
            <div className="py-6 space-y-6">
               <div className="flex justify-between items-center p-4 bg-muted rounded-2xl">
                  <span className="text-[10px] font-black uppercase opacity-40">Seu PIN:</span>

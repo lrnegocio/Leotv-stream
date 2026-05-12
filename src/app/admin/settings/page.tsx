@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -57,7 +58,7 @@ export default function SettingsPage() {
     setSaving(true)
     try {
       if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
-        toast({ title: "CONFIGURAÇÕES SINCRONIZADAS!" })
+        toast({ title: "CONFIGURAÇÕES SINCRONIZADAS v370!" })
       }
     } catch (e) { toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
     } finally { setSaving(false) }
@@ -91,7 +92,7 @@ export default function SettingsPage() {
       setNewPin("")
       setNewPinConfirm("")
       setIsChangingPin(false)
-      toast({ title: "SENHA PARENTAL ALTERADA!" })
+      toast({ title: "SENHA PARENTAL ALTERADA v370!" })
     }
     setSaving(false)
   }
@@ -123,12 +124,10 @@ export default function SettingsPage() {
           });
         } else if (originalItem.type === 'multi-season') {
           const seasons = originalItem.seasons || [{ id: 's1', number: 1, episodes: [] }];
-          // Adiciona na última temporada disponível
           seasons[seasons.length - 1].episodes.push(...newEpisodes);
           success = await saveContent({ ...originalItem, seasons });
         }
       } else {
-        // MODO NOVO
         if ((importType === 'series' || importType === 'multi-season') && !seriesTitle) {
           toast({ variant: "destructive", title: "Título Obrigatório" });
           setIsProcessing(false);
@@ -169,7 +168,7 @@ export default function SettingsPage() {
       }
 
       if (success) {
-        toast({ title: `INJEÇÃO CONCLUÍDA`, description: `Sinais sincronizados na rede!` });
+        toast({ title: `INJEÇÃO CONCLUÍDA v370`, description: `Sinais sincronizados na rede!` });
         setListText("");
         setSeriesTitle("");
       }
@@ -197,7 +196,7 @@ export default function SettingsPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <Card className="bg-primary/5 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
-             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2"><Megaphone className="h-5 w-5" /> Publicidade Master</CardTitle></CardHeader>
+             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2"><Megaphone className="h-5 w-5" /> Publicidade Master v370</CardTitle></CardHeader>
              <CardContent className="p-8 space-y-4">
                 <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">URL do Banner</Label><Input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
                 <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Link de Destino</Label><Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
@@ -205,7 +204,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Senha Parental Global</CardTitle></CardHeader>
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Senha Parental Global v370</CardTitle></CardHeader>
             <CardContent className="p-8 space-y-6">
               {!isChangingPin ? (
                 <div className="space-y-4">
@@ -237,7 +236,7 @@ export default function SettingsPage() {
         <div className="space-y-8">
           <Card className="bg-card/50 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6 flex flex-row items-center justify-between">
-              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
+              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos v370</CardTitle>
               <Button onClick={handleSendAnnouncement} disabled={saving || !announcement} className="bg-blue-600 hover:bg-blue-700 h-10 px-4 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-blue-500/20">
                 <Send className="mr-2 h-4 w-4" /> DISPARAR AGORA
               </Button>
@@ -255,7 +254,7 @@ export default function SettingsPage() {
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
-              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2"><ListPlus className="h-5 w-5" /> Injeção de Sinais Master</CardTitle>
+              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2"><ListPlus className="h-5 w-5" /> Injeção de Sinais v370</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="flex bg-black/40 p-1 rounded-xl mb-4">
@@ -292,6 +291,7 @@ export default function SettingsPage() {
                             <SelectItem value="LÉO TV PAY PER VIEW">PPV</SelectItem>
                             <SelectItem value="LÉO TV ALACARTES">ALACARTE</SelectItem>
                             <SelectItem value="LÉO TV ADULTOS">ADULTOS</SelectItem>
+                            <SelectItem value="LÉO TV RÁDIOS">RÁDIOS</SelectItem>
                          </SelectContent>
                       </Select>
                    </div>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
               </div>
 
               <Button onClick={handleImportSmart} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95">
-                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <><Sparkles className="mr-2 h-6 w-6" /> INJETAR NA REDE V370</>}
+                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <><Sparkles className="mr-2 h-6 w-6" /> INJETAR NA REDE v370</>}
               </Button>
             </CardContent>
           </Card>

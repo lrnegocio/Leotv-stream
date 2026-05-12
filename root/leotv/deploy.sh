@@ -1,6 +1,7 @@
+
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v303..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v370..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -37,7 +38,7 @@ npm run build
 
 # Verifica se o build deu certo
 if [ $? -eq 0 ]; then
-    echo "✅ BUILD CONCLUÍDO COM SUCESSO!"
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO v370!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
     pm2 start ecosystem.config.js
@@ -50,7 +51,7 @@ pm2 start ecosystem.config.js --update-env
 pm2 save
 
 echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO PARA O DOMÍNIO!"
+echo "✅ SISTEMA LÉO TV PRONTO PARA O DOMÍNIO v370!"
 echo "🔗 AGORA EXECUTE OS COMANDOS DO NGINX NO PUTTY"
 echo "--------------------------------------------------"
 pm2 list

@@ -47,10 +47,10 @@ export default function UserManagementPage() {
   React.useEffect(() => { loadUsers() }, [loadUsers])
 
   const handleResetDevices = async (userId: string) => {
-    if (confirm("Deseja limpar as telas deste cliente?")) {
+    if (confirm("Deseja limpar as telas deste cliente v370?")) {
       const success = await resetUserDevices(userId);
       if (success) {
-        toast({ title: "TELAS LIBERADAS!" });
+        toast({ title: "TELAS LIBERADAS v370!" });
         loadUsers();
       }
     }
@@ -102,7 +102,7 @@ export default function UserManagementPage() {
 
     const success = await saveUser(userData);
     if (success) {
-      toast({ title: "SINAL SINCRONIZADO!" });
+      toast({ title: "SINAL SINCRONIZADO v370!" });
       setIsDialogOpen(false);
       setEditingUserId(null);
       await loadUsers();
@@ -170,7 +170,7 @@ export default function UserManagementPage() {
              <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
            </Button>
            <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(11), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, isGamesOnly: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
-            <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER
+            <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER v370
           </Button>
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function UserManagementPage() {
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
-          placeholder="PESQUISAR PIN NO BANCO..." 
+          placeholder="PESQUISAR PIN NO BANCO v370..." 
           className="pl-12 bg-card/50 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 
@@ -192,7 +192,7 @@ export default function UserManagementPage() {
           <Table>
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 h-14">
-                <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER</TableHead>
+                <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER v370</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">VALIDADE</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">ACESSO VIP</TableHead>
                 <TableHead className="uppercase text-[10px] font-black text-center">TELAS</TableHead>
@@ -238,14 +238,14 @@ export default function UserManagementPage() {
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEditUser(u)} className="text-blue-400 hover:bg-blue-400/10"><Edit className="h-5 w-5" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => toggleBlock(u)} className={u.isBlocked ? 'text-destructive' : 'text-green-400'}>{u.isBlocked ? <UserX className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}</Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXTERMINAR PIN?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { if(confirm("EXTERMINAR PIN v370?")) removeUser(u.id).then(() => loadUsers()) }} className="text-destructive hover:bg-destructive/10"><Trash2 className="h-5 w-5" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
               {filteredUsers.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado na base.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado v370.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -311,7 +311,7 @@ export default function UserManagementPage() {
                <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura está pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS v370'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -91,9 +91,9 @@ export default function ContentManagementPage() {
       setSelectedIds([])
       setUpdateFlags({ genre: false, isRestricted: false, isActive: false })
       await loadItems(searchTerm)
-      toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA!" })
+      toast({ title: "RECALIBRAGEM EM MASSA CONCLUÍDA v370!" })
     } else {
-      toast({ variant: "destructive", title: "Erro ao atualizar.", description: "Adicione a coluna 'isActive' no Supabase para desativar canais." })
+      toast({ variant: "destructive", title: "Erro ao atualizar." })
     }
     setIsDeleting(false)
   }
@@ -111,7 +111,7 @@ export default function ContentManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Biblioteca Master</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Biblioteca Master v370</h1>
           <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Total de Canais e VOD (A-Z).</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -143,7 +143,7 @@ export default function ContentManagementPage() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase opacity-40">Sincronizando Lista Alfabética...</p></div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-[10px] font-black uppercase opacity-40">Sincronizando Lista Alfabética v370...</p></div>
       ) : (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
           {items.map((item) => {
@@ -196,7 +196,7 @@ export default function ContentManagementPage() {
 
       <Dialog open={isBulkEditing} onOpenChange={setIsBulkEditing}>
         <DialogContent className="max-w-md bg-card border-white/10 rounded-[2rem] p-8 shadow-2xl">
-          <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem Blindada ({selectedIds.length})</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem Blindada v370 ({selectedIds.length})</DialogTitle></DialogHeader>
           <div className="space-y-6 py-4">
              <p className="text-[9px] font-bold uppercase text-primary/60 italic text-center">Marque apenas o que deseja alterar nos {selectedIds.length} itens.</p>
              
@@ -223,6 +223,7 @@ export default function ContentManagementPage() {
                       <SelectItem value="LÉO TV DORAMAS">LÉO TV DORAMAS</SelectItem>
                       <SelectItem value="LÉO TV ADULTOS">LÉO TV ADULTOS</SelectItem>
                       <SelectItem value="LÉO TV DESENHOS">LÉO TV DESENHOS</SelectItem>
+                      <SelectItem value="LÉO TV RÁDIOS">LÉO TV RÁDIOS</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
