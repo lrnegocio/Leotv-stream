@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Volume2, VolumeX } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Volume2, VolumeX, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 
 /**
  * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS
- * Sincronizado para HLS.js com Autoplay de Episódios.
+ * Sincronizado para HLS.js com Autoplay de Episódios e Clipes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -171,9 +171,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5" /></Button>}
         
         {!isIframe && (
-          <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
-            {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
-          </Button>
+          <div className="flex flex-col items-center gap-2">
+             <div className="bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40 flex items-center gap-2 animate-in fade-in zoom-in-95">
+                <Zap className="h-2 w-2 text-emerald-500 animate-pulse" />
+                <span className="text-[7px] font-black uppercase text-emerald-500 tracking-tighter">Auto Avançar Ativo</span>
+             </div>
+             <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
+               {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
+             </Button>
+          </div>
         )}
 
         <Button size="icon" onClick={() => initPlayer()} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-emerald-500 transition-all">

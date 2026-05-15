@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -147,9 +146,10 @@ export default function HomeContent() {
         setSelectedSeries(deepItem || item);
       } catch (e) { setSelectedSeries(item); } finally { setLoading(false); }
     } else {
+      // MOTOR DE AUTOPLAY v370P: Passa a lista atual e o index para o player
+      const currentList = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       const idx = content.findIndex(i => i.id === item.id);
-      const list = content.length > 0 ? content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) })) : [{ ...item, streamUrl: formatMasterLink(item.streamUrl) }];
-      setActiveVideo({ items: list, index: idx !== -1 ? idx : 0 });
+      setActiveVideo({ items: currentList, index: idx !== -1 ? idx : 0 });
     }
   };
 
@@ -188,7 +188,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370 v370...</p>
         </div>
       )}
 
