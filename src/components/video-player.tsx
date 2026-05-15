@@ -13,8 +13,8 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v385 - MOTOR DIAMANTE HLS
- * Sincronizado para HLS.js (Extermina erro de Fontes não suportadas).
+ * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS
+ * Sincronizado para HLS.js com Autoplay de Episódios.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -52,7 +52,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // MOTOR DIAMANTE v385: HLS.JS ATIVADO PARA QUALQUER M3U8 PROXIED
     if (isM3u8 || lowUrl.includes('proxy')) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
@@ -155,6 +154,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           playsInline 
           controls 
           crossOrigin="anonymous"
+          onEnded={onNext}
         />
       )}
 
@@ -162,7 +162,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
           <div className="text-center space-y-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v385 Permanente...</p>
+            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370 Permanente...</p>
           </div>
         </div>
       )}
