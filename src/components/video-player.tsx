@@ -31,6 +31,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
   const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy');
   
+  // SINTONIZADOR DE IFRAMES v370
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
@@ -38,6 +39,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                    lowUrl.includes('xvideos') ||
                    lowUrl.includes('pornhub') ||
                    lowUrl.includes('ok.ru') ||
+                   lowUrl.includes('tokyvideo.com') ||
                    lowUrl.includes('ch.php?');
 
   const initPlayer = React.useCallback(async () => {

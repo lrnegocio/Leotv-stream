@@ -83,7 +83,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR v370 - SUPORTE PUNYCODE (xn--)
+ * FORMATADOR v370 - SUPORTE PUNYCODE (xn--) E TOKYVIDEO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -99,6 +99,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
+    // SUPORTE YOUTUBE
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -109,9 +110,6 @@ export const formatMasterLink = (url: string) => {
 
     // SUPORTE DIAMANTE v370: Proxy para links complexos e punycode
     if (
-      lowUrl.includes('vyds') || 
-      lowUrl.includes('rdcanais') || 
-      lowUrl.includes('redecanais') ||
       lowUrl.includes('.m3u8') || 
       lowUrl.includes('.mp4') ||
       lowUrl.includes('ch.php?') ||
@@ -180,7 +178,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO & ANTI-ERRO
+ * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO & LIMPEZA CIRÚRGICA
  */
 export async function saveUser(user: Partial<User>) {
   try {
@@ -189,7 +187,7 @@ export async function saveUser(user: Partial<User>) {
     
     if (!cleanPin) return false;
 
-    // 1. BUSCA INTELIGENTE: Se o PIN já existe, pegamos o ID dele para evitar conflito de chave duplicada
+    // 1. BUSCA INTELIGENTE: Se o PIN já existe, pegamos o ID dele para evitar conflito
     const { data: existing } = await supabase.from('users').select('id').eq('pin', cleanPin).maybeSingle();
     if (existing) {
       payload.id = existing.id;
@@ -215,10 +213,7 @@ export async function saveUser(user: Partial<User>) {
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    if (error) {
-      console.error("Erro Supabase PIN:", error.message);
-      return false;
-    }
+    if (error) return false;
     return true;
   } catch (e) { 
     return false; 

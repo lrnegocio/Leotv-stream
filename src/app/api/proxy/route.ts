@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL GHOST v370 - SUPORTE PUNYCODE E BYPASS CLOUDFLARE
+ * TÚNEL GHOST v370 - SUPORTE PUNYCODE, TOKYVIDEO E BYPASS CLOUDFLARE
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.be/');
+    } else if (lowTarget.includes('tokyvideo.com')) {
+      requestHeaders.set('Referer', 'https://www.tokyvideo.com/');
     } else {
       try {
         const urlObj = new URL(targetUrl);
