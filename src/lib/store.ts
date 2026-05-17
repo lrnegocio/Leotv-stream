@@ -84,14 +84,12 @@ export interface User {
 
 /**
  * FORMATADOR v370 - O MAIS ESTÁVEL
- * Agora suporta extração de links de dentro de tags IFRAME.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // EXTRAÇÃO DE IFRAME: Se o Mestre colar o código do iframe, pega só o SRC
     if (finalUrl.toLowerCase().startsWith('<iframe')) {
       const match = finalUrl.match(/src="([^"]+)"/i);
       if (match && match[1]) {
@@ -109,7 +107,6 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    // TÚNEL GHOST v370: Proteção para links de sites sensíveis e formatos m3u8
     if (
       lowUrl.includes('vyds') || 
       lowUrl.includes('rdcanais') || 
@@ -181,16 +178,21 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO AUTO-CICATRIZANTE
- * Se o banco der erro por falta de colunas, o sistema limpa e salva o essencial.
+ * SALVAMENTO DE PIN v370 - PROTOCOLO BLINDADO
+ * Remove campos de join e impurezas antes de enviar ao Supabase.
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // Lista completa de colunas da v370
-    const fullColumns = [
+    // EXTERMÍNIO DE IMPUREZAS: Remove campos que NÃO existem na tabela users
+    delete payload.reseller_name;
+    delete payload.resellers;
+    delete payload.created_at;
+
+    // Lista oficial de colunas permitidas no banco
+    const allowedColumns = [
       'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
       'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
       'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 
@@ -198,21 +200,19 @@ export async function saveUser(user: Partial<User>) {
     ];
 
     const cleanPayload: any = {};
-    fullColumns.forEach(col => {
+    allowedColumns.forEach(col => {
       if (payload[col] !== undefined) cleanPayload[col] = payload[col];
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
     
-    // SE DER ERRO DE NÚCLEO: Tenta salvar sem os campos novos
     if (error) {
-      console.warn("Retentativa de salvamento blindado v370...");
-      const minimalColumns = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'resellerId'];
-      const minimalPayload: any = {};
-      minimalColumns.forEach(col => {
-        if (payload[col] !== undefined) minimalPayload[col] = payload[col];
-      });
-      const { error: retryError } = await supabase.from('users').upsert(minimalPayload);
+      console.error("Erro Supabase:", error.message);
+      // Fallback para colunas básicas se as novas falharem
+      const basicCols = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'resellerId'];
+      const basicPayload: any = {};
+      basicCols.forEach(col => { if (payload[col] !== undefined) basicPayload[col] = payload[col]; });
+      const { error: retryError } = await supabase.from('users').upsert(basicPayload);
       return !retryError;
     }
 
