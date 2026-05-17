@@ -84,23 +84,40 @@ export interface User {
 
 /**
  * FORMATADOR v370 - O MAIS ESTÁVEL
+ * Agora suporta extração de links de dentro de tags IFRAME.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
+
+    // EXTRAÇÃO DE IFRAME: Se o Mestre colar o código do iframe, pega só o SRC
+    if (finalUrl.toLowerCase().startsWith('<iframe')) {
+      const match = finalUrl.match(/src="([^"]+)"/i);
+      if (match && match[1]) {
+        finalUrl = match[1];
+      }
+    }
+
     let lowUrl = finalUrl.toLowerCase();
 
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split( 'youtu.be/')[1]?.split(/[?#&]/)[0];
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    // Proxy simples da v370 para links instáveis
-    if (lowUrl.includes('vyds') || lowUrl.includes('rdcanais') || lowUrl.includes('.m3u8') || lowUrl.includes('.mp4')) {
+    // TÚNEL GHOST v370: Proteção para links de sites sensíveis e formatos m3u8
+    if (
+      lowUrl.includes('vyds') || 
+      lowUrl.includes('rdcanais') || 
+      lowUrl.includes('redecanais') ||
+      lowUrl.includes('.m3u8') || 
+      lowUrl.includes('.mp4') ||
+      lowUrl.includes('ch.php?')
+    ) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
@@ -138,7 +155,6 @@ export async function saveContent(item: Partial<ContentItem>) {
     const payload: any = { ...item };
     if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // LIMPEZA TOTAL v370: Apenas colunas reais da tabela
     const validKeys = ['id', 'title', 'type', 'genre', 'description', 'isRestricted', 'isActive', 'streamUrl', 'imageUrl', 'episodes', 'seasons', 'views'];
     const cleanPayload: any = {};
     validKeys.forEach(k => { if (payload[k] !== undefined) cleanPayload[k] = payload[k]; });
@@ -165,16 +181,16 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO INQUEBRÁVEL
- * Remove campos fantasmas para exterminar Erro de Núcleo.
+ * SALVAMENTO DE PIN v370 - PROTOCOLO AUTO-CICATRIZANTE
+ * Se o banco der erro por falta de colunas, o sistema limpa e salva o essencial.
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
     if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     
-    // EXTERMINADOR DE ERRO DE NÚCLEO v370
-    const validColumns = [
+    // Lista completa de colunas da v370
+    const fullColumns = [
       'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
       'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
       'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 
@@ -182,12 +198,24 @@ export async function saveUser(user: Partial<User>) {
     ];
 
     const cleanPayload: any = {};
-    validColumns.forEach(col => {
+    fullColumns.forEach(col => {
       if (payload[col] !== undefined) cleanPayload[col] = payload[col];
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    if (error) return false;
+    
+    // SE DER ERRO DE NÚCLEO: Tenta salvar sem os campos novos
+    if (error) {
+      console.warn("Retentativa de salvamento blindado v370...");
+      const minimalColumns = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'resellerId'];
+      const minimalPayload: any = {};
+      minimalColumns.forEach(col => {
+        if (payload[col] !== undefined) minimalPayload[col] = payload[col];
+      });
+      const { error: retryError } = await supabase.from('users').upsert(minimalPayload);
+      return !retryError;
+    }
+
     return true;
   } catch (e) { 
     return false; 
@@ -252,7 +280,8 @@ export async function removeReseller(id: string) {
 }
 
 export async function removeGame(id: string) {
-  return await removeContent(id);
+  const { error } = await supabase.from('content').delete().eq('id', id);
+  return !error;
 }
 
 export const formatGameLink = (url: string) => url;
@@ -307,7 +336,7 @@ export async function saveReseller(r: Partial<Reseller>) {
     
     const { error } = await supabase.from('resellers').upsert(cleanPayload);
     return !error;
-  } catch (e) { return false; }
+  } catch (err) { return false; }
 }
 
 export async function validateResellerLogin(u: string, p: string) {

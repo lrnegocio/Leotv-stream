@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -14,7 +15,6 @@ interface VideoPlayerProps {
 
 /**
  * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS
- * Sincronizado para HLS.js com Autoplay de Episódios e Clipes.
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -29,7 +29,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const lowUrl = safeUrl.toLowerCase();
   
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || (lowUrl.includes('proxy') && lowUrl.includes('url='));
+  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy');
   
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
@@ -37,7 +37,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
                    lowUrl.includes('streamrdc') ||
                    lowUrl.includes('xvideos') ||
                    lowUrl.includes('pornhub') ||
-                   lowUrl.includes('ok.ru');
+                   lowUrl.includes('ok.ru') ||
+                   lowUrl.includes('ch.php?');
 
   const initPlayer = React.useCallback(async () => {
     if (!isMounted || !safeUrl) return;
@@ -52,7 +53,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    if (isM3u8 || lowUrl.includes('proxy')) {
+    if (isM3u8) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
         const hls = new Hls({
@@ -98,7 +99,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         video.play().then(() => setLoading(false)).catch(() => setLoading(false)); 
       });
     }
-  }, [safeUrl, isMounted, isIframe, isM3u8, lowUrl]);
+  }, [safeUrl, isMounted, isIframe, isM3u8]);
 
   React.useEffect(() => {
     setIsMounted(true);
