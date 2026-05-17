@@ -83,7 +83,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR v370 - O MAIS ESTÁVEL
+ * FORMATADOR v370 - SUPORTE PUNYCODE (xn--)
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -107,13 +107,15 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
+    // SUPORTE DIAMANTE v370: Proxy para links complexos e punycode
     if (
       lowUrl.includes('vyds') || 
       lowUrl.includes('rdcanais') || 
       lowUrl.includes('redecanais') ||
       lowUrl.includes('.m3u8') || 
       lowUrl.includes('.mp4') ||
-      lowUrl.includes('ch.php?')
+      lowUrl.includes('ch.php?') ||
+      lowUrl.includes('xn--')
     ) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -178,8 +180,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO
- * Busca o PIN existente antes de salvar para evitar erros de chave duplicada.
+ * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO & ANTI-ERRO
  */
 export async function saveUser(user: Partial<User>) {
   try {
@@ -188,17 +189,15 @@ export async function saveUser(user: Partial<User>) {
     
     if (!cleanPin) return false;
 
-    // 1. BUSCA INTELIGENTE: Se não tem ID, verifica se o PIN já existe para pegar o ID dele
-    if (!payload.id) {
-      const { data: existing } = await supabase.from('users').select('id').eq('pin', cleanPin).maybeSingle();
-      if (existing) {
-        payload.id = existing.id;
-      } else {
-        payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
-      }
+    // 1. BUSCA INTELIGENTE: Se o PIN já existe, pegamos o ID dele para evitar conflito de chave duplicada
+    const { data: existing } = await supabase.from('users').select('id').eq('pin', cleanPin).maybeSingle();
+    if (existing) {
+      payload.id = existing.id;
+    } else if (!payload.id) {
+      payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
     }
     
-    // 2. EXTERMÍNIO DE IMPUREZAS
+    // 2. LIMPEZA DE CAMPOS FANTASMAS: Remove o que não pertence à tabela users
     delete payload.reseller_name;
     delete payload.resellers;
     delete payload.created_at;
@@ -216,7 +215,11 @@ export async function saveUser(user: Partial<User>) {
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    return !error;
+    if (error) {
+      console.error("Erro Supabase PIN:", error.message);
+      return false;
+    }
+    return true;
   } catch (e) { 
     return false; 
   }

@@ -61,6 +61,7 @@ export default function AdminGamesPage() {
         const res = await fetch(proxyUrl);
         const html = await res.text();
         
+        // REGEX MASTER: Pega o ID e slug do embed
         const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
         if (embedMatch) {
           setGameData(prev => ({ ...prev, url: embedMatch[0] }));

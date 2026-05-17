@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL GHOST DIAMANTE v370 - BYPASS CLOUDFLARE E CDNS
+ * TÚNEL GHOST v370 - SUPORTE PUNYCODE E BYPASS CLOUDFLARE
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -16,24 +16,26 @@ export async function GET(req: NextRequest) {
   const lowTarget = targetUrl.toLowerCase();
 
   try {
-    const urlObj = new URL(targetUrl);
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - FINGE SER UM NAVEGADOR DESKTOP ATUALIZADO
-    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    // MASCARAMENTO SOBERANO v370
+    requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
     requestHeaders.set('Connection', 'keep-alive');
     
-    // BYPASS DE REFERER PARA SITES DE CANAIS
+    // BYPASS DE REFERER PARA DOMÍNIOS CONHECIDOS
     if (lowTarget.includes('rdcanais') || lowTarget.includes('streamrdc')) {
       requestHeaders.set('Referer', 'https://rdcanais.com/');
     } else if (lowTarget.includes('redecanais')) {
       requestHeaders.set('Referer', 'https://redecanaistv.be/');
-    } else if (lowTarget.includes('mercadolivre') || lowTarget.includes('mercadopago')) {
-      requestHeaders.set('Referer', 'https://play.mercadolivre.com.br/');
     } else {
-      requestHeaders.set('Referer', urlObj.origin + '/');
+      try {
+        const urlObj = new URL(targetUrl);
+        requestHeaders.set('Referer', urlObj.origin + '/');
+      } catch (e) {
+        requestHeaders.set('Referer', 'https://www.google.com/');
+      }
     }
 
     const res = await fetch(targetUrl, { 
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
     const finalUrl = res.url;
     const contentType = res.headers.get('content-type') || '';
     
-    // DETECÇÃO AGRESSIVA DE FORMATO
+    // DETECÇÃO DE FORMATO
     let forcedType = contentType;
     if (lowTarget.includes('.mp4') || finalUrl.toLowerCase().endsWith('.mp4')) forcedType = 'video/mp4';
     if (lowTarget.includes('.m3u8') || finalUrl.toLowerCase().endsWith('.m3u8') || contentType.includes('mpegurl')) forcedType = 'application/vnd.apple.mpegurl';
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
 
-    // SEGREDO v370: REESCRITA DE M3U8 PARA PERMANÊNCIA DO SINAL
+    // SEGREDO v370: REESCRITA DE M3U8 PARA MANTER SINAL PERMANENTE
     if (forcedType.includes('mpegurl') || finalUrl.includes('.m3u8')) {
       const manifestText = await res.text();
       const baseUrl = finalUrl.split('?')[0].substring(0, finalUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -71,7 +73,6 @@ export async function GET(req: NextRequest) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) return line;
         try {
-          // Garante que TODOS os segmentos (.ts) e sub-playlists usem o Proxy do Léo TV
           const absoluteUrl = new URL(trimmed, baseUrl).href;
           return `/api/proxy?url=${encodeURIComponent(absoluteUrl)}`;
         } catch (e) { return line; }
