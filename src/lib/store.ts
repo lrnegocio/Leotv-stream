@@ -178,20 +178,31 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO BLINDADO
- * Remove campos de join e impurezas antes de enviar ao Supabase.
+ * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO
+ * Busca o PIN existente antes de salvar para evitar erros de chave duplicada.
  */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
-    if (!payload.id) payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+    const cleanPin = (payload.pin || "").toUpperCase().trim();
     
-    // EXTERMÍNIO DE IMPUREZAS: Remove campos que NÃO existem na tabela users
+    if (!cleanPin) return false;
+
+    // 1. BUSCA INTELIGENTE: Se não tem ID, verifica se o PIN já existe para pegar o ID dele
+    if (!payload.id) {
+      const { data: existing } = await supabase.from('users').select('id').eq('pin', cleanPin).maybeSingle();
+      if (existing) {
+        payload.id = existing.id;
+      } else {
+        payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+      }
+    }
+    
+    // 2. EXTERMÍNIO DE IMPUREZAS
     delete payload.reseller_name;
     delete payload.resellers;
     delete payload.created_at;
 
-    // Lista oficial de colunas permitidas no banco
     const allowedColumns = [
       'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
       'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
@@ -205,18 +216,7 @@ export async function saveUser(user: Partial<User>) {
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    
-    if (error) {
-      console.error("Erro Supabase:", error.message);
-      // Fallback para colunas básicas se as novas falharem
-      const basicCols = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'resellerId'];
-      const basicPayload: any = {};
-      basicCols.forEach(col => { if (payload[col] !== undefined) basicPayload[col] = payload[col]; });
-      const { error: retryError } = await supabase.from('users').upsert(basicPayload);
-      return !retryError;
-    }
-
-    return true;
+    return !error;
   } catch (e) { 
     return false; 
   }
