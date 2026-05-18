@@ -54,11 +54,19 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
+          /* SEGURANÇA MESTRE: BLOQUEIO VISUAL E SELEÇÃO */
+          body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+          }
+
           iframe {
             pointer-events: auto !important;
           }
 
-          /* Oculta poluentes e anúncios que travam o player */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
           [id*="cf-"], [class*="cf-"], .sorry-blocked, .access-denied,
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
@@ -87,6 +95,20 @@ export default function RootLayout({
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
           }
+        `}} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          /* SEGURANÇA DIAMANTE v370: BLOQUEIO DE FERRAMENTAS DE DEV */
+          document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+          });
+          document.onkeydown = function(e) {
+            if(e.keyCode == 123) return false; // F12
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
+            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; // CTRL+U
+            if(e.ctrlKey && e.keyCode == 'S'.charCodeAt(0)) return false; // CTRL+S
+          };
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">

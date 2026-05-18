@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from "react"
-import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star, MonitorX, Ghost } from "lucide-react"
+import { Plus, Search, UserCheck, UserX, RefreshCcw, Trash2, Edit, Loader2, Lock, Bell, MessageSquare, Clock, AlertTriangle, Gamepad2, Send, Zap, Star, MonitorX, Ghost, Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -66,10 +65,14 @@ export default function UserManagementPage() {
 
   const getExpiryStatus = (expiryDate?: string | null) => {
     const diffDays = getExpiryDays(expiryDate);
-    if (diffDays === null) return { label: "DISPONÍVEL", color: "bg-blue-500/10 text-blue-400", icon: Clock };
-    if (diffDays < 0) return { label: "EXPIRADO", color: "bg-destructive/10 text-destructive", icon: AlertTriangle };
-    if (diffDays <= 3) return { label: `${diffDays} DIA(S) RESTANTE(S)`, color: "bg-orange-500/10 text-orange-500", icon: AlertTriangle };
-    return { label: `${diffDays} DIA(S) ATIVO`, color: "bg-emerald-500/10 text-emerald-500", icon: UserCheck };
+    const now = new Date();
+    if (!expiryDate) return { label: "DISPONÍVEL", color: "bg-blue-500/10 text-blue-400", icon: Clock };
+    
+    if (now > new Date(expiryDate)) return { label: "EXPIRADO", color: "bg-destructive text-white", icon: AlertTriangle };
+    
+    if (diffDays !== null && diffDays <= 3 && diffDays >= 0) return { label: `${diffDays} DIA(S) RESTANTE(S)`, color: "bg-orange-500/10 text-orange-500", icon: AlertTriangle };
+    
+    return { label: `ATIVO`, color: "bg-emerald-500/10 text-emerald-500", icon: UserCheck };
   };
 
   const handleGeneratePin = () => { setNewUser(prev => ({ ...prev, pin: generateRandomPin(11) })) }
@@ -150,7 +153,8 @@ export default function UserManagementPage() {
     if (searchStr) return false;
     if (filterExpiring) {
       const days = getExpiryDays(u.expiryDate);
-      return days !== null && days >= 0 && days <= 3;
+      const isExp = u.expiryDate && new Date() > new Date(u.expiryDate);
+      return isExp || (days !== null && days >= 0 && days <= 3);
     }
     return true;
   });
@@ -159,7 +163,7 @@ export default function UserManagementPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle v370 de PINs</h1>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Controle v370-S de PINs</h1>
           <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Gestão de Validades e Acessos VIP ({users.length} total).</p>
         </div>
         <div className="flex gap-2">
@@ -167,7 +171,7 @@ export default function UserManagementPage() {
              <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
            </Button>
            <Button variant={filterExpiring ? "destructive" : "outline"} onClick={() => setFilterExpiring(!filterExpiring)} className="font-black uppercase text-[10px] h-12 rounded-xl">
-             <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "EXPIRANDO (3 DIAS)"}
+             <Bell className="mr-2 h-4 w-4" /> {filterExpiring ? "VER TODOS" : "VENCENDO/EXPIRADOS"}
            </Button>
            <Button onClick={() => { setIsDialogOpen(true); setNewUser({ pin: generateRandomPin(11), tier: 'monthly', screens: '1', isAdultEnabled: false, isGamesEnabled: false, isPpvEnabled: false, isAlacarteEnabled: false, isGamesOnly: false, individualMessage: "" }); setEditingUserId(null); }} className="bg-primary font-black uppercase text-[10px] h-12 rounded-xl shadow-lg shadow-primary/20">
             <Plus className="mr-2 h-4 w-4" /> NOVO PIN MASTER v370
@@ -178,7 +182,7 @@ export default function UserManagementPage() {
       <div className="relative group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         <Input 
-          placeholder="PESQUISAR PIN NO BANCO v370..." 
+          placeholder="PESQUISAR PIN NO BANCO v370-S..." 
           className="pl-12 bg-card/50 h-16 uppercase font-black text-lg tracking-[0.2em] rounded-[1.5rem]" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 
@@ -193,7 +197,7 @@ export default function UserManagementPage() {
             <TableHeader className="bg-black/20">
               <TableRow className="border-white/5 h-14">
                 <TableHead className="uppercase text-[10px] font-black text-primary px-8">PIN MASTER v370</TableHead>
-                <TableHead className="uppercase text-[10px] font-black">VALIDADE</TableHead>
+                <TableHead className="uppercase text-[10px] font-black">VALIDADE / APARELHOS</TableHead>
                 <TableHead className="uppercase text-[10px] font-black">ACESSO VIP</TableHead>
                 <TableHead className="uppercase text-[10px] font-black text-center">TELAS</TableHead>
                 <TableHead className="text-right uppercase text-[10px] font-black px-8">AÇÕES</TableHead>
@@ -214,9 +218,19 @@ export default function UserManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className={`flex items-center gap-2 px-4 py-2 rounded-xl w-fit font-black text-[10px] uppercase ${status.color}`}>
-                        <status.icon className="h-4 w-4" />
-                        {status.label}
+                      <div className="space-y-2">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl w-fit font-black text-[10px] uppercase ${status.color}`}>
+                            <status.icon className="h-4 w-4" />
+                            {status.label}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                           {u.activeDevices?.map((dev, idx) => (
+                             <div key={idx} className="flex items-center gap-2 text-[7px] font-bold text-muted-foreground bg-black/20 px-2 py-0.5 rounded-md w-fit">
+                                <Monitor className="h-2 w-2" /> ID: {dev.substring(0, 15)}...
+                             </div>
+                           ))}
+                           {activeCount === 0 && <span className="text-[7px] font-bold opacity-30">NENHUM APARELHO LOGADO</span>}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -229,7 +243,7 @@ export default function UserManagementPage() {
                     </TableCell>
                     <TableCell className="text-center">
                        <p className="text-[10px] font-black text-primary">{activeCount} / {u.maxScreens}</p>
-                       <Button variant="ghost" size="sm" onClick={() => handleResetDevices(u.id)} className="h-6 text-[7px] uppercase font-black text-destructive hover:bg-destructive/10 mt-1"><MonitorX className="h-3 w-3 mr-1" /> Resetar</Button>
+                       <Button variant="ghost" size="sm" onClick={() => handleResetDevices(u.id)} className="h-6 text-[7px] uppercase font-black text-destructive hover:bg-destructive/10 mt-1"><MonitorX className="h-3 w-3 mr-1" /> Resetar Telas</Button>
                     </TableCell>
                     <TableCell className="text-right px-8">
                       <div className="flex justify-end gap-1">
@@ -245,7 +259,7 @@ export default function UserManagementPage() {
                 );
               })}
               {filteredUsers.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado v370.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-20 opacity-30 font-black uppercase">Nenhum PIN localizado v370-S.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -254,7 +268,7 @@ export default function UserManagementPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md bg-card border-white/10 rounded-[2.5rem] p-8 max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano v370</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Configurar PIN Soberano v370-S</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Código PIN (11 Dígitos)</Label>
@@ -268,7 +282,7 @@ export default function UserManagementPage() {
                 <Label className="uppercase text-[10px] font-black opacity-60">Plano</Label>
                 <Select value={newUser.tier} onValueChange={(v: any) => setNewUser({...newUser, tier: v})}>
                   <SelectTrigger className="h-12 border-white/5 bg-black/40 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="test">Teste</SelectItem><SelectItem value="monthly">Mensal</SelectItem><SelectItem value="lifetime">Vitalício</SelectItem></SelectContent>
+                  <SelectContent><SelectItem value="test">Teste 6h</SelectItem><SelectItem value="monthly">Mensal 30d</SelectItem><SelectItem value="lifetime">Vitalício</SelectItem></SelectContent>
                 </Select>
               </div>
               <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Telas</Label><Input type="number" value={newUser.screens} onChange={e => setNewUser({...newUser, screens: e.target.value})} className="h-12 bg-black/40 border-white/5 font-bold" /></div>
@@ -311,7 +325,7 @@ export default function UserManagementPage() {
                <Textarea value={newUser.individualMessage} onChange={e => setNewUser({...newUser, individualMessage: e.target.value})} placeholder="Ex: Sua fatura está pendente..." className="bg-black/40 border-white/5 h-24 text-xs font-bold" />
             </div>
           </div>
-          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS v370'}</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSaveUser} className="w-full h-16 bg-primary font-black text-lg rounded-2xl shadow-xl shadow-primary/20" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'CONFIRMAR MUDANÇAS v370-S'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

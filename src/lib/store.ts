@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -83,7 +82,7 @@ export interface User {
 }
 
 /**
- * FORMATADOR v370 - SUPORTE PUNYCODE (xn--) E TOKYVIDEO
+ * FORMATADOR v370-S - SUPORTE PUNYCODE (xn--) E TOKYVIDEO
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -99,7 +98,10 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // SUPORTE YOUTUBE
+    if (lowUrl.includes('tokyvideo.com')) {
+        return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -108,7 +110,6 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    // SUPORTE DIAMANTE v370: Proxy para links complexos e punycode
     if (
       lowUrl.includes('.m3u8') || 
       lowUrl.includes('.mp4') ||
@@ -178,7 +179,7 @@ export async function getRemoteUsers(): Promise<User[]> {
 }
 
 /**
- * SALVAMENTO DE PIN v370 - PROTOCOLO ANTI-CONFLITO & LIMPEZA CIRÚRGICA
+ * SALVAMENTO DE PIN v370-S - PROTOCOLO EXPIRAÇÃO TESTE
  */
 export async function saveUser(user: Partial<User>) {
   try {
@@ -187,15 +188,23 @@ export async function saveUser(user: Partial<User>) {
     
     if (!cleanPin) return false;
 
-    // 1. BUSCA INTELIGENTE: Se o PIN já existe, pegamos o ID dele para evitar conflito
-    const { data: existing } = await supabase.from('users').select('id').eq('pin', cleanPin).maybeSingle();
+    const { data: existing } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (existing) {
       payload.id = existing.id;
-    } else if (!payload.id) {
+    } else {
       payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
+      // Se for novo teste, já seta expiração de 6 horas
+      if (payload.subscriptionTier === 'test') {
+          const exp = new Date();
+          exp.setHours(exp.getHours() + 6);
+          payload.expiryDate = exp.toISOString();
+      } else if (payload.subscriptionTier === 'monthly') {
+          const exp = new Date();
+          exp.setMonth(exp.getMonth() + 1);
+          payload.expiryDate = exp.toISOString();
+      }
     }
     
-    // 2. LIMPEZA DE CAMPOS FANTASMAS: Remove o que não pertence à tabela users
     delete payload.reseller_name;
     delete payload.resellers;
     delete payload.created_at;
@@ -213,13 +222,13 @@ export async function saveUser(user: Partial<User>) {
     });
 
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    if (error) return false;
-    return true;
-  } catch (e) { 
-    return false; 
-  }
+    return !error;
+  } catch (e) { return false; }
 }
 
+/**
+ * VALIDADOR v370-S - BLOQUEIO POR EXPIRAÇÃO REAL
+ */
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
@@ -233,8 +242,16 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
       };
     }
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
+    
+    // VERIFICAÇÃO DE EXPIRAÇÃO
+    if (user.expiryDate) {
+        const now = new Date();
+        const exp = new Date(user.expiryDate);
+        if (now > exp) return { error: "PIN EXPIRADO - CONTATE O MESTRE LÉO" };
+    }
     
     const activeDevices = user.activeDevices || [];
     if (!activeDevices.includes(deviceId)) {
@@ -370,10 +387,28 @@ export async function getTopContent(l = 10) {
   } catch (e) { return []; }
 }
 
+/**
+ * CONTADOR DETALHADO v370-S
+ * Conta canais, filmes e cada episódio de série individualmente.
+ */
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', 'ARENA: %');
-    return count || 0;
+    const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');
+    if (!data) return 0;
+    
+    let total = 0;
+    data.forEach(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+            total += 1;
+        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
+            total += item.episodes.length;
+        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
+            item.seasons.forEach((s: any) => {
+                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+            });
+        }
+    });
+    return total;
   } catch (e) { return 0; }
 }
 
