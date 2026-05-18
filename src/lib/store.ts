@@ -178,9 +178,6 @@ export async function getRemoteUsers(): Promise<User[]> {
   } catch (e) { return []; }
 }
 
-/**
- * SALVAMENTO DE PIN v370-S - PROTOCOLO EXPIRAÇÃO TESTE
- */
 export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
@@ -192,8 +189,7 @@ export async function saveUser(user: Partial<User>) {
     if (existing) {
       payload.id = existing.id;
     } else {
-      payload.id = "user_" + Date.now() + Math.random().toString(36).substring(7);
-      // Se for novo teste, já seta expiração de 6 horas
+      payload.id = payload.id || "user_" + Date.now() + Math.random().toString(36).substring(7);
       if (payload.subscriptionTier === 'test') {
           const exp = new Date();
           exp.setHours(exp.getHours() + 6);
@@ -226,9 +222,6 @@ export async function saveUser(user: Partial<User>) {
   } catch (e) { return false; }
 }
 
-/**
- * VALIDADOR v370-S - BLOQUEIO POR EXPIRAÇÃO REAL
- */
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
@@ -246,11 +239,10 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
     
-    // VERIFICAÇÃO DE EXPIRAÇÃO
     if (user.expiryDate) {
         const now = new Date();
         const exp = new Date(user.expiryDate);
-        if (now > exp) return { error: "PIN EXPIRADO - CONTATE O MESTRE LÉO" };
+        if (now > exp) return { error: "ACESSO EXPIRADO" };
     }
     
     const activeDevices = user.activeDevices || [];
@@ -375,8 +367,22 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g.toUpperCase());
-    return count || 0;
+    const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
+    if (!data) return 0;
+    
+    let total = 0;
+    data.forEach(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+            total += 1;
+        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
+            total += item.episodes.length;
+        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
+            item.seasons.forEach((s: any) => {
+                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+            });
+        }
+    });
+    return total;
   } catch (e) { return 0; }
 }
 
@@ -387,10 +393,6 @@ export async function getTopContent(l = 10) {
   } catch (e) { return []; }
 }
 
-/**
- * CONTADOR DETALHADO v370-S
- * Conta canais, filmes e cada episódio de série individualmente.
- */
 export async function getTotalContentCount() {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');

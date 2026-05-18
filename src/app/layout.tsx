@@ -5,7 +5,7 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Léo TV Stream - O Sinal Master',
+  title: 'Léo TV Stream - O Sinal Master v370',
   description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming do Mestre Léo.',
   manifest: '/manifest.webmanifest',
   icons: {
@@ -63,10 +63,7 @@ export default function RootLayout({
             -webkit-touch-callout: none;
           }
 
-          iframe {
-            pointer-events: auto !important;
-          }
-
+          /* Remove overlays de erro e anúncios de sites externos */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
           [id*="cf-"], [class*="cf-"], .sorry-blocked, .access-denied,
           .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
@@ -86,29 +83,32 @@ export default function RootLayout({
             z-index: -9999 !important;
           }
 
-          .vjs-big-play-button, .vjs-big-play-centered, .play-button {
-            opacity: 0.1 !important;
-            pointer-events: none !important;
-          }
-
           body { -webkit-tap-highlight-color: transparent; }
           @media all and (display-mode: standalone) {
             body { padding-top: env(safe-area-inset-top); }
           }
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
-          /* SEGURANÇA DIAMANTE v370: BLOQUEIO DE FERRAMENTAS DE DEV */
-          document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-          });
-          document.onkeydown = function(e) {
-            if(e.keyCode == 123) return false; // F12
-            if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) return false;
-            if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) return false;
-            if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) return false;
-            if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false; // CTRL+U
-            if(e.ctrlKey && e.keyCode == 'S'.charCodeAt(0)) return false; // CTRL+S
-          };
+          /* SEGURANÇA DIAMANTE v370-S: BLOQUEIO DE FERRAMENTAS DE DEV */
+          if (typeof window !== 'undefined') {
+            document.addEventListener('contextmenu', function(e) {
+              e.preventDefault();
+            });
+            document.onkeydown = function(e) {
+              // F12
+              if(e.keyCode == 123) return false;
+              // Ctrl+Shift+I (Inspecionar)
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 73) return false;
+              // Ctrl+Shift+J (Console)
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 74) return false;
+              // Ctrl+U (Código Fonte)
+              if(e.ctrlKey && e.keyCode == 85) return false;
+              // Ctrl+S (Salvar)
+              if(e.ctrlKey && e.keyCode == 83) return false;
+              // Ctrl+Shift+C (Inspecionar Elemento)
+              if(e.ctrlKey && e.shiftKey && e.keyCode == 67) return false;
+            };
+          }
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
