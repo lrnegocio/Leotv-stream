@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -108,7 +109,7 @@ export async function getCategoryCount(g: string) {
 
 /**
  * CONTAGEM TOTAL DA REDE v370-S
- * Varre todo o banco somando cada episódio individualmente.
+ * Varre todo o banco somando cada episódio individualmente de forma robusta.
  */
 export async function getTotalContentCount() {
   try {
@@ -119,11 +120,14 @@ export async function getTotalContentCount() {
     data.forEach(item => {
         if (item.type === 'channel' || item.type === 'movie') {
             total += 1;
-        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
-            total += item.episodes.length;
-        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
-            item.seasons.forEach((s: any) => {
-                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+        } else if (item.type === 'series') {
+            const eps = Array.isArray(item.episodes) ? item.episodes : [];
+            total += eps.length;
+        } else if (item.type === 'multi-season') {
+            const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+            seasons.forEach((s: any) => {
+                const eps = Array.isArray(s.episodes) ? s.episodes : [];
+                total += eps.length;
             });
         }
     });

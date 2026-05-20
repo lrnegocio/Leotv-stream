@@ -14,10 +14,10 @@ git reset --hard origin/main
 # Liberação agressiva de RAM (Drop Caches)
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-# PAUSA PARA RESPIRAR: Para o serviço para ter RAM pro Build
-echo "⏸️ PAUSANDO MOTORES PARA LIBERAR RAM (BUILD MODE)..."
-pm2 stop all 2>/dev/null || true
-pm2 delete all 2>/dev/null || true
+# PAUSA PARA RESPIRAR: Para APENAS o Léo TV para ter RAM pro Build
+echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
+pm2 stop leotv-master 2>/dev/null || true
+pm2 delete leotv-master 2>/dev/null || true
 
 # LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 3000
 echo "🔓 LIMPANDO PORTA INTERNA 3000..."
@@ -44,8 +44,8 @@ else
     exit 1
 fi
 
-# Reinicia o processo no PM2 na porta interna 3000
-echo "♻️ REINICIANDO MOTORES NA PORTA INTERNA 3000..."
+# Reinicia APENAS o processo Léo TV na porta 3000
+echo "♻️ REINICIANDO MOTOR LÉO TV NA PORTA INTERNA 3000..."
 pm2 start ecosystem.config.js --update-env
 pm2 save
 
@@ -54,6 +54,6 @@ echo "📊 RELATÓRIO DE CAPACIDADE DA VPS:"
 free -h
 echo "--------------------------------------------------"
 echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v370!"
-echo "🔗 AGORA EXECUTE: systemctl restart nginx"
+echo "🔗 AGORA OS DOIS PROJETOS PODEM RODAR JUNTOS!"
 echo "--------------------------------------------------"
 pm2 list
