@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react"
@@ -16,27 +15,28 @@ export default function AdminDashboard() {
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
 
-  React.useEffect(() => {
-    const load = async () => {
-      try {
-        const count = await getTotalContentCount()
-        const ppv = await getCategoryCount('LÉO TV PAY PER VIEW')
-        const alacarte = await getCategoryCount('LÉO TV ALACARTES')
-        const u = await getRemoteUsers()
-        const r = await getRemoteResellers()
-        
-        setTotalContent(count)
-        setPpvCount(ppv)
-        setAlacarteCount(alacarte)
-        setUsers(u)
-        setResellers(r)
-      } catch (err) {
-      } finally {
-        setLoading(false)
-      }
+  const loadData = React.useCallback(async () => {
+    try {
+      const count = await getTotalContentCount()
+      const ppv = await getCategoryCount('LÉO TV PAY PER VIEW')
+      const alacarte = await getCategoryCount('LÉO TV ALACARTES')
+      const u = await getRemoteUsers()
+      const r = await getRemoteResellers()
+      
+      setTotalContent(count)
+      setPpvCount(ppv)
+      setAlacarteCount(alacarte)
+      setUsers(u)
+      setResellers(r)
+    } catch (err) {
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
+
+  React.useEffect(() => {
+    loadData()
+  }, [loadData])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -56,10 +56,13 @@ export default function AdminDashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel de Controle</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel de Controle v370</h1>
           <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gerenciamento central da rede StreamSight.</p>
         </div>
         <div className="flex gap-3">
+          <Button onClick={() => { setLoading(true); loadData(); }} variant="outline" className="h-10 px-4 rounded-xl">
+             <Zap className="h-4 w-4 text-primary" />
+          </Button>
           <Button asChild className="bg-primary hover:bg-primary/90 uppercase font-bold text-[10px] h-10 px-6 rounded-xl shadow-lg shadow-primary/20">
             <Link href="/admin/content/new">
               <PlayCircle className="mr-2 h-4 w-4" /> Novo Conteúdo
@@ -92,7 +95,7 @@ export default function AdminDashboard() {
         <Card className="bg-card border-border shadow-md rounded-2xl overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border p-6">
             <div>
-              <CardTitle className="uppercase text-sm font-black tracking-widest italic text-primary">Últimos Acessos por PIN</CardTitle>
+              <CardTitle className="uppercase text-sm font-black tracking-widest italic text-primary">Últimos Acessos por PIN v370</CardTitle>
               <p className="text-[9px] text-muted-foreground uppercase font-bold">Monitoramento em tempo real.</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-black hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
@@ -138,7 +141,7 @@ export default function AdminDashboard() {
                 <ShieldCheck className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h4 className="font-black text-lg uppercase tracking-tight italic">Status da Rede</h4>
+                <h4 className="font-black text-lg uppercase tracking-tight italic">Status da Rede v370</h4>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Todos os sinais operando com estabilidade máxima.</p>
               </div>
             </div>

@@ -62,7 +62,10 @@ export default function RootLayout({
             user-select: none !important;
             -webkit-touch-callout: none !important;
           }
-          img { pointer-events: none !important; }
+          img { 
+            pointer-events: none !important; 
+            -webkit-user-drag: none !important;
+          }
 
           /* Limpeza de overlays externos */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
@@ -78,10 +81,10 @@ export default function RootLayout({
           (function() {
             if (typeof window === 'undefined') return;
             
-            // Bloqueia botão direito
+            // 1. Bloqueia botão direito
             document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
             
-            // Bloqueia atalhos de teclado
+            // 2. Bloqueia atalhos de teclado (F12, Ctrl+Shift+I, Ctrl+U, etc)
             document.addEventListener('keydown', function(e) {
               if (
                 e.keyCode == 123 || // F12
@@ -93,19 +96,28 @@ export default function RootLayout({
               }
             });
 
-            // Detecta abertura do console por redimensionamento
+            // 3. Detecção de Console Aberto (Redirecionamento Master)
             let checkStatus = false;
             const element = new Image();
             Object.defineProperty(element, 'id', {
               get: function() { checkStatus = true; }
             });
+            
             setInterval(function() {
               checkStatus = false;
               console.log(element);
+              console.clear();
               if(checkStatus) {
                 window.location.href = "about:blank";
               }
             }, 1000);
+
+            // 4. Desabilita DevTools via loop de debugger (Opcional, mas agressivo)
+            /*
+            setInterval(function() {
+              debugger;
+            }, 100);
+            */
           })();
         `}} />
       </head>
