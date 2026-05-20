@@ -365,6 +365,10 @@ export async function updateGlobalSettings(v: any) {
   return !error;
 }
 
+/**
+ * MOTOR DE CONTAGEM REAL v370-S
+ * Soma canais + episódios de séries + episódios de temporadas.
+ */
 export async function getCategoryCount(g: string) {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
@@ -393,6 +397,10 @@ export async function getTopContent(l = 10) {
   } catch (e) { return []; }
 }
 
+/**
+ * CONTAGEM TOTAL DA REDE v370-S
+ * Varre todo o banco somando cada episódio individual.
+ */
 export async function getTotalContentCount() {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');

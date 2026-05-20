@@ -54,61 +54,59 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* SEGURANÇA MESTRE: BLOQUEIO VISUAL E SELEÇÃO */
+          /* SEGURANÇA DIAMANTE v370-S: BLOQUEIO TOTAL */
           body {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+            -webkit-touch-callout: none !important;
           }
+          img { pointer-events: none !important; }
 
-          /* Remove overlays de erro e anúncios de sites externos */
+          /* Limpeza de overlays externos */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
-          [id*="cf-"], [class*="cf-"], .sorry-blocked, .access-denied,
-          .ads-wrapper, .video-overlay, .ad-overlay, .overlay-ads,
-          .ad-layer, .click-to-play, #click-to-play-overlay,
-          [id*="ad-"], [class*="ad-"], .pop-under, .mgid-ad, 
-          .ad-container, .reidoscanais-ads, #over-video,
-          .vjs-overlay, .player-poster, .click-to-start,
-          .vjs-ads-label, .vjs-ad-loading, .vjs-ad-playing,
-          iframe[src*="doubleclick"], iframe[src*="ads"],
-          [id*="pop-"], [class*="pop-"],
-          .unauthorized-domain, #error-message {
+          [id*="cf-"], [class*="cf-"], .ads-wrapper, .ad-overlay, 
+          .reidoscanais-ads, #over-video {
             display: none !important;
-            width: 0 !important;
-            height: 0 !important;
+            visibility: hidden !important;
             opacity: 0 !important;
-            pointer-events: none !important;
-            z-index: -9999 !important;
-          }
-
-          body { -webkit-tap-highlight-color: transparent; }
-          @media all and (display-mode: standalone) {
-            body { padding-top: env(safe-area-inset-top); }
           }
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
-          /* SEGURANÇA DIAMANTE v370-S: BLOQUEIO DE FERRAMENTAS DE DEV */
-          if (typeof window !== 'undefined') {
-            document.addEventListener('contextmenu', function(e) {
-              e.preventDefault();
+          /* BLOQUEIO DE MODO DESENVOLVEDOR v370-S */
+          (function() {
+            if (typeof window === 'undefined') return;
+            
+            // Bloqueia botão direito
+            document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+            
+            // Bloqueia atalhos de teclado
+            document.addEventListener('keydown', function(e) {
+              if (
+                e.keyCode == 123 || // F12
+                (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || // Ctrl+Shift+I/J/C
+                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83)) // Ctrl+U/S
+              ) {
+                e.preventDefault();
+                return false;
+              }
             });
-            document.onkeydown = function(e) {
-              // F12
-              if(e.keyCode == 123) return false;
-              // Ctrl+Shift+I (Inspecionar)
-              if(e.ctrlKey && e.shiftKey && e.keyCode == 73) return false;
-              // Ctrl+Shift+J (Console)
-              if(e.ctrlKey && e.shiftKey && e.keyCode == 74) return false;
-              // Ctrl+U (Código Fonte)
-              if(e.ctrlKey && e.keyCode == 85) return false;
-              // Ctrl+S (Salvar)
-              if(e.ctrlKey && e.keyCode == 83) return false;
-              // Ctrl+Shift+C (Inspecionar Elemento)
-              if(e.ctrlKey && e.shiftKey && e.keyCode == 67) return false;
-            };
-          }
+
+            // Detecta abertura do console por redimensionamento
+            let checkStatus = false;
+            const element = new Image();
+            Object.defineProperty(element, 'id', {
+              get: function() { checkStatus = true; }
+            });
+            setInterval(function() {
+              checkStatus = false;
+              console.log(element);
+              if(checkStatus) {
+                window.location.href = "about:blank";
+              }
+            }, 1000);
+          })();
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
