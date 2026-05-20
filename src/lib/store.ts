@@ -82,8 +82,55 @@ export interface User {
 }
 
 /**
- * FORMATADOR v370-S - SUPORTE PUNYCODE (xn--) E TOKYVIDEO
+ * MOTOR DE CONTAGEM REAL v370-S
+ * Soma canais + episódios de séries + episódios de temporadas.
  */
+export async function getCategoryCount(g: string) {
+  try {
+    const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
+    if (!data) return 0;
+    
+    let total = 0;
+    data.forEach(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+            total += 1;
+        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
+            total += item.episodes.length;
+        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
+            item.seasons.forEach((s: any) => {
+                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+            });
+        }
+    });
+    return total;
+  } catch (e) { return 0; }
+}
+
+/**
+ * CONTAGEM TOTAL DA REDE v370-S
+ * Varre todo o banco somando cada episódio individualmente.
+ */
+export async function getTotalContentCount() {
+  try {
+    const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');
+    if (!data) return 0;
+    
+    let total = 0;
+    data.forEach(item => {
+        if (item.type === 'channel' || item.type === 'movie') {
+            total += 1;
+        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
+            total += item.episodes.length;
+        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
+            item.seasons.forEach((s: any) => {
+                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+            });
+        }
+    });
+    return total;
+  } catch (e) { return 0; }
+}
+
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
@@ -97,7 +144,6 @@ export const formatMasterLink = (url: string) => {
     }
 
     let lowUrl = finalUrl.toLowerCase();
-
     if (lowUrl.includes('tokyvideo.com')) {
         return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -110,19 +156,12 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
-    if (
-      lowUrl.includes('.m3u8') || 
-      lowUrl.includes('.mp4') ||
-      lowUrl.includes('ch.php?') ||
-      lowUrl.includes('xn--')
-    ) {
+    if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('ch.php?') || lowUrl.includes('xn--')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
     return finalUrl;
-  } catch (e) {
-    return url || "";
-  }
+  } catch (e) { return url || ""; }
 };
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
@@ -152,11 +191,9 @@ export async function saveContent(item: Partial<ContentItem>) {
   try {
     const payload: any = { ...item };
     if (!payload.id) payload.id = "cont_" + Date.now() + Math.random().toString(36).substring(7);
-    
     const validKeys = ['id', 'title', 'type', 'genre', 'description', 'isRestricted', 'isActive', 'streamUrl', 'imageUrl', 'episodes', 'seasons', 'views'];
     const cleanPayload: any = {};
     validKeys.forEach(k => { if (payload[k] !== undefined) cleanPayload[k] = payload[k]; });
-
     const { error } = await supabase.from('content').upsert(cleanPayload);
     return !error;
   } catch (e) { return false; }
@@ -164,17 +201,9 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*, resellers(name)')
-      .order('id', { ascending: false });
-    
+    const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
     if (error) throw error;
-    
-    return (data || []).map(u => ({
-      ...u,
-      reseller_name: u.resellers?.name || 'ADMIN'
-    }));
+    return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e) { return []; }
 }
 
@@ -182,7 +211,6 @@ export async function saveUser(user: Partial<User>) {
   try {
     const payload: any = { ...user };
     const cleanPin = (payload.pin || "").toUpperCase().trim();
-    
     if (!cleanPin) return false;
 
     const { data: existing } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
@@ -191,32 +219,18 @@ export async function saveUser(user: Partial<User>) {
     } else {
       payload.id = payload.id || "user_" + Date.now() + Math.random().toString(36).substring(7);
       if (payload.subscriptionTier === 'test') {
-          const exp = new Date();
-          exp.setHours(exp.getHours() + 6);
+          const exp = new Date(); exp.setHours(exp.getHours() + 6);
           payload.expiryDate = exp.toISOString();
       } else if (payload.subscriptionTier === 'monthly') {
-          const exp = new Date();
-          exp.setMonth(exp.getMonth() + 1);
+          const exp = new Date(); exp.setMonth(exp.getMonth() + 1);
           payload.expiryDate = exp.toISOString();
       }
     }
     
-    delete payload.reseller_name;
-    delete payload.resellers;
-    delete payload.created_at;
-
-    const allowedColumns = [
-      'id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 
-      'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 
-      'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 
-      'activatedAt', 'individualMessage', 'gamePoints'
-    ];
-
+    delete payload.reseller_name; delete payload.resellers; delete payload.created_at;
+    const allowedColumns = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 'activatedAt', 'individualMessage', 'gamePoints'];
     const cleanPayload: any = {};
-    allowedColumns.forEach(col => {
-      if (payload[col] !== undefined) cleanPayload[col] = payload[col];
-    });
-
+    allowedColumns.forEach(col => { if (payload[col] !== undefined) cleanPayload[col] = payload[col]; });
     const { error } = await supabase.from('users').upsert(cleanPayload);
     return !error;
   } catch (e) { return false; }
@@ -226,24 +240,12 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   try {
     const cleanPin = pin.toUpperCase().trim();
     if (cleanPin === 'ADM77X2P') {
-      return {
-        user: {
-          id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime',
-          maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true,
-          isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false
-        }
-      };
+      return { user: { id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false } };
     }
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
-    
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
-    
-    if (user.expiryDate) {
-        const now = new Date();
-        const exp = new Date(user.expiryDate);
-        if (now > exp) return { error: "ACESSO EXPIRADO" };
-    }
+    if (user.expiryDate && new Date() > new Date(user.expiryDate)) return { error: "ACESSO EXPIRADO" };
     
     const activeDevices = user.activeDevices || [];
     if (!activeDevices.includes(deviceId)) {
@@ -258,80 +260,35 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   if (!ids || ids.length === 0) return true;
-  try {
-    const { error } = await supabase.from('content').update(updates).in('id', ids);
-    return !error;
-  } catch (e) { return false; }
+  try { const { error } = await supabase.from('content').update(updates).in('id', ids); return !error; } catch (e) { return false; }
 }
 
 export async function getContentById(id: string) {
-  try {
-    const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle();
-    return data;
-  } catch (e) { return null; }
+  try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; }
 }
 
-export async function removeContent(id: string) { 
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
-
-export async function removeUser(id: string) {
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  return !error;
-}
-
-export async function removeReseller(id: string) {
-  const { error } = await supabase.from('resellers').delete().eq('id', id);
-  return !error;
-}
-
-export async function removeGame(id: string) {
-  const { error } = await supabase.from('content').delete().eq('id', id);
-  return !error;
-}
-
-export const formatGameLink = (url: string) => url;
+export async function removeContent(id: string) { const { error } = await supabase.from('content').delete().eq('id', id); return !error; }
+export async function removeUser(id: string) { const { error } = await supabase.from('users').delete().eq('id', id); return !error; }
+export async function removeReseller(id: string) { const { error } = await supabase.from('resellers').delete().eq('id', id); return !error; }
+export async function removeGame(id: string) { const { error } = await supabase.from('content').delete().eq('id', id); return !error; }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
-    return (data || []).map(i => ({ 
-      id: i.id, 
-      title: i.title, 
-      console: i.genre.replace('ARENA: ', ''), 
-      type: 'embed', 
-      url: i.streamUrl, 
-      imageUrl: i.imageUrl, 
-      genre: i.genre
-    }));
+    return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre }));
   } catch (e) { return []; }
 }
 
 export async function saveGame(g: any) {
-  return await saveContent({ 
-    id: g.id || "game_"+Date.now(), 
-    title: g.title.toUpperCase(), 
-    genre: `ARENA: ${g.console}`, 
-    streamUrl: g.url, 
-    description: 'GAME', 
-    isRestricted: true,
-    isActive: true 
-  });
+  return await saveContent({ id: g.id || "game_"+Date.now(), title: g.title.toUpperCase(), genre: `ARENA: ${g.console}`, streamUrl: g.url, description: 'GAME', isRestricted: true, isActive: true });
 }
 
 export async function resetUserDevices(userId: string) {
-  try {
-    const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId);
-    return !error;
-  } catch (e) { return false; }
+  try { const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId); return !error; } catch (e) { return false; }
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  try {
-    const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true });
-    return data || [];
-  } catch (e) { return []; }
+  try { const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true }); return data || []; } catch (e) { return []; }
 }
 
 export async function saveReseller(r: Partial<Reseller>) {
@@ -340,24 +297,17 @@ export async function saveReseller(r: Partial<Reseller>) {
     const validCols = ['id', 'name', 'username', 'password', 'credits', 'totalSold', 'isBlocked', 'cpf', 'phone', 'email', 'birthDate'];
     const cleanPayload: any = {};
     validCols.forEach(c => { if(payload[c] !== undefined) cleanPayload[c] = payload[c]; });
-    
     const { error } = await supabase.from('resellers').upsert(cleanPayload);
     return !error;
   } catch (err) { return false; }
 }
 
 export async function validateResellerLogin(u: string, p: string) {
-  try {
-    const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle();
-    return data ? { reseller: data } : { error: "INVÁLIDO" };
-  } catch (e) { return { error: "ERRO DE REDE" }; }
+  try { const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function getGlobalSettings() {
-  try {
-    const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle();
-    return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
-  } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
+  try { const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle(); return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
 }
 
 export async function updateGlobalSettings(v: any) {
@@ -365,66 +315,12 @@ export async function updateGlobalSettings(v: any) {
   return !error;
 }
 
-/**
- * MOTOR DE CONTAGEM REAL v370-S
- * Soma canais + episódios de séries + episódios de temporadas.
- */
-export async function getCategoryCount(g: string) {
-  try {
-    const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
-    if (!data) return 0;
-    
-    let total = 0;
-    data.forEach(item => {
-        if (item.type === 'channel' || item.type === 'movie') {
-            total += 1;
-        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
-            total += item.episodes.length;
-        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
-            item.seasons.forEach((s: any) => {
-                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
-            });
-        }
-    });
-    return total;
-  } catch (e) { return 0; }
-}
-
 export async function getTopContent(l = 10) {
-  try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l);
-    return data || [];
-  } catch (e) { return []; }
-}
-
-/**
- * CONTAGEM TOTAL DA REDE v370-S
- * Varre todo o banco somando cada episódio individual.
- */
-export async function getTotalContentCount() {
-  try {
-    const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');
-    if (!data) return 0;
-    
-    let total = 0;
-    data.forEach(item => {
-        if (item.type === 'channel' || item.type === 'movie') {
-            total += 1;
-        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
-            total += item.episodes.length;
-        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
-            item.seasons.forEach((s: any) => {
-                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
-            });
-        }
-    });
-    return total;
-  } catch (e) { return 0; }
+  try { const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l); return data || []; } catch (e) { return []; }
 }
 
 export async function bulkRemoveContent(ids: string[]) {
-  const { error } = await supabase.from('content').delete().in('id', ids);
-  return !error;
+  const { error } = await supabase.from('content').delete().in('id', ids); return !error;
 }
 
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');

@@ -77,7 +77,7 @@ export default function RootLayout({
           }
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
-          /* BLOQUEIO DE MODO DESENVOLVEDOR v370-S */
+          /* BLOQUEIO AGRESSIVO DE MODO DESENVOLVEDOR v370-S */
           (function() {
             if (typeof window === 'undefined') return;
             
@@ -96,28 +96,19 @@ export default function RootLayout({
               }
             });
 
-            // 3. Detecção de Console Aberto (Redirecionamento Master)
-            let checkStatus = false;
-            const element = new Image();
-            Object.defineProperty(element, 'id', {
-              get: function() { checkStatus = true; }
-            });
-            
+            // 3. Detecção de Console Aberto (Anti-Hacker v370-S)
             setInterval(function() {
-              checkStatus = false;
-              console.log(element);
-              console.clear();
-              if(checkStatus) {
-                window.location.href = "about:blank";
-              }
-            }, 1000);
+                const before = new Date().getTime();
+                debugger;
+                const after = new Date().getTime();
+                if (after - before > 100) {
+                    window.location.href = "about:blank";
+                }
+            }, 500);
 
-            // 4. Desabilita DevTools via loop de debugger (Opcional, mas agressivo)
-            /*
-            setInterval(function() {
-              debugger;
-            }, 100);
-            */
+            // 4. Proteção contra seleção de texto e drag de imagens
+            document.onselectstart = function() { return false; };
+            document.ondragstart = function() { return false; };
           })();
         `}} />
       </head>
