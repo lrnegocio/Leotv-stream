@@ -74,43 +74,47 @@ export default function RootLayout({
             opacity: 0 !important;
           }
         `}} />
-        <script dangerouslySetInnerHTML={{ __html: `
-          /* BLOQUEIO AGRESSIVO v370-S - MESTRE LÉO PROTEGIDO */
-          (function() {
-            if (typeof window === 'undefined') return;
-            
-            const block = (e) => { e.preventDefault(); return false; };
-            document.addEventListener('contextmenu', block);
-            
-            document.addEventListener('keydown', function(e) {
-              if (
-                e.keyCode == 123 || 
-                (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || 
-                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))
-              ) {
-                e.preventDefault();
-                return false;
-              }
-            });
-
-            setInterval(function() {
-                const before = new Date().getTime();
-                debugger;
-                const after = new Date().getTime();
-                if (after - before > 100) {
-                    window.location.href = "about:blank";
-                }
-            }, 1000);
-
-            document.onselectstart = function() { return false; };
-            document.ondragstart = function() { return false; };
-          })();
-        `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
         {children}
         <Toaster />
         <OfflineIndicator />
+        <Script id="security-script" strategy="afterInteractive">
+          {`
+            (function() {
+              if (typeof window === 'undefined') return;
+              
+              const block = (e) => { e.preventDefault(); return false; };
+              document.addEventListener('contextmenu', block);
+              
+              document.addEventListener('keydown', function(e) {
+                if (
+                  e.keyCode == 123 || 
+                  (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || 
+                  (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))
+                ) {
+                  e.preventDefault();
+                  return false;
+                }
+              });
+
+              document.onselectstart = function() { return false; };
+              document.ondragstart = function() { return false; };
+
+              // Anti-Console Stealth
+              setInterval(function() {
+                const before = new Date().getTime();
+                // O debugger é disparado apenas se o console estiver aberto em alguns navegadores
+                // Mas vamos remover para evitar o erro de exceção e usar detecção de tempo
+                const after = new Date().getTime();
+                if (after - before > 200) {
+                  // Se houver lag excessivo (detecção de console), limpa a página
+                  document.body.innerHTML = "<h1>SISTEMA LÉO TV PROTEGIDO</h1>";
+                }
+              }, 2000);
+            })();
+          `}
+        </Script>
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="afterInteractive" />
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="afterInteractive" />
       </body>

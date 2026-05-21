@@ -280,7 +280,7 @@ export async function saveGame(g: any) {
 }
 
 export async function resetUserDevices(userId: string) {
-  try { const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId); return !error; } catch (e) { false; }
+  try { const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId); return !error; } catch (e) { return false; }
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
