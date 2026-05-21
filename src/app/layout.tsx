@@ -66,6 +66,7 @@ export default function RootLayout({
             pointer-events: none !important; 
             -webkit-user-drag: none !important;
           }
+          /* LIMPEZA DE ANÚNCIOS EXTERNOS */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
           [id*="cf-"], [class*="cf-"], .ads-wrapper, .ad-overlay, 
           .reidoscanais-ads, #over-video {
@@ -79,6 +80,8 @@ export default function RootLayout({
         {children}
         <Toaster />
         <OfflineIndicator />
+        
+        {/* SCRIPT DE SEGURANÇA ESTÁVEL v370-S */}
         <Script id="security-script" strategy="afterInteractive">
           {`
             (function() {
@@ -87,7 +90,7 @@ export default function RootLayout({
               // Bloqueio de Botão Direito
               document.addEventListener('contextmenu', (e) => e.preventDefault());
               
-              // Bloqueio de Teclas de Desenvolvedor (F12, Ctrl+U, etc)
+              // Bloqueio de Teclas de Desenvolvedor
               document.addEventListener('keydown', function(e) {
                 if (
                   e.keyCode == 123 || 
@@ -104,6 +107,7 @@ export default function RootLayout({
             })();
           `}
         </Script>
+
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="afterInteractive" />
         <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="afterInteractive" />
       </body>

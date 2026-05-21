@@ -50,7 +50,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // MOTOR DE ÁUDIO SOBERANO v370: Força volume máximo
+    // FORÇANDO VOLUME MÁXIMO v370-S
     video.volume = 1.0;
 
     if (isM3u8) {

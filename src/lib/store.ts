@@ -81,6 +81,10 @@ export interface User {
   reseller_name?: string; 
 }
 
+/**
+ * CONTAGEM REAL SOBERANA v370-S
+ * Soma cada episódio individualmente para mostrar o tamanho real da rede.
+ */
 export async function getCategoryCount(g: string) {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
@@ -140,10 +144,13 @@ export const formatMasterLink = (url: string) => {
     }
 
     let lowUrl = finalUrl.toLowerCase();
+    
+    // SUPORTE TOKYVIDEO v370
     if (lowUrl.includes('tokyvideo.com')) {
         return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
+    // SUPORTE YOUTUBE v370
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -152,6 +159,7 @@ export const formatMasterLink = (url: string) => {
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
+    // TÚNEL PARA M3U8, MP4 E PUNYCODE (xn--)
     if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('ch.php?') || lowUrl.includes('xn--')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
@@ -209,6 +217,11 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = (payload.pin || "").toUpperCase().trim();
     if (!cleanPin) return false;
 
+    // LIMPEZA CIRÚRGICA v370: Remove campos que não existem no banco
+    delete payload.reseller_name;
+    delete payload.resellers;
+    delete payload.created_at;
+
     const { data: existing } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (existing) {
       payload.id = existing.id;
@@ -223,10 +236,10 @@ export async function saveUser(user: Partial<User>) {
       }
     }
     
-    delete payload.reseller_name; delete payload.resellers; delete payload.created_at;
     const allowedColumns = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 'activatedAt', 'individualMessage', 'gamePoints'];
     const cleanPayload: any = {};
     allowedColumns.forEach(col => { if (payload[col] !== undefined) cleanPayload[col] = payload[col]; });
+    
     const { error } = await supabase.from('users').upsert(cleanPayload);
     return !error;
   } catch (e) { return false; }
@@ -241,6 +254,8 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
+    
+    // VALIDAÇÃO DE EXPIRAÇÃO v370-S
     if (user.expiryDate && new Date() > new Date(user.expiryDate)) return { error: "ACESSO EXPIRADO" };
     
     const activeDevices = user.activeDevices || [];
@@ -278,6 +293,7 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
+// CORREÇÃO: Exportação da função de remoção de games v370-S
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
