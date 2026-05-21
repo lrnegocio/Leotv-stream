@@ -59,7 +59,6 @@ export default function HomeContent() {
       const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "vps_device");
       if (res.user) {
         setUser(res.user);
-        localStorage.setItem("user_session", JSON.stringify({ ...res.user, deviceId: (currentUser as any).deviceId || "vps_device" }));
       }
     } catch (e) { }
   }, []);
@@ -89,20 +88,17 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined') {
-      try {
-        const session = localStorage.getItem("user_session");
-        if (session) {
-          const parsed = JSON.parse(session);
-          setUser(parsed);
-          syncUserPermissions(parsed);
-        } else {
-          router.push("/login");
-        }
-      } catch (e) { router.push("/login"); }
+    const session = localStorage.getItem("user_session");
+    if (session) {
+      const parsed = JSON.parse(session);
+      setUser(parsed);
+      syncUserPermissions(parsed);
+    } else {
+      router.push("/login");
     }
   }, [router, syncUserPermissions]);
 
+  // ESTABILIZADOR v370-S: Carrega dados mantendo a categoria selecionada fixa
   React.useEffect(() => {
     if (!isMounted) return;
     const delayDebounceFn = setTimeout(() => loadData(q, selectedCat), 500);
@@ -146,7 +142,7 @@ export default function HomeContent() {
         setSelectedSeries(deepItem || item);
       } catch (e) { setSelectedSeries(item); } finally { setLoading(false); }
     } else {
-      // MOTOR DE AUTOPLAY v370P: Passa a lista atual e o index para o player
+      // MOTOR DE AUTOPLAY v370-S: Envia a lista da categoria atual para o player
       const currentList = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       const idx = content.findIndex(i => i.id === item.id);
       setActiveVideo({ items: currentList, index: idx !== -1 ? idx : 0 });
@@ -155,32 +151,24 @@ export default function HomeContent() {
 
   const handleCategoryClick = (cat: any) => {
     if (!user) return;
-    if (user.role === 'admin') {
-      if (cat.special === 'games') setGamesMenuOpen(true);
-      else setSelectedCat(cat.id);
-      return;
-    }
-    if (cat.specialAccess && !(user as any)[cat.specialAccess]) {
-      return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO", description: "Fale com seu revendedor." });
+    if (cat.specialAccess && !(user as any)[cat.specialAccess] && user.role !== 'admin') {
+      return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO" });
     }
     if (cat.special === 'games' || cat.restricted) {
-      if (cat.special === 'games' && !user?.isGamesEnabled) return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
-      if (cat.restricted && !user?.isAdultEnabled) return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
+      if (cat.special === 'games' && !user?.isGamesEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
+      if (cat.restricted && !user?.isAdultEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
       setUnlockTarget(cat.id);
       setIsPinOpen(true);
-    } else setSelectedCat(cat.id);
+    } else {
+      setSelectedCat(cat.id);
+    }
   };
 
-  const gameConsoles = Array.from(new Set(games.map(g => g.console))).sort();
-
   if (!isMounted) return null;
-
   const isGamesOnly = user?.isGamesOnly === true;
-  
   const visibleCategories = CATEGORIES.filter(c => {
     if (isGamesOnly) return c.id === 'GAMES';
-    const isSpecialVisible = user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
-    return isSpecialVisible;
+    return user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
   });
 
   return (
@@ -208,20 +196,11 @@ export default function HomeContent() {
 
       <main className="p-8 max-w-[1600px] mx-auto space-y-8">
         {!isGamesOnly && user?.individualMessage && !selectedCat && !q && (
-          <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 shadow-xl">
+          <div className="bg-primary/10 border-2 border-primary/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 shadow-xl">
              <div className="bg-primary p-3 rounded-2xl shadow-lg"><BellRing className="h-6 w-6 text-white" /></div>
              <div className="flex-1">
                 <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Recado do Mestre Léo</p>
                 <p className="text-sm font-bold leading-relaxed">{user.individualMessage}</p>
-             </div>
-          </div>
-        )}
-
-        {!isGamesOnly && !selectedCat && !q && settings?.bannerUrl && (
-          <div className="w-full group relative cursor-pointer" onClick={() => settings.bannerLink && window.open(settings.bannerLink, '_blank')}>
-             <div className="relative aspect-[4/1] w-full rounded-[2.5rem] overflow-hidden border-4 border-primary/10 shadow-2xl transition-transform hover:scale-[1.01]">
-                <Image src={settings.bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
-                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2"><Zap className="h-3 w-3 text-amber-400 animate-pulse" /><span className="text-[8px] font-black uppercase text-white tracking-widest">Publicidade v370</span></div>
              </div>
           </div>
         )}
@@ -256,19 +235,17 @@ export default function HomeContent() {
         )}
       </main>
 
-      {/* DIÁLOGOS DE INTERFACE */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v370</DialogTitle></DialogHeader>
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
              {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50 outline-none">
+                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
                   <span className="font-black uppercase text-[11px] tracking-widest text-left">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
                   <PlayCircle className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
                 </button>
               ))}
           </div>
-          <Button onClick={() => setSelectedSeries(null)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">FECHAR LISTA</Button>
         </DialogContent>
       </Dialog>
 
@@ -276,57 +253,14 @@ export default function HomeContent() {
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito v370</div>
-          <p className="text-[10px] font-black uppercase opacity-40 mb-6 tracking-widest">Digite a Senha Parental</p>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
-          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl shadow-primary/20">DESBLOQUEAR v370</Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={gamesMenuOpen} onOpenChange={setGamesMenuOpen}>
-        <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-8 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-          <DialogHeader><DialogTitle className="text-2xl font-black uppercase italic text-emerald-500 flex items-center gap-3"><Gamepad2 className="h-8 w-8" /> Arena Games v370</DialogTitle></DialogHeader>
-          <div className="mt-8 flex-1 overflow-y-auto pr-4 custom-scroll scrollbar-visible space-y-4">
-              {gameConsoles.map(consoleName => (
-                <div key={consoleName} className="space-y-2">
-                  <button onClick={() => setExpandedConsole(expandedConsole === consoleName ? null : consoleName)} className="w-full flex items-center justify-between p-6 bg-white/5 rounded-[1.5rem] hover:bg-emerald-500/10 transition-all border border-white/5 group">
-                    <span className="text-sm font-black uppercase italic group-hover:text-emerald-500 tracking-widest">{consoleName}</span>
-                    {expandedConsole === consoleName ? <ChevronUp className="h-5 v-5 text-emerald-500" /> : <ChevronDown className="h-5 v-5 opacity-40" />}
-                  </button>
-                  {expandedConsole === consoleName && (
-                    <div className="grid gap-3 pl-4 animate-in slide-in-from-top-2 duration-300 grid-cols-1 sm:grid-cols-2">
-                      {games.filter(g => g.console === consoleName).map(game => (
-                        <button key={game.id} onClick={() => setActiveGame(game)} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 hover:border-emerald-500 rounded-xl px-6 transition-all group">
-                          <span className="text-[10px] font-black uppercase truncate tracking-tighter">{game.title}</span>
-                          <Play className="h-4 w-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-          <Button onClick={() => setGamesMenuOpen(false)} className="mt-6 w-full h-16 bg-zinc-800 font-black uppercase rounded-2xl shadow-xl">FECHAR ARENA</Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!activeGame} onOpenChange={() => setActiveGame(null)}>
-        <DialogContent className="max-w-6xl h-[90vh] bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-           {activeGame && (
-             <div className="w-full h-full relative">
-                <div className="absolute top-4 left-4 z-50 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 flex items-center gap-3">
-                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                   <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">{activeGame.title} - {activeGame.console}</span>
-                </div>
-                <button onClick={() => setActiveGame(null)} className="absolute top-4 right-4 z-50 bg-red-500/80 p-2 rounded-full text-white hover:scale-110 transition-all"><X className="h-5 w-5" /></button>
-                <iframe src={activeGame.url} className="w-full h-full border-0" allowFullScreen />
-             </div>
-           )}
+          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl">DESBLOQUEAR v370</Button>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-5xl bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-          {activeVideo && activeVideo.items && activeVideo.items[activeVideo.index] && (
+          {activeVideo && activeVideo.items[activeVideo.index] && (
             <VideoPlayer 
               url={activeVideo.items[activeVideo.index].streamUrl} 
               title={activeVideo.items[activeVideo.index].title} 
@@ -345,39 +279,10 @@ export default function HomeContent() {
                  <span className="text-[10px] font-black uppercase opacity-40">Seu PIN:</span>
                  <span className="font-mono font-black text-xl text-primary tracking-widest">{user?.pin}</span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                    <p className="text-[8px] font-black uppercase opacity-40">Validade</p>
-                    <p className="text-xs font-black uppercase text-primary">{user?.expiryDate ? new Date(user.expiryDate).toLocaleDateString() : 'Livre'}</p>
-                 </div>
-                 <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                    <p className="text-[8px] font-black uppercase opacity-40">Telas</p>
-                    <p className="text-xs font-black uppercase text-primary">{user?.maxScreens} Unidades</p>
-                 </div>
-              </div>
-              <div className="space-y-3">
-                 <p className="text-[10px] font-black uppercase opacity-40 text-center">Protocolo v370 Ativo</p>
-                 <div className="flex flex-wrap justify-center gap-2">
-                    {isGamesOnly ? (
-                      <Badge className="bg-amber-500">ARENA EXCLUSIVA</Badge>
-                    ) : (
-                      <>
-                        <Badge className={user?.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-30'}>ADULTO</Badge>
-                        <Badge className={user?.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-30'}>GAMES</Badge>
-                        <Badge className={user?.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-30'}>PPV</Badge>
-                        <Badge className={user?.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-30'}>ALACARTE</Badge>
-                      </>
-                    )}
-                 </div>
-              </div>
            </div>
            <Button onClick={() => setShowAcesso(false)} className="w-full h-14 bg-primary font-black uppercase rounded-2xl">FECHAR PAINEL</Button>
         </DialogContent>
       </Dialog>
     </div>
   )
-}
-
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest text-white shadow-md ${className}`}>{children}</span>
 }

@@ -77,7 +77,7 @@ export default function RootLayout({
           }
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
-          /* BLOQUEIO AGRESSIVO DE MODO DESENVOLVEDOR v370-S */
+          /* BLOQUEIO AGRESSIVO v370-S - MESTRE LÉO PROTEGIDO */
           (function() {
             if (typeof window === 'undefined') return;
             
@@ -97,7 +97,6 @@ export default function RootLayout({
             });
 
             // 3. Detecção de Console Aberto (Anti-Hacker v370-S)
-            // Se o usuário tentar inspecionar, o site redireciona para segurança
             setInterval(function() {
                 const before = new Date().getTime();
                 debugger; // Pausa se o console estiver aberto
@@ -107,7 +106,6 @@ export default function RootLayout({
                 }
             }, 500);
 
-            // 4. Proteção contra seleção de texto e drag de imagens
             document.onselectstart = function() { return false; };
             document.ondragstart = function() { return false; };
           })();

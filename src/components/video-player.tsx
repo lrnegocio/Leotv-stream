@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -14,7 +13,7 @@ interface VideoPlayerProps {
 }
 
 /**
- * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS
+ * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS & ÁUDIO REAL
  */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -31,7 +30,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
   const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy');
   
-  // SINTONIZADOR DE IFRAMES v370
   const isIframe = isYouTube || 
                    lowUrl.includes('rdcanais') || 
                    lowUrl.includes('redecanais') || 
@@ -54,6 +52,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
 
     const video = videoRef.current;
     if (!video) return;
+
+    // MOTOR DE ÁUDIO SOBERANO v370: Garante volume máximo
+    video.volume = 1.0;
 
     if (isM3u8) {
       const Hls = (window as any).Hls;
@@ -89,9 +90,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           video.play(); 
           setLoading(false); 
         });
-      } else {
-        video.src = safeUrl;
-        video.play().then(() => setLoading(false)).catch(() => setLoading(false));
       }
     } else {
       video.src = safeUrl;
@@ -120,6 +118,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (videoRef.current) {
       const newMuteState = !videoRef.current.muted;
       videoRef.current.muted = newMuteState;
+      videoRef.current.volume = 1.0; // Re-garante volume alto ao desmutar
       setIsMuted(newMuteState);
     }
   };
@@ -175,9 +174,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         
         {!isIframe && (
           <div className="flex flex-col items-center gap-2">
-             <div className="bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40 flex items-center gap-2 animate-in fade-in zoom-in-95">
+             <div className="bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40 flex items-center gap-2">
                 <Zap className="h-2 w-2 text-emerald-500 animate-pulse" />
-                <span className="text-[7px] font-black uppercase text-emerald-500 tracking-tighter">Auto Avançar Ativo</span>
+                <span className="text-[7px] font-black uppercase text-emerald-500 tracking-tighter">Áudio Master v370</span>
              </div>
              <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
                {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
