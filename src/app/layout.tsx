@@ -84,9 +84,10 @@ export default function RootLayout({
             (function() {
               if (typeof window === 'undefined') return;
               
-              const block = (e) => { e.preventDefault(); return false; };
-              document.addEventListener('contextmenu', block);
+              // Bloqueio de Botão Direito
+              document.addEventListener('contextmenu', (e) => e.preventDefault());
               
+              // Bloqueio de Teclas de Desenvolvedor (F12, Ctrl+U, etc)
               document.addEventListener('keydown', function(e) {
                 if (
                   e.keyCode == 123 || 
@@ -100,18 +101,6 @@ export default function RootLayout({
 
               document.onselectstart = function() { return false; };
               document.ondragstart = function() { return false; };
-
-              // Anti-Console Stealth
-              setInterval(function() {
-                const before = new Date().getTime();
-                // O debugger é disparado apenas se o console estiver aberto em alguns navegadores
-                // Mas vamos remover para evitar o erro de exceção e usar detecção de tempo
-                const after = new Date().getTime();
-                if (after - before > 200) {
-                  // Se houver lag excessivo (detecção de console), limpa a página
-                  document.body.innerHTML = "<h1>SISTEMA LÉO TV PROTEGIDO</h1>";
-                }
-              }, 2000);
             })();
           `}
         </Script>

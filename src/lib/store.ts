@@ -263,10 +263,25 @@ export async function getContentById(id: string) {
   try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; }
 }
 
-export async function removeContent(id: string) { const { error } = await supabase.from('content').delete().eq('id', id); return !error; }
-export async function removeUser(id: string) { const { error } = await supabase.from('users').delete().eq('id', id); return !error; }
-export async function removeReseller(id: string) { const { error } = await supabase.from('resellers').delete().eq('id', id); return !error; }
-export async function removeGame(id: string) { const { error } = await supabase.from('content').delete().eq('id', id); return !error; }
+export async function removeContent(id: string) { 
+  const { error } = await supabase.from('content').delete().eq('id', id); 
+  return !error; 
+}
+
+export async function removeUser(id: string) { 
+  const { error } = await supabase.from('users').delete().eq('id', id); 
+  return !error; 
+}
+
+export async function removeReseller(id: string) { 
+  const { error } = await supabase.from('resellers').delete().eq('id', id); 
+  return !error; 
+}
+
+export async function removeGame(id: string) { 
+  const { error } = await supabase.from('content').delete().eq('id', id); 
+  return !error; 
+}
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
