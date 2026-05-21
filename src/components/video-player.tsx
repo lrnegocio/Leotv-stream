@@ -17,32 +17,16 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
-  const [isMounted, setIsMounted] = React.useState(false)
   const [isMuted, setIsMuted] = React.useState(false)
-  const [playerKey, setPlayerKey] = React.useState(0)
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
-  const lowUrl = safeUrl.toLowerCase();
-  
-  const isYouTube = lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be');
-  const isM3u8 = lowUrl.includes('.m3u8') || lowUrl.includes('mpegurl') || lowUrl.includes('proxy');
-  
-  const isIframe = isYouTube || 
-                   lowUrl.includes('rdcanais') || 
-                   lowUrl.includes('redecanais') || 
-                   lowUrl.includes('streamrdc') ||
-                   lowUrl.includes('xvideos') ||
-                   lowUrl.includes('pornhub') ||
-                   lowUrl.includes('ok.ru') ||
-                   lowUrl.includes('tokyvideo.com') ||
-                   lowUrl.includes('ch.php?');
+  const isIframe = safeUrl.toLowerCase().includes('youtube.com') || safeUrl.toLowerCase().includes('ok.ru') || safeUrl.toLowerCase().includes('rdcanais') || safeUrl.toLowerCase().includes('redecanais');
 
   const initPlayer = React.useCallback(async () => {
-    if (!isMounted || !safeUrl) return;
+    if (!safeUrl) return;
     setLoading(true);
 
     if (isIframe) {
-      setPlayerKey(Date.now());
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -50,164 +34,65 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // FORÇANDO VOLUME MÁXIMO v370-S
-    video.volume = 1.0;
+    video.volume = 1.0; // FORÇA ÁUDIO NO MÁXIMO v370-S
 
-    if (isM3u8) {
+    if (safeUrl.includes('.m3u8')) {
       const Hls = (window as any).Hls;
       if (Hls && Hls.isSupported()) {
-        const hls = new Hls({
-          xhrSetup: (xhr: any) => { xhr.withCredentials = false; },
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 90
-        });
+        const hls = new Hls();
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().then(() => {
-            video.volume = 1.0;
-            video.muted = false;
-            setIsMuted(false);
-          }).catch(() => { 
-            if (videoRef.current) {
-              videoRef.current.muted = true; 
-              setIsMuted(true); 
-              videoRef.current.play(); 
-            }
-          });
+          video.play().catch(() => { video.muted = true; video.play(); setIsMuted(true); });
           setLoading(false);
         });
-        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
-          if (data.fatal) {
-            hls.recoverMediaError();
-          }
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      } else {
         video.src = safeUrl;
-        video.play().then(() => {
-          video.volume = 1.0;
-          video.muted = false;
-          setIsMuted(false);
-          setLoading(false);
-        }).catch(() => { 
-          video.muted = true; 
-          setIsMuted(true); 
-          video.play(); 
-          setLoading(false); 
-        });
+        video.play().finally(() => setLoading(false));
       }
     } else {
       video.src = safeUrl;
-      video.play().then(() => {
-        video.volume = 1.0;
-        video.muted = false;
-        setIsMuted(false);
-        setLoading(false);
-      }).catch(() => { 
-        video.muted = true; 
-        setIsMuted(true); 
-        video.play().then(() => setLoading(false)).catch(() => setLoading(false)); 
-      });
+      video.play().finally(() => setLoading(false));
     }
-  }, [safeUrl, isMounted, isIframe, isM3u8]);
+  }, [safeUrl, isIframe]);
 
   React.useEffect(() => {
-    setIsMounted(true);
     initPlayer();
-    
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.src = "";
-        videoRef.current.load();
-      }
-    };
-  }, [initPlayer, safeUrl]);
-
-  const handleToggleMute = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (videoRef.current) {
-      const newMuteState = !videoRef.current.muted;
-      videoRef.current.muted = newMuteState;
-      videoRef.current.volume = 1.0; 
-      setIsMuted(newMuteState);
-    }
-  };
+  }, [initPlayer]);
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current.requestFullscreen();
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen();
       setIsFullscreen(false);
     }
   };
 
-  if (!isMounted || !safeUrl) return null;
-
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen w-screen z-[999]' : 'h-[85vh] rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl'}`}>
-      
+    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[85vh] rounded-[3rem] overflow-hidden'}`}>
       {isIframe ? (
-        <iframe 
-          key={playerKey}
-          src={safeUrl}
-          className="w-full h-full border-0"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-          onLoad={() => setLoading(false)}
-        />
+        <iframe src={safeUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" />
       ) : (
-        <video 
-          key={safeUrl} 
-          ref={videoRef} 
-          className="w-full h-full object-contain" 
-          autoPlay 
-          playsInline 
-          controls 
-          crossOrigin="anonymous"
-          onEnded={onNext}
-        />
+        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
       )}
 
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-            <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370 Permanente...</p>
-          </div>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       )}
 
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
-        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronLeft className="h-5 w-5" /></Button>}
-        
-        {!isIframe && (
-          <div className="flex flex-col items-center gap-2">
-             <div className="bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40 flex items-center gap-2">
-                <Zap className="h-2 w-2 text-emerald-500 animate-pulse" />
-                <span className="text-[7px] font-black uppercase text-emerald-500 tracking-tighter">Áudio Master v370</span>
-             </div>
-             <Button size="icon" onClick={handleToggleMute} className="h-16 w-16 rounded-[1.5rem] bg-primary shadow-2xl border-4 border-white/20 transition-transform active:scale-95">
-               {isMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
-             </Button>
-          </div>
-        )}
-
-        <Button size="icon" onClick={() => initPlayer()} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-emerald-500 transition-all">
-          <RefreshCcw className="h-5 w-5" />
-        </Button>
-
-        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all">
-          {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-        </Button>
-        
-        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 rounded-2xl bg-black/40 border-white/10 hover:bg-primary transition-all"><ChevronRight className="h-5 w-5" /></Button>}
+        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 bg-black/40"><ChevronLeft /></Button>}
+        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 bg-black/40">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
+        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 bg-black/40"><ChevronRight /></Button>}
       </div>
 
-      <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">
-         <p className="text-[10px] font-black uppercase italic text-primary truncate max-w-[250px]">{title}</p>
+      <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10">
+         <p className="text-[10px] font-black uppercase text-primary">{title}</p>
       </div>
     </div>
   )

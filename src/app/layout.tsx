@@ -54,26 +54,13 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
         <style dangerouslySetInnerHTML={{ __html: `
-          /* SEGURANÇA DIAMANTE v370-S: BLOQUEIO TOTAL */
           body {
             -webkit-user-select: none !important;
             -moz-user-select: none !important;
             -ms-user-select: none !important;
             user-select: none !important;
-            -webkit-touch-callout: none !important;
           }
-          img { 
-            pointer-events: none !important; 
-            -webkit-user-drag: none !important;
-          }
-          /* LIMPEZA DE ANÚNCIOS EXTERNOS */
-          .cf-error-details, #cf-error-details, .cf-browser-verification,
-          [id*="cf-"], [class*="cf-"], .ads-wrapper, .ad-overlay, 
-          .reidoscanais-ads, #over-video {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-          }
+          img { pointer-events: none !important; -webkit-user-drag: none !important; }
         `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
@@ -81,35 +68,20 @@ export default function RootLayout({
         <Toaster />
         <OfflineIndicator />
         
-        {/* SCRIPT DE SEGURANÇA ESTÁVEL v370-S */}
-        <Script id="security-script" strategy="afterInteractive">
+        {/* SEGURANÇA DIAMANTE v370-S ESTABILIZADA */}
+        <Script id="security-master" strategy="afterInteractive">
           {`
-            (function() {
-              if (typeof window === 'undefined') return;
-              
-              // Bloqueio de Botão Direito
-              document.addEventListener('contextmenu', (e) => e.preventDefault());
-              
-              // Bloqueio de Teclas de Desenvolvedor
-              document.addEventListener('keydown', function(e) {
-                if (
-                  e.keyCode == 123 || 
-                  (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || 
-                  (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))
-                ) {
-                  e.preventDefault();
-                  return false;
-                }
-              });
-
-              document.onselectstart = function() { return false; };
-              document.ondragstart = function() { return false; };
-            })();
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('keydown', e => {
+              if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))) {
+                e.preventDefault();
+                return false;
+              }
+            });
           `}
         </Script>
-
-        <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="afterInteractive" />
-        <Script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js" strategy="afterInteractive" />
+        
+        <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="lazyOnload" />
       </body>
     </html>
   );
