@@ -66,8 +66,6 @@ export default function RootLayout({
             pointer-events: none !important; 
             -webkit-user-drag: none !important;
           }
-
-          /* Limpeza de overlays externos */
           .cf-error-details, #cf-error-details, .cf-browser-verification,
           [id*="cf-"], [class*="cf-"], .ads-wrapper, .ad-overlay, 
           .reidoscanais-ads, #over-video {
@@ -81,25 +79,22 @@ export default function RootLayout({
           (function() {
             if (typeof window === 'undefined') return;
             
-            // 1. Bloqueia botão direito
             document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
             
-            // 2. Bloqueia atalhos de teclado (F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, etc)
             document.addEventListener('keydown', function(e) {
               if (
-                e.keyCode == 123 || // F12
-                (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || // Ctrl+Shift+I/J/C
-                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83 || e.keyCode == 123)) // Ctrl+U/S/F12
+                e.keyCode == 123 || 
+                (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || 
+                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83))
               ) {
                 e.preventDefault();
                 return false;
               }
             });
 
-            // 3. Detecção de Console Aberto (Anti-Hacker v370-S)
             setInterval(function() {
                 const before = new Date().getTime();
-                debugger; // Pausa se o console estiver aberto
+                debugger;
                 const after = new Date().getTime();
                 if (after - before > 100) {
                     window.location.href = "about:blank";

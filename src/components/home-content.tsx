@@ -48,7 +48,6 @@ export default function HomeContent() {
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
-  const [expandedConsole, setExpandedConsole] = React.useState<string | null>(null)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -98,9 +97,9 @@ export default function HomeContent() {
     }
   }, [router, syncUserPermissions]);
 
-  // ESTABILIZADOR v370-S: Carrega dados mantendo a categoria selecionada fixa
   React.useEffect(() => {
     if (!isMounted) return;
+    // ESTABILIZADOR v370-S: Carrega apenas se houver busca ou se a categoria mudar
     const delayDebounceFn = setTimeout(() => loadData(q, selectedCat), 500);
     return () => clearTimeout(delayDebounceFn);
   }, [q, selectedCat, loadData, isMounted]);
@@ -142,7 +141,6 @@ export default function HomeContent() {
         setSelectedSeries(deepItem || item);
       } catch (e) { setSelectedSeries(item); } finally { setLoading(false); }
     } else {
-      // MOTOR DE AUTOPLAY v370-S: Envia a lista da categoria atual para o player
       const currentList = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
       const idx = content.findIndex(i => i.id === item.id);
       setActiveVideo({ items: currentList, index: idx !== -1 ? idx : 0 });
@@ -176,7 +174,7 @@ export default function HomeContent() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370 v370...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v370 Suprema...</p>
         </div>
       )}
 

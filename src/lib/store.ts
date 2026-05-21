@@ -83,7 +83,7 @@ export interface User {
 
 /**
  * MOTOR DE CONTAGEM REAL v370-S
- * Soma canais + episódios de séries + episódios de temporadas.
+ * Soma cada episódio de cada sinal individualmente.
  */
 export async function getCategoryCount(g: string) {
   try {
@@ -109,10 +109,6 @@ export async function getCategoryCount(g: string) {
   } catch (e) { return 0; }
 }
 
-/**
- * CONTAGEM TOTAL DA REDE v370-S
- * Varre todo o banco somando cada episódio individualmente.
- */
 export async function getTotalContentCount() {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');
@@ -158,7 +154,7 @@ export const formatMasterLink = (url: string) => {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split( 'youtu.be/')[1]?.split(/[?#&]/)[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 

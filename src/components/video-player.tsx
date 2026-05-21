@@ -118,7 +118,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     if (videoRef.current) {
       const newMuteState = !videoRef.current.muted;
       videoRef.current.muted = newMuteState;
-      videoRef.current.volume = 1.0; // Re-garante volume alto ao desmutar
+      videoRef.current.volume = 1.0; 
       setIsMuted(newMuteState);
     }
   };
