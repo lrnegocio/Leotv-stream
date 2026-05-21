@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -53,6 +54,37 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const q = searchParams ? (searchParams.get('q') || "") : ""
 
+  // MOTOR DE PLAYLIST SINTONIZADO v370
+  const flattenedPlaylist = React.useMemo(() => {
+    if (!selectedSeries) return [];
+    if (selectedSeries.type === 'series') {
+      return (selectedSeries.episodes || [])
+        .sort((a, b) => a.number - b.number)
+        .map(e => ({
+          ...e,
+          streamUrl: formatMasterLink(e.streamUrl),
+          title: `${selectedSeries.title} - EP ${e.number} ${e.title || ''}`
+        }));
+    }
+    if (selectedSeries.type === 'multi-season') {
+      const all: any[] = [];
+      const sortedSeasons = [...(selectedSeries.seasons || [])].sort((a, b) => a.number - b.number);
+      sortedSeasons.forEach(s => {
+        const sortedEps = [...(s.episodes || [])].sort((a, b) => a.number - b.number);
+        sortedEps.forEach(e => {
+          all.push({
+            ...e,
+            seasonNum: s.number,
+            streamUrl: formatMasterLink(e.streamUrl),
+            title: `${selectedSeries.title} - T${s.number} EP ${e.number} ${e.title || ''}`
+          });
+        });
+      });
+      return all;
+    }
+    return [];
+  }, [selectedSeries]);
+
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
       const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "vps_device");
@@ -99,7 +131,6 @@ export default function HomeContent() {
 
   React.useEffect(() => {
     if (!isMounted) return;
-    // ESTABILIZADOR v370-S: Carrega apenas se houver busca ou se a categoria mudar
     const delayDebounceFn = setTimeout(() => loadData(q, selectedCat), 500);
     return () => clearTimeout(delayDebounceFn);
   }, [q, selectedCat, loadData, isMounted]);
@@ -237,11 +268,28 @@ export default function HomeContent() {
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v370</DialogTitle></DialogHeader>
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
-             {selectedSeries?.episodes?.sort((a,b) => a.number - b.number).map((ep) => (
-                <button key={ep.id} onClick={() => setActiveVideo({ items: selectedSeries.episodes!.map(e => ({ ...e, streamUrl: formatMasterLink(e.streamUrl), title: `${selectedSeries.title} - EP ${e.number}` })), index: selectedSeries.episodes!.findIndex(i => i.id === ep.id) })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
+             {selectedSeries?.type === 'series' && flattenedPlaylist.map((ep, idx) => (
+                <button key={ep.id} onClick={() => setActiveVideo({ items: flattenedPlaylist, index: idx })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
                   <span className="font-black uppercase text-[11px] tracking-widest text-left">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
                   <PlayCircle className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
                 </button>
+              ))}
+
+             {selectedSeries?.type === 'multi-season' && selectedSeries.seasons?.sort((a,b) => a.number - b.number).map(season => (
+                <div key={season.id} className="space-y-2 mb-6">
+                  <p className="text-[11px] font-black text-primary uppercase pl-3 border-l-4 border-primary ml-1 italic tracking-widest">Temporada {season.number}</p>
+                  <div className="grid gap-2">
+                    {season.episodes?.sort((a,b) => a.number - b.number).map(ep => {
+                       const globalIdx = flattenedPlaylist.findIndex(item => item.id === ep.id);
+                       return (
+                        <button key={ep.id} onClick={() => setActiveVideo({ items: flattenedPlaylist, index: globalIdx })} className="w-full flex items-center justify-between p-4 bg-muted/40 rounded-xl hover:bg-primary hover:text-white transition-all group border border-border/30">
+                          <span className="font-bold uppercase text-[10px] tracking-tighter text-left">EP {ep.number} - {ep.title || 'SINAL MASTER'}</span>
+                          <PlayCircle className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
+                        </button>
+                       )
+                    })}
+                  </div>
+                </div>
               ))}
           </div>
         </DialogContent>

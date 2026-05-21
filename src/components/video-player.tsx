@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -68,7 +69,11 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { 
+          video.play().then(() => {
+            video.volume = 1.0;
+            video.muted = false;
+            setIsMuted(false);
+          }).catch(() => { 
             if (videoRef.current) {
               videoRef.current.muted = true; 
               setIsMuted(true); 
@@ -84,7 +89,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = safeUrl;
-        video.play().then(() => setLoading(false)).catch(() => { 
+        video.play().then(() => {
+          video.volume = 1.0;
+          video.muted = false;
+          setIsMuted(false);
+          setLoading(false);
+        }).catch(() => { 
           video.muted = true; 
           setIsMuted(true); 
           video.play(); 
@@ -93,7 +103,12 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       }
     } else {
       video.src = safeUrl;
-      video.play().then(() => setLoading(false)).catch(() => { 
+      video.play().then(() => {
+        video.volume = 1.0;
+        video.muted = false;
+        setIsMuted(false);
+        setLoading(false);
+      }).catch(() => { 
         video.muted = true; 
         setIsMuted(true); 
         video.play().then(() => setLoading(false)).catch(() => setLoading(false)); 
