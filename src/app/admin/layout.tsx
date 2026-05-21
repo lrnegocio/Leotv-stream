@@ -1,7 +1,7 @@
-
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import Link from "next/link"
 import { LayoutDashboard, Film, Users, Settings, LogOut, Tv, Loader2, Briefcase, BarChart3, Gamepad2 } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -12,7 +12,6 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     setIsMounted(true)
-    // ACESSO LIBERADO: Sem bloqueios de mouse ou teclado neste projeto.
   }, [])
 
   if (!isMounted) {
@@ -110,7 +109,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="hidden md:block">
-                <VoiceSearch />
+                <Suspense fallback={<div className="h-10 w-48 bg-muted animate-pulse rounded-xl" />}>
+                  <VoiceSearch />
+                </Suspense>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -131,6 +132,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminLayoutInner>{children}</AdminLayoutInner>
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </Suspense>
   )
 }

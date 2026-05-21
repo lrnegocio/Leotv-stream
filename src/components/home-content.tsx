@@ -1,7 +1,7 @@
-
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ const CATEGORIES = [
   { id: 'ADULT', name: 'ADULTOS', icon: Lock, color: 'bg-zinc-800', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
-export default function HomeContent() {
+function HomeContentInner() {
   const [content, setContent] = React.useState<ContentItem[]>([])
   const [games, setGames] = React.useState<GameItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
@@ -54,7 +54,6 @@ export default function HomeContent() {
   const searchParams = useSearchParams()
   const q = searchParams ? (searchParams.get('q') || "") : ""
 
-  // MOTOR DE PLAYLIST SINTONIZADO v370
   const flattenedPlaylist = React.useMemo(() => {
     if (!selectedSeries) return [];
     if (selectedSeries.type === 'series') {
@@ -88,9 +87,7 @@ export default function HomeContent() {
   const syncUserPermissions = React.useCallback(async (currentUser: User) => {
     try {
       const res = await validateDeviceLogin(currentUser.pin, (currentUser as any).deviceId || "vps_device");
-      if (res.user) {
-        setUser(res.user);
-      }
+      if (res.user) setUser(res.user);
     } catch (e) { }
   }, []);
 
@@ -268,18 +265,18 @@ export default function HomeContent() {
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v370</DialogTitle></DialogHeader>
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
-             {selectedSeries?.type === 'series' && flattenedPlaylist.map((ep, idx) => (
+             {selectedSeries?.type === 'series' && (selectedSeries.episodes || []).sort((a,b) => a.number - b.number).map((ep, idx) => (
                 <button key={ep.id} onClick={() => setActiveVideo({ items: flattenedPlaylist, index: idx })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
                   <span className="font-black uppercase text-[11px] tracking-widest text-left">EPISÓDIO {ep.number} - {ep.title || 'SINAL MASTER'}</span>
                   <PlayCircle className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
                 </button>
               ))}
 
-             {selectedSeries?.type === 'multi-season' && selectedSeries.seasons?.sort((a,b) => a.number - b.number).map(season => (
+             {selectedSeries?.type === 'multi-season' && (selectedSeries.seasons || []).sort((a,b) => a.number - b.number).map(season => (
                 <div key={season.id} className="space-y-2 mb-6">
                   <p className="text-[11px] font-black text-primary uppercase pl-3 border-l-4 border-primary ml-1 italic tracking-widest">Temporada {season.number}</p>
                   <div className="grid gap-2">
-                    {season.episodes?.sort((a,b) => a.number - b.number).map(ep => {
+                    {(season.episodes || []).sort((a,b) => a.number - b.number).map(ep => {
                        const globalIdx = flattenedPlaylist.findIndex(item => item.id === ep.id);
                        return (
                         <button key={ep.id} onClick={() => setActiveVideo({ items: flattenedPlaylist, index: globalIdx })} className="w-full flex items-center justify-between p-4 bg-muted/40 rounded-xl hover:bg-primary hover:text-white transition-all group border border-border/30">
@@ -331,4 +328,12 @@ export default function HomeContent() {
       </Dialog>
     </div>
   )
+}
+
+export default function HomeContent() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}>
+      <HomeContentInner />
+    </Suspense>
+  );
 }

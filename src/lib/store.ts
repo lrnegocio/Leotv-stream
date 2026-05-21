@@ -81,10 +81,6 @@ export interface User {
   reseller_name?: string; 
 }
 
-/**
- * MOTOR DE CONTAGEM REAL v370-S
- * Soma cada episódio de cada sinal individualmente.
- */
 export async function getCategoryCount(g: string) {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
@@ -140,9 +136,7 @@ export const formatMasterLink = (url: string) => {
 
     if (finalUrl.toLowerCase().startsWith('<iframe')) {
       const match = finalUrl.match(/src="([^"]+)"/i);
-      if (match && match[1]) {
-        finalUrl = match[1];
-      }
+      if (match && match[1]) finalUrl = match[1];
     }
 
     let lowUrl = finalUrl.toLowerCase();

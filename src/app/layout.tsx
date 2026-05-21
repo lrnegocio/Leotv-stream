@@ -79,7 +79,8 @@ export default function RootLayout({
           (function() {
             if (typeof window === 'undefined') return;
             
-            document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+            const block = (e) => { e.preventDefault(); return false; };
+            document.addEventListener('contextmenu', block);
             
             document.addEventListener('keydown', function(e) {
               if (
@@ -99,7 +100,7 @@ export default function RootLayout({
                 if (after - before > 100) {
                     window.location.href = "about:blank";
                 }
-            }, 500);
+            }, 1000);
 
             document.onselectstart = function() { return false; };
             document.ondragstart = function() { return false; };

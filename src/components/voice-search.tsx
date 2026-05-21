@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -9,9 +8,6 @@ import { voiceSearchContent } from "@/ai/flows/voice-search-content-flow"
 import { toast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 
-/**
- * BUSCA MASTER v315 - BLINDAGEM DIAMANTE CONTRA CLIENT-SIDE EXCEPTION
- */
 function VoiceSearchContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -28,7 +24,6 @@ function VoiceSearchContent() {
     const q = searchParams?.get('q') || "";
     setQuery(q);
     
-    // Verificação ultra-segura de API de Voz
     if (typeof window !== 'undefined') {
       try {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;

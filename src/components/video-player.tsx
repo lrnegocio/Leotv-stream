@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -13,9 +12,6 @@ interface VideoPlayerProps {
   onPrev?: () => void
 }
 
-/**
- * PLAYER MASTER SOBERANA v370 - MOTOR DIAMANTE HLS & ÁUDIO REAL
- */
 export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
@@ -54,7 +50,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // MOTOR DE ÁUDIO SOBERANO v370: Garante volume máximo
+    // MOTOR DE ÁUDIO SOBERANO v370: Força volume máximo
     video.volume = 1.0;
 
     if (isM3u8) {
