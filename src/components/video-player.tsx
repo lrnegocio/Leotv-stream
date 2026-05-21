@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, RefreshCcw, Maximize, Minimize, Volume2, VolumeX, Zap } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -17,7 +18,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
-  const [isMuted, setIsMuted] = React.useState(false)
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   const isIframe = safeUrl.toLowerCase().includes('youtube.com') || safeUrl.toLowerCase().includes('ok.ru') || safeUrl.toLowerCase().includes('rdcanais') || safeUrl.toLowerCase().includes('redecanais');
@@ -34,7 +34,8 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    video.volume = 1.0; // FORÇA ÁUDIO NO MÁXIMO v370-S
+    // FORÇA ÁUDIO NO MÁXIMO v370-S
+    video.volume = 1.0; 
 
     if (safeUrl.includes('.m3u8')) {
       const Hls = (window as any).Hls;
@@ -43,7 +44,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         hls.loadSource(safeUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { video.muted = true; video.play(); setIsMuted(true); });
+          video.play().catch(() => { 
+            video.muted = true; 
+            video.play(); 
+          });
           setLoading(false);
         });
       } else {

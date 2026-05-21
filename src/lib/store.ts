@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -81,6 +82,7 @@ export interface User {
   reseller_name?: string; 
 }
 
+// CONTAGEM REAL: Soma cada episódio individualmente v370-S
 export async function getCategoryCount(g: string) {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
@@ -101,7 +103,7 @@ export async function getCategoryCount(g: string) {
             });
         }
     });
-    return total;
+  return total;
   } catch (e) { return 0; }
 }
 
@@ -229,7 +231,10 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
+    
+    // EXPIRAÇÃO REAL v370-S
     if (user.expiryDate && new Date() > new Date(user.expiryDate)) return { error: "ACESSO EXPIRADO" };
+    
     const activeDevices = user.activeDevices || [];
     if (!activeDevices.includes(deviceId)) {
       if (activeDevices.length >= user.maxScreens) return { error: "LIMITE DE TELAS ATINGIDO" };
@@ -265,6 +270,7 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
+// CORREÇÃO DE EXPORTAÇÃO PARA O BUILD DA VPS
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
