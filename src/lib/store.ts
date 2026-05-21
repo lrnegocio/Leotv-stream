@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -95,11 +94,14 @@ export async function getCategoryCount(g: string) {
     data.forEach(item => {
         if (item.type === 'channel' || item.type === 'movie') {
             total += 1;
-        } else if (item.type === 'series' && Array.isArray(item.episodes)) {
-            total += item.episodes.length;
-        } else if (item.type === 'multi-season' && Array.isArray(item.seasons)) {
-            item.seasons.forEach((s: any) => {
-                if (s.episodes && Array.isArray(s.episodes)) total += s.episodes.length;
+        } else if (item.type === 'series') {
+            const eps = Array.isArray(item.episodes) ? item.episodes : [];
+            total += eps.length;
+        } else if (item.type === 'multi-season') {
+            const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+            seasons.forEach((s: any) => {
+                const eps = Array.isArray(s.episodes) ? s.episodes : [];
+                total += eps.length;
             });
         }
     });
@@ -109,7 +111,7 @@ export async function getCategoryCount(g: string) {
 
 /**
  * CONTAGEM TOTAL DA REDE v370-S
- * Varre todo o banco somando cada episódio individualmente de forma robusta.
+ * Varre todo o banco somando cada episódio individualmente.
  */
 export async function getTotalContentCount() {
   try {
@@ -288,7 +290,7 @@ export async function saveGame(g: any) {
 }
 
 export async function resetUserDevices(userId: string) {
-  try { const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId); return !error; } catch (e) { return false; }
+  try { const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId); return !error; } catch (e) { false; }
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {

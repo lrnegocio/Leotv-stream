@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v370..."
@@ -15,6 +14,7 @@ git reset --hard origin/main
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 # PAUSA PARA RESPIRAR: Para APENAS o Léo TV para ter RAM pro Build
+# IMPORTANTE: Não usamos 'pm2 stop all' para não derrubar o Bingo na 3001
 echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
 pm2 delete leotv-master 2>/dev/null || true
@@ -40,13 +40,13 @@ if [ $? -eq 0 ]; then
     echo "✅ BUILD CONCLUÍDO COM SUCESSO v370!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
-    pm2 start ecosystem.config.js
+    pm2 start ecosystem.config.js --name leotv-master
     exit 1
 fi
 
 # Reinicia APENAS o processo Léo TV na porta 3000
 echo "♻️ REINICIANDO MOTOR LÉO TV NA PORTA INTERNA 3000..."
-pm2 start ecosystem.config.js --update-env
+pm2 start ecosystem.config.js --name leotv-master --update-env
 pm2 save
 
 echo "--------------------------------------------------"
@@ -54,6 +54,6 @@ echo "📊 RELATÓRIO DE CAPACIDADE DA VPS:"
 free -h
 echo "--------------------------------------------------"
 echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v370!"
-echo "🔗 AGORA OS DOIS PROJETOS PODEM RODAR JUNTOS!"
+echo "🔗 AGORA OS DOIS PROJETOS PODEM RODAR JUNTOS SEM CONFLITO!"
 echo "--------------------------------------------------"
 pm2 list

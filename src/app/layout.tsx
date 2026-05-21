@@ -84,12 +84,12 @@ export default function RootLayout({
             // 1. Bloqueia botão direito
             document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
             
-            // 2. Bloqueia atalhos de teclado (F12, Ctrl+Shift+I, Ctrl+U, etc)
+            // 2. Bloqueia atalhos de teclado (F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, etc)
             document.addEventListener('keydown', function(e) {
               if (
                 e.keyCode == 123 || // F12
                 (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) || // Ctrl+Shift+I/J/C
-                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83)) // Ctrl+U/S
+                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83 || e.keyCode == 123)) // Ctrl+U/S/F12
               ) {
                 e.preventDefault();
                 return false;
@@ -97,9 +97,10 @@ export default function RootLayout({
             });
 
             // 3. Detecção de Console Aberto (Anti-Hacker v370-S)
+            // Se o usuário tentar inspecionar, o site redireciona para segurança
             setInterval(function() {
                 const before = new Date().getTime();
-                debugger;
+                debugger; // Pausa se o console estiver aberto
                 const after = new Date().getTime();
                 if (after - before > 100) {
                     window.location.href = "about:blank";
