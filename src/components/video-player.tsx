@@ -34,7 +34,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // FORÇA ÁUDIO NO MÁXIMO v370-S
+    // FORÇA ÁUDIO NO MÁXIMO v370-S - ACABA COM O SOM BAIXO
     video.volume = 1.0; 
 
     if (safeUrl.includes('.m3u8')) {
