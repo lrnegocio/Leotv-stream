@@ -268,7 +268,6 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
-// CORREÇÃO DE EXPORTAÇÃO MASTER v370-S
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 

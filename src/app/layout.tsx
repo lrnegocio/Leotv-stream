@@ -69,7 +69,7 @@ export default function RootLayout({
         <Toaster />
         <OfflineIndicator />
         
-        {/* SEGURANÇA DIAMANTE v370-S ESTABILIZADA - BLOQUEIO DE F12 E BOTÃO DIREITO */}
+        {/* SEGURANÇA DIAMANTE v370-S ESTABILIZADA - BLOQUEIO SILENCIOSO */}
         <Script id="security-master" strategy="afterInteractive">
           {`
             document.addEventListener('contextmenu', e => e.preventDefault());
