@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -60,9 +59,9 @@ export default function RootLayout({
         <Toaster />
         <OfflineIndicator />
         
-        {/* SEGURANÇA DIAMANTE v370-S ESTABILIZADA - BLOQUEIO SILENCIOSO */}
         <Script id="security-master" strategy="afterInteractive">
           {`
+            // BLOQUEIO MASTER v370-S - ESTABILIZADO
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
               if (
@@ -72,7 +71,6 @@ export default function RootLayout({
                 (e.ctrlKey && e.keyCode === 83)
               ) {
                 e.preventDefault();
-                return false;
               }
             });
           `}

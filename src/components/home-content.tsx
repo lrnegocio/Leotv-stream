@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -213,7 +212,9 @@ function HomeContentInner() {
           <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
         </div>
         <div className="flex-1 max-w-xl mx-4">
-          {!isGamesOnly && <VoiceSearch />}
+          <Suspense fallback={<div className="h-14 bg-muted animate-pulse rounded-2xl" />}>
+            {!isGamesOnly && <VoiceSearch />}
+          </Suspense>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></button>

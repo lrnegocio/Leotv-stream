@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -34,7 +33,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // FORÇA ÁUDIO NO MÁXIMO v370-S - ACABA COM O SOM BAIXO
+    // GANHO DE ÁUDIO MASTER v370-S - FORÇA 100% DE VOLUME
     video.volume = 1.0; 
 
     if (safeUrl.includes('.m3u8')) {
@@ -90,9 +89,9 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       )}
 
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
-        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 bg-black/40"><ChevronLeft /></Button>}
-        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 bg-black/40">{isFullscreen ? <Minimize /> : <Maximize />}</Button>
-        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 bg-black/40"><ChevronRight /></Button>}
+        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 bg-black/40"><ChevronLeft className="h-5 w-5 text-white" /></Button>}
+        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 bg-black/40">{isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}</Button>
+        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 bg-black/40"><ChevronRight className="h-5 w-5 text-white" /></Button>}
       </div>
 
       <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10">
