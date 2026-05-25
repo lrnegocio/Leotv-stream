@@ -54,15 +54,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * 'self' data: blob:; media-src * 'self' data: blob:; frame-src * 'self' data: blob:;" />
-        <style dangerouslySetInnerHTML={{ __html: `
-          body {
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-            user-select: none !important;
-          }
-          img { pointer-events: none !important; -webkit-user-drag: none !important; }
-        `}} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
         {children}
