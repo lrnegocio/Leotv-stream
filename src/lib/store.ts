@@ -267,7 +267,6 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
-// CORREÇÃO BUILD v370-S: Exportação obrigatória da função
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
