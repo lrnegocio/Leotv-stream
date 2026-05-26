@@ -33,7 +33,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // GANHO DE ÁUDIO MASTER v370-S - FORÇA 100% DE VOLUME
+    // GANHO DE ÁUDIO MASTER v370-S - FORÇA 100% DE VOLUME SEMPRE
     video.volume = 1.0; 
 
     if (safeUrl.includes('.m3u8')) {

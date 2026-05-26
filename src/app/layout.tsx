@@ -61,7 +61,7 @@ export default function RootLayout({
         
         <Script id="security-master" strategy="afterInteractive">
           {`
-            // BLOQUEIO MASTER v370-S - ESTABILIZADO
+            // BLOQUEIO MASTER v370-S - ESTABILIZADO SEM CRASH
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
               if (
