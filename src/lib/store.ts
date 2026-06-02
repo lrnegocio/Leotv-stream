@@ -81,6 +81,18 @@ export interface User {
   reseller_name?: string; 
 }
 
+// FUNÇÃO PARA PARSE SEGURO DE JSON (Resolve sumiço de episódios)
+const safeParse = (data: any) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  try {
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 export async function getCategoryCount(g: string) {
   try {
     const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
@@ -91,12 +103,12 @@ export async function getCategoryCount(g: string) {
         if (item.type === 'channel' || item.type === 'movie') {
             total += 1;
         } else if (item.type === 'series') {
-            const eps = Array.isArray(item.episodes) ? item.episodes : [];
+            const eps = safeParse(item.episodes);
             total += eps.length;
         } else if (item.type === 'multi-season') {
-            const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+            const seasons = safeParse(item.seasons);
             seasons.forEach((s: any) => {
-                const eps = Array.isArray(s.episodes) ? s.episodes : [];
+                const eps = safeParse(s.episodes);
                 total += eps.length;
             });
         }
@@ -115,12 +127,12 @@ export async function getTotalContentCount() {
         if (item.type === 'channel' || item.type === 'movie') {
             total += 1;
         } else if (item.type === 'series') {
-            const eps = Array.isArray(item.episodes) ? item.episodes : [];
+            const eps = safeParse(item.episodes);
             total += eps.length;
         } else if (item.type === 'multi-season') {
-            const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+            const seasons = safeParse(item.seasons);
             seasons.forEach((s: any) => {
-                const eps = Array.isArray(s.episodes) ? s.episodes : [];
+                const eps = safeParse(s.episodes);
                 total += eps.length;
             });
         }
@@ -165,8 +177,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       ...item,
       isRestricted: !!item.isRestricted,
       isActive: item.isActive !== false,
-      episodes: Array.isArray(item.episodes) ? item.episodes : [],
-      seasons: Array.isArray(item.seasons) ? item.seasons : []
+      episodes: safeParse(item.episodes),
+      seasons: safeParse(item.seasons)
     }));
     if (!showInactive) items = items.filter(i => i.isActive !== false);
     return items;
@@ -266,6 +278,7 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
+// EXPORTANDO CORRETAMENTE PARA NÃO DAR ERRO NO PUTTY
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
