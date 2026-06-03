@@ -128,15 +128,14 @@ export async function getTotalContentCount() {
 
 /**
  * SINTONIZADOR UNIVERSAL v370-S
- * Extrai links reais de Iframes e formata diversos tipos de stream.
- * Agora aceita e trata virtualmente QUALQUER link de vídeo.
+ * Agora aceita e trata virtualmente QUALQUER link de vídeo ou Iframe.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // 1. Extração de Iframe (Detecta iframes colados direto no campo de link)
+    // Extração de Iframe
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src="([^"]+)"/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -144,8 +143,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // 2. Protocolo de Proxy Master (Links que precisam de Bypass de Referer ou CORS)
-    // Adicionado suporte a mais tipos de link como vidsrc, ok.ru, redecanais, etc.
+    // Protocolo de Proxy Master
     const needsProxy = [
       '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
       'tokyvideo.com', 'redecanais', 'rdcanais', 'ok.ru', 
@@ -153,12 +151,11 @@ export const formatMasterLink = (url: string) => {
     ];
 
     if (needsProxy.some(term => lowUrl.includes(term)) && !lowUrl.includes('youtube.com')) {
-      // Se já for uma URL de proxy, não duplica
       if (lowUrl.includes('/api/proxy?url=')) return finalUrl;
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 3. YouTube Shorts, Live e Padrão
+    // YouTube
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -177,7 +174,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   try {
     let query = supabase.from('content').select('*');
     
-    // Esconde itens da Arena se não for uma busca específica da Arena
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
@@ -194,11 +190,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("FALHA CRÍTICA SUPABASE v370-S:", {
-        message: error.message,
-        code: error.code,
-        hint: error.hint
-      });
+      console.error("FALHA CRÍTICA SUPABASE v370-S:", error.message);
       throw error;
     }
 
@@ -233,6 +225,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e: any) { 
+    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
     throw e;
   }
 }
