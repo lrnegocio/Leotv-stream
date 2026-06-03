@@ -126,26 +126,45 @@ export async function getTotalContentCount() {
   } catch (e) { return 0; }
 }
 
+/**
+ * SINTONIZADOR UNIVERSAL v370-S
+ * Extrai links reais de Iframes e formata diversos tipos de stream.
+ */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
-    if (finalUrl.toLowerCase().startsWith('<iframe')) {
-      const match = finalUrl.match(/src="([^"]+)"/i);
-      if (match && match[1]) finalUrl = match[1];
+
+    // 1. Extração de Iframe (Detecta iframes colados direto)
+    if (finalUrl.toLowerCase().includes('<iframe')) {
+      const srcMatch = finalUrl.match(/src="([^"]+)"/i);
+      if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
     }
+
     let lowUrl = finalUrl.toLowerCase();
-    if (lowUrl.includes('tokyvideo.com')) return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+
+    // 2. Protocolo de Proxy Master (Links que precisam de Bypass)
+    const needsProxy = [
+      '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
+      'tokyvideo.com', 'redecanais', 'rdcanais', 'ok.ru', 
+      'stream', 'cdn', 'vidsrc', 'embed'
+    ];
+
+    if (needsProxy.some(term => lowUrl.includes(term)) && !lowUrl.includes('youtube.com')) {
+      return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
+    }
+
+    // 3. YouTube Shorts e Padrão
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
       else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
-      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+      else if (lowUrl.includes('/embed/')) return finalUrl;
+      
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
     }
-    if (lowUrl.includes('.m3u8') || lowUrl.includes('.mp4') || lowUrl.includes('ch.php?') || lowUrl.includes('xn--')) {
-      return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
-    }
+
     return finalUrl;
   } catch (e) { return url || ""; }
 };
@@ -170,11 +189,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      // LOG DETALHADO PARA O MESTRE LÉO
       console.error("Erro Supabase Detalhado:", {
         message: error.message,
-        details: error.details,
-        hint: error.hint,
         code: error.code
       });
       throw error;

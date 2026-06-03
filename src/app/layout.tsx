@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -47,7 +48,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="light">
+    <html lang="pt-BR" className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -59,7 +60,6 @@ export default function RootLayout({
         <Toaster />
         <OfflineIndicator />
         
-        {/* SCRIPTS DE TERCEIROS CARREGADOS COM SEGURANÇA */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="lazyOnload" />
       </body>
     </html>

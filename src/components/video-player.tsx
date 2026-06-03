@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Loader2, ChevronRight, ChevronLeft, Maximize, Minimize } from "lucide-react"
+import { Loader2, ChevronRight, ChevronLeft, Maximize, Minimize, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface VideoPlayerProps {
@@ -16,14 +17,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const videoRef = React.useRef<HTMLVideoElement>(null)
   const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState(false)
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
-  const isIframe = safeUrl.toLowerCase().includes('youtube.com') || safeUrl.toLowerCase().includes('ok.ru') || safeUrl.toLowerCase().includes('rdcanais') || safeUrl.toLowerCase().includes('redecanais');
+  
+  // DETECTOR UNIVERSAL v370-S
+  const isIframe = safeUrl.includes('embed') || 
+                   safeUrl.includes('youtube.com') || 
+                   safeUrl.includes('ok.ru') || 
+                   safeUrl.includes('vidsrc') || 
+                   !safeUrl.match(/\.(m3u8|mp4|ts|mpd)(\?|$)/i);
 
   const initPlayer = React.useCallback(async () => {
     if (!safeUrl) return;
     setLoading(true);
+    setError(false);
 
     if (isIframe) {
       setTimeout(() => setLoading(false), 2000);
@@ -33,30 +42,38 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // GANHO DE ÁUDIO MASTER v370-S - FORÇA 100% DE VOLUME SEMPRE
     video.volume = 1.0; 
     video.muted = false;
 
-    if (safeUrl.includes('.m3u8')) {
-      const Hls = (window as any).Hls;
-      if (Hls && Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(safeUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => { 
-            video.muted = true; 
-            video.play(); 
+    try {
+      if (safeUrl.includes('.m3u8')) {
+        const Hls = (window as any).Hls;
+        if (Hls && Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90
           });
-          setLoading(false);
-        });
+          hls.loadSource(safeUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(() => { video.muted = true; video.play(); });
+            setLoading(false);
+          });
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) { setError(true); setLoading(false); }
+          });
+        } else {
+          video.src = safeUrl;
+          video.play().finally(() => setLoading(false));
+        }
       } else {
         video.src = safeUrl;
         video.play().finally(() => setLoading(false));
       }
-    } else {
-      video.src = safeUrl;
-      video.play().finally(() => setLoading(false));
+    } catch (e) {
+      setError(true);
+      setLoading(false);
     }
   }, [safeUrl, isIframe]);
 
@@ -76,27 +93,40 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[85vh] rounded-[3rem] overflow-hidden'}`}>
-      {isIframe ? (
-        <iframe src={safeUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" />
+    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[85vh] rounded-[3rem] overflow-hidden shadow-2xl border border-white/5'}`}>
+      {error ? (
+        <div className="flex flex-col items-center gap-4 text-center p-10 animate-in zoom-in-95">
+           <AlertTriangle className="h-20 w-20 text-amber-500" />
+           <h3 className="text-xl font-black uppercase italic text-primary">Sinal Oscilando v370</h3>
+           <p className="text-xs font-bold opacity-60">Mestre Léo, este link pode estar offline ou bloqueado. Tente sintonizar novamente.</p>
+           <Button onClick={() => initPlayer()} className="bg-primary h-12 px-8 rounded-xl font-black uppercase text-[10px]">RECONECTAR SINAL</Button>
+        </div>
+      ) : isIframe ? (
+        <iframe 
+          src={safeUrl} 
+          className="w-full h-full border-0" 
+          allow="autoplay; fullscreen; picture-in-picture" 
+          sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+        />
       ) : (
         <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
       )}
 
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      {loading && !error && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95">
+          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <p className="mt-4 text-[10px] font-black uppercase italic text-primary animate-pulse tracking-[0.2em]">Sintonizando v370-S...</p>
         </div>
       )}
 
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
-        {onPrev && <Button size="icon" onClick={onPrev} className="h-12 w-12 bg-black/40"><ChevronLeft className="h-5 w-5 text-white" /></Button>}
-        <Button size="icon" onClick={toggleFullscreen} className="h-12 w-12 bg-black/40">{isFullscreen ? <Minimize className="h-5 w-5 text-white" /> : <Maximize className="h-5 w-5 text-white" />}</Button>
-        {onNext && <Button size="icon" onClick={onNext} className="h-12 w-12 bg-black/40"><ChevronRight className="h-5 w-5 text-white" /></Button>}
+        {onPrev && <Button size="icon" onClick={onPrev} className="h-14 w-14 bg-black/60 rounded-2xl hover:bg-primary transition-all border border-white/10"><ChevronLeft className="h-6 w-6 text-white" /></Button>}
+        <Button size="icon" onClick={toggleFullscreen} className="h-14 w-14 bg-black/60 rounded-2xl hover:bg-primary transition-all border border-white/10">{isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}</Button>
+        {onNext && <Button size="icon" onClick={onNext} className="h-14 w-14 bg-black/60 rounded-2xl hover:bg-primary transition-all border border-white/10"><ChevronRight className="h-6 w-6 text-white" /></Button>}
       </div>
 
-      <div className="absolute top-6 left-6 z-[160] bg-black/60 px-6 py-2 rounded-full border border-white/10">
-         <p className="text-[10px] font-black uppercase text-primary">{title}</p>
+      <div className="absolute top-8 left-8 z-[160] bg-black/60 px-8 py-3 rounded-full border border-white/10 backdrop-blur-md">
+         <p className="text-[11px] font-black uppercase italic text-primary tracking-widest">{title}</p>
       </div>
     </div>
   )
