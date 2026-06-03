@@ -169,8 +169,14 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("ERRO SUPABASE REAL:", error);
-      throw new Error(error.message || "Erro ao conectar no Supabase. O projeto pode estar pausado.");
+      // LOG DE ALTA PRECISÃO PARA O MESTRE LÉO
+      console.error("ERRO DETALHADO SUPABASE:", {
+        mensagem: error.message,
+        codigo: error.code,
+        detalhes: error.details,
+        dica: error.hint
+      });
+      throw new Error(error.message || "Falha na conexão com o Supabase. Projeto pode estar pausado.");
     }
 
     return (data || []).map(item => ({
@@ -181,7 +187,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
-    console.error("FALHA CRÍTICA NO BANCO:", e);
+    console.error("FALHA CRÍTICA NO BANCO:", e.message || e);
     throw e;
   }
 }
