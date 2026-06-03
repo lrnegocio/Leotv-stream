@@ -202,13 +202,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      // LOG DETALHADO PARA O MESTRE LÉO
-      console.error("Erro Supabase Detalhado:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+      console.error("Erro Supabase Detalhado:", error);
       throw error;
     }
 
