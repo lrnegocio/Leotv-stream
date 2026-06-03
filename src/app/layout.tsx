@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -60,23 +59,7 @@ export default function RootLayout({
         <Toaster />
         <OfflineIndicator />
         
-        <Script id="security-master" strategy="afterInteractive">
-          {`
-            // SEGURANÇA DIAMANTE v370-S - PROTEÇÃO SEM TRAVAMENTOS
-            document.addEventListener('contextmenu', e => e.preventDefault());
-            document.addEventListener('keydown', e => {
-              if (
-                e.keyCode === 123 || 
-                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
-                (e.ctrlKey && e.keyCode === 85) || 
-                (e.ctrlKey && e.keyCode === 83)
-              ) {
-                e.preventDefault();
-              }
-            });
-          `}
-        </Script>
-        
+        {/* SCRIPTS DE TERCEIROS CARREGADOS COM SEGURANÇA */}
         <Script src="https://cdn.jsdelivr.net/npm/hls.js@latest" strategy="lazyOnload" />
       </body>
     </html>
