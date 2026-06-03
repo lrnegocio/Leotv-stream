@@ -2,13 +2,13 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Léo TV Stream - O Sinal Master',
+    name: 'Léo TV Stream - O Sinal Master v370',
     short_name: 'Léo TV',
     description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming.',
-    start_url: '/',
+    start_url: '/login',
     display: 'standalone',
-    display_override: ['standalone', 'window-controls-overlay'],
-    orientation: 'any',
+    display_override: ['standalone', 'fullscreen', 'window-controls-overlay'],
+    orientation: 'landscape',
     background_color: '#0A051A',
     theme_color: '#6D2DCC',
     scope: '/',

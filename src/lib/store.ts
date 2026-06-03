@@ -129,13 +129,14 @@ export async function getTotalContentCount() {
 /**
  * SINTONIZADOR UNIVERSAL v370-S
  * Extrai links reais de Iframes e formata diversos tipos de stream.
+ * Agora aceita e trata virtualmente QUALQUER link de vídeo.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // 1. Extração de Iframe (Detecta iframes colados direto)
+    // 1. Extração de Iframe (Detecta iframes colados direto no campo de link)
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src="([^"]+)"/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -143,18 +144,21 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // 2. Protocolo de Proxy Master (Links que precisam de Bypass)
+    // 2. Protocolo de Proxy Master (Links que precisam de Bypass de Referer ou CORS)
+    // Adicionado suporte a mais tipos de link como vidsrc, ok.ru, redecanais, etc.
     const needsProxy = [
       '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
       'tokyvideo.com', 'redecanais', 'rdcanais', 'ok.ru', 
-      'stream', 'cdn', 'vidsrc', 'embed'
+      'stream', 'cdn', 'vidsrc', 'embed', 'player', 'video'
     ];
 
     if (needsProxy.some(term => lowUrl.includes(term)) && !lowUrl.includes('youtube.com')) {
+      // Se já for uma URL de proxy, não duplica
+      if (lowUrl.includes('/api/proxy?url=')) return finalUrl;
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 3. YouTube Shorts e Padrão
+    // 3. YouTube Shorts, Live e Padrão
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -162,7 +166,7 @@ export const formatMasterLink = (url: string) => {
       else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('/embed/')) return finalUrl;
       
-      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0`;
     }
 
     return finalUrl;
@@ -173,6 +177,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   try {
     let query = supabase.from('content').select('*');
     
+    // Esconde itens da Arena se não for uma busca específica da Arena
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
@@ -189,9 +194,10 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("Erro Supabase Detalhado:", {
+      console.error("FALHA CRÍTICA SUPABASE v370-S:", {
         message: error.message,
-        code: error.code
+        code: error.code,
+        hint: error.hint
       });
       throw error;
     }
@@ -204,7 +210,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
-    console.error("FALHA AO BUSCAR CONTEÚDO v370-S:", e.message || e);
     throw e;
   }
 }
@@ -228,7 +233,6 @@ export async function getRemoteUsers(): Promise<User[]> {
     if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e: any) { 
-    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
     throw e;
   }
 }

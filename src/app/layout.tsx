@@ -6,7 +6,7 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Léo TV Stream - O Sinal Master v370-S',
+  title: 'Léo TV Stream - O Sinal Master v370',
   description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming do Mestre Léo.',
   manifest: '/manifest.webmanifest',
   icons: {
