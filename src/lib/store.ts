@@ -96,7 +96,8 @@ const safeParse = (data: any) => {
 export async function getCategoryCount(g: string) {
   try {
     const { data, error } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
-    if (error || !data) return 0;
+    if (error) throw error;
+    if (!data) return 0;
     
     let total = 0;
     data.forEach(item => {
@@ -169,7 +170,13 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("ERRO SUPABASE CONTEÚDO v370-S:", error.message || error);
+      // LOG DETALHADO PARA O MESTRE LÉO
+      console.error("Erro Supabase Detalhado:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
 
@@ -181,7 +188,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
-    console.error("ERRO CRÍTICO NA GRADE:", e.message || e);
+    console.error("FALHA AO BUSCAR CONTEÚDO v370-S:", e.message || e);
     throw e;
   }
 }

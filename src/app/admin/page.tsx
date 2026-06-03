@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
       const errorMsg = err.message || "";
       console.error("ERRO DE SINTONIA ADMIN:", errorMsg);
       
-      if (errorMsg.includes('exceed_egress_quota') || errorMsg.includes('quota')) {
+      if (errorMsg.includes('exceed_egress_quota') || errorMsg.includes('quota') || errorMsg.includes('restricted')) {
         setIsQuotaExceeded(true)
       } else {
         setIsDbOffline(true)
@@ -105,9 +105,14 @@ export default function AdminDashboard() {
               <p className="text-[12px] font-black uppercase text-amber-600 tracking-widest mb-1">Aviso Crítico: Tráfego de Dados Excedido</p>
               <p className="text-base font-bold leading-relaxed text-foreground/80">Mestre Léo, sua rede atingiu o limite de transferência gratuita do Supabase (Egress Quota). Para os canais voltarem, você precisa fazer o upgrade no Supabase ou aguardar o reset mensal.</p>
            </div>
-           <Button variant="outline" className="border-amber-500/30 text-amber-600 font-black text-[9px] uppercase h-14 px-8 rounded-2xl hover:bg-amber-500 hover:text-white transition-all" asChild>
-             <a href="https://supabase.com/dashboard/project/_/settings/billing" target="_blank" rel="noopener noreferrer">Resolver no Supabase</a>
-           </Button>
+           <div className="flex flex-col gap-2">
+             <Button variant="outline" className="border-amber-500/30 text-amber-600 font-black text-[9px] uppercase h-12 px-8 rounded-xl hover:bg-amber-500 hover:text-white transition-all" asChild>
+               <a href="https://supabase.com/dashboard/project/_/settings/billing" target="_blank" rel="noopener noreferrer">Resolver no Supabase</a>
+             </Button>
+             <Button asChild variant="secondary" className="h-12 px-8 rounded-xl font-black uppercase text-[9px]">
+                <Link href="/admin/content"><HardDriveDownload className="mr-2 h-3 w-3" /> Salvar Backup Local</Link>
+             </Button>
+           </div>
         </div>
       )}
 

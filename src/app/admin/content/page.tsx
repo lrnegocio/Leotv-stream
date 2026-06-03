@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff, CheckCircle2, AlertTriangle, RefreshCcw } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff, CheckCircle2, AlertTriangle, RefreshCcw, HardDriveDownload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
@@ -53,6 +53,21 @@ export default function ContentManagementPage() {
     const delayDebounceFn = setTimeout(() => { loadItems(searchTerm) }, 500)
     return () => clearTimeout(delayDebounceFn)
   }, [searchTerm, loadItems])
+
+  const handleDownloadBackup = () => {
+    if (items.length === 0) {
+      toast({ variant: "destructive", title: "Nada para baixar!", description: "Aguarde os canais carregarem ou verifique o banco." });
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `leotv_backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    toast({ title: "BACKUP SALVO!", description: "Sua lista de canais está segura no seu computador." });
+  }
 
   const handleDelete = async (id: string) => {
     if (confirm("Mestre, deseja realmente excluir este sinal da rede?")) {
@@ -123,6 +138,9 @@ export default function ContentManagementPage() {
           <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Total de Canais e VOD (A-Z).</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button onClick={handleDownloadBackup} variant="outline" className="h-10 px-4 rounded-xl border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 text-[9px] font-black uppercase">
+            <HardDriveDownload className="mr-2 h-3 w-3" /> Exportar Biblioteca
+          </Button>
           <Button onClick={() => loadItems(searchTerm)} variant="outline" className="h-10 w-10 rounded-xl border-primary/20">
             <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -147,7 +165,7 @@ export default function ContentManagementPage() {
            <div className="bg-destructive p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-white" /></div>
            <div className="flex-1">
               <p className="text-[10px] font-black uppercase text-destructive tracking-widest mb-1">Aviso Crítico: Banco de Dados Offline</p>
-              <p className="text-sm font-bold leading-relaxed">Mestre, o Supabase retornou um erro. Certifique-se de que o projeto "Léo Tv & Stream" foi **RETOMADO** no painel deles.</p>
+              <p className="text-sm font-bold leading-relaxed">Mestre, o Supabase retornou um erro. Certifique-se de que o projeto "Léo Tv & Stream" foi **RETOMADO** ou se a cota de tráfego foi excedida.</p>
            </div>
            <Button variant="outline" className="border-destructive/30 text-destructive font-black text-[9px] uppercase h-10 px-4 rounded-xl" asChild>
              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Ir para o Supabase</a>
@@ -222,7 +240,7 @@ export default function ContentManagementPage() {
       )}
 
       <Dialog open={isBulkEditing} onOpenChange={setIsBulkEditing}>
-        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2rem] p-8 shadow-2xl">
+        <DialogContent className="max-w-md bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
           <DialogHeader><DialogTitle className="uppercase font-black text-amber-500 italic text-xl">Recalibragem Blindada v370 ({selectedIds.length})</DialogTitle></DialogHeader>
           <div className="space-y-6 py-4">
              <p className="text-[9px] font-bold uppercase text-primary/60 italic text-center">Marque apenas o que deseja alterar nos {selectedIds.length} itens.</p>
