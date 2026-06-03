@@ -22,6 +22,7 @@ export default function AdminDashboard() {
     setLoading(true)
     setIsDbOffline(false)
     try {
+      // TENTATIVA DE CONEXÃO MASTER v370-S
       const [count, ppv, alacarte, u, r] = await Promise.all([
         getTotalContentCount(),
         getCategoryCount('LÉO TV PAY PER VIEW'),
@@ -36,15 +37,20 @@ export default function AdminDashboard() {
       setUsers(u)
       setResellers(r)
       
-      // Se tudo vier zero e o projeto não carregar, pode ser pausa do Supabase
+      // Detecção de sinal vazio por pausa do Supabase
       if (count === 0 && u.length === 0) {
         setIsDbOffline(true)
       } else {
         toast({ title: "DADOS SINCRONIZADOS v370-S" })
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("ERRO DE SINTONIA ADMIN:", err.message);
       setIsDbOffline(true)
-      toast({ variant: "destructive", title: "ERRO DE CONEXÃO", description: "Verifique seu Supabase." })
+      toast({ 
+        variant: "destructive", 
+        title: "SINAL DO BANCO PERDIDO", 
+        description: "Mestre Léo, seu Supabase está dormindo ou offline." 
+      })
     } finally {
       setLoading(false)
     }
@@ -162,7 +168,7 @@ export default function AdminDashboard() {
               {users.length === 0 && (
                 <div className="p-20 text-center flex flex-col items-center gap-4 opacity-30">
                    <Ghost className="h-12 w-12" />
-                   <p className="font-black uppercase text-xs">Aguardando retomada do Banco de Dados...</p>
+                   <p className="font-black uppercase text-xs">{isDbOffline ? 'Sinal do Banco Perdido' : 'Aguardando primeiros clientes...'}</p>
                 </div>
               )}
             </div>

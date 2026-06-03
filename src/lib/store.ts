@@ -169,9 +169,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      // LOG DE ALTA PRECISÃO PARA O MESTRE LÉO - Evita o erro {}
-      console.error("ERRO SUPABASE DETALHADO:", error.message);
-      throw new Error(error.message);
+      console.error("FALHA SUPABASE v370-S:", error.message || error);
+      throw error;
     }
 
     return (data || []).map(item => ({
@@ -182,7 +181,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
-    console.error("FALHA CRÍTICA NO BANCO:", e.message || e);
+    console.error("ERRO CRÍTICO NA GRADE:", e.message || e);
     throw e;
   }
 }
@@ -204,9 +203,9 @@ export async function getRemoteUsers(): Promise<User[]> {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
     if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
-  } catch (e) { 
-    console.error("Erro ao buscar usuários:", e);
-    return []; 
+  } catch (e: any) { 
+    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
+    throw e;
   }
 }
 
