@@ -6,7 +6,7 @@ import { OfflineIndicator } from '@/components/offline-indicator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Léo TV Stream - O Sinal Master v370',
+  title: 'Léo TV Stream - O Aplicativo Master v370-S',
   description: 'Acesse seus canais, filmes e séries com a melhor tecnologia de streaming do Mestre Léo.',
   manifest: '/manifest.webmanifest',
   icons: {
@@ -20,16 +20,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Léo TV Stream',
-  },
-  other: {
-    'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'black-translucent',
-    'application-name': 'Léo TV',
-    'msapplication-TileColor': '#6D2DCC',
-    'theme-color': '#6D2DCC',
-    'tv-app-capable': 'yes',
-    'handheldfriendly': 'true',
   }
 };
 

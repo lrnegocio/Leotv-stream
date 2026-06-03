@@ -127,36 +127,47 @@ export async function getTotalContentCount() {
 }
 
 /**
- * SINTONIZADOR UNIVERSAL v370-S
- * Agora aceita e trata virtualmente QUALQUER link de vídeo ou Iframe.
- * Suporte nativo para OK.ru, Vidsrc, YouTube e links diretos.
+ * SINTONIZADOR UNIVERSAL v370-S (SUPREMO)
+ * Aceita todo tipo de link: Iframes, OK.ru, Tokyvideo, YouTube e links diretos.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // Extração de Iframe (Caso o mestre cole o código completo do embed)
+    // 1. Extração de Iframe (Caso o mestre cole o código completo do embed)
     if (finalUrl.toLowerCase().includes('<iframe')) {
-      const srcMatch = finalUrl.match(/src="([^"]+)"/i);
+      const srcMatch = finalUrl.match(/src=["']([^"']+)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
     }
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // Protocolo de Proxy Master (Para links que bloqueiam carregamento direto)
+    // 2. Tratamento Especial para sites de embed populares
+    if (lowUrl.includes('ok.ru/video/')) {
+      const videoId = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
+      if (videoId) finalUrl = `https://ok.ru/videoembed/${videoId}`;
+    }
+    
+    if (lowUrl.includes('tokyvideo.com/video/')) {
+       const slug = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
+       if (slug) finalUrl = `https://www.tokyvideo.com/embed/${slug}`;
+    }
+
+    // 3. Protocolo de Proxy Master (CORS Bypass)
     const needsProxy = [
       '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
-      'tokyvideo.com', 'redecanais', 'rdcanais', 'ok.ru', 
-      'stream', 'cdn', 'vidsrc', 'embed', 'player', 'video'
+      'redecanais', 'rdcanais', 'stream', 'cdn', 'vidsrc', 
+      'player', 'video', 'playlist', 'master', 'index'
     ];
 
-    if (needsProxy.some(term => lowUrl.includes(term)) && !lowUrl.includes('youtube.com')) {
-      if (lowUrl.includes('/api/proxy?url=')) return finalUrl;
+    if (lowUrl.includes('/api/proxy?url=')) return finalUrl;
+
+    if (needsProxy.some(term => lowUrl.includes(term)) && !lowUrl.includes('youtube.com') && !lowUrl.includes('ok.ru')) {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // Tratamento Especial YouTube
+    // 4. YouTube (Suporte para Shorts e Links padrão)
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -192,7 +203,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     
     if (error) {
       // LOG DETALHADO PARA O MESTRE LÉO
-      console.error("FALHA CRÍTICA SUPABASE v370-S:", {
+      console.error("Erro Supabase Detalhado:", {
         message: error.message,
         details: error.details,
         hint: error.hint,
@@ -229,10 +240,7 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
-    if (error) {
-       console.error("ERRO SUPABASE USUARIOS:", error.message);
-       throw error;
-    }
+    if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e: any) { 
     console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
