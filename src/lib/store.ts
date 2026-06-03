@@ -152,25 +152,39 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
+    
+    // Filtro Arena (Games)
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
-    if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    const trimmedGenre = categoryGenre.trim().toUpperCase();
-    if (trimmedGenre) query = query.eq('genre', trimmedGenre);
-    const { data, error } = await query.order('title', { ascending: true });
-    if (error) throw error;
 
-    let items = (data || []).map(item => ({
+    // Busca por termo
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
+
+    // Filtro de Gênero Master
+    const trimmedGenre = categoryGenre.trim().toUpperCase();
+    if (trimmedGenre) {
+      query = query.eq('genre', trimmedGenre);
+    }
+
+    const { data, error } = await query.order('title', { ascending: true });
+    
+    if (error) {
+      console.error("Erro Supabase:", error);
+      return [];
+    }
+
+    return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
       isActive: item.isActive !== false,
       episodes: safeParse(item.episodes),
       seasons: safeParse(item.seasons)
-    }));
-    if (!showInactive) items = items.filter(i => i.isActive !== false);
-    return items;
+    })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
+    console.error("Falha Crítica no Banco:", e);
     return []; 
   }
 }
@@ -260,6 +274,7 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
+// FIX: Exportação obrigatória para evitar erro de build no Putty
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
