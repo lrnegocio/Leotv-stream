@@ -153,17 +153,14 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   try {
     let query = supabase.from('content').select('*');
     
-    // Filtro Arena (Games)
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
 
-    // Busca por termo
     if (searchQuery) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     }
 
-    // Filtro de Gênero Master
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) {
       query = query.eq('genre', trimmedGenre);
@@ -172,14 +169,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      // LOG DETALHADO PARA O MESTRE LÉO
-      console.error("Erro Supabase Detalhado:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
-      return [];
+      console.error("ERRO SUPABASE REAL:", error);
+      throw new Error(error.message || "Erro ao conectar no Supabase. O projeto pode estar pausado.");
     }
 
     return (data || []).map(item => ({
@@ -190,8 +181,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
   } catch (e: any) { 
-    console.error("Falha Crítica no Banco:", e);
-    return []; 
+    console.error("FALHA CRÍTICA NO BANCO:", e);
+    throw e;
   }
 }
 

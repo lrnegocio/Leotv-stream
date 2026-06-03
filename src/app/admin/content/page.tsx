@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff, CheckCircle2 } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Film, Lock, PlayCircle, Loader2, Tv, Square, CheckSquare, Edit, Power, PowerOff, CheckCircle2, AlertTriangle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
@@ -20,6 +20,7 @@ export default function ContentManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [items, setItems] = React.useState<ContentItem[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [errorDb, setErrorDb] = React.useState<string | null>(null)
   const [previewItem, setPreviewItem] = React.useState<ContentItem | null>(null)
   const [activeEpisode, setActiveEpisode] = React.useState<{url: string, title: string, id: string} | null>(null)
   const [selectedIds, setSelectedIds] = React.useState<string[]>([])
@@ -31,11 +32,18 @@ export default function ContentManagementPage() {
 
   const loadItems = React.useCallback(async (query = "") => {
     setLoading(true)
+    setErrorDb(null)
     try {
       const data = await getRemoteContent(true, query)
       setItems(data)
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erro de Conexão Master" })
+    } catch (error: any) {
+      console.error("Erro ao carregar itens:", error);
+      setErrorDb(error.message || "Erro de conexão com o banco de dados.");
+      toast({ 
+        variant: "destructive", 
+        title: "Sinal do Banco Perdido", 
+        description: "Mestre, verifique se o seu Supabase está ATIVO (não pausado)." 
+      })
     } finally {
       setLoading(false)
     }
@@ -115,6 +123,9 @@ export default function ContentManagementPage() {
           <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Gestão Total de Canais e VOD (A-Z).</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button onClick={() => loadItems(searchTerm)} variant="outline" className="h-10 w-10 rounded-xl border-primary/20">
+            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
           {selectedIds.length > 0 && (
             <>
               <Button onClick={() => setIsBulkEditing(true)} className="bg-amber-500 hover:bg-amber-600 h-10 px-4 rounded-xl text-[9px] font-black uppercase shadow-lg shadow-amber-500/20">
@@ -130,6 +141,19 @@ export default function ContentManagementPage() {
           </Button>
         </div>
       </div>
+
+      {errorDb && (
+        <div className="bg-destructive/10 border-2 border-destructive/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 shadow-xl">
+           <div className="bg-destructive p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-white" /></div>
+           <div className="flex-1">
+              <p className="text-[10px] font-black uppercase text-destructive tracking-widest mb-1">Aviso Crítico: Banco de Dados Offline</p>
+              <p className="text-sm font-bold leading-relaxed">Mestre, o Supabase retornou um erro. Certifique-se de que o projeto "Léo Tv & Stream" foi **RETOMADO** no painel deles.</p>
+           </div>
+           <Button variant="outline" className="border-destructive/30 text-destructive font-black text-[9px] uppercase h-10 px-4 rounded-xl" asChild>
+             <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Ir para o Supabase</a>
+           </Button>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -191,6 +215,9 @@ export default function ContentManagementPage() {
               </div>
             );
           })}
+          {!loading && items.length === 0 && !errorDb && (
+            <div className="col-span-full py-20 text-center opacity-30 font-black uppercase text-xs">Nenhum canal localizado v370.</div>
+          )}
         </div>
       )}
 
