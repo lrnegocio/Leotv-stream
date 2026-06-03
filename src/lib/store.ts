@@ -129,13 +129,14 @@ export async function getTotalContentCount() {
 /**
  * SINTONIZADOR UNIVERSAL v370-S
  * Agora aceita e trata virtualmente QUALQUER link de vídeo ou Iframe.
+ * Suporte nativo para OK.ru, Vidsrc, YouTube e links diretos.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // Extração de Iframe
+    // Extração de Iframe (Caso o mestre cole o código completo do embed)
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src="([^"]+)"/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -143,7 +144,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // Protocolo de Proxy Master
+    // Protocolo de Proxy Master (Para links que bloqueiam carregamento direto)
     const needsProxy = [
       '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
       'tokyvideo.com', 'redecanais', 'rdcanais', 'ok.ru', 
@@ -155,7 +156,7 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // YouTube
+    // Tratamento Especial YouTube
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -190,7 +191,13 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("FALHA CRÍTICA SUPABASE v370-S:", error.message);
+      // LOG DETALHADO PARA O MESTRE LÉO
+      console.error("FALHA CRÍTICA SUPABASE v370-S:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
 
@@ -222,7 +229,10 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
-    if (error) throw error;
+    if (error) {
+       console.error("ERRO SUPABASE USUARIOS:", error.message);
+       throw error;
+    }
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e: any) { 
     console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);

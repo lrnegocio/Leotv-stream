@@ -22,7 +22,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   
-  // Detector Universal de Iframe/Video
+  // Detector Universal de Iframe/Video v370-S
   const isIframe = safeUrl.includes('embed') || 
                    safeUrl.includes('youtube.com') || 
                    safeUrl.includes('ok.ru') || 
@@ -35,6 +35,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false);
 
     if (isIframe) {
+      // Iframes levam tempo para carregar o conteúdo interno
       setTimeout(() => setLoading(false), 2000);
       return;
     }
@@ -42,6 +43,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
+    // Configuração Soberana de Áudio
     video.volume = 1.0; 
     video.muted = false;
 
@@ -49,14 +51,24 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       if (safeUrl.includes('.m3u8')) {
         const Hls = (window as any).Hls;
         if (Hls && Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+          const hls = new Hls({ 
+            enableWorker: true, 
+            lowLatencyMode: true,
+            backBufferLength: 90 
+          });
           hls.loadSource(safeUrl);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(() => { video.muted = true; video.play(); });
+            video.play().catch(() => {
+              // Autoplay block bypass
+              video.muted = true;
+              video.play();
+            });
             setLoading(false);
           });
-          hls.on(Hls.Events.ERROR, (event: any, data: any) => { if (data.fatal) setError(true); });
+          hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+            if (data.fatal) setError(true);
+          });
         } else {
           video.src = safeUrl;
           video.play().finally(() => setLoading(false));
@@ -66,12 +78,15 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         video.play().finally(() => setLoading(false));
       }
     } catch (e) {
+      console.error("ERRO PLAYER v370-S:", e);
       setError(true);
       setLoading(false);
     }
   }, [safeUrl, isIframe]);
 
-  React.useEffect(() => { initPlayer(); }, [initPlayer]);
+  React.useEffect(() => {
+    initPlayer();
+  }, [initPlayer]);
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -94,9 +109,20 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
            <Button onClick={() => initPlayer()} className="bg-primary h-12 px-8 rounded-xl font-black uppercase text-[10px]">RECONECTAR SINAL</Button>
         </div>
       ) : isIframe ? (
-        <iframe src={safeUrl} className="w-full h-full border-0" allow="autoplay; fullscreen" />
+        <iframe 
+          src={safeUrl} 
+          className="w-full h-full border-0" 
+          allow="autoplay; fullscreen; picture-in-picture" 
+          allowFullScreen
+        />
       ) : (
-        <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline controls />
+        <video 
+          ref={videoRef} 
+          className="w-full h-full object-contain" 
+          autoPlay 
+          playsInline 
+          controls 
+        />
       )}
 
       {loading && !error && (
