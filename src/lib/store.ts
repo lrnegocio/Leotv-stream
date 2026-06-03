@@ -169,14 +169,9 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      // LOG DE ALTA PRECISÃO PARA O MESTRE LÉO
-      console.error("ERRO DETALHADO SUPABASE:", {
-        mensagem: error.message,
-        codigo: error.code,
-        detalhes: error.details,
-        dica: error.hint
-      });
-      throw new Error(error.message || "Falha na conexão com o Supabase. Projeto pode estar pausado.");
+      // LOG DE ALTA PRECISÃO PARA O MESTRE LÉO - Evita o erro {}
+      console.error("ERRO SUPABASE DETALHADO:", error.message);
+      throw new Error(error.message);
     }
 
     return (data || []).map(item => ({
@@ -209,7 +204,10 @@ export async function getRemoteUsers(): Promise<User[]> {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
     if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
-  } catch (e) { return []; }
+  } catch (e) { 
+    console.error("Erro ao buscar usuários:", e);
+    return []; 
+  }
 }
 
 export async function saveUser(user: Partial<User>) {
