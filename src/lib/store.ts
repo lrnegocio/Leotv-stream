@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -128,14 +127,14 @@ export async function getTotalContentCount() {
 
 /**
  * SINTONIZADOR UNIVERSAL v370-S (SUPREMO)
- * Aceita todo tipo de link: Iframes, OK.ru, Tokyvideo, YouTube e links diretos.
+ * Aceita todo tipo de link: Iframes, OK.ru, Tokyvideo, YouTube e links diretos com Bypass.
  */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // 1. Extração de Iframe
+    // 1. Extração Inteligente de Iframe
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["']([^"']+)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -143,7 +142,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // 2. Tratamento para sites de embed populares
+    // 2. Conversores de Embed (OK.ru, TokyVideo, etc)
     if (lowUrl.includes('ok.ru/video/')) {
       const videoId = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
       if (videoId) finalUrl = `https://ok.ru/videoembed/${videoId}`;
@@ -167,7 +166,7 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 4. YouTube
+    // 4. YouTube Smart Convert
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -223,9 +222,17 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes('exceed_egress_quota')) {
+        throw new Error("COTA DE DADOS EXCEDIDA v370-S: Mestre Léo, o Supabase bloqueou o sinal. Faça o upgrade do plano ou aguarde o reset.");
+      }
+      throw error;
+    }
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
-  } catch (e: any) { throw e; }
+  } catch (e: any) { 
+    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
+    throw e;
+  }
 }
 
 export async function saveUser(user: Partial<User>) {
