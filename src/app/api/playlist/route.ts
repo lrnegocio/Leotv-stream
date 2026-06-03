@@ -1,7 +1,7 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getRemoteContent, formatMasterLink } from '@/lib/store';
 
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**
