@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -95,8 +96,8 @@ const safeParse = (data: any) => {
 
 export async function getCategoryCount(g: string) {
   try {
-    const { data } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
-    if (!data) return 0;
+    const { data, error } = await supabase.from('content').select('type, episodes, seasons').eq('genre', g.toUpperCase());
+    if (error || !data) return 0;
     
     let total = 0;
     data.forEach(item => {
@@ -119,25 +120,9 @@ export async function getCategoryCount(g: string) {
 
 export async function getTotalContentCount() {
   try {
-    const { data } = await supabase.from('content').select('type, episodes, seasons').not('genre', 'ilike', 'ARENA: %');
-    if (!data) return 0;
-    
-    let total = 0;
-    data.forEach(item => {
-        if (item.type === 'channel' || item.type === 'movie') {
-            total += 1;
-        } else if (item.type === 'series') {
-            const eps = safeParse(item.episodes);
-            total += eps.length;
-        } else if (item.type === 'multi-season') {
-            const seasons = safeParse(item.seasons);
-            seasons.forEach((s: any) => {
-                const eps = safeParse(s.episodes);
-                total += eps.length;
-            });
-        }
-    });
-    return total;
+    const { data, error } = await supabase.from('content').select('id');
+    if (error) return 0;
+    return data?.length || 0;
   } catch (e) { return 0; }
 }
 
@@ -167,12 +152,21 @@ export const formatMasterLink = (url: string) => {
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
-    let query = supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %');
+    let query = supabase.from('content').select('*');
+    
+    // Filtro inteligente para não misturar Games na lista de TV
+    if (!categoryGenre.startsWith('ARENA:')) {
+       query = query.not('genre', 'ilike', 'ARENA: %');
+    }
+
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
+    
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
+
     let items = (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
@@ -180,9 +174,13 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       episodes: safeParse(item.episodes),
       seasons: safeParse(item.seasons)
     }));
+
     if (!showInactive) items = items.filter(i => i.isActive !== false);
     return items;
-  } catch (e: any) { return []; }
+  } catch (e: any) { 
+    console.error("Erro Supabase Content:", e);
+    return []; 
+  }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
@@ -278,7 +276,7 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
-// EXPORTANDO CORRETAMENTE PARA NÃO DAR ERRO NO PUTTY
+// EXPORTAÇÃO MESTRE PARA NÃO DAR ERRO NO PUTTY
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 

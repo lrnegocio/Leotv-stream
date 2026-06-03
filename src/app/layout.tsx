@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -61,7 +62,7 @@ export default function RootLayout({
         
         <Script id="security-master" strategy="afterInteractive">
           {`
-            // BLOQUEIO MASTER v370-S - ESTABILIZADO (SEM TELA BRANCA)
+            // SEGURANÇA DIAMANTE v370-S - PROTEÇÃO SEM TRAVAMENTOS
             document.addEventListener('contextmenu', e => e.preventDefault());
             document.addEventListener('keydown', e => {
               if (
