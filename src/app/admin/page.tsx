@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -14,21 +15,32 @@ export default function AdminDashboard() {
   const [users, setUsers] = React.useState<User[]>([])
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [isDbOffline, setIsDbOffline] = React.useState(false)
 
   const loadData = React.useCallback(async () => {
+    setLoading(true)
+    setIsDbOffline(false)
     try {
-      const count = await getTotalContentCount()
-      const ppv = await getCategoryCount('LÉO TV PAY PER VIEW')
-      const alacarte = await getCategoryCount('LÉO TV ALACARTES')
-      const u = await getRemoteUsers()
-      const r = await getRemoteResellers()
+      const [count, ppv, alacarte, u, r] = await Promise.all([
+        getTotalContentCount(),
+        getCategoryCount('LÉO TV PAY PER VIEW'),
+        getCategoryCount('LÉO TV ALACARTES'),
+        getRemoteUsers(),
+        getRemoteResellers()
+      ])
       
       setTotalContent(count)
       setPpvCount(ppv)
       setAlacarteCount(alacarte)
       setUsers(u)
       setResellers(r)
+      
+      // Se tudo vier zero mas o sistema está tentando carregar, o banco pode estar offline
+      if (count === 0 && u.length === 0) {
+        setIsDbOffline(true)
+      }
     } catch (err) {
+      setIsDbOffline(true)
     } finally {
       setLoading(false)
     }
@@ -39,8 +51,9 @@ export default function AdminDashboard() {
   }, [loadData])
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Sintonizando Banco de Dados...</p>
     </div>
   )
 
@@ -56,12 +69,12 @@ export default function AdminDashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel de Controle v370</h1>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel de Controle v370-S</h1>
           <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gerenciamento central da rede StreamSight.</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => { setLoading(true); loadData(); }} variant="outline" className="h-10 px-4 rounded-xl">
-             <Zap className="h-4 w-4 text-primary" />
+          <Button onClick={loadData} variant="outline" className="h-10 px-4 rounded-xl">
+             <Zap className={`h-4 w-4 ${isDbOffline ? 'text-red-500 animate-pulse' : 'text-primary'}`} />
           </Button>
           <Button asChild className="bg-primary hover:bg-primary/90 uppercase font-bold text-[10px] h-10 px-6 rounded-xl shadow-lg shadow-primary/20">
             <Link href="/admin/content/new">
@@ -70,6 +83,19 @@ export default function AdminDashboard() {
           </Button>
         </div>
       </div>
+
+      {isDbOffline && (
+        <div className="bg-destructive/10 border-2 border-destructive/20 p-6 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4 shadow-xl">
+           <div className="bg-destructive p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-white" /></div>
+           <div className="flex-1">
+              <p className="text-[10px] font-black uppercase text-destructive tracking-widest mb-1">Aviso: Banco de Dados Offline</p>
+              <p className="text-sm font-bold leading-relaxed">Mestre Léo, seu projeto no Supabase está **PAUSADO**. Clique em "Resume Project" no site do Supabase para seus canais voltarem!</p>
+           </div>
+           <Button variant="outline" className="border-destructive/20 text-destructive font-black text-[10px] uppercase h-10 px-4 rounded-xl" asChild>
+             <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Ir para o Supabase</a>
+           </Button>
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
@@ -83,8 +109,8 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-3xl font-black tracking-tight">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
-                <ArrowUpRight className="h-3 w-3 mr-1 text-emerald-500" />
-                Sinal Ativo
+                <ArrowUpRight className={`h-3 w-3 mr-1 ${isDbOffline ? 'text-red-500' : 'text-emerald-500'}`} />
+                {isDbOffline ? 'Sinal Offline' : 'Sinal Ativo'}
               </p>
             </CardContent>
           </Card>
@@ -129,20 +155,22 @@ export default function AdminDashboard() {
                   </div>
                 );
               })}
-              {users.length === 0 && <div className="p-10 text-center opacity-30 font-bold uppercase text-xs">Nenhum cliente cadastrado.</div>}
+              {users.length === 0 && <div className="p-10 text-center opacity-30 font-bold uppercase text-xs">Aguardando retomada do Banco de Dados...</div>}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-primary/5 border border-primary/20 shadow-sm border-l-4 border-l-primary rounded-2xl">
+        <Card className={`bg-primary/5 border shadow-sm border-l-4 rounded-2xl ${isDbOffline ? 'border-destructive/20 border-l-destructive' : 'border-primary/20 border-l-primary'}`}>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <ShieldCheck className="h-6 w-6 text-primary" />
+              <div className={`p-3 rounded-full ${isDbOffline ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+                {isDbOffline ? <AlertTriangle className="h-6 w-6 text-destructive" /> : <ShieldCheck className="h-6 w-6 text-primary" />}
               </div>
               <div>
-                <h4 className="font-black text-lg uppercase tracking-tight italic">Status da Rede v370</h4>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Todos os sinais operando com estabilidade máxima.</p>
+                <h4 className="font-black text-lg uppercase tracking-tight italic">{isDbOffline ? 'Sinal do Banco Perdido' : 'Status da Rede v370'}</h4>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                  {isDbOffline ? 'O seu Supabase está pausado. Clique em Resume Project no painel deles.' : 'Todos os sinais operando com estabilidade máxima.'}
+                </p>
               </div>
             </div>
           </CardContent>

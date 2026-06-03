@@ -82,7 +82,6 @@ export interface User {
   reseller_name?: string; 
 }
 
-// FUNÇÃO PARA PARSE SEGURO DE JSON (Resolve sumiço de episódios)
 const safeParse = (data: any) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -153,17 +152,12 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    
-    // Filtro inteligente para não misturar Games na lista de TV
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
-
     if (searchQuery) query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) query = query.eq('genre', trimmedGenre);
-    
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
 
@@ -174,11 +168,9 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       episodes: safeParse(item.episodes),
       seasons: safeParse(item.seasons)
     }));
-
     if (!showInactive) items = items.filter(i => i.isActive !== false);
     return items;
   } catch (e: any) { 
-    console.error("Erro Supabase Content:", e);
     return []; 
   }
 }
@@ -214,13 +206,6 @@ export async function saveUser(user: Partial<User>) {
     const { data: existing } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (existing) { payload.id = existing.id; } else {
       payload.id = payload.id || "user_" + Date.now() + Math.random().toString(36).substring(7);
-      if (payload.subscriptionTier === 'test') {
-          const exp = new Date(); exp.setHours(exp.getHours() + 6);
-          payload.expiryDate = exp.toISOString();
-      } else if (payload.subscriptionTier === 'monthly') {
-          const exp = new Date(); exp.setMonth(exp.getMonth() + 1);
-          payload.expiryDate = exp.toISOString();
-      }
     }
     const allowedColumns = ['id', 'pin', 'role', 'subscriptionTier', 'expiryDate', 'maxScreens', 'activeDevices', 'isBlocked', 'isAdultEnabled', 'isGamesEnabled', 'isPpvEnabled', 'isAlacarteEnabled', 'isGamesOnly', 'resellerId', 'activatedAt', 'individualMessage', 'gamePoints'];
     const cleanPayload: any = {};
@@ -240,7 +225,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
     if (user.expiryDate && new Date() > new Date(user.expiryDate)) return { error: "ACESSO EXPIRADO" };
-    
     const activeDevices = user.activeDevices || [];
     if (!activeDevices.includes(deviceId)) {
       if (activeDevices.length >= user.maxScreens) return { error: "LIMITE DE TELAS ATINGIDO" };
@@ -276,7 +260,6 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
-// EXPORTAÇÃO MESTRE PARA NÃO DAR ERRO NO PUTTY
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
