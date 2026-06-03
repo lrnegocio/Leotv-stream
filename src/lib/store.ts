@@ -171,7 +171,7 @@ export const formatMasterLink = (url: string) => {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split(/[?#&]/)[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split( 'youtu.be/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('/embed/')) return finalUrl;
       
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0`;
@@ -196,6 +196,8 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     }
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
+    
+    // FILTRO MESTRE LÉO: Sumir do aplicativo se isActive for false
     return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
@@ -222,12 +224,7 @@ export async function saveContent(item: Partial<ContentItem>) {
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
-    if (error) {
-      if (error.message?.includes('exceed_egress_quota')) {
-        throw new Error("COTA DE DADOS EXCEDIDA v370-S: Mestre Léo, o Supabase bloqueou o sinal. Faça o upgrade do plano ou aguarde o reset.");
-      }
-      throw error;
-    }
+    if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
   } catch (e: any) { 
     console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);

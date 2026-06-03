@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Léo TV Stream - O Sinal Master v370-S',
     short_name: 'Léo TV',
     description: 'O melhor aplicativo de streaming do Mestre Léo.',
-    start_url: '/login',
+    start_url: '/',
     display: 'standalone',
     display_override: ['standalone', 'fullscreen', 'window-controls-overlay'],
     orientation: 'any',
