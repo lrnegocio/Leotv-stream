@@ -172,7 +172,13 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("Erro Supabase:", error);
+      // LOG DETALHADO PARA O MESTRE LÉO
+      console.error("Erro Supabase Detalhado:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return [];
     }
 
@@ -274,7 +280,6 @@ export async function removeReseller(id: string) {
   return !error; 
 }
 
-// FIX: Exportação obrigatória para evitar erro de build no Putty
 export async function removeGame(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
