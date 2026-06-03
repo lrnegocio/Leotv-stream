@@ -135,7 +135,7 @@ export const formatMasterLink = (url: string) => {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // 1. Extração de Iframe (Caso o mestre cole o código completo do embed)
+    // 1. Extração de Iframe
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["']([^"']+)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -143,7 +143,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // 2. Tratamento Especial para sites de embed populares
+    // 2. Tratamento para sites de embed populares
     if (lowUrl.includes('ok.ru/video/')) {
       const videoId = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
       if (videoId) finalUrl = `https://ok.ru/videoembed/${videoId}`;
@@ -167,7 +167,7 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 4. YouTube (Suporte para Shorts e Links padrão)
+    // 4. YouTube
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
@@ -185,27 +185,18 @@ export const formatMasterLink = (url: string) => {
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    
     if (!categoryGenre.startsWith('ARENA:')) {
        query = query.not('genre', 'ilike', 'ARENA: %');
     }
-
     if (searchQuery) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     }
-
     const trimmedGenre = categoryGenre.trim().toUpperCase();
     if (trimmedGenre) {
       query = query.eq('genre', trimmedGenre);
     }
-
     const { data, error } = await query.order('title', { ascending: true });
-    
-    if (error) {
-      console.error("Erro Supabase Detalhado:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
@@ -213,9 +204,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
       episodes: safeParse(item.episodes),
       seasons: safeParse(item.seasons)
     })).filter(i => showInactive || i.isActive !== false);
-  } catch (e: any) { 
-    throw e;
-  }
+  } catch (e: any) { throw e; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
@@ -236,10 +225,7 @@ export async function getRemoteUsers(): Promise<User[]> {
     const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
     if (error) throw error;
     return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
-  } catch (e: any) { 
-    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
-    throw e;
-  }
+  } catch (e: any) { throw e; }
 }
 
 export async function saveUser(user: Partial<User>) {
