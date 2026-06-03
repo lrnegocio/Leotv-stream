@@ -120,7 +120,7 @@ export async function getCategoryCount(g: string) {
 export async function getTotalContentCount() {
   try {
     const { data, error } = await supabase.from('content').select('id');
-    if (error) return 0;
+    if (error) throw error;
     return data?.length || 0;
   } catch (e) { return 0; }
 }
@@ -169,7 +169,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     
     if (error) {
-      console.error("FALHA SUPABASE v370-S:", error.message || error);
+      console.error("ERRO SUPABASE CONTEÚDO v370-S:", error.message || error);
       throw error;
     }
 
@@ -194,7 +194,8 @@ export async function saveContent(item: Partial<ContentItem>) {
     const cleanPayload: any = {};
     validKeys.forEach(k => { if (payload[k] !== undefined) cleanPayload[k] = payload[k]; });
     const { error } = await supabase.from('content').upsert(cleanPayload);
-    return !error;
+    if (error) throw error;
+    return true;
   } catch (e) { return false; }
 }
 
@@ -225,7 +226,8 @@ export async function saveUser(user: Partial<User>) {
     const cleanPayload: any = {};
     allowedColumns.forEach(col => { if (payload[col] !== undefined) cleanPayload[col] = payload[col]; });
     const { error } = await supabase.from('users').upsert(cleanPayload);
-    return !error;
+    if (error) throw error;
+    return true;
   } catch (e) { return false; }
 }
 
@@ -236,6 +238,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
       return { user: { id: 'admin_master_leo', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false } };
     }
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
+    if (error) throw error;
     if (!user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "PIN BLOQUEADO" };
     if (user.expiryDate && new Date() > new Date(user.expiryDate)) return { error: "ACESSO EXPIRADO" };
@@ -252,11 +255,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
   if (!ids || ids.length === 0) return true;
-  try { const { error } = await supabase.from('content').update(updates).in('id', ids); return !error; } catch (e) { return false; }
+  try { const { error } = await supabase.from('content').update(updates).in('id', ids); if (error) throw error; return true; } catch (e) { return false; }
 }
 
 export async function getContentById(id: string) {
-  try { const { data } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); return data; } catch (e) { return null; }
+  try { const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); if (error) throw error; return data; } catch (e) { return null; }
 }
 
 export async function removeContent(id: string) { 
@@ -281,7 +284,8 @@ export async function removeGame(id: string) {
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
+    const { data, error } = await supabase.from('content').select('*').ilike('genre', 'ARENA: %');
+    if (error) throw error;
     return (data || []).map(i => ({ id: i.id, title: i.title, console: i.genre.replace('ARENA: ', ''), type: 'embed', url: i.streamUrl, imageUrl: i.imageUrl, genre: i.genre }));
   } catch (e) { return []; }
 }
@@ -295,7 +299,7 @@ export async function resetUserDevices(userId: string) {
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  try { const { data } = await supabase.from('resellers').select('*').order('name', { ascending: true }); return data || []; } catch (e) { return []; }
+  try { const { data, error } = await supabase.from('resellers').select('*').order('name', { ascending: true }); if (error) throw error; return data || []; } catch (e) { return []; }
 }
 
 export async function saveReseller(r: Partial<Reseller>) {
@@ -305,16 +309,17 @@ export async function saveReseller(r: Partial<Reseller>) {
     const cleanPayload: any = {};
     validCols.forEach(c => { if(payload[c] !== undefined) cleanPayload[c] = payload[c]; });
     const { error } = await supabase.from('resellers').upsert(cleanPayload);
-    return !error;
+    if (error) throw error;
+    return true;
   } catch (err) { return false; }
 }
 
 export async function validateResellerLogin(u: string, p: string) {
-  try { const { data } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO DE REDE" }; }
+  try { const { data, error } = await supabase.from('resellers').select('*').eq('username', u.trim()).eq('password', p.trim()).maybeSingle(); if (error) throw error; return data ? { reseller: data } : { error: "INVÁLIDO" }; } catch (e) { return { error: "ERRO DE REDE" }; }
 }
 
 export async function getGlobalSettings() {
-  try { const { data } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle(); return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
+  try { const { data, error } = await supabase.from('settings').select('*').eq('key', 'global').maybeSingle(); if (error) throw error; return data?.value || { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
 }
 
 export async function updateGlobalSettings(v: any) {
@@ -323,7 +328,7 @@ export async function updateGlobalSettings(v: any) {
 }
 
 export async function getTopContent(l = 10) {
-  try { const { data } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l); return data || []; } catch (e) { return []; }
+  try { const { data, error } = await supabase.from('content').select('*').not('genre', 'ilike', 'ARENA: %').order('views', { ascending: false }).limit(l); if (error) throw error; return data || []; } catch (e) { return []; }
 }
 
 export async function bulkRemoveContent(ids: string[]) {

@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -17,10 +17,12 @@ export default function AdminDashboard() {
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
   const [isDbOffline, setIsDbOffline] = React.useState(false)
+  const [isQuotaExceeded, setIsQuotaExceeded] = React.useState(false)
 
   const loadData = React.useCallback(async () => {
     setLoading(true)
     setIsDbOffline(false)
+    setIsQuotaExceeded(false)
     try {
       // TENTATIVA DE CONEXÃO MASTER v370-S
       const [count, ppv, alacarte, u, r] = await Promise.all([
@@ -37,19 +39,21 @@ export default function AdminDashboard() {
       setUsers(u)
       setResellers(r)
       
-      // Detecção de sinal vazio por pausa do Supabase
-      if (count === 0 && u.length === 0) {
-        setIsDbOffline(true)
-      } else {
-        toast({ title: "DADOS SINCRONIZADOS v370-S" })
-      }
+      toast({ title: "DADOS SINCRONIZADOS v370-S" })
     } catch (err: any) {
-      console.error("ERRO DE SINTONIA ADMIN:", err.message);
-      setIsDbOffline(true)
+      const errorMsg = err.message || "";
+      console.error("ERRO DE SINTONIA ADMIN:", errorMsg);
+      
+      if (errorMsg.includes('exceed_egress_quota') || errorMsg.includes('quota')) {
+        setIsQuotaExceeded(true)
+      } else {
+        setIsDbOffline(true)
+      }
+      
       toast({ 
         variant: "destructive", 
         title: "SINAL DO BANCO PERDIDO", 
-        description: "Mestre Léo, seu Supabase está dormindo ou offline." 
+        description: "Mestre Léo, verifique a cota do Supabase." 
       })
     } finally {
       setLoading(false)
@@ -84,7 +88,7 @@ export default function AdminDashboard() {
         </div>
         <div className="flex gap-3">
           <Button onClick={loadData} variant="outline" className="h-12 w-12 rounded-xl border-primary/20 hover:bg-primary/5 transition-all">
-             <RefreshCcw className={`h-5 w-5 ${isDbOffline ? 'text-red-500' : 'text-primary'}`} />
+             <RefreshCcw className={`h-5 w-5 ${isDbOffline || isQuotaExceeded ? 'text-red-500' : 'text-primary'}`} />
           </Button>
           <Button asChild className="bg-primary hover:bg-primary/90 uppercase font-black text-[10px] h-12 px-6 rounded-xl shadow-lg shadow-primary/20">
             <Link href="/admin/content/new">
@@ -94,12 +98,25 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {isDbOffline && (
+      {isQuotaExceeded && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
+           <div className="bg-amber-500 p-4 rounded-3xl shadow-lg"><CreditCard className="h-8 w-8 text-white" /></div>
+           <div className="flex-1 text-center md:text-left">
+              <p className="text-[12px] font-black uppercase text-amber-600 tracking-widest mb-1">Aviso Crítico: Tráfego de Dados Excedido</p>
+              <p className="text-base font-bold leading-relaxed text-foreground/80">Mestre Léo, sua rede atingiu o limite de transferência gratuita do Supabase (Egress Quota). Para os canais voltarem, você precisa fazer o upgrade no Supabase ou aguardar o reset mensal.</p>
+           </div>
+           <Button variant="outline" className="border-amber-500/30 text-amber-600 font-black text-[9px] uppercase h-14 px-8 rounded-2xl hover:bg-amber-500 hover:text-white transition-all" asChild>
+             <a href="https://supabase.com/dashboard/project/_/settings/billing" target="_blank" rel="noopener noreferrer">Resolver no Supabase</a>
+           </Button>
+        </div>
+      )}
+
+      {isDbOffline && !isQuotaExceeded && (
         <div className="bg-destructive/10 border-2 border-destructive/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
            <div className="bg-destructive p-4 rounded-3xl shadow-lg"><AlertTriangle className="h-8 w-8 text-white" /></div>
            <div className="flex-1 text-center md:text-left">
               <p className="text-[12px] font-black uppercase text-destructive tracking-widest mb-1">Aviso Crítico: Banco de Dados Pausado</p>
-              <p className="text-base font-bold leading-relaxed">Mestre Léo, seu projeto no Supabase está **PAUSADO**. Clique no botão verde "Resume Project" no painel do Supabase para seus canais voltarem!</p>
+              <p className="text-base font-bold leading-relaxed">Mestre Léo, seu projeto no Supabase está **PAUSADO** ou Offline. Clique no botão verde "Resume Project" no painel do Supabase para restaurar o sinal!</p>
            </div>
            <Button variant="outline" className="border-destructive/30 text-destructive font-black text-[10px] uppercase h-14 px-8 rounded-2xl hover:bg-destructive hover:text-white transition-all" asChild>
              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Retomar no Supabase</a>
@@ -119,8 +136,8 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-3xl font-black tracking-tight">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
-                <ArrowUpRight className={`h-3 w-3 mr-1 ${isDbOffline ? 'text-red-500' : 'text-emerald-500'}`} />
-                {isDbOffline ? 'Sinal Offline' : 'Sinal Ativo'}
+                <ArrowUpRight className={`h-3 w-3 mr-1 ${isDbOffline || isQuotaExceeded ? 'text-red-500' : 'text-emerald-500'}`} />
+                {isDbOffline || isQuotaExceeded ? 'Sinal Offline' : 'Sinal Ativo'}
               </p>
             </CardContent>
           </Card>
@@ -168,23 +185,23 @@ export default function AdminDashboard() {
               {users.length === 0 && (
                 <div className="p-20 text-center flex flex-col items-center gap-4 opacity-30">
                    <Ghost className="h-12 w-12" />
-                   <p className="font-black uppercase text-xs">{isDbOffline ? 'Sinal do Banco Perdido' : 'Aguardando primeiros clientes...'}</p>
+                   <p className="font-black uppercase text-xs">{isDbOffline || isQuotaExceeded ? 'Sinal do Banco Perdido' : 'Aguardando primeiros clientes...'}</p>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className={`bg-primary/5 border shadow-xl border-l-8 rounded-[2rem] transition-all ${isDbOffline ? 'border-destructive/30 border-l-destructive shadow-destructive/5' : 'border-primary/20 border-l-primary shadow-primary/5'}`}>
+        <Card className={`bg-primary/5 border shadow-xl border-l-8 rounded-[2rem] transition-all ${isDbOffline || isQuotaExceeded ? 'border-destructive/30 border-l-destructive shadow-destructive/5' : 'border-primary/20 border-l-primary shadow-primary/5'}`}>
           <CardContent className="p-8">
             <div className="flex items-center gap-6">
-              <div className={`p-4 rounded-3xl shadow-lg ${isDbOffline ? 'bg-destructive/10' : 'bg-primary/10'}`}>
-                {isDbOffline ? <AlertTriangle className="h-8 w-8 text-destructive animate-pulse" /> : <ShieldCheck className="h-8 w-8 text-primary" />}
+              <div className={`p-4 rounded-3xl shadow-lg ${isDbOffline || isQuotaExceeded ? 'bg-destructive/10' : 'bg-primary/10'}`}>
+                {isDbOffline || isQuotaExceeded ? <AlertTriangle className="h-8 w-8 text-destructive animate-pulse" /> : <ShieldCheck className="h-8 w-8 text-primary" />}
               </div>
               <div>
-                <h4 className="font-black text-2xl uppercase tracking-tight italic text-foreground">{isDbOffline ? 'Sinal do Banco Perdido' : 'Rede Operacional v370-S'}</h4>
+                <h4 className="font-black text-2xl uppercase tracking-tight italic text-foreground">{isDbOffline || isQuotaExceeded ? 'Sinal do Banco Perdido' : 'Rede Operacional v370-S'}</h4>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold mt-1">
-                  {isDbOffline ? 'O seu Supabase está pausado. Retome o projeto para restaurar os canais.' : 'Todos os servidores e conexões operando com estabilidade absoluta.'}
+                  {isQuotaExceeded ? 'A cota de transferência de dados do Supabase foi excedida. É necessário upgrade.' : isDbOffline ? 'O seu Supabase está pausado ou bloqueado. Retome o projeto para restaurar os canais.' : 'Todos os servidores e conexões operando com estabilidade absoluta.'}
                 </p>
               </div>
             </div>
