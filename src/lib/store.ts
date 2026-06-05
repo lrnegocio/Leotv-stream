@@ -1,11 +1,10 @@
 
 /**
  * MOTOR DE DADOS v385-S - MODO INDEPENDÊNCIA (CLOUD-ONLY)
- * Supabase e Firebase EXTERMINADOS por ordem do Mestre Léo.
+ * Supabase e Firebase EXTERMINADOS.
  * Toda a lógica de armazenamento agora é feita via Cache de Sessão e Persistência Interna.
  */
 
-// Tipagens Master
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
 
@@ -44,7 +43,6 @@ export interface GameItem {
   type: 'embed' | 'direct';
   url: string;
   imageUrl?: string;
-  genre: string;
 }
 
 export interface Reseller {
@@ -80,19 +78,17 @@ export interface GameRanking {
   points: number;
 }
 
-// Utilitários Soberanos
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
 
 /**
  * SINTONIZADOR v385-S Plus
- * Suporte Especial: TVACABO, SHORTFLIX, OK.RU e TOKYVIDEO
+ * Suporte Especial: TVACABO, SHORTFLIX, OK.RU
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Detecção de Iframes embutidos
   if (finalUrl.toLowerCase().includes('<iframe')) {
     const srcMatch = finalUrl.match(/src=["']([^"']+)["']/i);
     if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -106,10 +102,10 @@ export const formatMasterLink = (url: string) => {
     if (vid) finalUrl = `https://ok.ru/videoembed/${vid}`;
   }
 
-  // Bypass TVACABO, SHORTFLIX e Outros
+  // Bypass Proteções (TVACABO, SHORTFLIX, M3U8)
   const needsGhostTunnel = [
     'tvacabo.top', 'shortflix.net', 'tokyvideo.com', '.m3u8', '.mp4', '.ts', 
-    'redecanais', 'rdcanais', 'stream', 'vidsrc', 'cdn', 'akamai'
+    'redecanais', 'rdcanais', 'vidsrc', 'cdn', 'akamai'
   ];
 
   if (needsGhostTunnel.some(t => lowUrl.includes(t)) && !lowUrl.includes('/api/proxy')) {
@@ -119,8 +115,7 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// --- MOTOR DE DADOS INDEPENDENTE (MOCK PARA BUILD) ---
-
+// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD (MOCK INDEPENDENTE)
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   return [
     { id: 'c1', title: 'LÉO TV EXCLUSIVO', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal Master Léo', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
@@ -135,9 +130,7 @@ export async function bulkRemoveContent(ids: string[]) { return true; }
 export async function bulkUpdateContent(ids: string[], updates: any) { return true; }
 
 export async function getRemoteUsers(): Promise<User[]> { 
-  return [
-    { id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false }
-  ];
+  return [{ id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false }];
 }
 export async function saveUser(user: Partial<User>) { return true; }
 export async function removeUser(id: string) { return true; }
@@ -148,18 +141,13 @@ export async function saveReseller(r: Partial<Reseller>) { return true; }
 export async function removeReseller(id: string) { return true; }
 
 export async function validateDeviceLogin(pin: string, deviceId: string) {
-  const cleanPin = pin.toUpperCase().trim();
-  if (cleanPin === 'ADM77X2P') {
-    return { user: { id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false } as User };
-  }
+  if (pin.toUpperCase().trim() === 'ADM77X2P') return { user: { id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false } as User };
   return { error: "SISTEMA EM MODO INDEPENDENTE CLOUDFLARE" };
 }
 
 export async function validateResellerLogin(u: string, p: string) { return { error: "MODO OFFLINE" }; }
-
 export async function getGlobalSettings() { return { parentalPin: "1234", announcement: "SISTEMA VITALÍCIO ATIVO v385-S", bannerUrl: "", bannerLink: "" }; }
 export async function updateGlobalSettings(v: any) { return true; }
-
 export async function getCategoryCount(g: string) { return 0; }
 export async function getTotalContentCount() { return 0; }
 export async function getTopContent() { return []; }

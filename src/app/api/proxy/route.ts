@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
-    requestHeaders.set('Sec-Fetch-Mode', 'no-cors');
     
     // BYPASS DE REFERER PARA DOMÍNIOS PROTEGIDOS
     if (lowTarget.includes('tvacabo.top')) {
@@ -48,7 +47,6 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const responseHeaders = new Headers();
     
-    // Cabeçalhos essenciais para Streaming e Iframes
     ['content-length', 'content-range', 'accept-ranges'].forEach(h => {
       const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);
@@ -59,7 +57,6 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *;");
 
-    // Limpeza de Bloqueios M3U8
     if (contentType.includes('mpegurl') || lowTarget.includes('.m3u8')) {
       const text = await res.text();
       return new Response(text, { headers: responseHeaders });
