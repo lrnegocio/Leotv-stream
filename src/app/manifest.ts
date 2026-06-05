@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Léo TV Stream - O Sinal Master v375',
+    name: 'Léo TV Stream - O Sinal Master v375-S',
     short_name: 'Léo TV',
-    description: 'O melhor aplicativo de streaming do Mestre Léo - Versão TV & Mobile.',
+    description: 'O melhor aplicativo de streaming do Mestre Léo - Versão TV & Mobile Soberana.',
     start_url: '/user/home',
     display: 'standalone',
     display_override: ['fullscreen', 'minimal-ui'],
