@@ -138,6 +138,7 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
+    // SINTONIZAÇÃO SOBERANA TVACABO E SHORTFLIX
     if (lowUrl.includes('ok.ru/video/')) {
       const videoId = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
       if (videoId) finalUrl = `https://ok.ru/videoembed/${videoId}`;
@@ -146,6 +147,10 @@ export const formatMasterLink = (url: string) => {
     if (lowUrl.includes('tokyvideo.com/video/')) {
        const slug = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
        if (slug) finalUrl = `https://www.tokyvideo.com/embed/${slug}`;
+    }
+
+    if (lowUrl.includes('shortflix.net/pt/home')) {
+       return finalUrl; // Mantém a home para navegação
     }
 
     const needsProxy = [

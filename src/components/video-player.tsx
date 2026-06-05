@@ -22,11 +22,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   
-  // Detector Universal de Iframe/Video v370-S
+  // Detector Universal de Iframe/Video v375-S Plus (SHORTFLIX & TVACABO)
   const isIframe = safeUrl.includes('embed') || 
                    safeUrl.includes('youtube.com') || 
                    safeUrl.includes('ok.ru') || 
                    safeUrl.includes('vidsrc') || 
+                   safeUrl.includes('shortflix.net') || 
+                   safeUrl.includes('tvacabo.top') || 
                    !safeUrl.match(/\.(m3u8|mp4|ts|mpd)(\?|$)/i);
 
   const initPlayer = React.useCallback(async () => {
@@ -104,7 +106,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {error ? (
         <div className="flex flex-col items-center gap-4 text-center p-10">
            <AlertTriangle className="h-20 w-20 text-amber-500" />
-           <h3 className="text-xl font-black uppercase italic text-primary">Sinal Oscilando v370-S</h3>
+           <h3 className="text-xl font-black uppercase italic text-primary">Sinal Oscilando v375-S</h3>
            <p className="text-xs font-bold opacity-60">Mestre Léo, o sinal pode estar bloqueado ou com cota excedida.</p>
            <Button onClick={() => initPlayer()} className="bg-primary h-12 px-8 rounded-xl font-black uppercase text-[10px]">RECONECTAR SINAL</Button>
         </div>
@@ -128,7 +130,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && !error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="mt-4 text-[10px] font-black uppercase italic text-primary tracking-widest">Sintonizando v370-S...</p>
+          <p className="mt-4 text-[10px] font-black uppercase italic text-primary tracking-widest">Sintonizando v375-S...</p>
         </div>
       )}
 
