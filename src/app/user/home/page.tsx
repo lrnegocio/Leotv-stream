@@ -1,9 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { Suspense } from 'react';
 import HomeContent from '@/components/home-content';
+import { PwaInstall } from '@/components/pwa-install';
 import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
@@ -26,6 +26,7 @@ export default function HomePage() {
       </div>
     }>
       <HomeContent />
+      <PwaInstall />
     </Suspense>
   );
 }
