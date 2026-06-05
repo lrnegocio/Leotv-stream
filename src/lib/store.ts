@@ -223,7 +223,6 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // BUSCA INDEPENDENTE PARA EVITAR ERRO DE RELACIONAMENTO v375-S
     const [{ data: users, error: usersError }, { data: resellers, error: resellersError }] = await Promise.all([
       supabase.from('users').select('*').order('id', { ascending: false }),
       supabase.from('resellers').select('id, name')
@@ -297,7 +296,6 @@ export async function getContentById(id: string) {
   try { const { data, error } = await supabase.from('content').select('*').eq('id', id).maybeSingle(); if (error) throw error; return data; } catch (e) { return null; }
 }
 
-// EXPORTAÇÕES FIX v375-S PARA BUILD CLOUDFLARE
 export async function removeContent(id: string) { 
   const { error } = await supabase.from('content').delete().eq('id', id); 
   return !error; 
