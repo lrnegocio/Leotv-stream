@@ -222,6 +222,7 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
+    // BUSCA INDEPENDENTE PARA EVITAR ERRO DE RELACIONAMENTO
     const { data: users, error: usersError } = await supabase.from('users').select('*').order('id', { ascending: false });
     if (usersError) throw usersError;
 
@@ -248,7 +249,6 @@ export async function saveUser(user: Partial<User>) {
     const cleanPin = (payload.pin || "").toUpperCase().trim();
     if (!cleanPin) return false;
     delete payload.reseller_name;
-    delete payload.resellers;
     delete payload.created_at;
     const { data: existing } = await supabase.from('users').select('*').eq('pin', cleanPin).maybeSingle();
     if (existing) { payload.id = existing.id; } else {
