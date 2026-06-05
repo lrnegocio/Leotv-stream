@@ -22,13 +22,14 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   
-  // Detector Universal de Iframe/Video v375-S Plus (SHORTFLIX & TVACABO)
+  // DETECTOR UNIVERSAL v385-S PLUS (TVACABO & SHORTFLIX)
   const isIframe = safeUrl.includes('embed') || 
                    safeUrl.includes('youtube.com') || 
                    safeUrl.includes('ok.ru') || 
                    safeUrl.includes('vidsrc') || 
                    safeUrl.includes('shortflix.net') || 
                    safeUrl.includes('tvacabo.top') || 
+                   safeUrl.includes('tokyvideo') || 
                    !safeUrl.match(/\.(m3u8|mp4|ts|mpd)(\?|$)/i);
 
   const initPlayer = React.useCallback(async () => {
@@ -37,15 +38,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false);
 
     if (isIframe) {
-      // Iframes levam tempo para carregar o conteúdo interno
-      setTimeout(() => setLoading(false), 2000);
+      setTimeout(() => setLoading(false), 2500);
       return;
     }
 
     const video = videoRef.current;
     if (!video) return;
 
-    // Configuração Soberana de Áudio
     video.volume = 1.0; 
     video.muted = false;
 
@@ -62,7 +61,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             video.play().catch(() => {
-              // Autoplay block bypass
               video.muted = true;
               video.play();
             });
@@ -80,7 +78,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         video.play().finally(() => setLoading(false));
       }
     } catch (e) {
-      console.error("ERRO PLAYER v370-S:", e);
       setError(true);
       setLoading(false);
     }
@@ -102,13 +99,13 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   };
 
   return (
-    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[85vh] rounded-[3rem] overflow-hidden border border-white/5'}`}>
+    <div ref={containerRef} className={`relative w-full bg-black flex items-center justify-center ${isFullscreen ? 'h-screen' : 'h-[85vh] rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl'}`}>
       {error ? (
         <div className="flex flex-col items-center gap-4 text-center p-10">
            <AlertTriangle className="h-20 w-20 text-amber-500" />
-           <h3 className="text-xl font-black uppercase italic text-primary">Sinal Oscilando v375-S</h3>
-           <p className="text-xs font-bold opacity-60">Mestre Léo, o sinal pode estar bloqueado ou com cota excedida.</p>
-           <Button onClick={() => initPlayer()} className="bg-primary h-12 px-8 rounded-xl font-black uppercase text-[10px]">RECONECTAR SINAL</Button>
+           <h3 className="text-xl font-black uppercase italic text-primary">Sinal Oscilando v385-S</h3>
+           <p className="text-xs font-bold opacity-60">Mestre Léo, o sinal pode estar bloqueado pelo site original.</p>
+           <Button onClick={() => initPlayer()} className="bg-primary h-12 px-8 rounded-xl font-black uppercase text-[10px]">RECONECTAR TÚNEL</Button>
         </div>
       ) : isIframe ? (
         <iframe 
@@ -116,6 +113,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
           className="w-full h-full border-0" 
           allow="autoplay; fullscreen; picture-in-picture" 
           allowFullScreen
+          title="Player Universal"
         />
       ) : (
         <video 
@@ -130,7 +128,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
       {loading && !error && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="mt-4 text-[10px] font-black uppercase italic text-primary tracking-widest">Sintonizando v375-S...</p>
+          <p className="mt-4 text-[10px] font-black uppercase italic text-primary tracking-widest">Sintonizando v385-S...</p>
         </div>
       )}
 
