@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -45,7 +44,6 @@ export default function AdminGamesPage() {
     setGameData(prev => ({ ...prev, url: val.trim() }));
   }
 
-  // SINTONIZADOR ARENA v370: Conversão de RetroGames para EMBED REAL
   const handleFixLink = async () => {
     if (!gameData.url) {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
@@ -61,7 +59,6 @@ export default function AdminGamesPage() {
         const res = await fetch(proxyUrl);
         const html = await res.text();
         
-        // REGEX MASTER: Pega o ID e slug do embed
         const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
         if (embedMatch) {
           setGameData(prev => ({ ...prev, url: embedMatch[0] }));
