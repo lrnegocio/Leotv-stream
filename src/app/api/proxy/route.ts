@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /**
- * TÚNEL GHOST v370-S - SUPORTE PUNYCODE, TOKYVIDEO E BYPASS CLOUDFLARE
+ * TÚNEL GHOST v375-S - SUPORTE PUNYCODE, TOKYVIDEO E BYPASS CLOUDFLARE
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO v370
+    // MASCARAMENTO SOBERANO v375-S
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Accept-Language', 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7');
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
 
-    // SEGREDO v370: REESCRITA DE M3U8 PARA MANTER SINAL PERMANENTE
+    // SEGREDO v375-S: REESCRITA DE M3U8 PARA MANTER SINAL PERMANENTE
     if (forcedType.includes('mpegurl') || finalUrl.includes('.m3u8')) {
       const manifestText = await res.text();
       const baseUrl = finalUrl.split('?')[0].substring(0, finalUrl.split('?')[0].lastIndexOf('/') + 1);
@@ -89,6 +89,6 @@ export async function GET(req: NextRequest) {
 
     return new Response(res.body, { status: res.status, headers: responseHeaders });
   } catch (error) {
-    return new Response("Falha no Túnel Permanente v370", { status: 500 });
+    return new Response("Falha no Túnel Permanente v375-S", { status: 500 });
   }
 }
