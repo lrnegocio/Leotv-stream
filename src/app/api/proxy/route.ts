@@ -31,6 +31,10 @@ export async function GET(req: NextRequest) {
       requestHeaders.set('Referer', 'https://redecanaistv.be/');
     } else if (lowTarget.includes('tokyvideo.com')) {
       requestHeaders.set('Referer', 'https://www.tokyvideo.com/');
+    } else if (lowTarget.includes('tvacabo.top')) {
+      requestHeaders.set('Referer', 'https://tvacabo.top/');
+    } else if (lowTarget.includes('shortflix.net')) {
+      requestHeaders.set('Referer', 'https://www.shortflix.net/');
     } else {
       try {
         const urlObj = new URL(targetUrl);

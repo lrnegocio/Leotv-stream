@@ -172,7 +172,7 @@ export const formatMasterLink = (url: string) => {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
       else if (lowUrl.includes('v=')) videoId = finalUrl.split('v=')[1]?.split(/[&#]/)[0];
-      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split( 'youtu.be/')[1]?.split(/[?#&]/)[0];
+      else if (lowUrl.includes('youtu.be/')) videoId = finalUrl.split( 'youtu.be/')[1]?.split(/[?#&/]/)[0];
       else if (lowUrl.includes('/embed/')) return finalUrl;
       
       if (videoId) return `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0`;
