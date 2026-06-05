@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Léo TV',
     description: 'O melhor aplicativo de streaming do Mestre Léo - Versão TV & Mobile Soberana.',
     start_url: '/user/home',
-    display: 'standalone',
+    display: 'fullscreen',
     display_override: ['fullscreen', 'minimal-ui'],
     orientation: 'any',
     background_color: '#0A051A',

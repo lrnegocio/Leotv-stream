@@ -222,6 +222,7 @@ export async function saveContent(item: Partial<ContentItem>) {
 
 export async function getRemoteUsers(): Promise<User[]> {
   try {
+    // BUSCA INDEPENDENTE PARA EVITAR ERRO DE RELACIONAMENTO
     const [{ data: users, error: usersError }, { data: resellers, error: resellersError }] = await Promise.all([
       supabase.from('users').select('*').order('id', { ascending: false }),
       supabase.from('resellers').select('id, name')
