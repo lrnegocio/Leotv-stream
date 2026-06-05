@@ -197,7 +197,6 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     const { data, error } = await query.order('title', { ascending: true });
     if (error) throw error;
     
-    // FILTRO MESTRE LÉO: Sumir do aplicativo se isActive for false
     return (data || []).map(item => ({
       ...item,
       isRestricted: !!item.isRestricted,
@@ -221,11 +220,30 @@ export async function saveContent(item: Partial<ContentItem>) {
   } catch (e) { return false; }
 }
 
+/**
+ * BUSCA DE USUÁRIOS BLINDADA v370-S
+ * Agora faz o join manualmente para evitar erro de cache de relacionamento do PostgREST.
+ */
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    const { data, error } = await supabase.from('users').select('*, resellers(name)').order('id', { ascending: false });
-    if (error) throw error;
-    return (data || []).map(u => ({ ...u, reseller_name: u.resellers?.name || 'ADMIN' }));
+    // 1. Busca os usuários
+    const { data: users, error: usersError } = await supabase.from('users').select('*').order('id', { ascending: false });
+    if (usersError) throw usersError;
+
+    // 2. Busca os revendedores para pegar os nomes
+    const { data: resellers, error: resellersError } = await supabase.from('resellers').select('id, name');
+    
+    // 3. Cria um mapa de nomes para performance
+    const resellerMap = new Map();
+    if (!resellersError && resellers) {
+      resellers.forEach(r => resellerMap.set(r.id, r.name));
+    }
+
+    // 4. Junta os dados em memória
+    return (users || []).map(u => ({
+      ...u,
+      reseller_name: u.resellerId ? (resellerMap.get(u.resellerId) || 'NÃO LOCALIZADO') : 'ADMIN'
+    }));
   } catch (e: any) { 
     console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
     throw e;
