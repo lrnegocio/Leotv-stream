@@ -126,16 +126,11 @@ export async function getTotalContentCount() {
   } catch (e) { return 0; }
 }
 
-/**
- * SINTONIZADOR UNIVERSAL v375-S (SUPREMO)
- * Agora aceita Iframes, YouTube, OK.RU, tvacabo.top e links diretos com Bypass.
- */
 export const formatMasterLink = (url: string) => {
   try {
     if (!url || typeof url !== 'string') return "";
     let finalUrl = url.trim();
 
-    // 1. Extração Inteligente de Iframe
     if (finalUrl.toLowerCase().includes('<iframe')) {
       const srcMatch = finalUrl.match(/src=["']([^"']+)["']/i);
       if (srcMatch && srcMatch[1]) finalUrl = srcMatch[1];
@@ -143,7 +138,6 @@ export const formatMasterLink = (url: string) => {
 
     let lowUrl = finalUrl.toLowerCase();
 
-    // 2. Conversores de Embed (OK.ru, TokyVideo, etc)
     if (lowUrl.includes('ok.ru/video/')) {
       const videoId = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
       if (videoId) finalUrl = `https://ok.ru/videoembed/${videoId}`;
@@ -154,7 +148,6 @@ export const formatMasterLink = (url: string) => {
        if (slug) finalUrl = `https://www.tokyvideo.com/embed/${slug}`;
     }
 
-    // 3. Protocolo de Proxy Master (CORS Bypass)
     const needsProxy = [
       '.m3u8', '.mp4', '.ts', '.mpd', 'ch.php?', 'xn--', 
       'redecanais', 'rdcanais', 'stream', 'cdn', 'vidsrc', 
@@ -168,7 +161,6 @@ export const formatMasterLink = (url: string) => {
       return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
     }
 
-    // 4. YouTube Smart Convert
     if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
       let videoId = "";
       if (lowUrl.includes('/shorts/')) videoId = finalUrl.split('/shorts/')[1]?.split(/[?#&]/)[0];
