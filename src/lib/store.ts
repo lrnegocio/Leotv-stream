@@ -126,8 +126,8 @@ export async function getTotalContentCount() {
 }
 
 /**
- * SINTONIZADOR UNIVERSAL v370-S (SUPREMO)
- * Aceita todo tipo de link: Iframes, OK.ru, Tokyvideo, YouTube e links diretos com Bypass.
+ * SINTONIZADOR UNIVERSAL v375-S (SUPREMO)
+ * Agora aceita Iframes, YouTube, OK.RU e links diretos com Bypass.
  */
 export const formatMasterLink = (url: string) => {
   try {
@@ -220,32 +220,24 @@ export async function saveContent(item: Partial<ContentItem>) {
   } catch (e) { return false; }
 }
 
-/**
- * BUSCA DE USUÁRIOS BLINDADA v370-S
- * Agora faz o join manualmente para evitar erro de cache de relacionamento do PostgREST.
- */
 export async function getRemoteUsers(): Promise<User[]> {
   try {
-    // 1. Busca os usuários
     const { data: users, error: usersError } = await supabase.from('users').select('*').order('id', { ascending: false });
     if (usersError) throw usersError;
 
-    // 2. Busca os revendedores para pegar os nomes
     const { data: resellers, error: resellersError } = await supabase.from('resellers').select('id, name');
     
-    // 3. Cria um mapa de nomes para performance
     const resellerMap = new Map();
     if (!resellersError && resellers) {
       resellers.forEach(r => resellerMap.set(r.id, r.name));
     }
 
-    // 4. Junta os dados em memória
     return (users || []).map(u => ({
       ...u,
       reseller_name: u.resellerId ? (resellerMap.get(u.resellerId) || 'NÃO LOCALIZADO') : 'ADMIN'
     }));
   } catch (e: any) { 
-    console.error("FALHA AO BUSCAR USUÁRIOS v370-S:", e.message || e);
+    console.error("FALHA AO BUSCAR USUÁRIOS v375-S:", e.message || e);
     throw e;
   }
 }
