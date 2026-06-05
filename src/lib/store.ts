@@ -75,6 +75,11 @@ export interface User {
   individualMessage?: string;
 }
 
+export interface GameRanking {
+  pin: string;
+  points: number;
+}
+
 // Utilitários Soberanos
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
@@ -114,11 +119,9 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// --- MOCK STORAGE SOBERANO (Fim da Cota) ---
-// Estas funções garantem que o build e o app funcionem sem banco externo.
+// --- MOTOR DE DADOS INDEPENDENTE (MOCK PARA BUILD) ---
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
-  // Canais Hardcoded para o sistema nunca ficar vazio
   return [
     { id: 'c1', title: 'LÉO TV EXCLUSIVO', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal Master Léo', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
     { id: 'c2', title: 'SHORTFLIX DRAMAS', type: 'channel', genre: 'LÉO TV DORAMAS', description: 'Novelas Curtas', streamUrl: 'https://www.shortflix.net/pt/home', isRestricted: false, isActive: true }
@@ -149,7 +152,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   if (cleanPin === 'ADM77X2P') {
     return { user: { id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [deviceId], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false } as User };
   }
-  // Retorna sucesso para qualquer PIN se o Mestre quiser liberar em modo Ghost
   return { error: "SISTEMA EM MODO INDEPENDENTE CLOUDFLARE" };
 }
 
@@ -161,12 +163,10 @@ export async function updateGlobalSettings(v: any) { return true; }
 export async function getCategoryCount(g: string) { return 0; }
 export async function getTotalContentCount() { return 0; }
 export async function getTopContent() { return []; }
-export async function getRemoteGames() { return []; }
-
-// EXPORTAÇÕES ESSENCIAIS PARA MATAR ERRO DE BUILD
+export async function getRemoteGames(): Promise<GameItem[]> { return []; }
 export async function saveGame(g: any) { return true; }
 export async function removeGame(id: string) { return true; }
-export async function getGameRankings() { return []; }
+export async function getGameRankings(): Promise<GameRanking[]> { return []; }
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `🎬 *LÉO TV STREAM!* \n👤 *PIN:* \`${pin}\` \n🔗 ${url}`;
 export const getExpiryMessage = (pin: string, days: number) => `⚠️ *AVISO LÉO TV!*`;
