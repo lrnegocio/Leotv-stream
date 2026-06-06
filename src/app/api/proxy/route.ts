@@ -56,7 +56,6 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const responseHeaders = new Headers();
     
-    // Repassa headers de stream para estabilidade HD e evitar travamentos
     ['content-length', 'content-range', 'accept-ranges', 'cache-control'].forEach(h => {
       const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);

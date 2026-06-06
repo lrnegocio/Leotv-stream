@@ -90,7 +90,6 @@ export const formatMasterLink = (url: string) => {
   let finalUrl = url.trim();
 
   // Tratamento de hardware encoder (Sky/Vivensis) ou IPs locais
-  // Se o link for um IP de casa ou porta de encoder, mandamos pro Túnel Ghost da VPS
   if (
     finalUrl.startsWith('http://') && 
     (finalUrl.includes(':80') || finalUrl.includes(':8080') || finalUrl.includes('192.168') || finalUrl.includes('177.'))
@@ -110,7 +109,7 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// MOTOR DE DADOS INDEPENDENTE (MEMÓRIA/ESTÁTICO) - SEM BANCO EXTERNO
+// MOTOR DE DADOS INDEPENDENTE
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   const all = [
     { id: 'c1', title: 'SINAL SKY MASTER (ENCODER)', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal via Hardware Encoder', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
@@ -125,15 +124,18 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
   return filtered;
 }
 
-export async function saveContent(item: Partial<ContentItem>) { console.log("Simulando Save Content", item); return true; }
+export async function saveContent(item: Partial<ContentItem>) { return true; }
 export async function getContentById(id: string) { 
   const all = await getRemoteContent(true);
   return all.find(i => i.id === id) || null;
 }
 
+// EXPORTAÇÕES MASTER - OBRIGATÓRIO PARA BUILD VPS/CLOUDFLARE
 export async function removeContent(id: string) { return true; }
 export async function bulkRemoveContent(ids: string[]) { return true; }
 export async function bulkUpdateContent(ids: string[], updates: any) { return true; }
+export async function removeGame(id: string) { return true; }
+export async function saveGame(g: any) { return true; }
 
 export async function getRemoteUsers(): Promise<User[]> { 
   return [{ id: 'admin', pin: 'ADM77X2P', role: 'admin', subscriptionTier: 'lifetime', maxScreens: 99, activeDevices: [], isBlocked: false, isAdultEnabled: true, isGamesEnabled: true, isPpvEnabled: true, isAlacarteEnabled: true, isGamesOnly: false }];
@@ -152,7 +154,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   return { error: "SISTEMA VITALÍCIO - USE PIN MASTER" };
 }
 
-export async function validateResellerLogin(u: string, p: string) { return { error: "ACESSO RESTRITO AO MESTRE" }; }
+export async function validateResellerLogin(u: string, p: string) { return { error: "ACESSO RESTRITO" }; }
 export async function getGlobalSettings() { return { parentalPin: "1234", announcement: "SISTEMA VITALÍCIO ATIVO v385-S", bannerUrl: "", bannerLink: "" }; }
 export async function updateGlobalSettings(v: any) { return true; }
 export async function getCategoryCount(g: string) { return 0; }
@@ -160,8 +162,6 @@ export async function getTotalContentCount() { return 2; }
 export async function getTopContent(limit = 10): Promise<ContentItem[]> { return []; }
 
 export async function getRemoteGames(): Promise<GameItem[]> { return []; }
-export async function saveGame(g: any) { return true; }
-export async function removeGame(id: string) { return true; }
 export async function getGameRankings(): Promise<GameRanking[]> { return []; }
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => `🎬 *LÉO TV STREAM!* \n👤 *PIN MASTER:* \`${pin}\` \n🔗 ${url}`;
