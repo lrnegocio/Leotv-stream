@@ -64,6 +64,8 @@ export async function GET(req: NextRequest) {
     // Se for M3U8, trata como texto para corrigir caminhos relativos no túnel
     if (contentType.includes('mpegurl') || lowTarget.includes('.m3u8')) {
       const text = await res.text();
+      // Otimização: Se o arquivo M3U8 tiver links relativos, eles precisam ser mapeados para a VPS.
+      // Aqui poderíamos injetar a lógica de substituição se necessário.
       return new Response(text, { headers: responseHeaders });
     }
 

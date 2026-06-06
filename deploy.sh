@@ -1,6 +1,7 @@
+
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v370..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -10,11 +11,10 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-# Liberação agressiva de RAM (Drop Caches)
+# Liberação agressiva de RAM (Drop Caches) para VPS pequena
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-# PAUSA PARA RESPIRAR: Para APENAS o Léo TV para ter RAM pro Build
-# IMPORTANTE: Não usamos 'pm2 stop all' para não derrubar o Bingo na 3001
+# PAUSA PARA RESPIRAR: Para o processo para ter RAM pro Build
 echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
 pm2 delete leotv-master 2>/dev/null || true
@@ -23,37 +23,31 @@ pm2 delete leotv-master 2>/dev/null || true
 echo "🔓 LIMPANDO PORTA INTERNA 3000..."
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Garante que o NPM e o PM2 estão no PATH
-export PATH=$PATH:/usr/local/bin:/usr/bin
-
 # Instala dependências de forma limpa
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
 npm install --no-audit --no-fund --prefer-offline
 
-# Build ultra-otimizado para 1GB de RAM
+# Build ultra-otimizado para 1GB de RAM (Wireguard compatível)
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
 export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
 
 # Verifica se o build deu certo
 if [ $? -eq 0 ]; then
-    echo "✅ BUILD CONCLUÍDO COM SUCESSO v370!"
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO v385-S!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
-    pm2 start ecosystem.config.js --name leotv-master
+    pm2 start npm --name "leotv-master" -- start
     exit 1
 fi
 
-# Reinicia APENAS o processo Léo TV na porta 3000
+# Reinicia o processo na porta 3000
 echo "♻️ REINICIANDO MOTOR LÉO TV NA PORTA INTERNA 3000..."
-pm2 start ecosystem.config.js --name leotv-master --update-env
+pm2 start npm --name "leotv-master" -- start
 pm2 save
 
 echo "--------------------------------------------------"
-echo "📊 RELATÓRIO DE CAPACIDADE DA VPS:"
-free -h
-echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v370!"
-echo "🔗 AGORA OS DOIS PROJETOS PODEM RODAR JUNTOS SEM CONFLITO!"
+echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v385-S!"
+echo "🔗 ACESSE: https://leotv.fun"
 echo "--------------------------------------------------"
 pm2 list

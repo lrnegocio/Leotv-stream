@@ -88,16 +88,15 @@ export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // Bypass OK.RU
   if (finalUrl.toLowerCase().includes('ok.ru/video/')) {
     const vid = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
     if (vid) finalUrl = `https://ok.ru/videoembed/${vid}`;
   }
 
-  // Bypass Proteções e Links Instáveis (M3U8, MP4, TS, VPS Extraction)
   const needsGhostTunnel = [
     'tvacabo.top', 'shortflix.net', 'tokyvideo.com', '.m3u8', '.mp4', '.ts', 
-    'redecanais', 'rdcanais', 'vidsrc', 'cdn', 'akamai', 'youtube.com', 'youtu.be'
+    'redecanais', 'rdcanais', 'vidsrc', 'cdn', 'akamai', 'youtube.com', 'youtu.be',
+    'vivensis', 'encoder'
   ];
 
   if (needsGhostTunnel.some(t => finalUrl.toLowerCase().includes(t)) && !finalUrl.includes('/api/proxy')) {
@@ -107,7 +106,6 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   const all = [
     { id: 'c1', title: 'LÉO TV EXCLUSIVO', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal Master Léo', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
@@ -149,6 +147,8 @@ export async function updateGlobalSettings(v: any) { return true; }
 export async function getCategoryCount(g: string) { return 0; }
 export async function getTotalContentCount() { return 2; }
 export async function getTopContent() { return []; }
+
+// EXPORTAÇÕES DE GAMES OBRIGATÓRIAS PARA O BUILD
 export async function getRemoteGames(): Promise<GameItem[]> { return []; }
 export async function saveGame(g: any) { return true; }
 export async function removeGame(id: string) { return true; }
