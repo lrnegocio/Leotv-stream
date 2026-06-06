@@ -130,7 +130,6 @@ export async function getContentById(id: string) {
   return all.find(i => i.id === id) || null;
 }
 
-// EXPORTAÇÕES MASTER - OBRIGATÓRIO PARA BUILD VPS/CLOUDFLARE
 export async function removeContent(id: string) { return true; }
 export async function bulkRemoveContent(ids: string[]) { return true; }
 export async function bulkUpdateContent(ids: string[], updates: any) { return true; }
