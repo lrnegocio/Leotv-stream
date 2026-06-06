@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (VPS leonet)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -11,10 +11,10 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-# Liberação agressiva de RAM (Drop Caches) para VPS pequena
+# Liberação agressiva de RAM (Drop Caches) para manter Wireguard liso
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-# PAUSA PARA RESPIRAR: Para o processo para ter RAM pro Build
+# PAUSA PARA RESPIRAR: Para o processo para ter RAM pro Build (450MB Max)
 echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
 pm2 delete leotv-master 2>/dev/null || true
@@ -23,11 +23,11 @@ pm2 delete leotv-master 2>/dev/null || true
 echo "🔓 LIMPANDO PORTA INTERNA 3000..."
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Instala dependências de forma limpa
+# Instala dependências de forma limpa (Fix Radix UI)
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
 npm install --no-audit --no-fund --prefer-offline
 
-# Build ultra-otimizado para 1GB de RAM (Wireguard compatível)
+# Build ultra-otimizado para 1GB de RAM (Wireguard amigável)
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
 export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
@@ -48,6 +48,7 @@ pm2 save
 
 echo "--------------------------------------------------"
 echo "✅ SISTEMA LÉO TV PRONTO E SINCRONIZADO v385-S!"
-echo "🔗 ACESSE: https://leotv.fun"
+echo "🔗 ACESSE: http://177.153.202.104:3000"
+echo "📡 DOMÍNIO: leotv.fun"
 echo "--------------------------------------------------"
 pm2 list
