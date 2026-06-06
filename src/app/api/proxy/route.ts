@@ -5,7 +5,8 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL GHOST v385-S - BYPASS TOTAL TVACABO, SHORTFLIX E DORAMAS
+ * TÚNEL GHOST v385-S - BYPASS TOTAL E EXTRAÇÃO VPS
+ * Otimizado para tvacabo.top, shortflix.net e streams instáveis.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     const requestHeaders = new Headers();
     
-    // MASCARAMENTO SOBERANO - Android TV / Chrome High Authority
+    // MASCARAMENTO SOBERANO - Android TV High Authority
     requestHeaders.set('User-Agent', 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36');
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest) {
     } else if (lowTarget.includes('shortflix.net')) {
       requestHeaders.set('Referer', 'https://www.shortflix.net/');
       requestHeaders.set('Origin', 'https://www.shortflix.net');
+    } else if (lowTarget.includes('youtube') || lowTarget.includes('youtu.be')) {
+      requestHeaders.set('Referer', 'https://www.youtube.com/');
     } else {
       try {
         const urlObj = new URL(targetUrl);
@@ -47,6 +50,7 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const responseHeaders = new Headers();
     
+    // Repassa headers de stream para estabilidade
     ['content-length', 'content-range', 'accept-ranges'].forEach(h => {
       const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);
@@ -57,6 +61,7 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *;");
 
+    // Se for M3U8, trata como texto para corrigir caminhos relativos no túnel
     if (contentType.includes('mpegurl') || lowTarget.includes('.m3u8')) {
       const text = await res.text();
       return new Response(text, { headers: responseHeaders });
