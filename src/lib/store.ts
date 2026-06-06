@@ -89,15 +89,17 @@ export const formatMasterLink = (url: string) => {
   let finalUrl = url.trim();
 
   // Tratamento de hardware encoder (Sky/Vivensis)
-  if (finalUrl.startsWith('http://') && (finalUrl.includes(':80') || finalUrl.includes(':8080'))) {
-    // Sinais de encoder caseiro passam obrigatoriamente pelo túnel para esconder o IP de casa
+  // Se o link for um IP de casa ou porta de encoder, mandamos pro Túnel Ghost da VPS
+  if (
+    finalUrl.startsWith('http://') && 
+    (finalUrl.includes(':80') || finalUrl.includes(':8080') || finalUrl.includes('192.168') || finalUrl.includes('177.'))
+  ) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
 
   const needsGhostTunnel = [
-    'tvacabo.top', 'shortflix.net', '.m3u8', '.mp4', '.ts', 
-    'redecanais', 'rdcanais', 'vidsrc', 'youtube.com', 'youtu.be',
-    'ok.ru', 'vivensis', 'sky', 'encoder'
+    'tvacabo.top', 'shortflix.net', 'redecanais', 'rdcanais', 
+    'vidsrc', 'ok.ru', 'vivensis', 'sky', 'encoder'
   ];
 
   if (needsGhostTunnel.some(t => finalUrl.toLowerCase().includes(t)) && !finalUrl.includes('/api/proxy')) {
@@ -107,7 +109,7 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD (DADOS INTERNOS)
+// MOTOR DE DADOS INDEPENDENTE (SEM BANCO EXTERNO)
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   const all = [
     { id: 'c1', title: 'SINAL SKY MASTER', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal via Hardware Encoder', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },

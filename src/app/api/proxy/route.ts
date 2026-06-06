@@ -25,8 +25,9 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Connection', 'keep-alive');
     
     // BYPASS PARA HARDWARE SKY/ENCODER (Evita bloqueios de IP local)
+    // Usamos o IP da sua VPS como autoridade de tráfego
     if (lowTarget.includes('192.168.') || lowTarget.includes('177.') || lowTarget.includes('sky')) {
-      requestHeaders.set('X-Forwarded-For', '24.152.37.78'); // IP da sua VPS como autoridade
+      requestHeaders.set('X-Forwarded-For', '24.152.37.78'); 
     }
 
     // BYPASS DE REFERER PARA DOMÍNIOS PROTEGIDOS
