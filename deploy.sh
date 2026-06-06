@@ -20,6 +20,7 @@ sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 # Pausa processos para o build
 echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
+pm2 delete leotv-master 2>/dev/null || true
 
 # Limpa porta
 fuser -k 3000/tcp 2>/dev/null || true
@@ -37,13 +38,13 @@ if [ $? -eq 0 ]; then
     echo "✅ BUILD CONCLUÍDO COM SUCESSO v385-S!"
 else
     echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
-    pm2 start leotv-master 2>/dev/null || true
+    pm2 start npm --name "leotv-master" -- start
     exit 1
 fi
 
 # Reinicia
 echo "♻️ REINICIANDO MOTOR LÉO TV..."
-pm2 restart leotv-master 2>/dev/null || pm2 start npm --name "leotv-master" -- start
+pm2 start npm --name "leotv-master" -- start
 pm2 save
 
 echo "--------------------------------------------------"
