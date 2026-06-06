@@ -107,7 +107,7 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD (INDIVIDUALIZADAS)
+// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   const all = [
     { id: 'c1', title: 'LÉO TV EXCLUSIVO', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal Master Léo', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
