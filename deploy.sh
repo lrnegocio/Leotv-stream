@@ -14,7 +14,7 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-echo "🗑️ DELETANDO CACHE DE MÓDULOS..."
+echo "🗑️ DELETANDO CACHE DE MÓDULOS PARA FORÇAR INSTALAÇÃO LIMPA..."
 rm -rf node_modules
 rm -f package-lock.json
 
@@ -24,7 +24,8 @@ pm2 delete leotv-master 2>/dev/null || true
 fuser -k 3000/tcp 2>/dev/null || true
 
 # Instalação Limpa (Força Bruta)
-echo "📦 INSTALANDO DEPENDÊNCIAS (BRUTE FORCE)..."
+echo "📦 INSTALANDO DEPENDÊNCIAS (MODO RECONEXÃO)..."
+# Usamos legacy-peer-deps para ignorar conflitos de versões de IA que travam o NPM
 npm install --legacy-peer-deps --no-audit --no-fund
 
 # Build do Núcleo

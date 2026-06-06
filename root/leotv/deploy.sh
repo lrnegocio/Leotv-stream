@@ -21,7 +21,7 @@ fuser -k 3000/tcp 2>/dev/null || true
 
 # Instalação Limpa
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
-npm install --legacy-peer-deps
+npm install --legacy-peer-deps --no-audit --no-fund
 
 # Build
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER..."
