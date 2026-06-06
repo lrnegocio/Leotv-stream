@@ -1,20 +1,30 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORCE ONLINE)..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (ONLINE FORCE)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# Limpeza Agressiva
-echo "🧹 LIMPANDO CACHE E CONFLITOS..."
-rm -rf node_modules
-rm -f package-lock.json
+# Permissão de Segurança
+chmod +x deploy.sh
+
+# Limpeza Agressiva de Cache
+echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-# Instalação Limpa
-echo "📦 INSTALANDO DEPENDÊNCIAS (MODO INQUEBRÁVEL)..."
+echo "🗑️ DELETANDO CACHE DE MÓDULOS..."
+rm -rf node_modules
+rm -f package-lock.json
+
+# Pausa Processos Antigos
+echo "⏸️ PAUSANDO MOTOR LÉO TV..."
+pm2 delete leotv-master 2>/dev/null || true
+fuser -k 3000/tcp 2>/dev/null || true
+
+# Instalação Limpa (Força Bruta)
+echo "📦 INSTALANDO DEPENDÊNCIAS (BRUTE FORCE)..."
 npm install --legacy-peer-deps --no-audit --no-fund
 
 # Build do Núcleo
@@ -25,14 +35,13 @@ npm run build
 if [ $? -eq 0 ]; then
     echo "✅ BUILD CONCLUÍDO COM SUCESSO v385-S!"
 else
-    echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
-    pm2 restart leotv-master || pm2 start npm --name "leotv-master" -- start
+    echo "❌ ERRO NO BUILD. TENTANDO RECOVERY EMERGÊNCIAL..."
+    pm2 start npm --name "leotv-master" -- start
     exit 1
 fi
 
 # Reinicia Processos
 echo "♻️ REINICIANDO MOTOR LÉO TV..."
-pm2 delete leotv-master 2>/dev/null || true
 pm2 start npm --name "leotv-master" -- start
 pm2 save
 

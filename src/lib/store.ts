@@ -126,7 +126,7 @@ export async function getRemoteContent(showInactive = false, searchQuery = "", c
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
     const { data, error } = await query.order('title');
     if (error) throw error;
-    return data || [];
+    return (data || []) as ContentItem[];
   } catch (e) {
     console.error("Erro ao buscar conteúdo:", e);
     return [];
@@ -176,7 +176,7 @@ export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('id', { ascending: false });
     if (error) throw error;
-    return data || [];
+    return (data || []) as User[];
   } catch (e) { return []; }
 }
 
@@ -210,7 +210,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
     if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
 
-    let devices = user.activeDevices || [];
+    let devices = (user.activeDevices || []) as string[];
     if (!devices.includes(deviceId)) {
       if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS ATINGIDO" };
       devices.push(deviceId);
@@ -229,7 +229,7 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
   try {
     const { data, error } = await supabase.from('resellers').select('*');
     if (error) throw error;
-    return data || [];
+    return (data || []) as Reseller[];
   } catch (e) { return []; }
 }
 
@@ -293,14 +293,14 @@ export async function getTotalContentCount() {
 export async function getTopContent(limit = 10): Promise<ContentItem[]> {
   try {
     const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limit);
-    return data || [];
+    return (data || []) as ContentItem[];
   } catch (e) { return []; }
 }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
     const { data } = await supabase.from('games').select('*');
-    return data || [];
+    return (data || []) as GameItem[];
   } catch (e) { return []; }
 }
 
@@ -322,7 +322,7 @@ export async function removeGame(id: string) {
 export async function getGameRankings(): Promise<GameRanking[]> {
   try {
     const { data } = await supabase.from('rankings').select('*').order('points', { ascending: false }).limit(20);
-    return data || [];
+    return (data || []) as GameRanking[];
   } catch (e) { return []; }
 }
 
