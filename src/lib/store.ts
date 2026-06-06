@@ -1,7 +1,7 @@
 
 /**
  * MOTOR DE DADOS v385-S - MODO INDEPENDÊNCIA VPS
- * Sistema Autossuficiente - Otimizado para TVACABO e SHORTFLIX.
+ * Sistema Autossuficiente - Otimizado para Hardware (Sky/Vivensis) e Streams.
  */
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
@@ -81,22 +81,23 @@ export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Mat
 export const cleanName = (n: string) => n.toUpperCase().trim();
 
 /**
- * SINTONIZADOR MASTER v385-S (BYPASS TOTAL)
- * Suporte: tvacabo.top, shortflix.net, ok.ru, youtube.
+ * SINTONIZADOR MASTER v385-S (EXTRAÇÃO E BYPASS)
+ * Suporte: sky, encoder, vivensis, tvacabo.top, shortflix.net.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  if (finalUrl.toLowerCase().includes('ok.ru/video/')) {
-    const vid = finalUrl.split('/video/')[1]?.split(/[?#&/]/)[0];
-    if (vid) finalUrl = `https://ok.ru/videoembed/${vid}`;
+  // Tratamento de hardware encoder (Sky/Vivensis)
+  if (finalUrl.startsWith('http://') && (finalUrl.includes(':80') || finalUrl.includes(':8080'))) {
+    // Sinais de encoder caseiro passam obrigatoriamente pelo túnel para esconder o IP de casa
+    return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
 
   const needsGhostTunnel = [
-    'tvacabo.top', 'shortflix.net', 'tokyvideo.com', '.m3u8', '.mp4', '.ts', 
-    'redecanais', 'rdcanais', 'vidsrc', 'cdn', 'akamai', 'youtube.com', 'youtu.be',
-    'vivensis', 'encoder'
+    'tvacabo.top', 'shortflix.net', '.m3u8', '.mp4', '.ts', 
+    'redecanais', 'rdcanais', 'vidsrc', 'youtube.com', 'youtu.be',
+    'ok.ru', 'vivensis', 'sky', 'encoder'
   ];
 
   if (needsGhostTunnel.some(t => finalUrl.toLowerCase().includes(t)) && !finalUrl.includes('/api/proxy')) {
@@ -106,10 +107,11 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
+// EXPORTAÇÕES OBRIGATÓRIAS PARA O BUILD (DADOS INTERNOS)
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   const all = [
-    { id: 'c1', title: 'LÉO TV EXCLUSIVO', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal Master Léo', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
-    { id: 'c2', title: 'SHORTFLIX DRAMAS', type: 'channel', genre: 'LÉO TV DORAMAS', description: 'Novelas Curtas', streamUrl: 'https://www.shortflix.net/pt/home', isRestricted: false, isActive: true }
+    { id: 'c1', title: 'SINAL SKY MASTER', type: 'channel', genre: 'LÉO TV AO VIVO', description: 'Canal via Hardware Encoder', streamUrl: 'https://tvacabo.top/', isRestricted: false, isActive: true },
+    { id: 'c2', title: 'SHORTFLIX DRAMAS', type: 'channel', genre: 'LÉO TV DORAMAS', description: 'Novelas Curtas Master', streamUrl: 'https://www.shortflix.net/pt/home', isRestricted: false, isActive: true }
   ] as ContentItem[];
   if (searchQuery) return all.filter(i => i.title.toLowerCase().includes(searchQuery.toLowerCase()));
   if (categoryGenre) return all.filter(i => i.genre === categoryGenre);
@@ -148,7 +150,6 @@ export async function getCategoryCount(g: string) { return 0; }
 export async function getTotalContentCount() { return 2; }
 export async function getTopContent() { return []; }
 
-// EXPORTAÇÕES DE GAMES OBRIGATÓRIAS PARA O BUILD
 export async function getRemoteGames(): Promise<GameItem[]> { return []; }
 export async function saveGame(g: any) { return true; }
 export async function removeGame(id: string) { return true; }

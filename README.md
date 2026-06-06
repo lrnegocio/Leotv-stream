@@ -9,7 +9,7 @@ firewall-cmd --permanent --add-port=443/tcp
 firewall-cmd --reload
 ```
 
-### 📦 2. Atualização e Ativação do Sistema (Sincronização v370):
+### 📦 2. Atualização e Ativação do Sistema (Sincronização v385):
 ```bash
 cd ~/leotv
 git fetch origin main
@@ -18,17 +18,9 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-### 🌐 3. Ativação do Domínio e SSL (HTTPS)
-Após rodar o deploy, execute estes comandos no Putty para ativar o cadeado:
-```bash
-systemctl restart nginx
-systemctl enable nginx
-certbot --nginx -d leotv.fun -d www.leotv.fun
-```
-
 ---
 
-### 📡 4. Inteligência de Sinais: Permanente vs Temporário
+### 📡 3. Inteligência de Sinais: Permanente vs Temporário
 
 **A) Sinais de IPTV (Servidores Externos):**
 - **O que são:** Sinais alugados (Ex: `172.110...`).
@@ -36,17 +28,17 @@ certbot --nginx -d leotv.fun -d www.leotv.fun
 - **O Segredo:** Não existe link vitalício em servidores de terceiros. Se você não é o dono do servidor, você depende do pagamento da conta.
 
 **B) Sinais de Hardware (O Único Vitalício):**
-- **O que é:** 1 Receptor Vivensis + 1 Encoder ligados na SUA rede.
+- **O que é:** 1 Receptor Sky/Vivensis + 1 Encoder HDMI ligados na SUA rede.
 - **Vantagem:** O sinal sai da antena direto para o seu site. **Nunca expira**, não tem mensalidade de servidor e o link é seu para sempre.
-- **Como integrar:** Pegue o IP do seu Encoder e cole no painel Léo TV.
+- **Como integrar:** Pegue o IP do seu Encoder e cole no painel Léo TV. O nosso **Túnel Ghost** na VPS vai proteger o seu IP de casa e entregar o sinal para os seus clientes.
 
 ---
 
-### 🧠 5. Protocolo de Captura (O Manual do Mestre)
+### 🧠 4. Protocolo de Captura (O Manual do Mestre)
 
-1. **Swap Gênio:** Se o link terminar em `.ts`, o sistema converte para `.m3u8` para economizar banda e evitar bloqueios.
-2. **Deep-Trace:** Nosso sistema agora segue redirecionamentos ocultos para tentar achar a CDN final do vídeo.
-3. **Limpeza Profunda:** Anúncios e interfaces de sites (Roblox, Mercado Play) são removidos por injeção de CSS.
+1.  **Deep-Trace**: Nosso sistema agora segue redirecionamentos ocultos para achar a CDN final do vídeo automaticamente.
+2.  **Mascara TV**: O `tvacabo.top` e o `shortflix.net` são abertos em um frame que remove anúncios e injeta CSS de limpeza.
+3.  **Bypass de Hardware**: Sinais vindo de Encoders residenciais são tunelados pela VPS para garantir segurança e anonimato.
 
 ---
 **SEU LINK DE ACESSO:** `https://leotv.fun`

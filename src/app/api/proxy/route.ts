@@ -5,8 +5,8 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 /**
- * TÚNEL GHOST v385-S - BYPASS TOTAL E EXTRAÇÃO VPS
- * Otimizado para tvacabo.top, shortflix.net e streams instáveis.
+ * TÚNEL GHOST v385-S PLUS - EXTRAÇÃO MASTER
+ * Otimizado para Hardware (Sky), tvacabo.top e shortflix.net.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,6 +24,11 @@ export async function GET(req: NextRequest) {
     requestHeaders.set('Accept', '*/*');
     requestHeaders.set('Connection', 'keep-alive');
     
+    // BYPASS PARA HARDWARE SKY/ENCODER (Evita bloqueios de IP local)
+    if (lowTarget.includes('192.168.') || lowTarget.includes('177.') || lowTarget.includes('sky')) {
+      requestHeaders.set('X-Forwarded-For', '24.152.37.78'); // IP da sua VPS como autoridade
+    }
+
     // BYPASS DE REFERER PARA DOMÍNIOS PROTEGIDOS
     if (lowTarget.includes('tvacabo.top')) {
       requestHeaders.set('Referer', 'https://tvacabo.top/');
@@ -31,8 +36,6 @@ export async function GET(req: NextRequest) {
     } else if (lowTarget.includes('shortflix.net')) {
       requestHeaders.set('Referer', 'https://www.shortflix.net/');
       requestHeaders.set('Origin', 'https://www.shortflix.net');
-    } else if (lowTarget.includes('youtube') || lowTarget.includes('youtu.be')) {
-      requestHeaders.set('Referer', 'https://www.youtube.com/');
     } else {
       try {
         const urlObj = new URL(targetUrl);
@@ -50,7 +53,7 @@ export async function GET(req: NextRequest) {
     const contentType = res.headers.get('content-type') || '';
     const responseHeaders = new Headers();
     
-    // Repassa headers de stream para estabilidade
+    // Repassa headers de stream para estabilidade HD
     ['content-length', 'content-range', 'accept-ranges'].forEach(h => {
       const val = res.headers.get(h);
       if (val) responseHeaders.set(h, val);
@@ -60,14 +63,6 @@ export async function GET(req: NextRequest) {
     responseHeaders.set('Access-Control-Allow-Origin', '*');
     responseHeaders.set('X-Frame-Options', 'ALLOWALL');
     responseHeaders.set('Content-Security-Policy', "frame-ancestors *;");
-
-    // Se for M3U8, trata como texto para corrigir caminhos relativos no túnel
-    if (contentType.includes('mpegurl') || lowTarget.includes('.m3u8')) {
-      const text = await res.text();
-      // Otimização: Se o arquivo M3U8 tiver links relativos, eles precisam ser mapeados para a VPS.
-      // Aqui poderíamos injetar a lógica de substituição se necessário.
-      return new Response(text, { headers: responseHeaders });
-    }
 
     return new Response(res.body, { status: res.status, headers: responseHeaders });
   } catch (error) {
