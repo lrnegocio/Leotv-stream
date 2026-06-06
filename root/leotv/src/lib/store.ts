@@ -1,4 +1,3 @@
-
 /**
  * MOTOR DE DADOS v385-S - MODO CONEXÃO SOBERANA
  * Sistema Conectado ao Supabase - Otimizado para Hardware (Sky/Vivensis) e VOD.
@@ -54,10 +53,6 @@ export interface Reseller {
   credits: number;
   totalSold: number;
   isBlocked: boolean;
-  cpf?: string;
-  phone?: string;
-  email?: string;
-  birthDate?: string;
 }
 
 export interface User {
@@ -78,7 +73,6 @@ export interface User {
   individualMessage?: string;
   reseller_name?: string;
   activatedAt?: string;
-  gamePoints?: number;
 }
 
 export interface GameRanking {
