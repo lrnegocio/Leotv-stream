@@ -1,55 +1,34 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v370..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORCE ROOT)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# DESBLOQUEIO MASTER: Limpeza total de memória e conflitos
-echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
+# Limpeza Total
+echo "🧹 LIMPANDO CACHE E GIT..."
 git fetch origin main
 git reset --hard origin/main
+rm -rf node_modules
+rm -f package-lock.json
 
-# Liberação agressiva de RAM (Drop Caches)
+# RAM e PM2
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-
-# PAUSA PARA RESPIRAR: Para APENAS o Léo TV para ter RAM pro Build
-echo "⏸️ PAUSANDO MOTOR LÉO TV (BUILD MODE)..."
 pm2 stop leotv-master 2>/dev/null || true
 pm2 delete leotv-master 2>/dev/null || true
-
-# LIBERAÇÃO DE PORTA: Garante que nada ficou travado na porta 3000
-echo "🔓 LIMPANDO PORTA INTERNA 3000..."
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Garante que o NPM e o PM2 estão no PATH
-export PATH=$PATH:/usr/local/bin:/usr/bin
-
-# Instala dependências de forma limpa
+# Instalação Limpa
 echo "📦 INSTALANDO DEPENDÊNCIAS..."
-npm install --no-audit --no-fund --prefer-offline
+npm install --legacy-peer-deps
 
-# Build ultra-otimizado para 1GB de RAM
-echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
+# Build
+echo "🏗️ CONSTRUINDO NÚCLEO MASTER..."
 export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
 
-# Verifica se o build deu certo
-if [ $? -eq 0 ]; then
-    echo "✅ BUILD CONCLUÍDO COM SUCESSO v370!"
-else
-    echo "❌ ERRO NO BUILD. TENTANDO RECOVERY..."
-    pm2 start ecosystem.config.js
-    exit 1
-fi
-
-# Reinicia APENAS o processo Léo TV na porta 3000
-echo "♻️ REINICIANDO MOTOR LÉO TV NA PORTA INTERNA 3000..."
-pm2 start ecosystem.config.js --update-env
+# Start
+pm2 start npm --name "leotv-master" -- start
 pm2 save
-
-echo "--------------------------------------------------"
-echo "✅ SISTEMA LÉO TV PRONTO PARA O DOMÍNIO v370!"
-echo "--------------------------------------------------"
 pm2 list

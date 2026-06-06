@@ -11,7 +11,7 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-# Limpeza Agressiva de Cache
+# Limpeza Agressiva de Cache e Dependências
 echo "🗑️ DELETANDO CACHE DE MÓDULOS (CLEAN MODE)..."
 rm -rf node_modules
 rm -f package-lock.json
@@ -30,7 +30,7 @@ pm2 delete leotv-master 2>/dev/null || true
 # Limpa porta
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Instala dependências SEM CACHE
+# Instala dependências SEM CACHE (Online Force)
 echo "📦 INSTALANDO DEPENDÊNCIAS (ONLINE FORCE)..."
 npm install --no-audit --no-fund --legacy-peer-deps
 
