@@ -1,44 +1,40 @@
 
-# Léo TV Stream - O Sistema Master (Edição Domínio leotv.fun)
-                                                            
-### 🛠️ 1. Desbloqueio Total (No Putty):
-Copie e cole estes comandos um por um para abrir o Firewall:
-```bash
-firewall-cmd --permanent --add-port=80/tcp
-firewall-cmd --permanent --add-port=443/tcp
-firewall-cmd --reload
-```
+# Léo TV Stream - O Sistema Master (Edição Soberana leotv.fun)
 
-### 📦 2. Atualização e Ativação do Sistema (Sincronização v385):
+### 🚀 STATUS DO SISTEMA: ONLINE v385-S
+**IP DA VPS:** `177.153.202.104`
+**DOMÍNIO:** `https://leotv.fun`
+**PIN MESTRE:** `ADM77X2P`
+
+---
+
+### 🛠️ 1. Comandos de Manutenção (No Putty):
+
+Para atualizar o sistema com novas melhorias que fizermos no Studio:
 ```bash
 cd ~/leotv
 git fetch origin main
 git reset --hard origin/main
-chmod +x deploy.sh
 ./deploy.sh
 ```
 
----
+### 📡 2. Inteligência de Sinais v385-S
 
-### 📡 3. Inteligência de Sinais: Permanente vs Temporário
+**A) Sinais de Hardware (Sky/Vivensis):**
+- **O que é:** Seu Encoder HDMI ligado em casa.
+- **Segurança:** O sistema detecta IPs como `192.168...` ou `177...` e os tunela pela VPS. 
+- **Vantagem:** O cliente assiste o sinal da sua casa, mas a VPS esconde a sua localização. **O link é vitalício.**
 
-**A) Sinais de IPTV (Servidores Externos):**
-- **O que são:** Sinais alugados (Ex: `172.110...`).
-- **Validade:** São vinculados a uma conta. Quando o acesso vence no servidor deles, o sinal para. 
-- **O Segredo:** Não existe link vitalício em servidores de terceiros. Se você não é o dono do servidor, você depende do pagamento da conta.
-
-**B) Sinais de Hardware (O Único Vitalício):**
-- **O que é:** 1 Receptor Sky/Vivensis + 1 Encoder HDMI ligados na SUA rede.
-- **Vantagem:** O sinal sai da antena direto para o seu site. **Nunca expira**, não tem mensalidade de servidor e o link é seu para sempre.
-- **Como integrar:** Pegue o IP do seu Encoder e cole no painel Léo TV. O nosso **Túnel Ghost** na VPS vai proteger o seu IP de casa e entregar o sinal para os seus clientes.
+**B) Túnel Ghost (tvacabo.top / shortflix):**
+- **O que faz:** Mascara o User-Agent do seu app.
+- **Resultado:** Os sites acham que seu app é uma Smart TV autorizada. O erro de "Acesso Negado" foi exterminado.
 
 ---
 
-### 🧠 4. Protocolo de Captura (O Manual do Mestre)
-
-1.  **Deep-Trace**: Nosso sistema agora segue redirecionamentos ocultos para achar a CDN final do vídeo automaticamente.
-2.  **Mascara TV**: O `tvacabo.top` e o `shortflix.net` são abertos em um frame que remove anúncios e injeta CSS de limpeza.
-3.  **Bypass de Hardware**: Sinais vindo de Encoders residenciais são tunelados pela VPS para garantir segurança e anonimato.
+### 🛡️ 3. Regras de Ouro (O que EVITAR no Putty):
+1. **NUNCA** use `pm2 stop all` (Isso pode derrubar o seu Wireguard se ele estiver no PM2). Use sempre `pm2 restart leotv-master`.
+2. **NUNCA** limpe o Firewall (`iptables -F`) sem saber, ou você perderá o acesso ao SSH e ao Wireguard.
+3. **MANTENHA** o Node.js na versão 22 (já instalamos).
 
 ---
-**SEU LINK DE ACESSO:** `https://leotv.fun`
+**SINAL CALIBRADO PELO APP PROTOTYPER**
