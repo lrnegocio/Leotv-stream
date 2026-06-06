@@ -1,7 +1,7 @@
 
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (VPS leonet)..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORÇA BRUTA)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -11,10 +11,15 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
+# Limpeza Agressiva de Cache
+echo "🗑️ DELETANDO CACHE DE MÓDULOS (CLEAN MODE)..."
+rm -rf node_modules
+rm -f package-lock.json
+
 # Garante ferramentas no PATH
 export PATH=$PATH:/usr/local/bin:/usr/bin:/bin
 
-# Liberação agressiva de RAM
+# Liberação de RAM
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
 # Pausa processos para o build
@@ -25,9 +30,9 @@ pm2 delete leotv-master 2>/dev/null || true
 # Limpa porta
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Instala dependências de forma limpa
-echo "📦 INSTALANDO DEPENDÊNCIAS..."
-npm install --no-audit --no-fund --prefer-offline
+# Instala dependências SEM CACHE
+echo "📦 INSTALANDO DEPENDÊNCIAS (ONLINE FORCE)..."
+npm install --no-audit --no-fund --legacy-peer-deps
 
 # Build otimizado para 1GB de RAM
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
