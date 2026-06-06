@@ -70,6 +70,7 @@ export interface User {
   isGamesOnly: boolean;
   resellerId?: string | null;
   individualMessage?: string;
+  reseller_name?: string;
 }
 
 export interface GameRanking {

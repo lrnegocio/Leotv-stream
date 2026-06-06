@@ -11,6 +11,9 @@ echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
+# Garante que o NPM e o PM2 estão no PATH (Fix para Ubuntu 24.04)
+export PATH=$PATH:/usr/local/bin:/usr/bin:/bin
+
 # Liberação agressiva de RAM (Drop Caches) para manter Wireguard liso
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
