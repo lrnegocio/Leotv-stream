@@ -1,20 +1,19 @@
-
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (ONLINE FORCE)..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORCE ONLINE)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# Permissão de Segurança
+# Permissão de Segurança Interna
 chmod +x deploy.sh
 
 # Limpeza Agressiva de Cache
-echo "🧹 LIMPANDO MEMÓRIA E CONFLITOS DE GIT..."
+echo "🧹 LIMPANDO CACHE E CONFLITOS DE GIT..."
 git fetch origin main
 git reset --hard origin/main
 
-echo "🗑️ DELETANDO CACHE DE MÓDULOS PARA FORÇAR INSTALAÇÃO LIMPA..."
+echo "🗑️ DELETANDO NODE_MODULES PARA INSTALAÇÃO LIMPA..."
 rm -rf node_modules
 rm -f package-lock.json
 
@@ -23,9 +22,9 @@ echo "⏸️ PAUSANDO MOTOR LÉO TV..."
 pm2 delete leotv-master 2>/dev/null || true
 fuser -k 3000/tcp 2>/dev/null || true
 
-# Instalação Limpa (Força Bruta)
+# Instalação Limpa (Força Bruta Online)
 echo "📦 INSTALANDO DEPENDÊNCIAS (MODO RECONEXÃO)..."
-# Usamos legacy-peer-deps para ignorar conflitos de versões de IA que travam o NPM
+# Usamos legacy-peer-deps para ignorar conflitos de versões e baixar o que estiver disponível
 npm install --legacy-peer-deps --no-audit --no-fund
 
 # Build do Núcleo
