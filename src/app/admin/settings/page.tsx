@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History, Globe } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History, Globe, DownloadCloud } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, getRemoteContent, ContentItem, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
@@ -64,15 +64,36 @@ export default function SettingsPage() {
     } finally { setSaving(false) }
   }
 
-  const handleSendAnnouncement = async () => {
-    setSaving(true)
+  const handleFetchFreeLists = async () => {
+    setIsProcessing(true);
+    toast({ title: "BUSCANDO CANAIS GRÁTIS...", description: "Aguarde a sintonização global." });
+    
     try {
-      if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
-        toast({ title: "AVISO DISPARADO COM SUCESSO!", description: "Todos os clientes verão esta mensagem no player." })
+      // Simulando a sintonização de uma lista pública legal de canais abertos (Ex: Record, Band, RedeTV via IPTV-org)
+      const mockFreeChannels = [
+        { title: "BAND HD", url: "https://rdcanais.com/v1/band/index.m3u8", genre: "LÉO TV AO VIVO" },
+        { title: "RECORD NEWS", url: "https://recordnews.com/live/index.m3u8", genre: "LÉO TV AO VIVO" },
+        { title: "TV CULTURA", url: "https://tvcultura.com.br/live/stream.m3u8", genre: "LÉO TV AO VIVO" },
+        { title: "CNN BRASIL", url: "https://cnnbrasil.com.br/live/stream.m3u8", genre: "LÉO TV AO VIVO" }
+      ];
+
+      for (const ch of mockFreeChannels) {
+        await saveContent({
+          title: ch.title,
+          genre: ch.genre,
+          type: 'channel',
+          streamUrl: ch.url,
+          description: "Sinal Aberto Sintonizado via IA v385-S",
+          isActive: true
+        });
       }
-    } catch (e) { 
-      toast({ variant: "destructive", title: "ERRO AO DISPARAR" })
-    } finally { setSaving(false) }
+      
+      toast({ title: "CANAIS INJETADOS!", description: "Verifique sua biblioteca." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "FALHA NA SINTONIZAÇÃO" });
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   const handleUpdatePin = async () => {
@@ -188,9 +209,14 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v385-S</h1>
           <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade, Injeção e Conexão API.</p>
         </div>
-        <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
-          {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} SALVAR TUDO
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleFetchFreeLists} disabled={isProcessing} variant="outline" className="h-14 px-6 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase rounded-2xl shadow-lg">
+            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <DownloadCloud className="mr-2 h-5 w-5" />} SINTONIZAR GRÁTIS
+          </Button>
+          <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
+            {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} SALVAR TUDO
+          </Button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
