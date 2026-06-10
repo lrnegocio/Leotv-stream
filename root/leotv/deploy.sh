@@ -6,6 +6,9 @@ echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORCE ROOT)..."
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
+# Permissão
+chmod +x deploy.sh
+
 # Limpeza Total
 echo "🧹 LIMPANDO CACHE E GIT..."
 git fetch origin main
@@ -20,13 +23,21 @@ pm2 delete leotv-master 2>/dev/null || true
 fuser -k 3000/tcp 2>/dev/null || true
 
 # Instalação Limpa
-echo "📦 INSTALANDO DEPENDÊNCIAS..."
+echo "📦 INSTALANDO DEPENDÊNCIAS (BRUTE FORCE)..."
 npm install --legacy-peer-deps --no-audit --no-fund
 
 # Build
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER..."
 export NODE_OPTIONS="--max-old-space-size=450"
 npm run build
+
+if [ $? -eq 0 ]; then
+    echo "✅ BUILD CONCLUÍDO COM SUCESSO!"
+else
+    echo "❌ ERRO NO BUILD. REINICIANDO COMANDO START..."
+    pm2 start npm --name "leotv-master" -- start
+    exit 1
+fi
 
 # Start
 pm2 start npm --name "leotv-master" -- start

@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History } from "lucide-react"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History, Globe } from "lucide-react"
 import { getGlobalSettings, updateGlobalSettings, saveContent, getRemoteContent, ContentItem, ContentType, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
@@ -25,7 +26,7 @@ export default function SettingsPage() {
   const [importGenre, setImportGenre] = React.useState("LÉO TV AO VIVO")
   const [importType, setImportType] = React.useState<ContentType>("channel")
   const [seriesTitle, setSeriesTitle] = React.useState("")
-  const [importMode, setImportMode] = React.useState<'new' | 'append'>('new')
+  const [importMode, setImportMode] = React.useState<'new' | 'append' | 'api'>('new')
   const [existingItems, setExistingItems] = React.useState<ContentItem[]>([])
   const [selectedItemId, setSelectedItemId] = React.useState("")
   const [startEpisodeNum, setStartEpisodeNum] = React.useState(1)
@@ -184,8 +185,8 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto space-y-8 pb-20">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v370</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade e Injeção de Sinais em Massa.</p>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v385-S</h1>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade, Injeção e Conexão API.</p>
         </div>
         <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
           {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} SALVAR TUDO
@@ -253,12 +254,13 @@ export default function SettingsPage() {
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-emerald-500/10 p-6">
-              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2"><ListPlus className="h-5 w-5" /> Injeção de Sinais v370</CardTitle>
+              <CardTitle className="uppercase text-sm font-black italic text-emerald-500 flex items-center gap-2"><ListPlus className="h-5 w-5" /> Injeção de Sinais e API</CardTitle>
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <div className="flex bg-black/40 p-1 rounded-xl mb-4">
                 <button onClick={() => setImportMode('new')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${importMode === 'new' ? 'bg-emerald-500 text-white shadow-lg' : 'text-muted-foreground'}`}><Plus className="inline h-3 w-3 mr-1" /> Novo Sinal</button>
                 <button onClick={() => setImportMode('append')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${importMode === 'append' ? 'bg-emerald-500 text-white shadow-lg' : 'text-muted-foreground'}`}><History className="inline h-3 w-3 mr-1" /> Completar Série</button>
+                <button onClick={() => setImportMode('api')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${importMode === 'api' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground'}`}><Globe className="inline h-3 w-3 mr-1" /> IPTV API</button>
               </div>
 
               {importMode === 'append' ? (
@@ -276,6 +278,17 @@ export default function SettingsPage() {
                     <Label className="text-[9px] font-black uppercase opacity-60">Começar do Episódio Número:</Label>
                     <Input type="number" title="Num Episódio Inicial" value={startEpisodeNum} onChange={e => setStartEpisodeNum(parseInt(e.target.value) || 1)} className="bg-black/40 h-10 border-white/5 font-black" />
                   </div>
+                </div>
+              ) : importMode === 'api' ? (
+                <div className="space-y-4 animate-in zoom-in-95">
+                   <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20">
+                      <p className="text-[10px] font-black uppercase text-primary italic">Sincronizador de API XTREAM / M3U em desenvolvimento.</p>
+                      <p className="text-[8px] font-bold opacity-60 mt-1 uppercase">Mestre Léo, cole o link da sua API abaixo e o sistema irá mapear os canais automaticamente nas categorias do Léo TV.</p>
+                   </div>
+                   <div className="space-y-2">
+                      <Label className="text-[9px] font-black uppercase opacity-60">Link da API IPTV (M3U ou Xtream)</Label>
+                      <Input placeholder="http://api.provedor.com:8080/..." className="bg-black/40 h-12 border-primary/20" />
+                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
@@ -315,13 +328,15 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label className="text-[9px] font-black uppercase opacity-60">Cole os links (Um por linha)</Label>
-                <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="https://link1.mp4&#10;https://link2.m3u8" className="h-[150px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
-              </div>
+              {importMode !== 'api' && (
+                <div className="space-y-2">
+                  <Label className="text-[9px] font-black uppercase opacity-60">Cole os links (Um por linha)</Label>
+                  <Textarea value={listText} onChange={e => setListText(e.target.value)} placeholder="https://link1.mp4&#10;https://link2.m3u8" className="h-[150px] bg-black/60 border-white/5 font-mono text-[9px] rounded-2xl" />
+                </div>
+              )}
 
-              <Button onClick={handleImportSmart} disabled={isProcessing || !listText} className="w-full h-16 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95">
-                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <><Sparkles className="mr-2 h-6 w-6" /> INJETAR NA REDE v370</>}
+              <Button onClick={handleImportSmart} disabled={isProcessing || (importMode !== 'api' && !listText)} className={`w-full h-16 ${importMode === 'api' ? 'bg-primary' : 'bg-emerald-500'} font-black uppercase rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95`}>
+                {isProcessing ? <Loader2 className="animate-spin mr-2" /> : importMode === 'api' ? <><Globe className="mr-2 h-6 w-6" /> CONECTAR API SOBERANA</> : <><Sparkles className="mr-2 h-6 w-6" /> INJETAR NA REDE v385</>}
               </Button>
             </CardContent>
           </Card>

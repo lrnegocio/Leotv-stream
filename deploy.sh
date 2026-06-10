@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (FORCE ONLINE)..."
