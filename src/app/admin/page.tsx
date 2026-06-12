@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload, Cloud } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -16,13 +16,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = React.useState<User[]>([])
   const [resellers, setResellers] = React.useState<Reseller[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [isDbOffline, setIsDbOffline] = React.useState(false)
-  const [isQuotaExceeded, setIsQuotaExceeded] = React.useState(false)
 
   const loadData = React.useCallback(async () => {
     setLoading(true)
-    setIsDbOffline(false)
-    setIsQuotaExceeded(false)
     try {
       const [count, ppv, alacarte, u, r] = await Promise.all([
         getTotalContentCount(),
@@ -38,14 +34,9 @@ export default function AdminDashboard() {
       setUsers(u)
       setResellers(r)
       
-      toast({ title: "DADOS SINCRONIZADOS v370-S" })
+      toast({ title: "NUVEM FIREBASE SINCRONIZADA v385" })
     } catch (err: any) {
-      const errorMsg = err.message || "";
-      if (errorMsg.includes('exceed_egress_quota') || errorMsg.includes('quota')) {
-        setIsQuotaExceeded(true)
-      } else {
-        setIsDbOffline(true)
-      }
+      toast({ variant: "destructive", title: "Erro na Cloud", description: "Verifique a internet da VPS." })
     } finally {
       setLoading(false)
     }
@@ -56,12 +47,12 @@ export default function AdminDashboard() {
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
       <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sintonizando v370-S...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sintonizando v385 Cloud...</p>
     </div>
   )
 
   const stats = [
-    { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-500" },
+    { title: "Clientes Cloud", value: users.length.toString(), icon: Users, color: "text-blue-500" },
     { title: "Sinais na Rede", value: totalContent.toLocaleString(), icon: Zap, color: "text-amber-500" },
     { title: "Sinais PPV", value: ppvCount.toLocaleString(), icon: Zap, color: "text-orange-500" },
     { title: "Sinais ALACARTE", value: alacarteCount.toLocaleString(), icon: Star, color: "text-blue-600" },
@@ -72,32 +63,25 @@ export default function AdminDashboard() {
     <div className="space-y-8 pb-20">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel v370-S</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão central da rede StreamSight.</p>
+          <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel Cloud v385-S</h1>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão central via Firebase Firestore.</p>
         </div>
         <Button onClick={loadData} variant="outline" className="h-12 w-12 rounded-xl border-primary/20">
-           <RefreshCcw className={`h-5 w-5 ${isDbOffline || isQuotaExceeded ? 'text-red-500' : 'text-primary'}`} />
+           <RefreshCcw className={`h-5 w-5 text-primary`} />
         </Button>
       </div>
 
-      {(isQuotaExceeded || isDbOffline) && (
-        <div className="bg-destructive/10 border-2 border-destructive/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
-           <div className="bg-destructive p-4 rounded-3xl shadow-lg">
-             {isQuotaExceeded ? <CreditCard className="h-8 w-8 text-white" /> : <AlertTriangle className="h-8 w-8 text-white" />}
-           </div>
-           <div className="flex-1 text-center md:text-left">
-              <p className="text-[12px] font-black uppercase text-destructive tracking-widest mb-1">Aviso Crítico: Sinal do Banco Perdido</p>
-              <p className="text-base font-bold leading-relaxed">
-                {isQuotaExceeded 
-                  ? "Mestre Léo, sua rede atingiu o limite de transferência do Supabase. Para os canais voltarem, você precisa fazer o upgrade no Supabase ou aguardar o reset mensal."
-                  : "Mestre Léo, o seu Supabase está PAUSADO ou Offline. Retome o projeto no site deles para restaurar o sinal!"}
-              </p>
-           </div>
-           <Button variant="outline" className="border-destructive/30 text-destructive font-black text-[9px] uppercase h-12 px-8 rounded-xl hover:bg-destructive hover:text-white transition-all" asChild>
-             <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer">Resolver no Supabase</a>
-           </Button>
-        </div>
-      )}
+      <div className="bg-emerald-500/10 border-2 border-emerald-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
+         <div className="bg-emerald-500 p-4 rounded-3xl shadow-lg">
+           <Cloud className="h-8 w-8 text-white" />
+         </div>
+         <div className="flex-1 text-center md:text-left">
+            <p className="text-[12px] font-black uppercase text-emerald-500 tracking-widest mb-1">Status: Conexão Cloud Blindada</p>
+            <p className="text-base font-bold leading-relaxed text-foreground">
+              Mestre Léo, o sistema agora está operando via Firebase. Seus dados estão salvos nos servidores do Google. O Supabase foi desativado por segurança.
+            </p>
+         </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => (
@@ -108,8 +92,8 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-3xl font-black tracking-tight">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
-                <ArrowUpRight className={`h-3 w-3 mr-1 ${isDbOffline || isQuotaExceeded ? 'text-red-500' : 'text-emerald-500'}`} />
-                {isDbOffline || isQuotaExceeded ? 'Sinal Offline' : 'Sinal Ativo'}
+                <ArrowUpRight className={`h-3 w-3 mr-1 text-emerald-500`} />
+                Sinal Cloud Ativo
               </p>
             </CardContent>
           </Card>
@@ -119,8 +103,8 @@ export default function AdminDashboard() {
       <Card className="bg-card border-border rounded-[2.5rem] overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 bg-black/5">
           <div>
-            <CardTitle className="uppercase text-sm font-black tracking-widest italic text-primary">Monitoramento Master v370-S</CardTitle>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold">Status real de acessos por PIN.</p>
+            <CardTitle className="uppercase text-sm font-black tracking-widest italic text-primary">Monitoramento Master v385-S</CardTitle>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold">Status real de acessos por PIN Cloud.</p>
           </div>
           <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-black hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
         </CardHeader>
@@ -134,7 +118,7 @@ export default function AdminDashboard() {
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center font-mono font-black text-primary uppercase text-lg">{user.pin.substring(0, 2)}</div>
                   <div className="flex-1">
                     <p className="font-black uppercase tracking-[0.2em] text-sm">{user.pin}</p>
-                    <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">{user.subscriptionTier} • {user.activatedAt ? 'Ativado' : 'Aguardando'}</p>
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">{user.subscriptionTier} • {user.activatedAt ? 'Ativado' : 'Cloud Store'}</p>
                   </div>
                   <div className="text-right">
                     <p className={`text-[10px] font-black uppercase ${statusColor}`}>{user.isBlocked ? 'BLOQUEADO' : isExpired ? 'EXPIRADO' : 'ATIVO'}</p>
@@ -142,7 +126,7 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
-            {users.length === 0 && <div className="p-10 text-center opacity-30 uppercase font-black text-xs">Aguardando sinal do banco...</div>}
+            {users.length === 0 && <div className="p-10 text-center opacity-30 uppercase font-black text-xs">Aguardando novos dados no Firebase Cloud...</div>}
           </div>
         </CardContent>
       </Card>

@@ -31,16 +31,48 @@
         "isAdultEnabled": { "type": "boolean" },
         "isPpvEnabled": { "type": "boolean" },
         "isAlacarteEnabled": { "type": "boolean" },
-        "gamesPassword": { "type": "string" },
-        "individualMessage": { "type": "string" }
+        "isGamesOnly": { "type": "boolean" },
+        "subscriptionTier": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "maxScreens": { "type": "number" },
+        "activeDevices": { "type": "array" },
+        "individualMessage": { "type": "string" },
+        "resellerId": { "type": "string" }
+      }
+    },
+    "Reseller": {
+      "title": "Revendedor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "credits": { "type": "number" },
+        "totalSold": { "type": "number" },
+        "isBlocked": { "type": "boolean" }
+      }
+    },
+    "GameItem": {
+      "title": "Jogo de Arena",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "console": { "type": "string" },
+        "url": { "type": "string" },
+        "imageUrl": { "type": "string" }
       }
     }
   },
   "auth": {
-    "providers": ["anonymous", "password"]
+    "providers": ["anonymous"]
   },
   "firestore": {
-    "/content/{contentId}": { "schema": "ContentItem", "description": "Biblioteca" },
-    "/users/{userId}": { "schema": "User", "description": "PINs" }
+    "/content/{contentId}": { "schema": "ContentItem", "description": "Biblioteca de canais e VOD" },
+    "/users/{userId}": { "schema": "User", "description": "PINs de acesso" },
+    "/resellers/{resellerId}": { "schema": "Reseller", "description": "Parceiros de revenda" },
+    "/games/{gameId}": { "schema": "GameItem", "description": "Jogos da Arena" },
+    "/settings/{settingId}": { "schema": "object", "description": "Configurações globais" }
   }
 }
