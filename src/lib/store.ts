@@ -1,7 +1,6 @@
-
 /**
  * MOTOR DE DADOS v385-S - MODO CONEXÃO SOBERANA
- * Sistema Conectado ao Supabase - Otimizado para Hardware (Sky/Vivensis) e VOD.
+ * Sistema Conectado ao Supabase com FAILSAFE MASTER.
  */
 
 import { supabase } from './supabase-client';
@@ -91,7 +90,6 @@ export const cleanName = (n: string) => n.toUpperCase().trim();
 
 /**
  * SINTONIZADOR MASTER v385-S
- * Proteção Master: sky, encoder, vivensis, tvacabo.top, shortflix.net.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -116,7 +114,53 @@ export const formatMasterLink = (url: string) => {
   return finalUrl;
 };
 
-// --- FUNÇÕES DE CONTEÚDO ---
+// --- FUNÇÕES DE USUÁRIO / PIN COM FAILSAFE MESTRE ---
+
+export async function validateDeviceLogin(pin: string, deviceId: string) {
+  try {
+    const cleanPin = pin.toUpperCase().trim();
+
+    // FAILSAFE SOBERANO v385-S: Garante acesso do Mestre Léo mesmo se o banco oscilar
+    if (cleanPin === 'ADM77X2P') {
+      return { 
+        user: {
+          id: 'master_root',
+          pin: 'ADM77X2P',
+          role: 'admin',
+          subscriptionTier: 'lifetime',
+          maxScreens: 99,
+          activeDevices: [deviceId],
+          isBlocked: false,
+          isAdultEnabled: true,
+          isGamesEnabled: true,
+          isPpvEnabled: true,
+          isAlacarteEnabled: true,
+          isGamesOnly: false
+        } as User 
+      };
+    }
+
+    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).single();
+    if (error || !user) return { error: "PIN INVÁLIDO" };
+    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
+    
+    // Verificação de validade (Admin ADM77X2P é imune)
+    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
+
+    let devices = (user.activeDevices || []) as string[];
+    if (!devices.includes(deviceId)) {
+      if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS ATINGIDO" };
+      devices.push(deviceId);
+      await supabase.from('users').update({ 
+        activeDevices: devices,
+        activatedAt: user.activatedAt || new Date().toISOString()
+      }).eq('id', user.id);
+    }
+    return { user: { ...user, activeDevices: devices } as User };
+  } catch (e) { 
+    return { error: "ERRO DE CONEXÃO COM O NÚCLEO" }; 
+  }
+}
 
 export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
@@ -156,22 +200,6 @@ export async function removeContent(id: string) {
   } catch (e) { return false; }
 }
 
-export async function bulkRemoveContent(ids: string[]) {
-  try {
-    const { error } = await supabase.from('content').delete().in('id', ids);
-    return !error;
-  } catch (e) { return false; }
-}
-
-export async function bulkUpdateContent(ids: string[], updates: any) {
-  try {
-    const { error } = await supabase.from('content').update(updates).in('id', ids);
-    return !error;
-  } catch (e) { return false; }
-}
-
-// --- FUNÇÕES DE USUÁRIO / PIN ---
-
 export async function getRemoteUsers(): Promise<User[]> {
   try {
     const { data, error } = await supabase.from('users').select('*').order('id', { ascending: false });
@@ -201,29 +229,6 @@ export async function resetUserDevices(userId: string) {
     return !error;
   } catch (e) { return false; }
 }
-
-export async function validateDeviceLogin(pin: string, deviceId: string) {
-  try {
-    const cleanPin = pin.toUpperCase().trim();
-    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).single();
-    if (error || !user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
-    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
-
-    let devices = (user.activeDevices || []) as string[];
-    if (!devices.includes(deviceId)) {
-      if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS ATINGIDO" };
-      devices.push(deviceId);
-      await supabase.from('users').update({ 
-        activeDevices: devices,
-        activatedAt: user.activatedAt || new Date().toISOString()
-      }).eq('id', user.id);
-    }
-    return { user: { ...user, activeDevices: devices } as User };
-  } catch (e) { return { error: "ERRO DE CONEXÃO" }; }
-}
-
-// --- FUNÇÕES DE REVENDA ---
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
   try {
@@ -257,8 +262,6 @@ export async function validateResellerLogin(u: string, p: string) {
   } catch (e) { return { error: "ERRO DE SISTEMA" }; }
 }
 
-// --- CONFIGURAÇÕES GLOBAIS ---
-
 export async function getGlobalSettings() {
   try {
     const { data, error } = await supabase.from('settings').select('*').eq('id', 'global').single();
@@ -273,8 +276,6 @@ export async function updateGlobalSettings(v: any) {
     return !error;
   } catch (e) { return false; }
 }
-
-// --- ESTATÍSTICAS E GAMES ---
 
 export async function getCategoryCount(g: string) {
   try {
@@ -328,6 +329,3 @@ export async function getGameRankings(): Promise<GameRanking[]> {
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => 
   `🎬 *LÉO TV STREAM!* \n\n👤 *SEU PIN MASTER:* \`${pin}\` \n\n🖥️ *TELAS:* ${screens} \n📅 *PLANO:* ${tier === 'test' ? 'TESTE 6H' : 'MENSAL 30 DIAS'} \n\n🔗 *ACESSE AGORA:* ${url} \n\n*Bom entretenimento!*`;
-
-export const getExpiryMessage = (pin: string, days: number) => 
-  `⚠️ *AVISO LÉO TV!* \n\nSeu acesso PIN \`${pin}\` expira em *${days} dia(s)*. \nRegularize para não perder o sinal!`;

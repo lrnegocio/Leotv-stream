@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (MODO AUTO-RELIEF)..."
+echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (MODO ULTRA-RELIEF)..."
 
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
@@ -9,27 +9,27 @@ cd "$(dirname "$0")"
 chmod +x deploy.sh 2>/dev/null
 chmod +x maintenance.sh 2>/dev/null
 
-# ALÍVIO DE CPU E RAM: Para tudo o que estiver consumindo recursos
+# ALÍVIO AGRESSIVO DE CPU E RAM
 echo "🧊 CONGELANDO PROCESSOS DE ALTO CONSUMO (FFMPEG/NODE)..."
 pkill -9 ffmpeg 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
 
-# Limpeza agressiva de cache e memória do sistema (Ubuntu/Debian)
+# Limpeza profunda de cache de memória do sistema
 echo "🧹 LIMPANDO MEMÓRIA RAM DO SISTEMA..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
-echo "🗑️ DELETANDO NODE_MODULES PARA INSTALAÇÃO LIMPA..."
+# Deleta node_modules para garantir instalação limpa e evitar conflitos de versão
+echo "🗑️ LIMPANDO AMBIENTE DE MÓDULOS..."
 rm -rf node_modules 2>/dev/null
 rm -f package-lock.json 2>/dev/null
 
-# Instalação Otimizada (Baixo consumo de RAM)
-echo "📦 INSTALANDO DEPENDÊNCIAS (MODO ECONÔMICO)..."
-# Usamos flags para economizar memória e ignorar avisos inúteis
-npm install --legacy-peer-deps --no-audit --no-fund --loglevel error
+# Instalação Otimizada (Modo Econômico para VPS)
+echo "📦 INSTALANDO DEPENDÊNCIAS (MODO FORCE)..."
+npm install --legacy-peer-deps --no-audit --no-fund --loglevel error --prefer-offline || npm install --legacy-peer-deps --no-audit --no-fund
 
-# Build do Núcleo Master com Limite de Memória
+# Build do Núcleo Master com Limite Estrito de Memória
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
-# Limitamos a RAM do build para 1GB para não capotar a VPS
+# Limitamos a RAM do build para evitar que a VPS trave
 export NODE_OPTIONS="--max-old-space-size=1024"
 npm run build
 
