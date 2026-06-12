@@ -18,7 +18,7 @@ rm -rf node_modules 2>/dev/null
 rm -f package-lock.json 2>/dev/null
 
 # Instalação Silenciosa e Leve
-echo "📦 INSTALANDO DEPENDÊNCIAS (MODO FORCE)..."
+echo "📦 INSTALANDO DEPENDÊNCIAS (MODO FORCE BRUTE)..."
 npm install --legacy-peer-deps --no-audit --no-fund --loglevel error
 
 # Build do Núcleo
