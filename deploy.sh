@@ -9,29 +9,27 @@ cd "$(dirname "$0")"
 chmod +x deploy.sh 2>/dev/null
 chmod +x maintenance.sh 2>/dev/null
 
-# ALÍVIO DE CPU: Para o rádio se estiver travando a VPS
-echo "🧊 CONGELANDO PROCESSOS DE ALTO CONSUMO (FFMPEG)..."
+# ALÍVIO DE CPU E RAM: Para tudo o que estiver consumindo recursos
+echo "🧊 CONGELANDO PROCESSOS DE ALTO CONSUMO (FFMPEG/NODE)..."
 pkill -9 ffmpeg 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
 
-# Limpeza agressiva de cache e memória
-echo "🧹 LIMPANDO CACHE E CONFLITOS DE GIT..."
+# Limpeza agressiva de cache e memória do sistema (Ubuntu/Debian)
+echo "🧹 LIMPANDO MEMÓRIA RAM DO SISTEMA..."
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
-git fetch origin main
-git reset --hard origin/main
 
 echo "🗑️ DELETANDO NODE_MODULES PARA INSTALAÇÃO LIMPA..."
-rm -rf node_modules
-rm -f package-lock.json
+rm -rf node_modules 2>/dev/null
+rm -f package-lock.json 2>/dev/null
 
-# Instalação Limpa (Força Bruta Online)
-echo "📦 INSTALANDO DEPENDÊNCIAS (MODO RECONEXÃO)..."
-# Usamos legacy-peer-deps para ignorar conflitos de versões e baixar o que estiver disponível
-npm install --legacy-peer-deps --no-audit --no-fund
+# Instalação Otimizada (Baixo consumo de RAM)
+echo "📦 INSTALANDO DEPENDÊNCIAS (MODO ECONÔMICO)..."
+# Usamos flags para economizar memória e ignorar avisos inúteis
+npm install --legacy-peer-deps --no-audit --no-fund --loglevel error
 
-# Build do Núcleo Master
-echo "🏗️ CONSTRUINDO NÚCLEO MASTER..."
-# Aumentamos a RAM para o build não capotar na VPS pequena
+# Build do Núcleo Master com Limite de Memória
+echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
+# Limitamos a RAM do build para 1GB para não capotar a VPS
 export NODE_OPTIONS="--max-old-space-size=1024"
 npm run build
 
