@@ -31,7 +31,32 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
+    const cleanPin = pin.toUpperCase().trim();
+
     if (loginType === 'user') {
+      // PROTOCOLO DE ACESSO SOBERANO (BYPASS ADM77X2P)
+      if (cleanPin === 'ADM77X2P') {
+        const masterSession = {
+          id: 'master_leo',
+          pin: 'ADM77X2P',
+          role: 'admin',
+          subscriptionTier: 'lifetime',
+          maxScreens: 99,
+          activeDevices: ["vps_master"],
+          isBlocked: false,
+          isAdultEnabled: true,
+          isGamesEnabled: true,
+          isPpvEnabled: true,
+          isAlacarteEnabled: true,
+          isGamesOnly: false,
+          deviceId: "vps_master"
+        };
+        localStorage.setItem("user_session", JSON.stringify(masterSession));
+        if (rememberMe) localStorage.setItem("p2p_saved_pin", pin);
+        router.push("/admin");
+        return;
+      }
+
       if (rememberMe) {
         localStorage.setItem("p2p_saved_pin", pin)
       } else {
@@ -143,7 +168,7 @@ export default function LoginPage() {
            <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-primary">
              <ShieldCheck className="h-3 w-3" /> Acesso Seguro
            </div>
-           <span className="text-[9px] font-bold uppercase italic">Léo TV v2.5</span>
+           <span className="text-[9px] font-bold uppercase italic">Léo TV v385-S</span>
         </CardFooter>
       </Card>
     </div>
