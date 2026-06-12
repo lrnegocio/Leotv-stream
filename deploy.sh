@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (MODO IP-READY)..."
@@ -6,8 +5,14 @@ echo "🚀 INICIANDO RECALIBRAGEM SOBERANA v385-S (MODO IP-READY)..."
 # Garante que estamos na pasta certa
 cd "$(dirname "$0")"
 
-# Alívio de Memória e Processos
+# Alívio de Memória e Processos - LIMPEZA TOTAL
 echo "🧹 LIMPANDO MEMÓRIA E PROCESSOS ANTIGOS..."
+# Para e deleta TUDO do PM2 para não haver conflito de porta
+pm2 stop all 2>/dev/null || true
+pm2 delete all 2>/dev/null || true
+
+# Mata qualquer coisa que esteja usando a porta 3000 na força bruta
+fuser -k 3000/tcp 2>/dev/null || true
 pkill -9 node 2>/dev/null || true
 pkill -9 ffmpeg 2>/dev/null || true
 sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
@@ -19,12 +24,10 @@ rm -f package-lock.json 2>/dev/null
 
 # Instalação Silenciosa e Leve
 echo "📦 INSTALANDO DEPENDÊNCIAS (MODO FORCE BRUTE)..."
-# Usamos --legacy-peer-deps para ignorar brigas de versões do NextJS 15
 npm install --legacy-peer-deps --no-audit --no-fund --loglevel error
 
 # Build do Núcleo
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
-# Limitamos a RAM do build para 1024MB para não travar VPS pequenas
 export NODE_OPTIONS="--max-old-space-size=1024"
 npm run build
 
@@ -36,8 +39,8 @@ else
 fi
 
 # Reinicia Processos no PM2 de forma limpa
-echo "♻️ REINICIANDO MOTOR LÉO TV..."
-pm2 delete leotv-master 2>/dev/null || true
+echo "♻️ REINICIANDO MOTOR LÉO TV UNIFICADO..."
+# Iniciamos apenas o processo oficial
 pm2 start npm --name "leotv-master" -- start -- -p 3000
 pm2 save
 
