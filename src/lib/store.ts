@@ -87,7 +87,6 @@ export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   const cleanPin = pin.toUpperCase().trim();
 
-  // LOGIN MESTRE (Bypass de Banco de Dados)
   if (cleanPin === 'ADM77X2P') {
     return { 
       user: {
@@ -125,12 +124,23 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
   }
 }
 
-export async function getRemoteContent(showInactive = false, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
+/**
+ * BUSCA REMOTA v385-S
+ * Agora busca TUDO por padrão para não ocultar dados importados.
+ */
+export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    if (!showInactive) query = query.eq('isActive', true);
+    
+    // Se showInactive for false, só filtramos os que são EXPLICITAMENTE false.
+    // Isso garante que canais com null no isActive apareçam.
+    if (!showInactive) {
+      query = query.not('isActive', 'eq', false);
+    }
+
     if (categoryGenre) query = query.eq('genre', categoryGenre);
     if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    
     const { data, error } = await query.order('title');
     if (error) throw error;
     return (data || []) as ContentItem[];
@@ -209,14 +219,14 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g).eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g);
     return count || 0;
   } catch (e) { return 0; }
 }
