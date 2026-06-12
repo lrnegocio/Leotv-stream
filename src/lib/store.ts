@@ -172,6 +172,27 @@ export async function removeUser(id: string) {
   } catch (e) { return false; }
 }
 
+export async function getRemoteResellers(): Promise<Reseller[]> {
+  try {
+    const { data } = await supabase.from('resellers').select('*');
+    return (data || []) as Reseller[];
+  } catch (e) { return []; }
+}
+
+export async function saveReseller(r: Partial<Reseller>) {
+  try {
+    const { error } = await supabase.from('resellers').upsert({ ...r, id: r.id || `rev_${Date.now()}` });
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function removeReseller(id: string) {
+  try {
+    const { error } = await supabase.from('resellers').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
+}
+
 export async function getGlobalSettings() {
   try {
     const { data } = await supabase.from('settings').select('*').eq('id', 'global').single();
@@ -246,3 +267,10 @@ export const formatMasterLink = (url: string) => {
 
 export const getBeautifulMessage = (pin: string, tier: string, url: string, screens: number) => 
   `🎬 *LÉO TV STREAM!* \n\n👤 *SEU PIN MASTER:* \`${pin}\` \n\n🖥️ *TELAS:* ${screens} \n📅 *PLANO:* ${tier === 'test' ? 'TESTE 6H' : 'MENSAL 30 DIAS'} \n\n🔗 *ACESSE AGORA:* ${url} \n\n*Bom entretenimento!*`;
+
+export async function resetUserDevices(userId: string) {
+  try {
+    const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId);
+    return !error;
+  } catch (e) { return false; }
+}
