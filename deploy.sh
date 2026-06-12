@@ -19,17 +19,19 @@ rm -f package-lock.json 2>/dev/null
 
 # Instalação Silenciosa e Leve
 echo "📦 INSTALANDO DEPENDÊNCIAS (MODO FORCE BRUTE)..."
+# Usamos --legacy-peer-deps para ignorar brigas de versões do NextJS 15
 npm install --legacy-peer-deps --no-audit --no-fund --loglevel error
 
 # Build do Núcleo
 echo "🏗️ CONSTRUINDO NÚCLEO MASTER LÉO TV..."
+# Limitamos a RAM do build para 1024MB para não travar VPS pequenas
 export NODE_OPTIONS="--max-old-space-size=1024"
 npm run build
 
 if [ $? -eq 0 ]; then
     echo "✅ BUILD CONCLUÍDO COM SUCESSO v385-S!"
 else
-    echo "❌ ERRO NO BUILD. VERIFIQUE OS LOGS."
+    echo "❌ ERRO NO BUILD. VERIFIQUE OS LOGS ACIMA."
     exit 1
 fi
 

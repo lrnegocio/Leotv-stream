@@ -157,17 +157,17 @@ export async function getRemoteContent(showInactive = true, searchQuery = "", ca
   if (!db) return [];
   try {
     const contentRef = collection(db, 'content');
-    let q = query(contentRef, orderBy('title'));
-
-    if (categoryGenre) {
-      q = query(contentRef, where('genre', '==', categoryGenre), orderBy('title'));
-    }
-
-    const snapshot = await getDocs(q);
+    // Busca básica ordenada por título
+    let snapshot = await getDocs(query(contentRef, orderBy('title')));
     let items = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ContentItem[];
 
+    // Filtros manuais para evitar necessidade de índices complexos no Firebase inicialmente
     if (!showInactive) {
       items = items.filter(i => i.isActive !== false);
+    }
+
+    if (categoryGenre) {
+      items = items.filter(i => i.genre === categoryGenre);
     }
 
     if (searchQuery) {
@@ -285,6 +285,7 @@ export async function getCategoryCount(g: string) {
 export async function getTopContent(limitNum = 10): Promise<ContentItem[]> {
   if (!db) return [];
   try {
+    // Busca ordenada por visualizações
     const q = query(collection(db, 'content'), orderBy('views', 'desc'), limit(limitNum));
     const snap = await getDocs(q);
     return snap.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ContentItem[];
