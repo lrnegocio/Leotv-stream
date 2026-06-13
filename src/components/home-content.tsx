@@ -3,21 +3,22 @@
 import * as React from "react"
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, Smartphone, Download } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, Smartphone, Download, ListPlay } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin, Episode, Season } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
 import Link from "next/link"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 const CATEGORIES = [
   { id: 'LIVE', name: 'CANAIS AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'FILMES MASTER', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SÉRIES' },
-  { id: 'PPV', name: 'PAY PER VIEW', icon: Zap, color: 'bg-orange-500', genre: 'LÉO TV PAY PER VIEW', specialAccess: 'isPpvEnabled' },
+  { id: 'PPV', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-orange-500', genre: 'LÉO TV PAY PER VIEW', specialAccess: 'isPpvEnabled' },
   { id: 'ALACARTE', name: 'ALACARTES', icon: Star, color: 'bg-blue-600', genre: 'LÉO TV ALACARTES', specialAccess: 'isAlacarteEnabled' },
   { id: 'ESPORTES', name: 'LÉO TV ESPORTES', icon: TrophyIcon, color: 'bg-orange-600', genre: 'LÉO TV ESPORTES' },
   { id: 'MUSICAS', name: 'LÉO TV MÚSICAS', icon: Headphones, color: 'bg-indigo-500', genre: 'LÉO TV MUSICAS' },
@@ -28,13 +29,11 @@ const CATEGORIES = [
   { id: 'DORAMAS', name: 'DORAMAS', icon: Sparkles, color: 'bg-indigo-400', genre: 'LÉO TV DORAMAS' },
   { id: 'KIDS', name: 'MUNDO INFANTIL', icon: Baby, color: 'bg-sky-500', genre: 'LÉO TV DESENHOS' },
   { id: 'RADIO', name: 'LÉO TV RÁDIOS', icon: Radio, color: 'bg-orange-400', genre: 'LÉO TV RÁDIOS' },
-  { id: 'GAMES', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-emerald-600', special: 'games' },
   { id: 'ADULT', name: 'ADULTOS', icon: Lock, color: 'bg-zinc-800', genre: 'LÉO TV ADULTOS', restricted: true },
 ]
 
 function HomeContentInner() {
   const [content, setContent] = React.useState<ContentItem[]>([])
-  const [games, setGames] = React.useState<GameItem[]>([])
   const [user, setUser] = React.useState<User | null>(null)
   const [settings, setSettings] = React.useState<any>(null)
   const [activeVideo, setActiveVideo] = React.useState<{ items: any[], index: number } | null>(null)
@@ -44,9 +43,8 @@ function HomeContentInner() {
   const [pinInput, setPinInput] = React.useState("")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
-  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | 'ITEM' | string | null>(null)
+  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'ITEM' | string | null>(null)
   const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
-  const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
   
@@ -61,25 +59,14 @@ function HomeContentInner() {
       setSettings(currentSettings);
       
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
-      
-      if (categoryId === 'GAMES') {
-        const remoteGames = await getRemoteGames();
-        setGames(remoteGames);
-        setContent([]);
-      } else {
-        const genreToFilter = categoryObj?.genre || "";
-        const data = await getRemoteContent(false, queryStr, genreToFilter);
-        setContent(data);
-      }
+      const genreToFilter = categoryObj?.genre || "";
+      const data = await getRemoteContent(false, queryStr, genreToFilter);
+      setContent(data);
 
       if (!categoryId && !queryStr) {
         const counts: Record<string, number> = {};
         for (const cat of CATEGORIES) { 
           if (cat.genre) counts[cat.id] = await getCategoryCount(cat.genre); 
-          else if (cat.id === 'GAMES') {
-             const g = await getRemoteGames();
-             counts[cat.id] = g.length;
-          }
         }
         setCatCounts(counts);
       }
@@ -143,13 +130,20 @@ function HomeContentInner() {
     }
   };
 
+  const playEpisode = (ep: Episode) => {
+    const formattedUrl = formatMasterLink(ep.streamUrl);
+    setActiveVideo({ 
+      items: [{ ...ep, title: `${selectedSeries?.title} - ${ep.title}`, streamUrl: formattedUrl }], 
+      index: 0 
+    });
+  };
+
   const handleCategoryClick = (cat: any) => {
     if (!user) return;
     if (cat.specialAccess && !(user as any)[cat.specialAccess] && user.role !== 'admin') {
       return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO" });
     }
-    if (cat.special === 'games' || cat.restricted) {
-      if (cat.special === 'games' && !user?.isGamesEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "ARENA BLOQUEADA" });
+    if (cat.restricted) {
       if (cat.restricted && !user?.isAdultEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
       setUnlockTarget(cat.id);
       setIsPinOpen(true);
@@ -161,7 +155,7 @@ function HomeContentInner() {
   if (!isMounted) return null;
   const isGamesOnly = user?.isGamesOnly === true;
   const visibleCategories = CATEGORIES.filter(c => {
-    if (isGamesOnly) return c.id === 'GAMES';
+    if (isGamesOnly) return c.id === 'PPV'; // Arena Games
     return user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
   });
 
@@ -203,22 +197,6 @@ function HomeContentInner() {
               </button>
             ))}
           </div>
-        ) : selectedCat === 'GAMES' ? (
-           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-             <h2 className="text-3xl font-black uppercase italic text-emerald-500">Arena de Games v385-S</h2>
-             <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {games.map(game => (
-                  <div key={game.id} onClick={() => setActiveGame(game)} className="group relative aspect-video bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-emerald-500 transition-all shadow-2xl">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-emerald-500/10 p-5">
-                       <Gamepad2 className="h-10 w-10 text-emerald-500 mb-2" />
-                       <h3 className="font-black text-[10px] uppercase text-center">{game.title}</h3>
-                       <span className="text-[8px] font-bold opacity-40 mt-1 uppercase">{game.console}</span>
-                    </div>
-                  </div>
-                ))}
-                {games.length === 0 && <div className="col-span-full py-40 text-center opacity-40 font-black uppercase text-xs">Arena vazia v385.</div>}
-             </div>
-           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
             <h2 className="text-3xl font-black uppercase italic text-primary">{q ? `Busca: ${q}` : CATEGORIES.find(c => c.id === selectedCat)?.name}</h2>
@@ -238,18 +216,71 @@ function HomeContentInner() {
         )}
       </main>
 
+      {/* DIALOG DE EPISÓDIOS */}
+      <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
+        <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden shadow-2xl">
+          {selectedSeries && (
+            <div className="flex flex-col md:flex-row h-[80vh]">
+              <div className="md:w-1/3 relative bg-black/40">
+                {selectedSeries.imageUrl ? <Image src={selectedSeries.imageUrl} alt={selectedSeries.title} fill className="object-cover opacity-60" unoptimized /> : <div className="flex items-center justify-center h-full"><Layers className="h-20 w-20 opacity-20" /></div>}
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent p-8 flex flex-col justify-end">
+                  <h2 className="text-2xl font-black uppercase italic text-primary leading-tight">{selectedSeries.title}</h2>
+                  <p className="text-[10px] font-bold opacity-60 uppercase mt-2">{selectedSeries.genre}</p>
+                </div>
+              </div>
+              <div className="flex-1 p-8 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2"><ListPlay className="h-5 w-5 text-primary" /> Lista de Episódios</h3>
+                   <Button variant="ghost" size="icon" onClick={() => setSelectedSeries(null)} className="rounded-full"><X className="h-5 w-5" /></Button>
+                </div>
+                <ScrollArea className="flex-1 pr-4">
+                  {selectedSeries.type === 'series' ? (
+                    <div className="grid gap-3">
+                      {selectedSeries.episodes?.map((ep) => (
+                        <button key={ep.id} onClick={() => playEpisode(ep)} className="flex items-center gap-4 p-4 bg-muted/40 rounded-2xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all text-left group">
+                          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center font-black text-sm text-white group-hover:scale-110 transition-transform">{ep.number}</div>
+                          <div className="flex-1">
+                            <p className="text-xs font-black uppercase">{ep.title || `Episódio ${ep.number}`}</p>
+                            <p className="text-[8px] font-bold opacity-40 uppercase">Assistir agora</p>
+                          </div>
+                          <PlayCircle className="h-5 w-5 text-primary opacity-40 group-hover:opacity-100" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      {selectedSeries.seasons?.map((season) => (
+                        <div key={season.id} className="space-y-4">
+                          <h4 className="text-xs font-black uppercase text-primary italic bg-primary/10 w-fit px-4 py-1 rounded-full">Temporada {season.number}</h4>
+                          <div className="grid gap-3">
+                            {season.episodes?.map((ep) => (
+                              <button key={ep.id} onClick={() => playEpisode(ep)} className="flex items-center gap-4 p-4 bg-muted/40 rounded-2xl border border-white/5 hover:bg-primary/10 hover:border-primary/30 transition-all text-left group">
+                                <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center font-black text-sm text-white group-hover:scale-110 transition-transform">{ep.number}</div>
+                                <div className="flex-1">
+                                  <p className="text-xs font-black uppercase">{ep.title || `Episódio ${ep.number}`}</p>
+                                  <p className="text-[8px] font-bold opacity-40 uppercase">Assistir agora</p>
+                                </div>
+                                <PlayCircle className="h-5 w-5 text-primary opacity-40 group-hover:opacity-100" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
           <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito v385</div>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
-          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl">DESBLOQUEAR v385</Button>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!activeGame} onOpenChange={() => setActiveGame(null)}>
-        <DialogContent className="max-w-5xl h-[85vh] bg-black p-0 border-0 rounded-none md:rounded-[3rem] overflow-hidden shadow-2xl">
-          <iframe src={activeGame?.url} className="w-full h-full border-0" allowFullScreen />
+          <Button onClick={verifyPassword} className="w-full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl">DESBLOQUEAR v385</Button>
         </DialogContent>
       </Dialog>
 
