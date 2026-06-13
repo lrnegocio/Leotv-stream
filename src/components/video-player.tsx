@@ -132,6 +132,22 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
+      {/* NAVEGAÇÃO SOBERANA */}
+      <div className="absolute inset-y-0 left-0 flex items-center px-4 z-[150] pointer-events-none group/nav">
+        {onPrev && (
+          <Button onClick={onPrev} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all pointer-events-auto opacity-0 group-hover/nav:opacity-100">
+            <ChevronLeft className="h-8 w-8" />
+          </Button>
+        )}
+      </div>
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 z-[150] pointer-events-none group/nav">
+        {onNext && (
+          <Button onClick={onNext} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all pointer-events-auto opacity-0 group-hover/nav:opacity-100">
+            <ChevronRight className="h-8 w-8" />
+          </Button>
+        )}
+      </div>
+
       <div className="absolute bottom-10 right-10 z-[160] flex gap-3">
         <Button size="icon" onClick={toggleFullscreen} className="h-14 w-14 bg-black/60 rounded-2xl hover:bg-primary transition-all border border-white/10">
           {isFullscreen ? <Minimize className="h-6 w-6 text-white" /> : <Maximize className="h-6 w-6 text-white" />}

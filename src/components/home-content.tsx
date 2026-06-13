@@ -20,7 +20,7 @@ const CATEGORIES = [
   { id: 'SERIES', name: 'SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SÉRIES' },
   { id: 'PPV', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-orange-500', genre: 'LÉO TV PAY PER VIEW', specialAccess: 'isPpvEnabled' },
   { id: 'ALACARTE', name: 'ALACARTES', icon: Star, color: 'bg-blue-600', genre: 'LÉO TV ALACARTES', specialAccess: 'isAlacarteEnabled' },
-  { id: 'ESPORTES', name: 'LÉO TV ESPORTES', icon: TrophyIcon, color: 'bg-orange-600', genre: 'LÉO TV ESPORTES' },
+  { id: 'ESPORTES', name: 'LÉO TV ESPORTES', icon: Trophy, color: 'bg-orange-600', genre: 'LÉO TV ESPORTES' },
   { id: 'MUSICAS', name: 'LÉO TV MÚSICAS', icon: Headphones, color: 'bg-indigo-500', genre: 'LÉO TV MUSICAS' },
   { id: 'CLIPES', name: 'LÉO TV VÍDEO CLIPES', icon: Music, color: 'bg-pink-500', genre: 'LÉO TV VÍDEO CLIPES' },
   { id: 'PIADAS', name: 'LÉO TV PIADAS', icon: Smile, color: 'bg-yellow-500', genre: 'LÉO TV PIADAS' },
@@ -96,7 +96,7 @@ function HomeContentInner() {
       if (pinInput === globalSettings.parentalPin) {
         if (unlockTarget === 'ITEM' && unlockTargetItem) {
           openItem(unlockTargetItem, true);
-        } else {
+        } else if (unlockTarget) {
           setSelectedCat(unlockTarget);
         }
         setIsPinOpen(false);
@@ -131,11 +131,29 @@ function HomeContentInner() {
   };
 
   const playEpisode = (ep: Episode) => {
-    const formattedUrl = formatMasterLink(ep.streamUrl);
-    setActiveVideo({ 
-      items: [{ ...ep, title: `${selectedSeries?.title} - ${ep.title}`, streamUrl: formattedUrl }], 
-      index: 0 
-    });
+    if (!selectedSeries) return;
+    
+    let allEps: any[] = [];
+    if (selectedSeries.type === 'series') {
+      allEps = (selectedSeries.episodes || []).map(e => ({
+        ...e,
+        title: `${selectedSeries.title} - ${e.title || `Episódio ${e.number}`}`,
+        streamUrl: formatMasterLink(e.streamUrl)
+      }));
+    } else {
+      (selectedSeries.seasons || []).forEach(s => {
+        (s.episodes || []).forEach(e => {
+          allEps.push({
+            ...e,
+            title: `${selectedSeries.title} - T${s.number} E${e.number} ${e.title || ''}`,
+            streamUrl: formatMasterLink(e.streamUrl)
+          });
+        });
+      });
+    }
+    
+    const idx = allEps.findIndex(e => e.id === ep.id);
+    setActiveVideo({ items: allEps, index: idx !== -1 ? idx : 0 });
   };
 
   const handleCategoryClick = (cat: any) => {
@@ -144,7 +162,7 @@ function HomeContentInner() {
       return toast({ variant: "destructive", title: "ACESSO NÃO CONTRATADO" });
     }
     if (cat.restricted) {
-      if (cat.restricted && !user?.isAdultEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
+      if (!user?.isAdultEnabled && user.role !== 'admin') return toast({ variant: "destructive", title: "CONTEÚDO BLOQUEADO" });
       setUnlockTarget(cat.id);
       setIsPinOpen(true);
     } else {
@@ -155,7 +173,7 @@ function HomeContentInner() {
   if (!isMounted) return null;
   const isGamesOnly = user?.isGamesOnly === true;
   const visibleCategories = CATEGORIES.filter(c => {
-    if (isGamesOnly) return c.id === 'PPV'; // Arena Games
+    if (isGamesOnly) return c.id === 'PPV'; 
     return user?.role === 'admin' || !c.specialAccess || (user && (user as any)[c.specialAccess]);
   });
 
@@ -216,7 +234,6 @@ function HomeContentInner() {
         )}
       </main>
 
-      {/* DIALOG DE EPISÓDIOS */}
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-4xl bg-card border-white/10 rounded-[3rem] p-0 overflow-hidden shadow-2xl">
           {selectedSeries && (
