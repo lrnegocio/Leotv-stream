@@ -3,15 +3,14 @@
 import * as React from "react"
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Trophy as TrophyIcon, Headphones, Info, Copy, PlayCircle, ExternalLink, Star, BellRing, Smartphone, Download, ListPlay } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Headphones, Info, PlayCircle, Star, ListPlay } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getRemoteGames, GameItem, getContentById, formatMasterLink, validateDeviceLogin, Episode, Season } from "@/lib/store"
+import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getContentById, formatMasterLink, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { VideoPlayer } from "@/components/video-player"
 import { VoiceSearch } from "@/components/voice-search"
 import Image from "next/image"
-import Link from "next/link"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 const CATEGORIES = [
@@ -92,8 +91,7 @@ function HomeContentInner() {
 
   const verifyPassword = async () => {
     try {
-      const globalSettings = await getGlobalSettings();
-      if (pinInput === globalSettings.parentalPin) {
+      if (pinInput === settings?.parentalPin) {
         if (unlockTarget === 'ITEM' && unlockTargetItem) {
           openItem(unlockTargetItem, true);
         } else if (unlockTarget) {
@@ -124,7 +122,12 @@ function HomeContentInner() {
         setSelectedSeries(deepItem || item);
       } catch (e) { setSelectedSeries(item); } finally { setLoading(false); }
     } else {
-      const currentList = content.map(i => ({ ...i, streamUrl: formatMasterLink(i.streamUrl) }));
+      // PREPARA A LISTA PARA NAVEGAÇÃO COM SETAS
+      const currentList = content.map(i => ({ 
+        id: i.id,
+        title: i.title, 
+        streamUrl: formatMasterLink(i.streamUrl) 
+      }));
       const idx = content.findIndex(i => i.id === item.id);
       setActiveVideo({ items: currentList, index: idx !== -1 ? idx : 0 });
     }
@@ -136,7 +139,7 @@ function HomeContentInner() {
     let allEps: any[] = [];
     if (selectedSeries.type === 'series') {
       allEps = (selectedSeries.episodes || []).map(e => ({
-        ...e,
+        id: e.id,
         title: `${selectedSeries.title} - ${e.title || `Episódio ${e.number}`}`,
         streamUrl: formatMasterLink(e.streamUrl)
       }));
@@ -144,7 +147,7 @@ function HomeContentInner() {
       (selectedSeries.seasons || []).forEach(s => {
         (s.episodes || []).forEach(e => {
           allEps.push({
-            ...e,
+            id: e.id,
             title: `${selectedSeries.title} - T${s.number} E${e.number} ${e.title || ''}`,
             streamUrl: formatMasterLink(e.streamUrl)
           });
@@ -186,7 +189,7 @@ function HomeContentInner() {
         </div>
       )}
 
-      <header className="h-20 border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
+      <header className="h-20 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           {(selectedCat || q) && <button onClick={() => { setSelectedCat(null); router.replace('/user/home'); }} className="h-12 w-12 rounded-full bg-muted flex items-center justify-center hover:bg-primary hover:text-white transition-all"><ChevronLeft className="h-6 w-6" /></button>}
           <span className="text-xl font-black text-primary uppercase italic tracking-tighter">Léo TV Stream</span>
