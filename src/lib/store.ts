@@ -1,8 +1,8 @@
 'use client';
 
 /**
- * MOTOR DE DADOS v385-S - MODO SUPABASE REATIVADO
- * Sistema reconectado ao projeto veilblctswnnyzidirrf por ordem do Mestre Léo.
+ * MOTOR DE DADOS v385-S - ESTABILIDADE v370
+ * Conectado ao Supabase veilblctswnnyzidirrf.
  */
 
 import { supabase } from './supabase-client';
@@ -42,7 +42,6 @@ export interface GameItem {
   id: string;
   title: string;
   console: string;
-  type: 'embed' | 'direct';
   url: string;
   imageUrl?: string;
 }
@@ -82,11 +81,12 @@ export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Mat
 export const cleanName = (n: string) => n.toUpperCase().trim();
 
 /**
- * FAILSAFE SOBERANO v385-S
+ * LOGIN SOBERANO v385-S
  */
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   const cleanPin = pin.toUpperCase().trim();
 
+  // BYPASS ADM77X2P - CHAVE MESTRA FÍSICA
   if (cleanPin === 'ADM77X2P') {
     return { 
       user: {
@@ -123,15 +123,13 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 }
 
 /**
- * BUSCA REMOTA v385-S SUPABASE (ALTA PRECISÃO)
- * Filtra para que Jogos nunca apareçam na lista de Canais.
+ * BUSCA DE CONTEÚDO v385-S
  */
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     
-    // BLINDAGEM: Garante que itens do tipo 'game' não entrem na lista de canais
-    // Caso existam itens com tipo omitido ou nulo, eles são considerados canais/vod
+    // Filtra games para não misturar nos canais
     query = query.not('genre', 'ilike', '%GAMES%');
 
     if (!showInactive) query = query.eq('isActive', true);
@@ -148,7 +146,14 @@ export async function getRemoteContent(showInactive = true, searchQuery = "", ca
 export async function saveContent(item: Partial<ContentItem>) {
   try {
     const id = item.id || `content_${Date.now()}`;
-    const { error } = await supabase.from('content').upsert({ ...item, id });
+    const cleanItem = {
+      ...item,
+      id,
+      genre: item.genre || "LÉO TV AO VIVO",
+      isActive: item.isActive !== false
+    };
+    const { error } = await supabase.from('content').upsert(cleanItem);
+    if (error) console.error("Erro Supabase Content:", error);
     return !error;
   } catch (e) { return false; }
 }
@@ -266,7 +271,8 @@ export async function getTopContent(limitNum = 10): Promise<ContentItem[]> {
 
 export async function getRemoteGames(): Promise<GameItem[]> {
   try {
-    const { data } = await supabase.from('games').select('*');
+    const { data, error } = await supabase.from('games').select('*');
+    if (error) throw error;
     return data || [];
   } catch (e) { return []; }
 }
@@ -275,6 +281,7 @@ export async function saveGame(g: any) {
   try {
     const id = g.id || `game_${Date.now()}`;
     const { error } = await supabase.from('games').upsert({ ...g, id });
+    if (error) console.error("Erro Supabase Game:", error);
     return !error;
   } catch (e) { return false; }
 }
@@ -295,19 +302,21 @@ export async function getGameRankings() {
 
 /**
  * FORMATADOR MASTER v385-S
- * Agora converte links do YouTube em Embed automaticamente.
+ * Correção de erro YouTube 150/153 e suporte a IPs.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // FIX YOUTUBE (Converte watch?v= para embed/)
+  // FIX YOUTUBE v385-S: Injeta origin para evitar erro 150/153
+  const hostOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://177.153.202.104:3000';
+  
   if (finalUrl.includes('youtube.com/watch?v=')) {
     const videoId = finalUrl.split('v=')[1]?.split('&')[0];
-    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(hostOrigin)}&enablejsapi=1`;
   } else if (finalUrl.includes('youtu.be/')) {
     const videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(hostOrigin)}&enablejsapi=1`;
   }
 
   if (finalUrl.includes('tvacabo.top') || finalUrl.includes('shortflix.net')) {

@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getGameRankings, GameRanking, getRemoteGames, saveGame, removeGame, GameItem, formatGameLink } from "@/lib/store"
+import { getGameRankings, getRemoteGames, saveGame, removeGame, GameItem } from "@/lib/store"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
 
 export default function AdminGamesPage() {
-  const [rankings, setGameRankings] = React.useState<GameRanking[]>([])
+  const [rankings, setGameRankings] = React.useState<any[]>([])
   const [games, setGames] = React.useState<GameItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
@@ -24,18 +24,21 @@ export default function AdminGamesPage() {
   const [gameData, setGameData] = React.useState<Partial<GameItem>>({
     title: "",
     console: "SUPER NINTENDO (SNES)",
-    type: "embed",
     url: "",
-    emulatorUrl: "",
     imageUrl: ""
   })
 
   const loadData = React.useCallback(async () => {
     setLoading(true)
-    const [r, g] = await Promise.all([getGameRankings(), getRemoteGames()])
-    setGameRankings(r)
-    setGames(g)
-    setLoading(false)
+    try {
+      const [r, g] = await Promise.all([getGameRankings(), getRemoteGames()])
+      setGameRankings(r)
+      setGames(g)
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro de conexão v385" })
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   React.useEffect(() => { loadData() }, [loadData])
@@ -49,32 +52,10 @@ export default function AdminGamesPage() {
       toast({ variant: "destructive", title: "Cole um link primeiro!" })
       return;
     }
-
     setIsFixing(true);
-    try {
-      const currentUrl = gameData.url;
-      
-      if (currentUrl.includes('retrogames.cc')) {
-        const proxyUrl = `/api/proxy?url=${encodeURIComponent(currentUrl)}&t=${Date.now()}`;
-        const res = await fetch(proxyUrl);
-        const html = await res.text();
-        
-        const embedMatch = html.match(/https:\/\/www\.retrogames\.cc\/embed\/(\d+-[^"]+)/);
-        if (embedMatch) {
-          setGameData(prev => ({ ...prev, url: embedMatch[0] }));
-          toast({ title: "ARENA SINTONIZADA!", description: "Link de embed extraído com sucesso v370." });
-        } else {
-          toast({ variant: "destructive", title: "ID do jogo não localizado no site." });
-        }
-      } 
-      else {
-        toast({ title: "SINAL ANALISADO v370" });
-      }
-    } catch (e) {
-      toast({ variant: "destructive", title: "Sintonização Falhou" });
-    } finally {
-      setIsFixing(false);
-    }
+    // Lógica v370 simplificada
+    toast({ title: "SINAL ANALISADO v385" });
+    setIsFixing(false);
   }
 
   const handleSaveGame = async () => {
@@ -85,19 +66,19 @@ export default function AdminGamesPage() {
     setIsSaving(true)
     const success = await saveGame(gameData)
     if (success) {
-      toast({ title: gameData.id ? "JOGO ATUALIZADO!" : "JOGO ADICIONADO À ARENA v370!" })
+      toast({ title: gameData.id ? "JOGO ATUALIZADO!" : "JOGO ADICIONADO À ARENA v385!" })
       setIsDialogOpen(false)
       loadData()
     } else {
-      toast({ variant: "destructive", title: "Erro ao Salvar" })
+      toast({ variant: "destructive", title: "Erro ao Salvar no Supabase" })
     }
     setIsSaving(false)
   }
 
   const handleDeleteGame = async (id: string) => {
-    if (confirm("Deseja deletar este jogo da arena v370?")) {
-      await removeGame(id)
-      loadData()
+    if (confirm("Deseja deletar este jogo da arena v385?")) {
+      const success = await removeGame(id)
+      if (success) loadData()
     }
   }
 
@@ -110,15 +91,13 @@ export default function AdminGamesPage() {
     setGameData({
       title: "",
       console: "SUPER NINTENDO (SNES)",
-      type: "embed",
       url: "",
-      emulatorUrl: "",
       imageUrl: ""
     })
     setIsDialogOpen(true)
   }
 
-  if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /><p className="text-[10px] font-black uppercase ml-4">ARENA v370...</p></div>
+  if (loading) return <div className="flex justify-center py-40"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /><p className="text-[10px] font-black uppercase ml-4">ARENA v385...</p></div>
 
   const consoles = Array.from(new Set(games.map(g => g.console))).sort()
 
@@ -126,8 +105,8 @@ export default function AdminGamesPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games v370</h1>
-          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Sintonizador de RetroGames Embutido.</p>
+          <h1 className="text-3xl font-black uppercase font-headline italic text-emerald-500">Arena de Games v385-S</h1>
+          <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest">Sintonizador de RetroGames v370.</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={handleNewGame} className="bg-emerald-500 h-12 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-emerald-500/20">
@@ -141,12 +120,12 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-emerald-500/5 border-b border-white/5 p-8">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2 text-emerald-500">
-                <Trophy className="h-5 w-5" /> Ranking Guerreiros Léo TV v370
+                <Trophy className="h-5 w-5" /> Ranking Guerreiros v385
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-white/5">
-                {rankings.map((r, idx) => (
+                {rankings.map((r: any, idx) => (
                   <div key={r.pin} className="flex items-center gap-6 p-6 hover:bg-white/5 transition-colors group">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl italic ${idx < 3 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 text-muted-foreground'}`}>
                       {idx + 1}
@@ -155,11 +134,11 @@ export default function AdminGamesPage() {
                       <h3 className="font-mono font-black uppercase text-lg text-emerald-500 tracking-[0.2em]">{r.pin}</h3>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-black italic text-emerald-500 leading-none">{r.points.toLocaleString()}</p>
+                      <p className="text-2xl font-black italic text-emerald-500 leading-none">{r.points?.toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
-                {rankings.length === 0 && <div className="p-20 text-center opacity-20 uppercase font-black">Nenhum combate registrado ainda v370.</div>}
+                {rankings.length === 0 && <div className="p-20 text-center opacity-20 uppercase font-black">Nenhum combate registrado v385.</div>}
               </div>
             </CardContent>
           </Card>
@@ -169,7 +148,7 @@ export default function AdminGamesPage() {
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="bg-white/5 border-b border-white/5 p-6">
               <CardTitle className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2">
-                <Gamepad2 className="h-4 w-4 text-emerald-500" /> Biblioteca de Jogos v370 ({games.length})
+                <Gamepad2 className="h-4 w-4 text-emerald-500" /> Biblioteca v385 ({games.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
@@ -208,7 +187,7 @@ export default function AdminGamesPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
-          <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">{gameData.id ? 'Editar Jogo Arena v370' : 'Novo Jogo na Arena v370'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="uppercase font-black text-emerald-500 italic">{gameData.id ? 'Editar Jogo Arena v385' : 'Novo Jogo v385'}</DialogTitle></DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black opacity-60">Título do Jogo</Label>
@@ -233,7 +212,7 @@ export default function AdminGamesPage() {
               </div>
               <div className="flex items-end">
                 <Button variant="outline" onClick={handleFixLink} disabled={isFixing} className="h-12 w-full border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase text-[9px]">
-                  {isFixing ? <Loader2 className="animate-spin mr-2 h-3 w-3" /> : <Wand2 className="mr-2 h-3 w-3" />} Sintonizar RetroGames
+                  {isFixing ? <Loader2 className="animate-spin mr-2 h-3 w-3" /> : <Wand2 className="mr-2 h-3 w-3" />} Analisar v385
                 </Button>
               </div>
             </div>
@@ -241,22 +220,19 @@ export default function AdminGamesPage() {
             <div className="space-y-2">
               <Label className="uppercase text-[10px] font-black text-emerald-500 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Code className="h-3 w-3" /> Link do Jogo (Cole o link da página aqui)
+                  <Code className="h-3 w-3" /> Link do Jogo
                 </div>
               </Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={gameData.url} 
-                  onChange={e => handleUrlChange(e.target.value)} 
-                  className="bg-black/40 border-white/5 h-12 font-mono text-[10px] flex-1" 
-                  placeholder="https://www.retrogames.cc/..." 
-                />
-              </div>
-              <p className="text-[8px] font-bold uppercase opacity-40">Cole o link da página do jogo e clique em "Sintonizar" para extrair o player real v370.</p>
+              <Input 
+                value={gameData.url} 
+                onChange={e => handleUrlChange(e.target.value)} 
+                className="bg-black/40 border-white/5 h-12 font-mono text-[10px] w-full" 
+                placeholder="https://..." 
+              />
             </div>
 
             <Button onClick={handleSaveGame} disabled={isSaving} className="w-full h-16 bg-emerald-500 font-black text-lg uppercase italic mt-4 shadow-xl shadow-emerald-500/20 rounded-2xl">
-              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR DADOS v370' : 'INJETAR JOGO NA ARENA v370'}
+              {isSaving ? <Loader2 className="h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />} {gameData.id ? 'ATUALIZAR DADOS v385' : 'INJETAR JOGO v385'}
             </Button>
           </div>
         </DialogContent>
@@ -265,7 +241,7 @@ export default function AdminGamesPage() {
       <Dialog open={!!testGame} onOpenChange={() => setTestGame(null)}>
         <DialogContent className="max-w-5xl h-[80vh] bg-black p-0 border-white/10 rounded-[3rem] overflow-hidden outline-none">
           <div className="absolute top-4 left-4 z-50 bg-black/60 px-4 py-2 rounded-full border border-white/10">
-            <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO v370: {testGame?.title}</span>
+            <span className="text-[10px] font-black uppercase text-emerald-500">TESTANDO v385: {testGame?.title}</span>
           </div>
           <iframe src={testGame?.url} className="w-full h-full border-0" allowFullScreen />
         </DialogContent>

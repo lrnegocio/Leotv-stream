@@ -46,7 +46,6 @@ function HomeContentInner() {
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | 'ITEM' | string | null>(null)
   const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
-  const [gamesMenuOpen, setGamesMenuOpen] = React.useState(false)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
@@ -56,17 +55,17 @@ function HomeContentInner() {
   const q = searchParams ? (searchParams.get('q') || "") : ""
 
   const loadData = React.useCallback(async (queryStr = "", categoryId: string | null = null) => {
+    setLoading(true);
     try {
       const currentSettings = await getGlobalSettings();
       setSettings(currentSettings);
       
       const categoryObj = CATEGORIES.find(c => c.id === categoryId);
       
-      // Se for a categoria GAMES, buscamos apenas da tabela de games
       if (categoryId === 'GAMES') {
         const remoteGames = await getRemoteGames();
         setGames(remoteGames);
-        setContent([]); // Limpa canais para não misturar
+        setContent([]);
       } else {
         const genreToFilter = categoryObj?.genre || "";
         const data = await getRemoteContent(false, queryStr, genreToFilter);
@@ -206,7 +205,7 @@ function HomeContentInner() {
           </div>
         ) : selectedCat === 'GAMES' ? (
            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-             <h2 className="text-3xl font-black uppercase italic text-emerald-500">Arena de Games v385</h2>
+             <h2 className="text-3xl font-black uppercase italic text-emerald-500">Arena de Games v385-S</h2>
              <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {games.map(game => (
                   <div key={game.id} onClick={() => setActiveGame(game)} className="group relative aspect-video bg-card rounded-[2rem] overflow-hidden cursor-pointer border border-border hover:border-emerald-500 transition-all shadow-2xl">
@@ -217,6 +216,7 @@ function HomeContentInner() {
                     </div>
                   </div>
                 ))}
+                {games.length === 0 && <div className="col-span-full py-40 text-center opacity-40 font-black uppercase text-xs">Arena vazia v385.</div>}
              </div>
            </div>
         ) : (
@@ -232,7 +232,7 @@ function HomeContentInner() {
                   </div>
                 </div>
               ))}
-              {content.length === 0 && <div className="col-span-full py-40 text-center opacity-40 font-black uppercase text-xs">Nenhum sinal localizado.</div>}
+              {content.length === 0 && <div className="col-span-full py-40 text-center opacity-40 font-black uppercase text-xs">Nenhum sinal localizado v385.</div>}
             </div>
           </div>
         )}
