@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Headphones, Info, PlayCircle, Star, ListPlay } from "lucide-react"
+import { LogOut, Tv, Lock, Loader2, ChevronLeft, Film, Layers, Baby, Music, Heart, Radio, Sparkles, Gamepad2, X, Trophy, Play, Video, Smile, Zap, Headphones, Info, PlayCircle, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getRemoteContent, ContentItem, User, getGlobalSettings, getCategoryCount, getContentById, formatMasterLink, Episode } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
@@ -250,7 +250,7 @@ function HomeContentInner() {
               </div>
               <div className="flex-1 p-8 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between mb-6">
-                   <h3 className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2"><ListPlay className="h-5 w-5 text-primary" /> Lista de Episódios</h3>
+                   <h3 className="text-sm font-black uppercase italic tracking-widest flex items-center gap-2"><PlayCircle className="h-5 w-5 text-primary" /> Lista de Episódios</h3>
                    <Button variant="ghost" size="icon" onClick={() => setSelectedSeries(null)} className="rounded-full"><X className="h-5 w-5" /></Button>
                 </div>
                 <ScrollArea className="flex-1 pr-4">
