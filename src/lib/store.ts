@@ -127,7 +127,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 }
 
 /**
- * LOGIN REVENDA v385-S
+ * LOGIN REVENDA v385-S (BLINDAGEM MAIÚSCULA)
  */
 export async function validateResellerLogin(username: string, password: string) {
   try {
