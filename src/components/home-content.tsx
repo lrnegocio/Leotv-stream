@@ -45,7 +45,7 @@ function HomeContentInner() {
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
   const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | 'ITEM' | string | null>(null)
-  const [unlockTargetItem, setUnlockTargetItem] = React.setUnlockTargetItem(null)
+  const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
   const [activeGame, setActiveGame] = React.useState<GameItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
