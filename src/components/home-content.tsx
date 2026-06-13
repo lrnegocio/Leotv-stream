@@ -203,7 +203,7 @@ function HomeContentInner() {
       {loading && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v375 Suprema...</p>
+          <p className="text-[10px] font-black uppercase text-primary animate-pulse tracking-widest">Sintonizando v385 Suprema...</p>
         </div>
       )}
 
@@ -218,11 +218,6 @@ function HomeContentInner() {
           </Suspense>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/user/install">
-            <Button variant="outline" className="h-12 px-4 rounded-2xl border-primary/20 text-primary hover:bg-primary/10 transition-all font-black uppercase text-[10px]">
-              <Smartphone className="h-4 w-4 mr-2" /> Baixar App
-            </Button>
-          </Link>
           <button onClick={() => setShowAcesso(true)} className="h-12 w-12 rounded-2xl border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/10 transition-all"><Info className="h-6 w-6" /></button>
           <button onClick={() => { localStorage.removeItem("user_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-2xl flex items-center justify-center bg-destructive/10 hover:bg-destructive hover:text-white transition-all"><LogOut className="h-6 w-6" /></button>
         </div>
@@ -264,6 +259,7 @@ function HomeContentInner() {
                   </div>
                 </div>
               ))}
+              {content.length === 0 && <div className="col-span-full py-40 text-center opacity-40 font-black uppercase text-xs">Nenhum sinal localizado para "{q || selectedCat}".</div>}
             </div>
           </div>
         )}
@@ -271,7 +267,7 @@ function HomeContentInner() {
 
       <Dialog open={!!selectedSeries} onOpenChange={() => setSelectedSeries(null)}>
         <DialogContent className="max-w-xl bg-card border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
-          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v370</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Episódios da Série v385</DialogTitle></DialogHeader>
           <div className="mt-6 flex-1 overflow-y-auto pr-2 custom-scroll scrollbar-visible space-y-3">
              {selectedSeries?.type === 'series' && (selectedSeries.episodes || []).sort((a,b) => a.number - b.number).map((ep, idx) => (
                 <button key={ep.id} onClick={() => setActiveVideo({ items: flattenedPlaylist, index: idx })} className="w-full flex items-center justify-between p-5 bg-muted/40 rounded-2xl hover:bg-primary hover:text-white transition-all group border border-border/50">
@@ -303,9 +299,9 @@ function HomeContentInner() {
       <Dialog open={isPinOpen} onOpenChange={setIsPinOpen}>
         <DialogContent className="sm:max-w-md bg-card rounded-[2.5rem] p-10 text-center shadow-2xl">
           <Lock className="h-16 w-16 text-primary mx-auto mb-6" />
-          <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito v370</div>
+          <div className="text-2xl font-black uppercase italic mb-4 text-primary">Acesso Restrito v385</div>
           <input type="password" title="Senha" maxLength={4} className="h-20 w-56 bg-muted border-border text-center text-4xl font-black tracking-[0.5em] rounded-3xl outline-none focus:border-primary mb-8" value={pinInput} onChange={e => setPinInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && verifyPassword()} />
-          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl">DESBLOQUEAR v370</Button>
+          <Button onClick={verifyPassword} className="full h-16 bg-primary text-sm font-black uppercase rounded-2xl shadow-xl">DESBLOQUEAR v385</Button>
         </DialogContent>
       </Dialog>
 
@@ -324,7 +320,7 @@ function HomeContentInner() {
 
       <Dialog open={showAcesso} onOpenChange={setShowAcesso}>
         <DialogContent className="max-w-md bg-card rounded-[2.5rem] p-8 shadow-2xl">
-           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v370</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Minha Conta v385</DialogTitle></DialogHeader>
            <div className="py-6 space-y-6">
               <div className="flex justify-between items-center p-4 bg-muted rounded-2xl">
                  <span className="text-[10px] font-black uppercase opacity-40">Seu PIN:</span>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -22,9 +21,10 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   
-  // DETECTOR UNIVERSAL v385-S PLUS (TVACABO & SHORTFLIX)
+  // DETECTOR UNIVERSAL v385-S PLUS (YouTube, TVACABO & SHORTFLIX)
   const isIframe = safeUrl.includes('embed') || 
                    safeUrl.includes('youtube.com') || 
+                   safeUrl.includes('youtu.be') ||
                    safeUrl.includes('ok.ru') || 
                    safeUrl.includes('vidsrc') || 
                    safeUrl.includes('shortflix.net') || 

@@ -127,15 +127,21 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 }
 
 /**
- * BUSCA REMOTA v385-S SUPABASE
+ * BUSCA REMOTA v385-S SUPABASE (ALTA PRECISÃO)
  */
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     
+    // Mostra tudo se showInactive for true (para admin ver todos os 70)
     if (!showInactive) query = query.eq('isActive', true);
+    
     if (categoryGenre) query = query.eq('genre', categoryGenre);
-    if (searchQuery) query = query.ilike('title', `%${searchQuery}%`);
+    
+    // BUSCA POR NOME OU CATEGORIA
+    if (searchQuery) {
+      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
+    }
     
     const { data, error } = await query.order('title');
     if (error) throw error;
@@ -225,14 +231,14 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
     return count || 0;
   } catch (e) { return 0; }
 }
 
 export async function getCategoryCount(g: string) {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g).eq('isActive', true);
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g);
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -273,9 +279,23 @@ export async function getGameRankings() {
   } catch (e) { return []; }
 }
 
+/**
+ * FORMATADOR MASTER v385-S
+ * Agora converte links do YouTube em Embed automaticamente.
+ */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
+
+  // FIX YOUTUBE (Converte watch?v= para embed/)
+  if (finalUrl.includes('youtube.com/watch?v=')) {
+    const videoId = finalUrl.split('v=')[1]?.split('&')[0];
+    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  } else if (finalUrl.includes('youtu.be/')) {
+    const videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  }
+
   if (finalUrl.includes('tvacabo.top') || finalUrl.includes('shortflix.net')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }
