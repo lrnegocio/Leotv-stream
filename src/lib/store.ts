@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -54,6 +55,10 @@ export interface Reseller {
   credits: number;
   totalSold: number;
   isBlocked: boolean;
+  email?: string;
+  phone?: string;
+  cpf?: string;
+  birthDate?: string;
 }
 
 export interface User {
@@ -126,10 +131,11 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
  */
 export async function validateResellerLogin(username: string, password: string) {
   try {
+    const cleanUsername = username.toUpperCase().trim();
     const { data: res, error } = await supabase
       .from('resellers')
       .select('*')
-      .eq('username', username.toUpperCase().trim())
+      .eq('username', cleanUsername)
       .eq('password', password)
       .single();
     
@@ -148,7 +154,6 @@ export async function getRemoteContent(showInactive = true, searchQuery = "", ca
   try {
     let query = supabase.from('content').select('*');
     
-    // Filtro preciso por categoria ou busca global
     if (categoryGenre) {
       query = query.eq('genre', categoryGenre);
     }
@@ -234,7 +239,7 @@ export async function removeUser(id: string) {
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
   try {
-    const { data, error } = await supabase.from('resellers').select('*');
+    const { data, error } = await supabase.from('resellers').select('*').order('name');
     if (error) throw error;
     return data || [];
   } catch (e) { return []; }
@@ -243,7 +248,13 @@ export async function getRemoteResellers(): Promise<Reseller[]> {
 export async function saveReseller(r: Partial<Reseller>) {
   try {
     const id = r.id || `rev_${Date.now()}`;
-    const { error } = await supabase.from('resellers').upsert({ ...r, id });
+    const cleanReseller = {
+      ...r,
+      id,
+      username: r.username ? r.username.toUpperCase().trim() : "",
+      name: r.name ? r.name.toUpperCase().trim() : "NOVO PARCEIRO"
+    };
+    const { error } = await supabase.from('resellers').upsert(cleanReseller);
     return !error;
   } catch (e) { return false; }
 }
@@ -252,7 +263,10 @@ export async function removeReseller(id: string) {
   try {
     const { error } = await supabase.from('resellers').delete().eq('id', id);
     return !error;
-  } catch (e) { return false; }
+  } catch (e) { 
+    console.error("Erro ao deletar revendedor:", e);
+    return false; 
+  }
 }
 
 export async function getGlobalSettings() {

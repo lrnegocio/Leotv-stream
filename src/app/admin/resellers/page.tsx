@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -45,25 +46,30 @@ export default function ResellersPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("ATENÇÃO: Deseja realmente excluir este revendedor? Todos os créditos e acessos dele serão removidos permanentemente.")) {
-      const success = await removeReseller(id)
-      if (success) {
-        toast({ title: "Excluído", description: "O revendedor foi removido do banco de dados." })
-        await load()
-      } else {
-        toast({ variant: "destructive", title: "Erro na Exclusão", description: "Falha ao remover no Supabase." })
+    if (!id) return;
+    if (confirm("ATENÇÃO MESTRE: Deseja realmente excluir este parceiro? Todos os créditos e acessos dele serão removidos permanentemente.")) {
+      try {
+        const success = await removeReseller(id);
+        if (success) {
+          toast({ title: "EXCLUÍDO COM SUCESSO!", description: "O parceiro foi removido do sistema v385-S." });
+          await load();
+        } else {
+          toast({ variant: "destructive", title: "ERRO NA EXCLUSÃO", description: "O Supabase recusou a remoção." });
+        }
+      } catch (e) {
+        toast({ variant: "destructive", title: "ERRO FATAL", description: "Falha de conexão com o banco." });
       }
     }
   }
 
-  const filtered = resellers.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = resellers.filter(r => (r.name || "").toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black uppercase font-headline">Gestão de Parceiros</h1>
-          <p className="text-[10px] uppercase font-bold text-primary tracking-widest italic">Controle Central de Rede & Estoque</p>
+          <p className="text-[10px] uppercase font-bold text-primary tracking-widest italic">Controle Central de Rede & Estoque v385-S</p>
         </div>
         <Button asChild className="bg-primary h-12 rounded-xl font-bold uppercase text-[10px]">
           <Link href="/admin/resellers/new"><Plus className="mr-2 h-4 w-4" /> Novo Parceiro</Link>
