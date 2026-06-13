@@ -18,7 +18,7 @@ const CATEGORIES = [
   { id: 'LIVE', name: 'CANAIS AO VIVO', icon: Tv, color: 'bg-emerald-500', genre: 'LÉO TV AO VIVO' },
   { id: 'MOVIES', name: 'FILMES MASTER', icon: Film, color: 'bg-blue-500', genre: 'LÉO TV FILMES' },
   { id: 'SERIES', name: 'SÉRIES', icon: Layers, color: 'bg-purple-500', genre: 'LÉO TV SÉRIES' },
-  { id: 'GAMES', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-orange-500', genre: 'LÉO TV PAY PER VIEW', specialAccess: 'isPpvEnabled' },
+  { id: 'GAMES', name: 'ARENA GAMES', icon: Gamepad2, color: 'bg-orange-500', genre: 'LÉO TV PAY PER VIEW' },
   { id: 'ALACARTE', name: 'ALACARTES', icon: Star, color: 'bg-blue-600', genre: 'LÉO TV ALACARTES', specialAccess: 'isAlacarteEnabled' },
   { id: 'ESPORTES', name: 'LÉO TV ESPORTES', icon: Trophy, color: 'bg-orange-600', genre: 'LÉO TV ESPORTES' },
   { id: 'MUSICAS', name: 'LÉO TV MÚSICAS', icon: Headphones, color: 'bg-indigo-500', genre: 'LÉO TV MUSICAS' },
@@ -43,7 +43,7 @@ function HomeContentInner() {
   const [pinInput, setPinInput] = React.useState("")
   const [selectedSeries, setSelectedSeries] = React.useState<ContentItem | null>(null)
   const [catCounts, setCatCounts] = React.useState<Record<string, number>>({})
-  const [unlockTarget, setUnlockTarget] = React.useState<'ADULT' | 'GAMES' | 'ITEM' | string | null>(null)
+  const [unlockTarget, setUnlockTarget] = React.useState<string | null>(null)
   const [unlockTargetItem, setUnlockTargetItem] = React.useState<ContentItem | null>(null)
   const [showAcesso, setShowAcesso] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)

@@ -2,11 +2,9 @@
 'use client';
 
 /**
- * MOTOR DE DADOS v385-S - ESTABILIDADE v370
- * Conectado ao Supabase veilblctswnnyzidirrf.
+ * MOTOR DE DADOS v385-S - MODO INDEPENDÊNCIA VPS
+ * Sistema de Armazenamento Local (JSON) - Esqueça o Supabase.
  */
-
-import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -82,8 +80,25 @@ export interface User {
   gamePoints?: number;
 }
 
+// --- UTILITÁRIOS ---
 export const generateRandomPin = (l = 11) => Array.from({ length: l }, () => Math.floor(Math.random() * 10)).join('');
 export const cleanName = (n: string) => n.toUpperCase().trim();
+
+// --- MOTOR DE COMUNICAÇÃO COM A VPS (API LOCAL) ---
+async function apiCall(action: string, collection: string, data?: any) {
+  try {
+    const res = await fetch('/api/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, collection, data })
+    });
+    const result = await res.json();
+    return result.data;
+  } catch (e) {
+    console.error("Erro na API Local:", e);
+    return null;
+  }
+}
 
 /**
  * LOGIN SOBERANO v385-S
@@ -110,241 +125,192 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
     };
   }
 
-  try {
-    const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).single();
-    if (error || !user) return { error: "PIN INVÁLIDO" };
-    if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
-    if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
+  const users: User[] = await apiCall('list', 'users') || [];
+  const user = users.find(u => u.pin === cleanPin);
 
-    let devices = (user.activeDevices || []) as string[];
-    if (!devices.includes(deviceId)) {
-      if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS ATINGIDO" };
-      devices.push(deviceId);
-      await supabase.from('users').update({ activeDevices: devices }).eq('id', user.id);
-    }
-    return { user: { ...user, activeDevices: devices } as User };
-  } catch (e) { return { error: "ERRO DE CONEXÃO MASTER" }; }
+  if (!user) return { error: "PIN INVÁLIDO" };
+  if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
+  if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
+
+  let devices = (user.activeDevices || []) as string[];
+  if (!devices.includes(deviceId)) {
+    if (devices.length >= (user.maxScreens || 1)) return { error: "LIMITE DE TELAS ATINGIDO" };
+    devices.push(deviceId);
+    await apiCall('update', 'users', { ...user, activeDevices: devices });
+  }
+  return { user: { ...user, activeDevices: devices } as User };
 }
 
 /**
- * LOGIN REVENDA v385-S (BLINDAGEM MAIÚSCULA)
+ * LOGIN REVENDA v385-S
  */
 export async function validateResellerLogin(username: string, password: string) {
-  try {
-    const cleanUsername = username.toUpperCase().trim();
-    const { data: res, error } = await supabase
-      .from('resellers')
-      .select('*')
-      .eq('username', cleanUsername)
-      .eq('password', password)
-      .single();
-    
-    if (error || !res) return { error: "CREDENCIAIS INVÁLIDAS" };
-    if (res.isBlocked) return { error: "REVENDA SUSPENSA" };
-    return { reseller: res as Reseller };
-  } catch (e) {
-    return { error: "FALHA NO NÚCLEO DE DADOS" };
-  }
+  const resellers: Reseller[] = await apiCall('list', 'resellers') || [];
+  const cleanUsername = username.toUpperCase().trim();
+  const res = resellers.find(r => r.username.toUpperCase() === cleanUsername && r.password === password);
+  
+  if (!res) return { error: "CREDENCIAIS INVÁLIDAS" };
+  if (res.isBlocked) return { error: "REVENDA SUSPENSA" };
+  return { reseller: res as Reseller };
 }
 
 /**
  * BUSCA DE CONTEÚDO v385-S
  */
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
-  try {
-    let query = supabase.from('content').select('*');
-    
-    if (categoryGenre) {
-      query = query.eq('genre', categoryGenre);
-    }
+  let items: ContentItem[] = await apiCall('list', 'content') || [];
+  
+  if (categoryGenre) {
+    // Se o gênero for PAY PER VIEW, o site agora chama de ARENA GAMES
+    const targetGenre = categoryGenre === 'ARENA GAMES' ? 'LÉO TV PAY PER VIEW' : categoryGenre;
+    items = items.filter(i => i.genre === targetGenre);
+  }
 
-    if (!showInactive) query = query.eq('isActive', true);
-    
-    if (searchQuery) {
-      query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
-    const { data, error } = await query.order('title');
-    if (error) throw error;
-    return data || [];
-  } catch (e) { return []; }
+  if (!showInactive) items = items.filter(i => i.isActive !== false);
+  
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    items = items.filter(i => i.title.toLowerCase().includes(q) || i.genre.toLowerCase().includes(q));
+  }
+  
+  return items.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
-  try {
-    const id = item.id || `content_${Date.now()}`;
-    const cleanItem = {
-      ...item,
-      id,
-      genre: item.genre || "LÉO TV AO VIVO",
-      isActive: item.isActive !== false,
-      title: item.title ? cleanName(item.title) : "SEM TITULO"
-    };
-    const { error } = await supabase.from('content').upsert(cleanItem);
-    return !error;
-  } catch (e) { return false; }
+  const id = item.id || `content_${Date.now()}`;
+  const cleanItem = {
+    ...item,
+    id,
+    genre: item.genre || "LÉO TV AO VIVO",
+    isActive: item.isActive !== false,
+    title: item.title ? cleanName(item.title) : "SEM TITULO"
+  };
+  const res = await apiCall('upsert', 'content', cleanItem);
+  return !!res;
 }
 
 export async function getContentById(id: string) {
-  try {
-    const { data, error } = await supabase.from('content').select('*').eq('id', id).single();
-    if (error) return null;
-    return data as ContentItem;
-  } catch (e) { return null; }
+  const items: ContentItem[] = await apiCall('list', 'content') || [];
+  return items.find(i => i.id === id) || null;
 }
 
 export async function removeContent(id: string) {
-  try {
-    const { error } = await supabase.from('content').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const res = await apiCall('delete', 'content', { id });
+  return !!res;
 }
 
 export async function bulkRemoveContent(ids: string[]) {
-  try {
-    const { error } = await supabase.from('content').delete().in('id', ids);
-    return !error;
-  } catch (e) { return false; }
+  let success = true;
+  for (const id of ids) {
+    const res = await apiCall('delete', 'content', { id });
+    if (!res) success = false;
+  }
+  return success;
 }
 
 export async function bulkUpdateContent(ids: string[], updates: any) {
-  try {
-    const { error } = await supabase.from('content').update(updates).in('id', ids);
-    return !error;
-  } catch (e) { return false; }
+  const items: ContentItem[] = await apiCall('list', 'content') || [];
+  for (const id of ids) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+      await apiCall('update', 'content', { ...item, ...updates });
+    }
+  }
+  return true;
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
-  try {
-    const { data, error } = await supabase.from('users').select('*').order('id', { ascending: false });
-    if (error) throw error;
-    return data || [];
-  } catch (e) { return []; }
+  return await apiCall('list', 'users') || [];
 }
 
 export async function saveUser(user: Partial<User>) {
-  try {
-    const id = user.id || `user_${Date.now()}`;
-    const { error } = await supabase.from('users').upsert({ ...user, id });
-    return !error;
-  } catch (e) { return false; }
+  const id = user.id || `user_${Date.now()}`;
+  const res = await apiCall('upsert', 'users', { ...user, id });
+  return !!res;
 }
 
 export async function removeUser(id: string) {
-  try {
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const res = await apiCall('delete', 'users', { id });
+  return !!res;
 }
 
 export async function getRemoteResellers(): Promise<Reseller[]> {
-  try {
-    const { data, error } = await supabase.from('resellers').select('*').order('name');
-    if (error) throw error;
-    return data || [];
-  } catch (e) { return []; }
+  return await apiCall('list', 'resellers') || [];
 }
 
 export async function saveReseller(r: Partial<Reseller>) {
-  try {
-    const id = r.id || `rev_${Date.now()}`;
-    const cleanReseller = {
-      ...r,
-      id,
-      username: r.username ? r.username.toUpperCase().trim() : "",
-      name: r.name ? r.name.toUpperCase().trim() : "NOVO PARCEIRO"
-    };
-    const { error } = await supabase.from('resellers').upsert(cleanReseller);
-    return !error;
-  } catch (e) { return false; }
+  const id = r.id || `rev_${Date.now()}`;
+  const cleanReseller = {
+    ...r,
+    id,
+    username: r.username ? r.username.toUpperCase().trim() : "",
+    name: r.name ? r.name.toUpperCase().trim() : "NOVO PARCEIRO"
+  };
+  const res = await apiCall('upsert', 'resellers', cleanReseller);
+  return !!res;
 }
 
 export async function removeReseller(id: string) {
-  try {
-    const { error } = await supabase.from('resellers').delete().eq('id', id);
-    return !error;
-  } catch (e) { 
-    console.error("Erro ao deletar revendedor:", e);
-    return false; 
-  }
+  const res = await apiCall('delete', 'resellers', { id });
+  return !!res;
 }
 
 export async function getGlobalSettings() {
-  try {
-    const { data, error } = await supabase.from('settings').select('*').eq('id', 'global').single();
-    if (error || !data) return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
-    return data;
-  } catch (e) { return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" }; }
+  const settings = await apiCall('list', 'settings') || [];
+  const global = settings.find((s: any) => s.id === 'global');
+  if (!global) return { parentalPin: "1234", announcement: "", bannerUrl: "", bannerLink: "" };
+  return global;
 }
 
 export async function updateGlobalSettings(v: any) {
-  try {
-    const { error } = await supabase.from('settings').upsert({ ...v, id: 'global' });
-    return !error;
-  } catch (e) { return false; }
+  const res = await apiCall('upsert', 'settings', { ...v, id: 'global' });
+  return !!res;
 }
 
 export async function getTotalContentCount() {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
-    return count || 0;
-  } catch (e) { return 0; }
+  const items = await getRemoteContent(false);
+  return items.length;
 }
 
 export async function getCategoryCount(g: string) {
-  try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).eq('genre', g);
-    return count || 0;
-  } catch (e) { return 0; }
+  const items = await getRemoteContent(false, "", g);
+  return items.length;
 }
 
 export async function getTopContent(limitNum = 10): Promise<ContentItem[]> {
-  try {
-    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limitNum);
-    return data || [];
-  } catch (e) { return []; }
+  const items: ContentItem[] = await apiCall('list', 'content') || [];
+  return items.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, limitNum);
 }
 
 export async function getRemoteGames(): Promise<GameItem[]> {
-  try {
-    const { data, error } = await supabase.from('games').select('*');
-    if (error) throw error;
-    return data || [];
-  } catch (e) { return []; }
+  return await apiCall('list', 'games') || [];
 }
 
 export async function saveGame(g: any) {
-  try {
-    const id = g.id || `game_${Date.now()}`;
-    const cleanGame = {
-      id,
-      title: cleanName(g.title || "JOGO ARENA"),
-      console: g.console || "RETRO",
-      url: g.url || "",
-      imageUrl: g.imageUrl || ""
-    };
-    const { error } = await supabase.from('games').upsert(cleanGame);
-    return !error;
-  } catch (e) { return false; }
+  const id = g.id || `game_${Date.now()}`;
+  const cleanGame = {
+    id,
+    title: cleanName(g.title || "JOGO ARENA"),
+    console: g.console || "RETRO",
+    url: g.url || "",
+    imageUrl: g.imageUrl || ""
+  };
+  const res = await apiCall('upsert', 'games', cleanGame);
+  return !!res;
 }
 
 export async function removeGame(id: string) {
-  try {
-    const { error } = await supabase.from('games').delete().eq('id', id);
-    return !error;
-  } catch (e) { return false; }
+  const res = await apiCall('delete', 'games', { id });
+  return !!res;
 }
 
 export async function getGameRankings() {
-  try {
-    const { data } = await supabase.from('rankings').select('*').order('points', { ascending: false }).limit(20);
-    return data || [];
-  } catch (e) { return []; }
+  return await apiCall('list', 'rankings') || [];
 }
 
 /**
  * FORMATADOR MASTER v385-S
- * Correção de YouTube 150/153.
+ * YouTube e Proxy Tunnel.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
@@ -370,8 +336,11 @@ export const getBeautifulMessage = (pin: string, tier: string, url: string, scre
   `🎬 *LÉO TV STREAM!* \n\n👤 *SEU PIN MASTER:* \`${pin}\` \n\n🖥️ *TELAS:* ${screens} \n📅 *PLANO:* ${tier === 'test' ? 'TESTE 6H' : 'MENSAL 30 DIAS'} \n\n🔗 *ACESSE AGORA:* ${url} \n\n*Bom entretenimento!*`;
 
 export async function resetUserDevices(userId: string) {
-  try {
-    const { error } = await supabase.from('users').update({ activeDevices: [] }).eq('id', userId);
-    return !error;
-  } catch (e) { return false; }
+  const users: User[] = await apiCall('list', 'users') || [];
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    await apiCall('update', 'users', { ...user, activeDevices: [] });
+    return true;
+  }
+  return false;
 }

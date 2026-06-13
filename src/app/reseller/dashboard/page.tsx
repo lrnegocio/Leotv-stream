@@ -42,8 +42,9 @@ export default function ResellerDashboard() {
       const filtered = allUsers.filter(u => u.resellerId === sessionData.id)
       setMyUsers(filtered)
       
-      const { supabase } = await import('@/lib/supabase-client')
-      const { data: resData } = await supabase.from('resellers').select('*').eq('id', sessionData.id).single()
+      // Busca dados atualizados do revendedor no banco local
+      const allResellers = await (await fetch('/api/db', { method: 'POST', body: JSON.stringify({ action: 'list', collection: 'resellers' }) })).json();
+      const resData = allResellers.data.find((r: any) => r.id === sessionData.id);
       
       if (resData) {
         setReseller(resData)
@@ -88,6 +89,10 @@ export default function ResellerDashboard() {
       const d = new Date();
       d.setHours(d.getHours() + 6);
       expiryDate = d.toISOString();
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      expiryDate = d.toISOString();
     }
 
     const newUser: User = {
@@ -124,7 +129,7 @@ export default function ResellerDashboard() {
         await loadData();
       }
     } catch (e) {
-      toast({ variant: "destructive", title: "Erro na conexão com Supabase." });
+      toast({ variant: "destructive", title: "Erro na conexão com a VPS." });
     } finally {
       setIsGenerating(false);
     }

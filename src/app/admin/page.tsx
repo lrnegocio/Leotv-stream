@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload, Database } from "lucide-react"
+import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload, Database, Server } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -33,9 +34,9 @@ export default function AdminDashboard() {
       setUsers(u)
       setResellers(r)
       
-      toast({ title: "SINAL MASTER SINCRONIZADO v385" })
+      toast({ title: "BANCO LOCAL SINCRONIZADO v385" })
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Erro de Rede", description: "Verifique o status do Supabase." })
+      toast({ variant: "destructive", title: "Erro de Servidor", description: "Verifique o arquivo database.json na VPS." })
     } finally {
       setLoading(false)
     }
@@ -46,14 +47,14 @@ export default function AdminDashboard() {
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
       <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sintonizando v385 Master...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Sintonizando v385 VPS...</p>
     </div>
   )
 
   const stats = [
     { title: "Clientes Ativos", value: users.length.toString(), icon: Users, color: "text-blue-500" },
     { title: "Sinais na Rede", value: totalContent.toLocaleString(), icon: Zap, color: "text-amber-500" },
-    { title: "Sinais PPV", value: ppvCount.toLocaleString(), icon: Zap, color: "text-orange-500" },
+    { title: "Arena Games", value: ppvCount.toLocaleString(), icon: Gamepad2, color: "text-orange-500" },
     { title: "Sinais ALACARTE", value: alacarteCount.toLocaleString(), icon: Star, color: "text-blue-600" },
     { title: "Revendas", value: resellers.length.toString(), icon: Briefcase, color: "text-emerald-500" },
   ]
@@ -63,21 +64,21 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black font-headline uppercase italic text-primary">Painel Master v385-S</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão central da rede StreamSight (Supabase).</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Gestão central da rede via Armazenamento Local (VPS).</p>
         </div>
         <Button onClick={loadData} variant="outline" className="h-12 w-12 rounded-xl border-primary/20">
            <RefreshCcw className={`h-5 w-5 text-primary`} />
         </Button>
       </div>
 
-      <div className="bg-emerald-500/10 border-2 border-emerald-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
-         <div className="bg-emerald-500 p-4 rounded-3xl shadow-lg">
-           <Database className="h-8 w-8 text-white" />
+      <div className="bg-primary/10 border-2 border-primary/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 shadow-2xl">
+         <div className="bg-primary p-4 rounded-3xl shadow-lg">
+           <Server className="h-8 w-8 text-white" />
          </div>
          <div className="flex-1 text-center md:text-left">
-            <p className="text-[12px] font-black uppercase text-emerald-500 tracking-widest mb-1">Status: Conexão Master Reestabelecida</p>
+            <p className="text-[12px] font-black uppercase text-primary tracking-widest mb-1">Status: Servidor Local Independente</p>
             <p className="text-base font-bold leading-relaxed text-foreground">
-              Mestre Léo, o sistema voltou para o Supabase! Todos os seus canais e clientes originais estão disponíveis novamente.
+              Mestre Léo, agora o sistema é 100% VPS! Todos os dados são salvos no arquivo 'database.json' dentro da sua própria máquina.
             </p>
          </div>
       </div>
@@ -87,12 +88,13 @@ export default function AdminDashboard() {
           <Card key={stat.title} className="bg-card border-border rounded-[2rem] hover:border-primary/30 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.title}</CardTitle>
+              {stat.icon && <stat.icon className={`h-4 w-4 ${stat.color}`} />}
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-black tracking-tight">{stat.value}</div>
               <p className="text-[9px] text-muted-foreground mt-1 flex items-center uppercase font-bold tracking-widest">
                 <ArrowUpRight className={`h-3 w-3 mr-1 text-emerald-500`} />
-                Sinal Master Ativo
+                Sinal Ativo na VPS
               </p>
             </CardContent>
           </Card>
@@ -103,7 +105,7 @@ export default function AdminDashboard() {
         <CardHeader className="flex flex-row items-center justify-between border-b border-border p-8 bg-black/5">
           <div>
             <CardTitle className="uppercase text-sm font-black tracking-widest italic text-primary">Monitoramento Master v385-S</CardTitle>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold">Status real de acessos por PIN Master.</p>
+            <p className="text-[9px] text-muted-foreground uppercase font-bold">Status real de acessos por PIN Master na sua VPS.</p>
           </div>
           <Button variant="ghost" size="sm" asChild className="uppercase text-[9px] font-black hover:text-primary"><Link href="/admin/users">Ver todos</Link></Button>
         </CardHeader>
@@ -125,7 +127,7 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
-            {users.length === 0 && <div className="p-10 text-center opacity-30 uppercase font-black text-xs">Aguardando dados do Supabase...</div>}
+            {users.length === 0 && <div className="p-10 text-center opacity-30 uppercase font-black text-xs">Aguardando dados da VPS...</div>}
           </div>
         </CardContent>
       </Card>
