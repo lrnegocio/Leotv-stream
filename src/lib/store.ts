@@ -87,7 +87,6 @@ export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   const cleanPin = pin.toUpperCase().trim();
 
-  // BYPASS MESTRE INQUEBRÁVEL (ADM77X2P)
   if (cleanPin === 'ADM77X2P') {
     return { 
       user: {
@@ -109,7 +108,6 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
   try {
     const { data: user, error } = await supabase.from('users').select('*').eq('pin', cleanPin).single();
-    
     if (error || !user) return { error: "PIN INVÁLIDO" };
     if (user.isBlocked) return { error: "ACESSO BLOQUEADO" };
     if (user.expiryDate && new Date(user.expiryDate) < new Date()) return { error: "PLANO EXPIRADO" };
@@ -121,9 +119,7 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
       await supabase.from('users').update({ activeDevices: devices }).eq('id', user.id);
     }
     return { user: { ...user, activeDevices: devices } as User };
-  } catch (e) { 
-    return { error: "ERRO DE CONEXÃO MASTER" }; 
-  }
+  } catch (e) { return { error: "ERRO DE CONEXÃO MASTER" }; }
 }
 
 /**
@@ -132,24 +128,15 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
-    
-    // Mostra tudo se showInactive for true (para admin ver todos os 70)
     if (!showInactive) query = query.eq('isActive', true);
-    
     if (categoryGenre) query = query.eq('genre', categoryGenre);
-    
-    // BUSCA POR NOME OU CATEGORIA
     if (searchQuery) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     }
-    
     const { data, error } = await query.order('title');
     if (error) throw error;
     return data || [];
-  } catch (e) { 
-    console.error("Erro Supabase Content:", e);
-    return []; 
-  }
+  } catch (e) { return []; }
 }
 
 export async function saveContent(item: Partial<ContentItem>) {
@@ -166,6 +153,27 @@ export async function getContentById(id: string) {
     if (error) return null;
     return data as ContentItem;
   } catch (e) { return null; }
+}
+
+export async function removeContent(id: string) {
+  try {
+    const { error } = await supabase.from('content').delete().eq('id', id);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function bulkRemoveContent(ids: string[]) {
+  try {
+    const { error } = await supabase.from('content').delete().in('id', ids);
+    return !error;
+  } catch (e) { return false; }
+}
+
+export async function bulkUpdateContent(ids: string[], updates: any) {
+  try {
+    const { error } = await supabase.from('content').update(updates).in('id', ids);
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function getRemoteUsers(): Promise<User[]> {
