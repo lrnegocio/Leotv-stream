@@ -3,8 +3,10 @@
 
 /**
  * MOTOR DE DADOS v385-S - MODO INDEPENDÊNCIA VPS
- * Sistema de Armazenamento Local (JSON) - Esqueça o Supabase.
+ * Sistema de Armazenamento Local (JSON) com função de Migração.
  */
+
+import { supabase } from './supabase-client';
 
 export type ContentType = 'movie' | 'series' | 'multi-season' | 'channel';
 export type SubscriptionTier = 'test' | 'monthly' | 'lifetime';
@@ -101,6 +103,30 @@ async function apiCall(action: string, collection: string, data?: any) {
 }
 
 /**
+ * MIGRADO SOBERANO - PUXA DADOS DO SUPABASE PARA A VPS
+ */
+export async function migrateFromSupabase() {
+  try {
+    const { data: content } = await supabase.from('content').select('*');
+    const { data: users } = await supabase.from('users').select('*');
+    const { data: resellers } = await supabase.from('resellers').select('*');
+    
+    if (content) {
+      for (const item of content) await saveContent(item);
+    }
+    if (users) {
+      for (const user of users) await saveUser(user);
+    }
+    if (resellers) {
+      for (const res of resellers) await saveReseller(res);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * LOGIN SOBERANO v385-S
  */
 export async function validateDeviceLogin(pin: string, deviceId: string) {
@@ -161,9 +187,13 @@ export async function getRemoteContent(showInactive = true, searchQuery = "", ca
   let items: ContentItem[] = await apiCall('list', 'content') || [];
   
   if (categoryGenre) {
-    // Se o gênero for PAY PER VIEW, o site agora chama de ARENA GAMES
-    const targetGenre = categoryGenre === 'ARENA GAMES' ? 'LÉO TV PAY PER VIEW' : categoryGenre;
-    items = items.filter(i => i.genre === targetGenre);
+    // Se o gênero for ARENA GAMES ou PAY PER VIEW, unifica
+    const isArena = categoryGenre === 'ARENA GAMES' || categoryGenre === 'LÉO TV PAY PER VIEW';
+    if (isArena) {
+      items = items.filter(i => i.genre === 'LÉO TV PAY PER VIEW' || i.genre === 'ARENA GAMES');
+    } else {
+      items = items.filter(i => i.genre === categoryGenre);
+    }
   }
 
   if (!showInactive) items = items.filter(i => i.isActive !== false);

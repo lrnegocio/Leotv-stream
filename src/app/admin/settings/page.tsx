@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History, Globe, DownloadCloud } from "lucide-react"
-import { getGlobalSettings, updateGlobalSettings, saveContent, getRemoteContent, ContentItem, ContentType, Episode } from "@/lib/store"
+import { Lock, Save, Loader2, ListPlus, Sparkles, Zap, Megaphone, ShieldCheck, Send, Layers, Plus, History, Globe, DownloadCloud, Database } from "lucide-react"
+import { getGlobalSettings, updateGlobalSettings, saveContent, getRemoteContent, ContentItem, ContentType, Episode, migrateFromSupabase } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -54,46 +54,26 @@ export default function SettingsPage() {
     load()
   }, [])
 
+  const handleMigrate = async () => {
+    if (!confirm("Mestre, deseja puxar seus 740 canais do Supabase para esta VPS? Isso pode demorar alguns segundos.")) return;
+    setIsProcessing(true);
+    const success = await migrateFromSupabase();
+    if (success) {
+      toast({ title: "MIGRAÇÃO CONCLUÍDA!", description: "Seus canais agora estão salvos localmente na VPS." });
+    } else {
+      toast({ variant: "destructive", title: "ERRO NA MIGRAÇÃO", description: "Verifique a conexão com o Supabase." });
+    }
+    setIsProcessing(false);
+  }
+
   const handleSaveSettings = async () => {
     setSaving(true)
     try {
       if (await updateGlobalSettings({ parentalPin, announcement, bannerUrl, bannerLink })) {
-        toast({ title: "CONFIGURAÇÕES SINCRONIZADAS v370!" })
+        toast({ title: "CONFIGURAÇÕES SINCRONIZADAS v385!" })
       }
     } catch (e) { toast({ variant: "destructive", title: "ERRO DE CONEXÃO" })
     } finally { setSaving(false) }
-  }
-
-  const handleFetchFreeLists = async () => {
-    setIsProcessing(true);
-    toast({ title: "BUSCANDO CANAIS GRÁTIS...", description: "Aguarde a sintonização global." });
-    
-    try {
-      // Simulando a sintonização de uma lista pública legal de canais abertos (Ex: Record, Band, RedeTV via IPTV-org)
-      const mockFreeChannels = [
-        { title: "BAND HD", url: "https://rdcanais.com/v1/band/index.m3u8", genre: "LÉO TV AO VIVO" },
-        { title: "RECORD NEWS", url: "https://recordnews.com/live/index.m3u8", genre: "LÉO TV AO VIVO" },
-        { title: "TV CULTURA", url: "https://tvcultura.com.br/live/stream.m3u8", genre: "LÉO TV AO VIVO" },
-        { title: "CNN BRASIL", url: "https://cnnbrasil.com.br/live/stream.m3u8", genre: "LÉO TV AO VIVO" }
-      ];
-
-      for (const ch of mockFreeChannels) {
-        await saveContent({
-          title: ch.title,
-          genre: ch.genre,
-          type: 'channel',
-          streamUrl: ch.url,
-          description: "Sinal Aberto Sintonizado via IA v385-S",
-          isActive: true
-        });
-      }
-      
-      toast({ title: "CANAIS INJETADOS!", description: "Verifique sua biblioteca." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "FALHA NA SINTONIZAÇÃO" });
-    } finally {
-      setIsProcessing(false);
-    }
   }
 
   const handleUpdatePin = async () => {
@@ -113,7 +93,7 @@ export default function SettingsPage() {
       setNewPin("")
       setNewPinConfirm("")
       setIsChangingPin(false)
-      toast({ title: "SENHA PARENTAL ALTERADA v370!" })
+      toast({ title: "SENHA PARENTAL ALTERADA!" })
     }
     setSaving(false)
   }
@@ -166,7 +146,7 @@ export default function SettingsPage() {
             title: seriesTitle,
             genre: importGenre,
             type: importType,
-            description: "Sinal Injetado em Massa v370",
+            description: "Sinal Injetado em Massa v385",
             isRestricted: importGenre.includes("ADULTO"),
             episodes: importType === 'series' ? episodes : [],
             seasons: importType === 'multi-season' ? [{ id: 's1', number: 1, episodes }] : []
@@ -179,7 +159,7 @@ export default function SettingsPage() {
                 genre: importGenre,
                 type: importType,
                 streamUrl: line,
-                description: "Injetado em Massa v370",
+                description: "Injetado em Massa v385",
                 isRestricted: importGenre.includes("ADULTO")
               });
             }
@@ -189,7 +169,7 @@ export default function SettingsPage() {
       }
 
       if (success) {
-        toast({ title: `INJEÇÃO CONCLUÍDA v370`, description: `Sinais sincronizados na rede!` });
+        toast({ title: `INJEÇÃO CONCLUÍDA v385`, description: `Sinais sincronizados na rede!` });
         setListText("");
         setSeriesTitle("");
       }
@@ -207,11 +187,11 @@ export default function SettingsPage() {
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-3xl font-black uppercase font-headline italic text-primary">Gestão Soberana v385-S</h1>
-          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Publicidade, Injeção e Conexão API.</p>
+          <p className="text-muted-foreground uppercase text-[10px] tracking-widest font-bold">Protocolo de Armazenamento Local VPS.</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleFetchFreeLists} disabled={isProcessing} variant="outline" className="h-14 px-6 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase rounded-2xl shadow-lg">
-            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <DownloadCloud className="mr-2 h-5 w-5" />} SINTONIZAR GRÁTIS
+          <Button onClick={handleMigrate} disabled={isProcessing} variant="outline" className="h-14 px-6 border-primary text-primary hover:bg-primary/10 font-black uppercase rounded-2xl shadow-lg">
+            {isProcessing ? <Loader2 className="animate-spin mr-2" /> : <Database className="mr-2 h-5 w-5" />} IMPORTAR DO SUPABASE
           </Button>
           <Button onClick={handleSaveSettings} disabled={saving} className="h-14 px-8 bg-emerald-500 font-black uppercase rounded-2xl shadow-xl shadow-emerald-500/20">
             {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 h-5 w-5" />} SALVAR TUDO
@@ -222,7 +202,7 @@ export default function SettingsPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <Card className="bg-primary/5 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
-             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2"><Megaphone className="h-5 w-5" /> Publicidade Master v370</CardTitle></CardHeader>
+             <CardHeader className="bg-primary/10 border-b border-primary/10 p-6"><CardTitle className="uppercase text-sm font-black italic text-primary flex items-center gap-2"><Megaphone className="h-5 w-5" /> Publicidade Master v385</CardTitle></CardHeader>
              <CardContent className="p-8 space-y-4">
                 <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">URL do Banner</Label><Input value={bannerUrl} onChange={e => setBannerUrl(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
                 <div className="space-y-2"><Label className="uppercase text-[10px] font-black opacity-60">Link de Destino</Label><Input value={bannerLink} onChange={e => setBannerLink(e.target.value)} className="bg-black/40 border-white/5 font-mono text-[10px]" /></div>
@@ -230,7 +210,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="bg-card/50 border-white/5 shadow-2xl rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Senha Parental Global v370</CardTitle></CardHeader>
+            <CardHeader className="bg-primary/5 border-b border-white/5 p-6"><CardTitle className="uppercase text-sm font-black italic">Senha Parental Global</CardTitle></CardHeader>
             <CardContent className="p-8 space-y-6">
               {!isChangingPin ? (
                 <div className="space-y-4">
@@ -262,8 +242,8 @@ export default function SettingsPage() {
         <div className="space-y-8">
           <Card className="bg-card/50 border border-primary/20 shadow-2xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-white/5 p-6 flex flex-row items-center justify-between">
-              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos v370</CardTitle>
-              <Button onClick={handleSendAnnouncement} disabled={saving || !announcement} className="bg-blue-600 hover:bg-blue-700 h-10 px-4 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-blue-500/20">
+              <CardTitle className="uppercase text-sm font-black italic">Mural de Avisos</CardTitle>
+              <Button onClick={handleSaveSettings} disabled={saving || !announcement} className="bg-blue-600 hover:bg-blue-700 h-10 px-4 rounded-xl font-black uppercase text-[10px] shadow-lg shadow-blue-500/20">
                 <Send className="mr-2 h-4 w-4" /> DISPARAR AGORA
               </Button>
             </CardHeader>
@@ -326,7 +306,7 @@ export default function SettingsPage() {
                             <SelectItem value="LÉO TV AO VIVO">AO VIVO</SelectItem>
                             <SelectItem value="LÉO TV FILMES">FILMES</SelectItem>
                             <SelectItem value="LÉO TV SÉRIES">SÉRIES/DORAMAS</SelectItem>
-                            <SelectItem value="LÉO TV PAY PER VIEW">PPV</SelectItem>
+                            <SelectItem value="LÉO TV PAY PER VIEW">ARENA GAMES</SelectItem>
                             <SelectItem value="LÉO TV ALACARTES">ALACARTE</SelectItem>
                             <SelectItem value="LÉO TV ADULTOS">ADULTOS</SelectItem>
                             <SelectItem value="LÉO TV RÁDIOS">RÁDIOS</SelectItem>

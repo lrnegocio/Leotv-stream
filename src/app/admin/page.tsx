@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Tv, ArrowUpRight, PlayCircle, ShieldCheck, Loader2, Briefcase, Zap, Star, AlertTriangle, RefreshCcw, CreditCard, HardDriveDownload, Database, Server, Gamepad2 } from "lucide-react"
+import { Users, Zap, ArrowUpRight, Loader2, Briefcase, RefreshCcw, Server, Gamepad2, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { getRemoteUsers, getRemoteResellers, getTotalContentCount, getCategoryCount, User, Reseller } from "@/lib/store"
@@ -34,9 +34,8 @@ export default function AdminDashboard() {
       setUsers(u)
       setResellers(r)
       
-      toast({ title: "BANCO LOCAL SINCRONIZADO v385" })
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Erro de Servidor", description: "Verifique o arquivo database.json na VPS." })
+      toast({ variant: "destructive", title: "Erro de Servidor" })
     } finally {
       setLoading(false)
     }
@@ -78,7 +77,7 @@ export default function AdminDashboard() {
          <div className="flex-1 text-center md:text-left">
             <p className="text-[12px] font-black uppercase text-primary tracking-widest mb-1">Status: Servidor Local Independente</p>
             <p className="text-base font-bold leading-relaxed text-foreground">
-              Mestre Léo, agora o sistema é 100% VPS! Todos os dados são salvos no arquivo 'database.json' dentro da sua própria máquina.
+              Mestre Léo, agora o sistema é 100% VPS! Seus dados são salvos no arquivo 'database.json'. Use a aba SEGURANÇA para importar canais antigos.
             </p>
          </div>
       </div>
