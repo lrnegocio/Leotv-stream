@@ -3,7 +3,7 @@
 
 /**
  * MOTOR DE DADOS v385-S - MODO INDEPENDÊNCIA VPS
- * Sistema de Armazenamento Local (JSON) com função de Migração.
+ * Sistema de Armazenamento Local (JSON) com função de Migração e Sintonizador YouTube.
  */
 
 import { supabase } from './supabase-client';
@@ -187,7 +187,6 @@ export async function getRemoteContent(showInactive = true, searchQuery = "", ca
   let items: ContentItem[] = await apiCall('list', 'content') || [];
   
   if (categoryGenre) {
-    // Se o gênero for ARENA GAMES ou PAY PER VIEW, unifica
     const isArena = categoryGenre === 'ARENA GAMES' || categoryGenre === 'LÉO TV PAY PER VIEW';
     if (isArena) {
       items = items.filter(i => i.genre === 'LÉO TV PAY PER VIEW' || i.genre === 'ARENA GAMES');
@@ -339,21 +338,30 @@ export async function getGameRankings() {
 }
 
 /**
- * FORMATADOR MASTER v385-S
- * YouTube e Proxy Tunnel.
+ * SINTONIZADOR MASTER v385-S PLUS
+ * YouTube Fix: Extrai ID e aplica Origin para evitar erro 150/153.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  const hostOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://177.153.202.104:3000';
-  
-  if (finalUrl.includes('youtube.com/watch?v=')) {
-    const videoId = finalUrl.split('v=')[1]?.split('&')[0];
-    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(hostOrigin)}&enablejsapi=1&rel=0`;
-  } else if (finalUrl.includes('youtu.be/')) {
-    const videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
-    if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(hostOrigin)}&enablejsapi=1&rel=0`;
+  // Detecção de Origem Real (Soberana)
+  let origin = 'https://leotv.fun';
+  if (typeof window !== 'undefined') {
+    origin = window.location.origin;
+  }
+
+  // RESTRUTURAÇÃO YOUTUBE MASTER
+  if (finalUrl.includes('youtube.com/') || finalUrl.includes('youtu.be/')) {
+    let videoId = "";
+    if (finalUrl.includes('watch?v=')) videoId = finalUrl.split('v=')[1]?.split('&')[0];
+    else if (finalUrl.includes('embed/')) videoId = finalUrl.split('embed/')[1]?.split('?')[0];
+    else if (finalUrl.includes('youtu.be/')) videoId = finalUrl.split('youtu.be/')[1]?.split('?')[0];
+
+    if (videoId) {
+      // Injeta parâmetros de autoridade para o YouTube liberar o sinal
+      finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(origin)}&enablejsapi=1&rel=0&widget_referrer=${encodeURIComponent(origin)}&playsinline=1`;
+    }
   }
 
   if (finalUrl.includes('tvacabo.top') || finalUrl.includes('shortflix.net')) {

@@ -38,6 +38,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
     setError(false);
 
     if (isIframe) {
+      // Small delay for iframe buffer
       setTimeout(() => setLoading(false), 2500);
       return;
     }
@@ -132,7 +133,7 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* NAVEGAÇÃO SOBERANA - BOTÕES FIXOS NAS LATERAIS */}
+      {/* NAVEGAÇÃO SOBERANA - BOTÕES NAS LATERAIS */}
       <div className="absolute inset-y-0 left-0 flex items-center px-4 z-[150] group/nav">
         {onPrev && (
           <Button onClick={onPrev} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all opacity-0 group-hover/nav:opacity-100">
