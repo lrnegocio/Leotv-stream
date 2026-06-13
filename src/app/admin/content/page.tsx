@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Search, Edit2, Trash2, Tv, Lock, PlayCircle, Loader2, RefreshCcw, HardDriveDownload, PowerOff, AlertTriangle, CheckSquare, Square, MoreHorizontal, Layers, Power } from "lucide-react"
+import { Plus, Search, Edit2, Trash2, Tv, Lock, PlayCircle, Loader2, RefreshCcw, HardDriveDownload, PowerOff, AlertTriangle, CheckSquare, Square, MoreHorizontal, Layers, Power, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getRemoteContent, removeContent, bulkRemoveContent, bulkUpdateContent, ContentItem } from "@/lib/store"
@@ -32,6 +32,7 @@ export default function ContentManagementPage() {
     setLoading(true)
     setErrorDb(null)
     try {
+      // O motor agora filtra apenas o que não for jogo para esta tela
       const data = await getRemoteContent(true, query)
       setItems(data)
     } catch (error: any) {

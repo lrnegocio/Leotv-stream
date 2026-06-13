@@ -124,10 +124,16 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 
 /**
  * BUSCA REMOTA v385-S SUPABASE (ALTA PRECISÃO)
+ * Filtra para que Jogos nunca apareçam na lista de Canais.
  */
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
+    
+    // BLINDAGEM: Garante que itens do tipo 'game' não entrem na lista de canais
+    // Caso existam itens com tipo omitido ou nulo, eles são considerados canais/vod
+    query = query.not('genre', 'ilike', '%GAMES%');
+
     if (!showInactive) query = query.eq('isActive', true);
     if (categoryGenre) query = query.eq('genre', categoryGenre);
     if (searchQuery) {
@@ -239,7 +245,7 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', '%GAMES%');
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -253,7 +259,7 @@ export async function getCategoryCount(g: string) {
 
 export async function getTopContent(limitNum = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limitNum);
+    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', '%GAMES%').order('views', { ascending: false }).limit(limitNum);
     return data || [];
   } catch (e) { return []; }
 }
