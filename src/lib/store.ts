@@ -86,7 +86,6 @@ export const cleanName = (n: string) => n.toUpperCase().trim();
 export async function validateDeviceLogin(pin: string, deviceId: string) {
   const cleanPin = pin.toUpperCase().trim();
 
-  // BYPASS ADM77X2P - CHAVE MESTRA FÍSICA
   if (cleanPin === 'ADM77X2P') {
     return { 
       user: {
@@ -123,21 +122,43 @@ export async function validateDeviceLogin(pin: string, deviceId: string) {
 }
 
 /**
+ * LOGIN REVENDA v385-S
+ */
+export async function validateResellerLogin(username: string, password: string) {
+  try {
+    const { data: res, error } = await supabase
+      .from('resellers')
+      .select('*')
+      .eq('username', username.toUpperCase().trim())
+      .eq('password', password)
+      .single();
+    
+    if (error || !res) return { error: "CREDENCIAIS INVÁLIDAS" };
+    if (res.isBlocked) return { error: "REVENDA SUSPENSA" };
+    return { reseller: res as Reseller };
+  } catch (e) {
+    return { error: "FALHA NO NÚCLEO DE DADOS" };
+  }
+}
+
+/**
  * BUSCA DE CONTEÚDO v385-S
  */
 export async function getRemoteContent(showInactive = true, searchQuery = "", categoryGenre = ""): Promise<ContentItem[]> {
   try {
     let query = supabase.from('content').select('*');
     
-    // Filtra games para não misturar nos canais (Games agora têm tabela própria ou flag)
-    query = query.not('genre', 'ilike', '%ARENA GAMES%');
+    // Filtro preciso por categoria ou busca global
+    if (categoryGenre) {
+      query = query.eq('genre', categoryGenre);
+    }
 
     if (!showInactive) query = query.eq('isActive', true);
-    if (categoryGenre && categoryGenre !== 'GAMES') query = query.eq('genre', categoryGenre);
     
     if (searchQuery) {
       query = query.or(`title.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
     }
+    
     const { data, error } = await query.order('title');
     if (error) throw error;
     return data || [];
@@ -155,11 +176,7 @@ export async function saveContent(item: Partial<ContentItem>) {
       title: item.title ? cleanName(item.title) : "SEM TITULO"
     };
     const { error } = await supabase.from('content').upsert(cleanItem);
-    if (error) {
-      console.error("Erro Supabase Content:", error);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) { return false; }
 }
 
@@ -255,7 +272,7 @@ export async function updateGlobalSettings(v: any) {
 
 export async function getTotalContentCount() {
   try {
-    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true }).not('genre', 'ilike', '%ARENA GAMES%');
+    const { count } = await supabase.from('content').select('*', { count: 'exact', head: true });
     return count || 0;
   } catch (e) { return 0; }
 }
@@ -269,7 +286,7 @@ export async function getCategoryCount(g: string) {
 
 export async function getTopContent(limitNum = 10): Promise<ContentItem[]> {
   try {
-    const { data } = await supabase.from('content').select('*').not('genre', 'ilike', '%ARENA GAMES%').order('views', { ascending: false }).limit(limitNum);
+    const { data } = await supabase.from('content').select('*').order('views', { ascending: false }).limit(limitNum);
     return data || [];
   } catch (e) { return []; }
 }
@@ -293,11 +310,7 @@ export async function saveGame(g: any) {
       imageUrl: g.imageUrl || ""
     };
     const { error } = await supabase.from('games').upsert(cleanGame);
-    if (error) {
-      console.error("Erro Supabase Game:", error);
-      return false;
-    }
-    return true;
+    return !error;
   } catch (e) { return false; }
 }
 
@@ -317,13 +330,12 @@ export async function getGameRankings() {
 
 /**
  * FORMATADOR MASTER v385-S
- * Correção de erro YouTube 150/153 e suporte a IPs.
+ * Correção de YouTube 150/153.
  */
 export const formatMasterLink = (url: string) => {
   if (!url) return "";
   let finalUrl = url.trim();
 
-  // FIX YOUTUBE v385-S: Injeta origin e converte para embed para evitar erro 150/153
   const hostOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://177.153.202.104:3000';
   
   if (finalUrl.includes('youtube.com/watch?v=')) {
@@ -334,7 +346,6 @@ export const formatMasterLink = (url: string) => {
     if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&origin=${encodeURIComponent(hostOrigin)}&enablejsapi=1&rel=0`;
   }
 
-  // Bypass para domínios que exigem Referer específico via Proxy Ghost
   if (finalUrl.includes('tvacabo.top') || finalUrl.includes('shortflix.net')) {
     return `/api/proxy?url=${encodeURIComponent(finalUrl)}`;
   }

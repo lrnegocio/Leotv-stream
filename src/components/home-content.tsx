@@ -76,8 +76,7 @@ function HomeContentInner() {
     setIsMounted(true);
     const session = localStorage.getItem("user_session");
     if (session) {
-      const parsed = JSON.parse(session);
-      setUser(parsed);
+      setUser(JSON.parse(session));
     } else {
       router.push("/login");
     }
@@ -90,21 +89,19 @@ function HomeContentInner() {
   }, [q, selectedCat, loadData, isMounted]);
 
   const verifyPassword = async () => {
-    try {
-      if (pinInput === settings?.parentalPin) {
-        if (unlockTarget === 'ITEM' && unlockTargetItem) {
-          openItem(unlockTargetItem, true);
-        } else if (unlockTarget) {
-          setSelectedCat(unlockTarget);
-        }
-        setIsPinOpen(false);
-        setPinInput("");
-        setUnlockTarget(null);
-      } else {
-        toast({ variant: "destructive", title: "SENHA INCORRETA" });
-        setPinInput("");
+    if (pinInput === settings?.parentalPin) {
+      if (unlockTarget === 'ITEM' && unlockTargetItem) {
+        openItem(unlockTargetItem, true);
+      } else if (unlockTarget) {
+        setSelectedCat(unlockTarget);
       }
-    } catch (e) { toast({ variant: "destructive", title: "ERRO DE SEGURANÇA" }); }
+      setIsPinOpen(false);
+      setPinInput("");
+      setUnlockTarget(null);
+    } else {
+      toast({ variant: "destructive", title: "SENHA INCORRETA" });
+      setPinInput("");
+    }
   };
 
   const openItem = async (item: ContentItem, bypassPin = false) => {
@@ -122,7 +119,6 @@ function HomeContentInner() {
         setSelectedSeries(deepItem || item);
       } catch (e) { setSelectedSeries(item); } finally { setLoading(false); }
     } else {
-      // PREPARA A LISTA PARA NAVEGAÇÃO COM SETAS
       const currentList = content.map(i => ({ 
         id: i.id,
         title: i.title, 
