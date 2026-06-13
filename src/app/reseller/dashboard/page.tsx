@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Key, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap, Monitor, Lock, Globe, Clock, AlertTriangle, UserCheck, Bell, MessageSquare, Star, Gamepad2 } from "lucide-react"
+import { Key, Plus, LogOut, Briefcase, Users, Search, RefreshCcw, Send, Loader2, Zap, Monitor, Lock, Globe, Clock, AlertTriangle, UserCheck, Bell, MessageSquare, Star, Gamepad2, UserX, UserCheck2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { getRemoteUsers, saveUser, saveReseller, generateRandomPin, getBeautifulMessage, getExpiryMessage, Reseller, User } from "@/lib/store"
+import { getRemoteUsers, saveUser, saveReseller, generateRandomPin, getBeautifulMessage, Reseller, User } from "@/lib/store"
 import { toast } from "@/hooks/use-toast"
 
 export default function ResellerDashboard() {
@@ -34,13 +34,27 @@ export default function ResellerDashboard() {
   const loadData = React.useCallback(async () => {
     const session = localStorage.getItem("reseller_session")
     if (!session) { router.push("/login"); return; }
-    const currentReseller = JSON.parse(session)
+    const sessionData = JSON.parse(session)
+    
+    setLoading(true)
     try {
       const allUsers = await getRemoteUsers()
-      setMyUsers(allUsers.filter(u => u.resellerId === currentReseller.id))
-      setReseller(currentReseller)
+      // Filtra usuários vinculados a este revendedor
+      const filtered = allUsers.filter(u => u.resellerId === sessionData.id)
+      setMyUsers(filtered)
+      
+      // Busca dados atualizados do revendedor para garantir saldo de créditos correto
+      const { supabase } = await import('@/lib/supabase-client')
+      const { data: resData } = await supabase.from('resellers').select('*').eq('id', sessionData.id).single()
+      
+      if (resData) {
+        setReseller(resData)
+        localStorage.setItem("reseller_session", JSON.stringify(resData))
+      } else {
+        setReseller(sessionData)
+      }
     } catch (e) {
-      toast({ variant: "destructive", title: "Erro de rede." })
+      toast({ variant: "destructive", title: "Erro ao atualizar dados." })
     } finally {
       setLoading(false)
     }
@@ -56,23 +70,44 @@ export default function ResellerDashboard() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryStatus = (expiryDate?: string | null) => {
+  const getExpiryStatus = (expiryDate?: string | null, isBlocked?: boolean) => {
+    if (isBlocked) return { label: "SINAL BLOQUEADO", color: "bg-destructive text-white", icon: UserX };
+    
+    if (!expiryDate) return { label: "AGUARDANDO ATIVAÇÃO", color: "bg-blue-500/10 text-blue-400", icon: Clock };
+    
+    const now = new Date();
+    const exp = new Date(expiryDate);
+    
+    if (now > exp) return { label: `EXPIRADO EM: ${exp.toLocaleString()}`, color: "bg-destructive text-white", icon: AlertTriangle };
+    
     const diffDays = getExpiryDays(expiryDate);
-    if (diffDays === null) return { label: "AGUARDANDO ATIVAÇÃO", color: "text-blue-400", icon: Clock };
-    if (diffDays < 0) return { label: "PIN EXPIRADO", color: "text-destructive", icon: AlertTriangle };
-    if (diffDays <= 3) return { label: `${diffDays} DIA(S) RESTANTE(S)`, color: "text-orange-500", icon: AlertTriangle };
-    return { label: `${diffDays} DIA(S) ATIVO`, color: "text-green-400", icon: UserCheck };
+    if (diffDays !== null && diffDays <= 3) {
+      return { label: `VENCE: ${exp.toLocaleString()}`, color: "bg-orange-500/10 text-orange-500", icon: AlertTriangle };
+    }
+    
+    return { label: `ATIVO ATÉ: ${exp.toLocaleString()}`, color: "bg-emerald-500/10 text-emerald-400", icon: UserCheck };
   };
 
   const handleGenerate = async (type: 'test' | 'monthly') => {
     if (!reseller) return;
     const screens = parseInt(config.screens);
-    if (type === 'monthly' && reseller.credits < screens) {
-      toast({ variant: "destructive", title: "CRÉDITOS INSUFICIENTES", description: `Custo: ${screens} créditos.` });
+    
+    if (type === 'monthly' && (reseller.credits || 0) < screens) {
+      toast({ variant: "destructive", title: "CRÉDITOS INSUFICIENTES", description: `Você precisa de ${screens} crédito(s).` });
       return;
     }
+
     setIsGenerating(true);
     const pin = generateRandomPin(11);
+    
+    // Configura validade inicial apenas para testes (6h). Mensal ativa no primeiro login.
+    let expiryDate = null;
+    if (type === 'test') {
+      const d = new Date();
+      d.setHours(d.getHours() + 6);
+      expiryDate = d.toISOString();
+    }
+
     const newUser: User = {
       id: "user_" + Date.now() + Math.random().toString(36).substring(7),
       pin,
@@ -81,117 +116,208 @@ export default function ResellerDashboard() {
       maxScreens: screens,
       activeDevices: [],
       isBlocked: false,
-      isAdultEnabled: false, // BLOQUEADO PARA REVENDA: Apenas Admin ativa
-      isGamesEnabled: false,  // BLOQUEADO PARA REVENDA: Apenas Admin ativa
-      isPpvEnabled: false,    // BLOQUEADO PARA REVENDA: Apenas Admin ativa
-      isAlacarteEnabled: false, // BLOQUEADO PARA REVENDA: Apenas Admin ativa
-      resellerId: reseller.id
+      isAdultEnabled: false, 
+      isGamesEnabled: false,  
+      isPpvEnabled: false,    
+      isAlacarteEnabled: false, 
+      isGamesOnly: false,
+      resellerId: reseller.id,
+      expiryDate: expiryDate
     };
-    if (await saveUser(newUser)) {
-      if (type === 'monthly') {
-        const updated = { ...reseller, credits: reseller.credits - screens, totalSold: (reseller.totalSold || 0) + 1 };
-        await saveReseller(updated);
-        setReseller(updated);
-        localStorage.setItem("reseller_session", JSON.stringify(updated));
+
+    try {
+      const successUser = await saveUser(newUser);
+      if (successUser) {
+        if (type === 'monthly') {
+          const updatedReseller = { 
+            ...reseller, 
+            credits: (reseller.credits || 0) - screens, 
+            totalSold: (reseller.totalSold || 0) + 1 
+          };
+          await saveReseller(updatedReseller);
+          setReseller(updatedReseller);
+          localStorage.setItem("reseller_session", JSON.stringify(updatedReseller));
+        }
+        toast({ title: "SINAL GERADO v385-S", description: `PIN: ${pin}` });
+        await loadData();
       }
-      toast({ title: "PIN GERADO COM SUCESSO!", description: `CÓDIGO: ${pin}` });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro na conexão com Supabase." });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  const toggleClientBlock = async (user: User) => {
+    const updated = { ...user, isBlocked: !user.isBlocked };
+    if (await saveUser(updated)) {
+      toast({ title: updated.isBlocked ? "CLIENTE BLOQUEADO" : "CLIENTE LIBERADO" });
       await loadData();
     }
-    setIsGenerating(false);
-  }
+  };
 
   const sendAccess = (u: User) => {
     const msg = getBeautifulMessage(u.pin, u.subscriptionTier, window.location.origin, u.maxScreens);
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  const filtered = myUsers.filter(u => u.pin.includes(search));
+  const filtered = myUsers.filter(u => (u.pin || "").includes(search));
 
-  if (loading || !reseller) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary h-12 w-12" /></div>
+  if (loading && !reseller) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary h-12 w-12" /></div>
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="h-20 border-b border-white/5 bg-card/30 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20"><Briefcase className="h-6 w-6 text-white" /></div>
-          <div><h1 className="text-xl font-black uppercase italic text-primary">Painel Revenda Master</h1><p className="text-[9px] font-black opacity-40 uppercase">{reseller.name}</p></div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-2 rounded-2xl text-center">
-            <p className="text-xl font-black text-emerald-500 leading-none">{reseller.credits}</p>
-            <p className="text-[8px] opacity-60 font-black uppercase">CRÉDITOS</p>
+    <div className="min-h-screen bg-background pb-20 select-none">
+      <header className="h-24 border-b border-white/5 bg-card/30 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-50">
+        <div className="flex items-center gap-5">
+          <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20"><Briefcase className="h-7 w-7 text-white" /></div>
+          <div>
+            <h1 className="text-2xl font-black uppercase italic text-primary">Painel Revenda Master</h1>
+            <p className="text-[10px] font-black opacity-60 uppercase tracking-widest">{reseller?.name}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("reseller_session"); router.push("/login"); }} className="text-destructive h-12 w-12 rounded-xl hover:bg-destructive/10"><LogOut className="h-6 w-6" /></Button>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 px-8 py-3 rounded-2xl text-center shadow-inner">
+            <p className="text-3xl font-black text-emerald-500 leading-none">{reseller?.credits || 0}</p>
+            <p className="text-[9px] opacity-60 font-black uppercase mt-1">CRÉDITOS DISPONÍVEIS</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => { localStorage.removeItem("reseller_session"); router.push("/login"); }} className="text-destructive h-14 w-14 rounded-2xl hover:bg-destructive/10">
+            <LogOut className="h-7 w-7" />
+          </Button>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto p-8 space-y-8">
-        <Card className="bg-primary/5 border border-primary/20 p-8 rounded-[3rem] shadow-2xl">
-          <div className="grid lg:grid-cols-2 gap-8">
-             <div className="space-y-4">
+        <Card className="bg-primary/5 border border-primary/20 p-10 rounded-[3rem] shadow-2xl">
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+             <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase opacity-60 ml-2">Telas do PIN</Label>
+                  <Label className="text-[10px] font-black uppercase opacity-60 ml-2 tracking-widest">Configuração de Telas</Label>
                   <Select value={config.screens} onValueChange={v => setConfig({...config, screens: v})}>
-                    <SelectTrigger className="w-full bg-black/40 h-14 rounded-2xl font-black text-primary border-white/5"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="1">1 Tela (1 CRÉD)</SelectItem><SelectItem value="2">2 Telas (2 CRÉD)</SelectItem><SelectItem value="3">3 Telas (3 CRÉD)</SelectItem></SelectContent>
+                    <SelectTrigger className="w-full bg-black/40 h-16 rounded-2xl font-black text-primary border-white/5 text-lg"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Tela (1 CRÉDITO)</SelectItem>
+                      <SelectItem value="2">2 Telas (2 CRÉDITOS)</SelectItem>
+                      <SelectItem value="3">3 Telas (3 CRÉDITOS)</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
-                <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                   <p className="text-[9px] font-black uppercase text-primary italic">Atenção: Ativação de Adulto, Games, PPV e Alacarte é feita EXCLUSIVAMENTE pelo Mestre Léo. Seus clientes devem pagar e solicitar a ele.</p>
+                <div className="p-5 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
+                   <AlertTriangle className="h-5 w-5 text-primary shrink-0" />
+                   <p className="text-[10px] font-bold uppercase text-primary/80 leading-relaxed italic">
+                     Mestre, a ativação de Adulto, Games e PPV é feita manualmente pelo Administrador Geral. Seus clientes devem solicitar liberação após a compra.
+                   </p>
                 </div>
              </div>
-             <div className="grid grid-cols-2 gap-4">
-                <Button onClick={() => handleGenerate('monthly')} disabled={isGenerating} className="h-full bg-primary rounded-[2rem] font-black text-lg uppercase shadow-xl">GERAR 30 DIAS</Button>
-                <Button onClick={() => handleGenerate('test')} disabled={isGenerating} variant="outline" className="h-full border-emerald-500/20 text-emerald-500 rounded-[2rem] font-black text-lg uppercase">TESTE GRÁTIS</Button>
+             <div className="grid grid-cols-2 gap-5 h-32">
+                <Button onClick={() => handleGenerate('monthly')} disabled={isGenerating} className="h-full bg-primary rounded-[2rem] font-black text-xl uppercase shadow-xl hover:scale-[1.02] active:scale-95 transition-all">
+                   {isGenerating ? <Loader2 className="animate-spin" /> : 'GERAR 30 DIAS'}
+                </Button>
+                <Button onClick={() => handleGenerate('test')} disabled={isGenerating} variant="outline" className="h-full border-emerald-500/20 text-emerald-500 rounded-[2rem] font-black text-xl uppercase hover:bg-emerald-500/5 hover:scale-[1.02] active:scale-95 transition-all">
+                   TESTE 6H
+                </Button>
              </div>
           </div>
         </Card>
 
-        <div className="relative">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
-          <Input placeholder="PESQUISAR PIN..." className="pl-14 h-16 bg-card/50 border-white/5 rounded-3xl uppercase font-black text-lg tracking-[0.2em]" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="relative group">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input placeholder="PESQUISAR PIN DOS MEUS CLIENTES..." className="pl-16 h-20 bg-card/50 border-white/5 rounded-[1.5rem] uppercase font-black text-xl tracking-[0.3em]" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
 
-        <Card className="bg-card/40 border-white/5 rounded-[3rem] shadow-2xl overflow-hidden">
-          <CardHeader className="border-b border-white/5 p-8 bg-black/20 flex flex-row items-center justify-between"><CardTitle className="text-sm font-black uppercase italic text-primary flex items-center gap-2"><Users className="h-5 w-5"/> Meus Clientes</CardTitle></CardHeader>
+        <Card className="bg-card/40 border-white/5 rounded-[3.5rem] shadow-2xl overflow-hidden">
+          <CardHeader className="border-b border-white/5 p-10 bg-black/20 flex flex-row items-center justify-between">
+            <div>
+               <CardTitle className="text-sm font-black uppercase italic text-primary flex items-center gap-3">
+                 <Users className="h-6 w-6"/> Gestão de Clientes Soberana
+               </CardTitle>
+               <p className="text-[9px] font-bold opacity-40 uppercase tracking-widest mt-1">Status real e controle de validade v385-S</p>
+            </div>
+            <Button onClick={loadData} variant="ghost" size="icon" className="text-primary h-12 w-12 rounded-xl"><RefreshCcw className={`h-6 w-6 ${loading ? 'animate-spin' : ''}`} /></Button>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-white/5">
-              {filtered.map(u => {
-                const status = getExpiryStatus(u.expiryDate);
-                return (
-                  <div key={u.id} className="p-8 flex flex-col lg:grid lg:grid-cols-4 items-center hover:bg-white/5 gap-8">
-                    <div className="flex items-center gap-6 col-span-2">
-                      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-2xl text-primary border border-primary/20">{u.pin.substring(0,2)}</div>
-                      <div>
-                        <p className="font-mono font-black text-3xl text-primary tracking-[0.25em]">{u.pin}</p>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                           <Badge className={`text-[7px] uppercase ${u.isAdultEnabled ? 'bg-red-500' : 'bg-muted opacity-20'}`}>Adulto</Badge>
-                           <Badge className={`text-[7px] uppercase ${u.isGamesEnabled ? 'bg-emerald-500' : 'bg-muted opacity-20'}`}>Games</Badge>
-                           <Badge className={`text-[7px] uppercase ${u.isPpvEnabled ? 'bg-orange-500' : 'bg-muted opacity-20'}`}>PPV</Badge>
-                           <Badge className={`text-[7px] uppercase ${u.isAlacarteEnabled ? 'bg-blue-500' : 'bg-muted opacity-20'}`}>Alacarte</Badge>
+              {filtered.length === 0 ? (
+                <div className="p-32 text-center opacity-20 font-black uppercase italic tracking-widest">Nenhum cliente sintonizado v385-S.</div>
+              ) : (
+                filtered.map(u => {
+                  const status = getExpiryStatus(u.expiryDate, u.isBlocked);
+                  return (
+                    <div key={u.id} className="p-10 flex flex-col lg:grid lg:grid-cols-5 items-center hover:bg-white/5 transition-colors gap-8">
+                      <div className="flex items-center gap-8 col-span-2">
+                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center font-black text-3xl shadow-2xl border border-white/5 ${u.isBlocked ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                          {u.pin.substring(0,2)}
+                        </div>
+                        <div>
+                          <p className={`font-mono font-black text-3xl tracking-[0.2em] ${u.isBlocked ? 'text-destructive' : 'text-primary'}`}>{u.pin}</p>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                             <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20">{u.subscriptionTier}</Badge>
+                             <Badge variant="outline" className="text-[8px] font-black uppercase border-primary/20">{u.maxScreens} TELA(S)</Badge>
+                          </div>
                         </div>
                       </div>
+                      
+                      <div className="flex flex-col items-center gap-2">
+                         <div className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase text-center border border-white/5 shadow-inner ${status.color} flex items-center gap-2`}>
+                            <status.icon className="h-4 w-4" />
+                            {status.label}
+                         </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 justify-center">
+                         <Badge className={`text-[7px] uppercase font-black ${u.isAdultEnabled ? 'bg-red-500 text-white' : 'bg-muted opacity-20'}`}>Adulto</Badge>
+                         <Badge className={`text-[7px] uppercase font-black ${u.isGamesEnabled ? 'bg-emerald-500 text-white' : 'bg-muted opacity-20'}`}>Games</Badge>
+                         <Badge className={`text-[7px] uppercase font-black ${u.isPpvEnabled ? 'bg-orange-500 text-white' : 'bg-muted opacity-20'}`}>PPV</Badge>
+                      </div>
+
+                      <div className="flex gap-3 justify-end">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setMsgInput(u.individualMessage || ""); }} className="text-primary h-12 w-12 hover:bg-primary/10 rounded-xl" title="Mensagem VIP">
+                          <MessageSquare className="h-6 w-6" />
+                        </Button>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => toggleClientBlock(u)} 
+                          className={`h-12 w-12 rounded-xl transition-all ${u.isBlocked ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' : 'bg-destructive/10 text-destructive hover:bg-destructive/20'}`}
+                          title={u.isBlocked ? "Desbloquear Sinal" : "Bloquear Sinal"}
+                        >
+                          {u.isBlocked ? <UserCheck2 className="h-6 w-6" /> : <UserX className="h-6 w-6" />}
+                        </Button>
+
+                        <Button variant="outline" onClick={() => sendAccess(u)} className="h-12 border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px] rounded-xl px-8 hover:bg-emerald-500/10 shadow-lg">
+                          ENVIAR ACESSO
+                        </Button>
+                      </div>
                     </div>
-                    <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase text-center ${status.color}`}>{status.label}</div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingUser(u); setMsgInput(u.individualMessage || ""); }} className="text-primary"><MessageSquare className="h-5 w-5" /></Button>
-                      <Button variant="outline" onClick={() => sendAccess(u)} className="h-12 border-emerald-500/20 text-emerald-500 font-black uppercase text-[10px] rounded-xl px-6">ENVIAR ACESSO</Button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
       </main>
 
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="bg-card border-white/10 rounded-[2.5rem] p-8">
-           <DialogHeader><DialogTitle className="text-xl font-black uppercase italic text-primary">Mensagem para o Cliente</DialogTitle></DialogHeader>
-           <div className="py-6 space-y-4">
-              <Textarea value={msgInput} onChange={e => setMsgInput(e.target.value)} placeholder="Ex: Sua fatura está pendente..." className="h-32 bg-black/40 border-white/5 font-bold text-xs" />
+        <DialogContent className="bg-card border-white/10 rounded-[3rem] p-10 shadow-2xl">
+           <DialogHeader>
+             <DialogTitle className="text-2xl font-black uppercase italic text-primary flex items-center gap-3">
+               <Bell className="h-6 w-6" /> Mensagem Individual VIP
+             </DialogTitle>
+           </DialogHeader>
+           <div className="py-8 space-y-4">
+              <p className="text-[10px] font-bold uppercase opacity-60 italic">Escreva um aviso que aparecerá apenas para este cliente no player.</p>
+              <Textarea 
+                value={msgInput} 
+                onChange={e => setMsgInput(e.target.value)} 
+                placeholder="Ex: Sua fatura está pendente. Regularize seu sinal!" 
+                className="h-40 bg-black/40 border-white/5 font-bold text-sm rounded-2xl" 
+              />
            </div>
-           <DialogFooter><Button onClick={() => { if(editingUser) saveUser({...editingUser, individualMessage: msgInput}).then(() => { toast({title: "Salvo!"}); setEditingUser(null); loadData(); }) }} className="w-full h-14 bg-primary font-black uppercase rounded-2xl">SALVAR MENSAGEM</Button></DialogFooter>
+           <DialogFooter>
+             <Button onClick={() => { if(editingUser) saveUser({...editingUser, individualMessage: msgInput}).then(() => { toast({title: "SALVO v385-S"}); setEditingUser(null); loadData(); }) }} className="w-full h-16 bg-primary font-black uppercase rounded-2xl text-lg shadow-xl shadow-primary/20">
+               SALVAR AVISO
+             </Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
