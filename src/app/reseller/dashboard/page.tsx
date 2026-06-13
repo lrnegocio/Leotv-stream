@@ -39,11 +39,9 @@ export default function ResellerDashboard() {
     setLoading(true)
     try {
       const allUsers = await getRemoteUsers()
-      // Filtra usuários vinculados a este revendedor
       const filtered = allUsers.filter(u => u.resellerId === sessionData.id)
       setMyUsers(filtered)
       
-      // Busca dados atualizados do revendedor para garantir saldo de créditos correto
       const { supabase } = await import('@/lib/supabase-client')
       const { data: resData } = await supabase.from('resellers').select('*').eq('id', sessionData.id).single()
       
@@ -62,30 +60,15 @@ export default function ResellerDashboard() {
 
   React.useEffect(() => { loadData() }, [loadData])
 
-  const getExpiryDays = (expiryDate?: string | null) => {
-    if (!expiryDate) return null;
-    const now = new Date();
-    const exp = new Date(expiryDate);
-    const diffTime = exp.getTime() - now.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
   const getExpiryStatus = (expiryDate?: string | null, isBlocked?: boolean) => {
     if (isBlocked) return { label: "SINAL BLOQUEADO", color: "bg-destructive text-white", icon: UserX };
-    
     if (!expiryDate) return { label: "AGUARDANDO ATIVAÇÃO", color: "bg-blue-500/10 text-blue-400", icon: Clock };
     
     const now = new Date();
     const exp = new Date(expiryDate);
     
-    if (now > exp) return { label: `EXPIRADO EM: ${exp.toLocaleString()}`, color: "bg-destructive text-white", icon: AlertTriangle };
-    
-    const diffDays = getExpiryDays(expiryDate);
-    if (diffDays !== null && diffDays <= 3) {
-      return { label: `VENCE: ${exp.toLocaleString()}`, color: "bg-orange-500/10 text-orange-500", icon: AlertTriangle };
-    }
-    
-    return { label: `ATIVO ATÉ: ${exp.toLocaleString()}`, color: "bg-emerald-500/10 text-emerald-400", icon: UserCheck };
+    if (now > exp) return { label: `EXPIRADO EM: ${exp.toLocaleString('pt-BR')}`, color: "bg-destructive text-white", icon: AlertTriangle };
+    return { label: `ATIVO ATÉ: ${exp.toLocaleString('pt-BR')}`, color: "bg-emerald-500/10 text-emerald-400", icon: UserCheck };
   };
 
   const handleGenerate = async (type: 'test' | 'monthly') => {
@@ -100,7 +83,6 @@ export default function ResellerDashboard() {
     setIsGenerating(true);
     const pin = generateRandomPin(11);
     
-    // Configura validade inicial apenas para testes (6h). Mensal ativa no primeiro login.
     let expiryDate = null;
     if (type === 'test') {
       const d = new Date();
@@ -204,7 +186,7 @@ export default function ResellerDashboard() {
                 <div className="p-5 bg-black/40 rounded-2xl border border-white/5 flex items-start gap-3">
                    <AlertTriangle className="h-5 w-5 text-primary shrink-0" />
                    <p className="text-[10px] font-bold uppercase text-primary/80 leading-relaxed italic">
-                     Mestre, a ativação de Adulto, Games e PPV é feita manualmente pelo Administrador Geral. Seus clientes devem solicitar liberação após a compra.
+                     Atenção: Ativação de Adulto, Games, PPV e Alacarte é feita EXCLUSIVAMENTE pelo Mestre Léo. Seus clientes devem pagar e solicitar a ele.
                    </p>
                 </div>
              </div>
@@ -228,9 +210,8 @@ export default function ResellerDashboard() {
           <CardHeader className="border-b border-white/5 p-10 bg-black/20 flex flex-row items-center justify-between">
             <div>
                <CardTitle className="text-sm font-black uppercase italic text-primary flex items-center gap-3">
-                 <Users className="h-6 w-6"/> Gestão de Clientes Soberana
+                 <Users className="h-6 w-6"/> Meus Clientes v385-S
                </CardTitle>
-               <p className="text-[9px] font-bold opacity-40 uppercase tracking-widest mt-1">Status real e controle de validade v385-S</p>
             </div>
             <Button onClick={loadData} variant="ghost" size="icon" className="text-primary h-12 w-12 rounded-xl"><RefreshCcw className={`h-6 w-6 ${loading ? 'animate-spin' : ''}`} /></Button>
           </CardHeader>

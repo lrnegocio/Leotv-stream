@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -21,7 +22,6 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
   
   const safeUrl = React.useMemo(() => url?.toString().trim() || "", [url]);
   
-  // DETECTOR UNIVERSAL v385-S PLUS (YouTube, TVACABO & SHORTFLIX)
   const isIframe = safeUrl.includes('embed') || 
                    safeUrl.includes('youtube.com') || 
                    safeUrl.includes('youtu.be') ||
@@ -132,17 +132,17 @@ export function VideoPlayer({ url, title, onNext, onPrev }: VideoPlayerProps) {
         </div>
       )}
 
-      {/* NAVEGAÇÃO SOBERANA */}
-      <div className="absolute inset-y-0 left-0 flex items-center px-4 z-[150] pointer-events-none group/nav">
+      {/* NAVEGAÇÃO SOBERANA - BOTÕES FIXOS NAS LATERAIS */}
+      <div className="absolute inset-y-0 left-0 flex items-center px-4 z-[150] group/nav">
         {onPrev && (
-          <Button onClick={onPrev} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all pointer-events-auto opacity-0 group-hover/nav:opacity-100">
+          <Button onClick={onPrev} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all opacity-0 group-hover/nav:opacity-100">
             <ChevronLeft className="h-8 w-8" />
           </Button>
         )}
       </div>
-      <div className="absolute inset-y-0 right-0 flex items-center px-4 z-[150] pointer-events-none group/nav">
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 z-[150] group/nav">
         {onNext && (
-          <Button onClick={onNext} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all pointer-events-auto opacity-0 group-hover/nav:opacity-100">
+          <Button onClick={onNext} size="icon" className="h-16 w-16 bg-black/40 rounded-full border border-white/10 text-white hover:bg-primary hover:scale-110 transition-all opacity-0 group-hover/nav:opacity-100">
             <ChevronRight className="h-8 w-8" />
           </Button>
         )}
