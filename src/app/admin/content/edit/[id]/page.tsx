@@ -35,7 +35,7 @@ export default function EditContentPage() {
         }
       } catch (err) { 
         console.error(err) 
-      } final: { 
+      } finally: { 
         setFetching(false) 
       }
     }
