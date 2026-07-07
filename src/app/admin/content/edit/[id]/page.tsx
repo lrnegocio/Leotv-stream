@@ -19,11 +19,11 @@ function renderizarPlayerSoberano(urlAtual: string) {
   if (urlAtual.includes("youtube.com") || urlAtual.includes("youtu.be")) {
     let videoId = "";
     if (urlAtual.includes("v=")) {
-      videoId = urlAtual.split("v=")[1]?.split("&")[0];
+      videoId = urlAtual.split("v=")[1]?.split("&")[0] || "";
     } else if (urlAtual.includes("youtu.be/")) {
-      videoId = urlAtual.split("youtu.be/")[1]?.split("?")[0];
+      videoId = urlAtual.split("youtu.be/")[1]?.split("?")[0] || "";
     } else if (urlAtual.includes("/embed/")) {
-      videoId = urlAtual.split("/embed/")[1]?.split("?")[0];
+      videoId = urlAtual.split("/embed/")[1]?.split("?")[0] || "";
     }
     return <iframe src={`https://youtube.com{videoId}?autoplay=1`} className="w-full h-full aspect-video border-0" allowFullScreen></iframe>;
   }
@@ -52,11 +52,7 @@ export default function EditContentPage() {
           setFormData({ ...item, isActive: item.isActive !== false, isRestricted: item.isRestricted === true })
           setSeasons(item.seasons || [])
         }
-      } catch (err) { 
-        console.error(err) 
-      } finally { 
-        setFetching(false) 
-      }
+      } catch (err) { console.error(err) } finally { setFetching(false) }
     }
     load()
   }, [id])
@@ -67,13 +63,9 @@ export default function EditContentPage() {
     setLoading(true)
     try {
       await saveContent({ ...formData, seasons })
-      toast({ title: "Sinal salvo com sucesso!" })
+      toast({ title: "Sinal salvo no Supabase com sucesso!" })
       router.push("/admin/content")
-    } catch (err) { 
-      toast({ variant: "destructive", title: "Erro ao salvar." }) 
-    } finally { 
-      setLoading(false) 
-    }
+    } catch (err) { toast({ variant: "destructive", title: "Erro ao salvar." }) } finally { setLoading(false) }
   }
 
   const addSeason = () => {
@@ -100,13 +92,7 @@ export default function EditContentPage() {
     setSeasons(updated)
   }
 
-  if (fetching) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-zinc-950">
-        <Loader2 className="animate-spin text-purple-500" />
-      </div>
-    )
-  }
+  if (fetching) return <div className="flex h-screen items-center justify-center bg-zinc-950"><Loader2 className="animate-spin text-purple-500" /></div>
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
@@ -186,4 +172,5 @@ export default function EditContentPage() {
               <h3 className="text-sm font-bold text-zinc-400">Configurações de Sinal</h3>
               <div className="flex items-center justify-between">
                 <Label>Sinal Ativo na Rede</Label>
-
+                <Switch checked={formData?.isActive || false} onCheckedChange={(val) => setFormData(formData ? { ...formData, isActive: val } : null)} />
+              </div>
