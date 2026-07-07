@@ -100,7 +100,13 @@ export default function EditContentPage() {
     setSeasons(updated)
   }
 
-  if (fetching) return <div className="flex h-screen items-center justify-center bg-zinc-950"><Loader2 className="animate-spin text-purple-500" /></div>
+ if (fetching) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-zinc-950 text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
