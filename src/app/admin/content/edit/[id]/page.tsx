@@ -12,13 +12,19 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/hooks/use-toast"
 import { getContentById, saveContent, Season, Episode, ContentItem } from "@/lib/store"
 import Link from "next/link"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 function renderizarPlayerSoberano(urlAtual: string) {
   if (!urlAtual || urlAtual.trim() === "") return <div className="p-4 text-center text-white">Aguardando sinal...</div>;
   if (urlAtual.includes("youtube.com") || urlAtual.includes("youtu.be")) {
-    let videoId = urlAtual.includes("v=") ? urlAtual.split("v=")[1]?.split("&")[0] : urlAtual.split("youtu.be/")[1]?.split("?")[0];
-    if (urlAtual.includes("/embed/")) videoId = urlAtual.split("/embed/")[1]?.split("?")[0];
+    let videoId = "";
+    if (urlAtual.includes("v=")) {
+      videoId = urlAtual.split("v=")[1]?.split("&")[0];
+    } else if (urlAtual.includes("youtu.be/")) {
+      videoId = urlAtual.split("youtu.be/")[1]?.split("?")[0];
+    } else if (urlAtual.includes("/embed/")) {
+      videoId = urlAtual.split("/embed/")[1]?.split("?")[0];
+    }
     return <iframe src={`https://youtube.com{videoId}?autoplay=1`} className="w-full h-full aspect-video border-0" allowFullScreen></iframe>;
   }
   if (urlAtual.includes("redecanais") || urlAtual.includes("ch.php") || urlAtual.includes(".html")) {
@@ -57,7 +63,7 @@ export default function EditContentPage() {
     setLoading(true)
     try {
       await saveContent({ ...formData, seasons })
-      toast({ title: "Sinal recalibrado com sucesso!" })
+      toast({ title: "Sinal salvo com sucesso!" })
       router.push("/admin/content")
     } catch (err) { toast({ variant: "destructive", title: "Erro ao salvar." }) } finally { setLoading(false) }
   }
@@ -80,6 +86,12 @@ export default function EditContentPage() {
     setSeasons(updated)
   }
 
+  const removeEpisode = (sIdx: number, epIdx: number) => {
+    const updated = [...seasons]
+    updated[sIdx].episodes = updated[sIdx].episodes.filter((_, i) => i !== epIdx)
+    setSeasons(updated)
+  }
+
   if (fetching) return <div className="flex h-screen items-center justify-center bg-zinc-950"><Loader2 className="animate-spin text-purple-500" /></div>
 
   return (
@@ -87,18 +99,18 @@ export default function EditContentPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="space-y-4 md:col-span-2 bg-zinc-900 p-6 rounded-xl border border-zinc-800 shadow-xl">
-            <h1 className="text-xl font-bold text-purple-400">Recalibrar Sinal v370</h1>
+            <h1 className="text-xl font-bold text-purple-400">Novo Sinal Master v370</h1>
             
             <div className="space-y-2">
               <Label>Nome do Conteúdo</Label>
-              <Input value={formData?.title || ""} onChange={(e) => setFormData(formData ? { ...formData, title: e.target.value } : null)} className="bg-zinc-950 border-zinc-800" required />
+              <Input value={formData?.title || ""} onChange={(e) => setFormData(formData ? { ...formData, title: e.target.value } : null)} className="bg-zinc-950 border-zinc-800 text-white" required />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo de Mídia</Label>
                 <Select value={formData?.type || "series"} onValueChange={(val) => setFormData(formData ? { ...formData, type: val } : null)}>
-                  <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-zinc-950 border-zinc-800 text-white"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                     <SelectItem value="channel">Canal Aberto/PPV</SelectItem>
                     <SelectItem value="movie">Filme Único</SelectItem>
@@ -108,38 +120,41 @@ export default function EditContentPage() {
               </div>
               <div className="space-y-2">
                 <Label>Pasta / Categoria</Label>
-                <Input value={formData?.genre || ""} onChange={(e) => setFormData(formData ? { ...formData, genre: e.target.value } : null)} className="bg-zinc-950 border-zinc-800" required />
+                <Input value={formData?.genre || ""} onChange={(e) => setFormData(formData ? { ...formData, genre: e.target.value } : null)} className="bg-zinc-950 border-zinc-800 text-white" required />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label>Sinopse do Sinal</Label>
-              <Textarea value={formData?.description || ""} onChange={(e) => setFormData(formData ? { ...formData, description: e.target.value } : null)} className="bg-zinc-950 border-zinc-800" />
+              <Textarea value={formData?.description || ""} onChange={(e) => setFormData(formData ? { ...formData, description: e.target.value } : null)} className="bg-zinc-950 border-zinc-800 text-white" />
             </div>
 
-            {/* SEÇÃO VOLTADA DE TEMPORADAS MASTER */}
             <div className="space-y-4 border-t border-zinc-800 pt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-md font-bold text-zinc-300">Temporadas Master</h3>
-                <Button type="button" onClick={addSeason} variant="outline" size="sm" className="border-purple-500/30 text-purple-400 bg-purple-500/10">
+                <Button type="button" onClick={addSeason} variant="outline" size="sm" className="border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20">
                   <Plus className="mr-1 h-4 w-4" /> Adicionar Temp
                 </Button>
               </div>
 
               {seasons.map((season, sIdx) => (
                 <div key={sIdx} className="p-4 bg-zinc-950 border border-zinc-800 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
                     <span className="font-bold text-purple-400 text-sm">Temp {season.num}</span>
-                    <Button type="button" onClick={() => addEpisode(sIdx)} size="sm" className="bg-zinc-900 border border-zinc-800 text-xs">Add Ep na T{season.num}</Button>
+                    <Button type="button" onClick={() => addEpisode(sIdx)} size="sm" className="bg-zinc-900 border border-zinc-800 text-xs text-purple-400 hover:bg-zinc-800">Add Ep na T{season.num}</Button>
                   </div>
 
-                  <div className="space-y-3 lista-episodios max-h-[200px] overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1 lista-episodios">
                     {season.episodes?.map((ep, epIdx) => (
                       <div key={epIdx} className="space-y-2 p-3 bg-zinc-900 rounded border border-zinc-800">
-                        <div className="flex gap-2">
-                          <Input value={ep.title} onChange={(e) => updateEpisode(sIdx, epIdx, "title", e.target.value)} placeholder="Título" className="bg-zinc-950 h-8" />
-                          <Input value={ep.url} onChange={(e) => updateEpisode(sIdx, epIdx, "url", e.target.value)} placeholder="Link do Episódio" className="bg-zinc-950 h-8" />
-                          <Button type="button" onClick={() => setTestVideo({ url: ep.url, title: ep.title })} className="bg-blue-600 h-8 text-xs font-bold">Sintonizar Ep</Button>
+                        <div className="flex gap-2 items-center">
+                          <div className="w-12">
+                            <Input type="number" value={ep.num} onChange={(e) => updateEpisode(sIdx, epIdx, "num", parseInt(e.target.value))} className="bg-zinc-950 h-8 text-center text-xs" />
+                          </div>
+                          <Input value={ep.title} onChange={(e) => updateEpisode(sIdx, epIdx, "title", e.target.value)} placeholder="Título" className="bg-zinc-950 h-8 text-xs" />
+                          <Input value={ep.url} onChange={(e) => updateEpisode(sIdx, epIdx, "url", e.target.value)} placeholder="Link do Episódio" className="bg-zinc-950 h-8 text-xs" />
+                          <Button type="button" onClick={() => setTestVideo({ url: ep.url, title: ep.title })} className="bg-blue-600 h-8 text-xs font-bold px-2">Sintonizar</Button>
+                          <Button type="button" variant="destructive" onClick={() => removeEpisode(sIdx, epIdx)} className="h-8 w-8 p-0"><Trash2 className="h-3 w-3" /></Button>
                         </div>
                       </div>
                     ))}
@@ -149,30 +164,13 @@ export default function EditContentPage() {
             </div>
           </div>
 
-          {/* PAINEL LATERAL ESQUERDO DO NOVO SINAL */}
           <div className="space-y-4 bg-zinc-900 p-6 rounded-xl border border-zinc-800 shadow-xl h-fit">
             <h3 className="text-md font-bold text-zinc-300 flex items-center"><Wand2 className="mr-2 h-4 w-4 text-purple-400" /> Capa Oficial</h3>
-            <Input value={formData?.imageUrl || ""} onChange={(e) => setFormData(formData ? { ...formData, imageUrl: e.target.value } : null)} className="bg-zinc-950 border-zinc-800" placeholder="URL da Imagem..." />
+            <Input value={formData?.imageUrl || ""} onChange={(e) => setFormData(formData ? { ...formData, imageUrl: e.target.value } : null)} className="bg-zinc-950 border-zinc-800 text-white" placeholder="URL da Imagem..." />
             
             <div className="border-t border-zinc-800 pt-4 space-y-4">
               <h3 className="text-sm font-bold text-zinc-400">Configurações de Sinal</h3>
               <div className="flex items-center justify-between">
                 <Label>Sinal Ativo na Rede</Label>
-                <Switch checked={formData?.isActive} onCheckedChange={(val) => setFormData(formData ? { ...formData, isActive: val } : null)} />
+                <Switch checked={formData?.isActive || false} onCheckedChange={(val) => setFormData(formData ? { ...formData, isActive: val } : null)} />
               </div>
-              <div className="flex items-center justify-between">
-                <Label>Conteúdo Restrito</Label>
-                <Switch checked={formData?.isRestricted} onCheckedChange={(val) => setFormData(formData ? { ...formData, isRestricted: val } : null)} />
-              </div>
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full bg-purple-600 font-bold hover:bg-purple-700 text-white mt-4">
-              {loading ? <Loader2 className="animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              SALVAR SINAL
-            </Button>
-          </div>
-        </form>
-      </div>
-
-      <Dialog open={!!testVideo} onOpenChange={() => setTestVideo(null)}>
-        <DialogContent className="sm:max-w-4xl bg-zinc-950 border-zinc-800 text-white p-4">
