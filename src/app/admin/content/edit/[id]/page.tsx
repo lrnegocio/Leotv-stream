@@ -14,25 +14,6 @@ import { getContentById, saveContent, Season, Episode, ContentItem } from "@/lib
 import Link from "next/link"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 
-function renderizarPlayerSoberano(urlAtual: string) {
-  if (!urlAtual || urlAtual.trim() === "") return <div className="p-4 text-center text-white">Aguardando sinal...</div>;
-  if (urlAtual.includes("youtube.com") || urlAtual.includes("youtu.be")) {
-    let videoId = "";
-    if (urlAtual.includes("v=")) {
-      videoId = urlAtual.split("v=")[1]?.split("&")[0] || "";
-    } else if (urlAtual.includes("youtu.be/")) {
-      videoId = urlAtual.split("youtu.be/")[1]?.split("?")[0] || "";
-    } else if (urlAtual.includes("/embed/")) {
-      videoId = urlAtual.split("/embed/")[1]?.split("?")[0] || "";
-    }
-    return <iframe src={`https://youtube.com{videoId}?autoplay=1`} className="w-full h-full aspect-video border-0" allowFullScreen></iframe>;
-  }
-  if (urlAtual.includes("redecanais") || urlAtual.includes("ch.php") || urlAtual.includes(".html")) {
-    return <iframe src={urlAtual} className="w-full h-full aspect-video border-0" allowFullScreen sandbox="allow-scripts allow-same-origin allow-forms"></iframe>;
-  }
-  return <video src={urlAtual} controls autoPlay className="w-full h-full aspect-video" />;
-}
-
 export default function EditContentPage() {
   const params = useParams()
   const id = params?.id as string
@@ -100,7 +81,19 @@ export default function EditContentPage() {
     setSeasons(updated)
   }
 
- if (fetching) {
+  const obterVideoId = (urlAtual: string) => {
+    if (!urlAtual) return ""
+    try {
+      if (urlAtual.includes("v=")) return urlAtual.split("v=")[1]?.split("&")[0] || ""
+      if (urlAtual.includes("youtu.be/")) return urlAtual.split("youtu.be/")[1]?.split("?")[0] || ""
+      if (urlAtual.includes("/embed/")) return urlAtual.split("/embed/")[1]?.split("?")[0] || ""
+    } catch (e) {
+      console.error(e)
+    }
+    return ""
+  }
+
+  if (fetching) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-950 text-white">
         <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
@@ -186,3 +179,14 @@ export default function EditContentPage() {
               <h3 className="text-sm font-bold text-zinc-400">Configurações de Sinal</h3>
               <div className="flex items-center justify-between">
                 <Label>Sinal Ativo na Rede</Label>
+                <Switch checked={formData?.isActive || false} onCheckedChange={(val) => setFormData(formData ? { ...formData, isActive: val } : null)} />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Conteúdo Restrito</Label>
+                <Switch checked={formData?.isRestricted || false} onCheckedChange={(val) => setFormData(formData ? { ...formData, isRestricted: val } : null)} />
+              </div>
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full bg-purple-600 font-bold hover:bg-purple-700 text-white mt-4 tracking-wider">
+              {loading ? <Loader2 className="animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              SALVAR SINAL
