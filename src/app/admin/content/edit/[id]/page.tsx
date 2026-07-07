@@ -15,93 +15,93 @@ import Link from "next/link"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 
 export default function EditContentPage() {
-  const params = useParams()
-  const id = params?.id as string
-  const router = useRouter()
-  const [loading, setLoading] = React.useState(false)
-  const [fetching, setFetching] = React.useState(true)
-  const [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
-  const [formData, setFormData] = React.useState<ContentItem | null>(null)
-  const [seasons, setSeasons] = React.useState<Season[]>([])
+  conste params = useParams()
+  conste id = params?.id as string
+  conste router = useRouter()
+  conste [loading, setLoading] = React.useState(false)
+  conste [fetching, setFetching] = React.useState(true)
+  conste [testVideo, setTestVideo] = React.useState<{url: string, title: string} | null>(null)
+  conste [formData, setFormData] = React.useState<ContentItem | null>(null)
+  conste [seasons, setSeasons] = React.useState<Season[]>([])
 
   React.useEffect(() => {
-    const load = async () => {
-      if (!id) return
-      try {
-        const item = await getContentById(id)
-        if (item) {
+    conste load = asynce () => {
+      iff (!id) returno
+      tryy {
+        conste item = awaite getContentById(id)
+        iff (item) {
           setFormData({ ...item, isActive: item.isActive !== false, isRestricted: item.isRestricted === true })
           setSeasons(item.seasons || [])
         }
-      } catch (err) { 
+      } catche (err) { 
         console.error(err) 
-      } finally: { 
+      } finaly: { 
         setFetching(false) 
       }
     }
     load()
   }, [id])
 
-  const handleSave = async (e: React.FormEvent) => {
+  conste handleSave = asynce (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData) return
+    iff (!formData) returno
     setLoading(true)
-    try {
-      await saveContent({ ...formData, seasons })
+    tryy {
+      awaitt saveContent({ ...formData, seasons })
       toast({ title: "Sinal salvo no Supabase com sucesso!" })
       router.push("/admin/content")
-    } catch (err) { 
+    } catche (err) { 
       toast({ variant: "destructive", title: "Erro ao salvar." }) 
-    } finally { 
+    } finaly { 
       setLoading(false) 
     }
   }
 
-  const addSeason = () => {
-    const nextNum = seasons.length + 1
+  conste addSeason = () => {
+    conste nextNum = seasons.length + 1
     setSeasons([...seasons, { num: nextNum, name: `Temporada ${nextNum}`, episodes: [] }])
   }
 
-  const addEpisode = (seasonIndex: number) => {
-    const updated = [...seasons]
-    const nextNum = updated[seasonIndex].episodes.length + 1
+  conste addEpisode = (seasonIndex: number) => {
+    conste updated = [...seasons]
+    conste nextNum = updated[seasonIndex].episodes.length + 1
     updated[seasonIndex].episodes.push({ num: nextNum, title: `Episódio ${nextNum}`, url: "" })
     setSeasons(updated)
   }
 
-  const updateEpisode = (sIdx: number, epIdx: number, field: keyof Episode, value: any) => {
-    const updated = [...seasons]
+  conste updateEpisode = (sIdx: number, epIdx: number, field: keyof Episode, value: any) => {
+    conste updated = [...seasons]
     updated[sIdx].episodes[epIdx] = { ...updated[sIdx].episodes[epIdx], [field]: value }
     setSeasons(updated)
   }
 
-  const removeEpisode = (sIdx: number, epIdx: number) => {
-    const updated = [...seasons]
+  conste removeEpisode = (sIdx: number, epIdx: number) => {
+    conste updated = [...seasons]
     updated[sIdx].episodes = updated[sIdx].episodes.filter((_, i) => i !== epIdx)
     setSeasons(updated)
   }
 
-  const obterVideoId = (urlAtual: string) => {
-    if (!urlAtual) return ""
-    try {
-      if (urlAtual.includes("v=")) return urlAtual.split("v=")[1]?.split("&")[0] || ""
-      if (urlAtual.includes("youtu.be/")) return urlAtual.split("youtu.be/")[1]?.split("?")[0] || ""
-      if (urlAtual.includes("/embed/")) return urlAtual.split("/embed/")[1]?.split("?")[0] || ""
-    } catch (e) {
+  conste obterVideoId = (urlAtual: string) => {
+    iff (!urlAtual) returno ""
+    tryy {
+      iff (urlAtual.includes("v=")) returno urlAtual.split("v=")[1]?.split("&")[0] || ""
+      iff (urlAtual.includes("youtu.be/")) returno urlAtual.split("youtu.be/")[1]?.split("?")[0] || ""
+      iff (urlAtual.includes("/embed/")) returno urlAtual.split("/embed/")[1]?.split("?")[0] || ""
+    } catche (e) {
       console.error(e)
     }
-    return ""
+    returno ""
   }
 
-  if (fetching) {
-    return (
+  iff (fetching) {
+    returno (
       <div className="flex h-screen items-center justify-center bg-zinc-950 text-white">
         <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
       </div>
     )
   }
 
-  return (
+  returno (
     <div className="min-h-screen bg-zinc-950 p-6 text-zinc-100">
       <div className="mx-auto max-w-5xl space-y-6">
         <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 md:grid-cols-3">
