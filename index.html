@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LÉO TV STREAM - Painel Master Vue</title>
+    <!-- Script do Vue 3 direto para rodar leve na VPS -->
+    <script src="https://unpkg.com"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b071e; color: #fff; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+        #app { display: flex; width: 100vw; height: 100vh; }
+        
+        /* BARRA LATERAL ROXA */
+        .sidebar { width: 260px; background: #130c2e; border-right: 1px solid #251854; padding: 20px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; color: #a27bfa; }
+        .brand h1 { font-size: 18px; margin: 0; font-weight: bold; letter-spacing: 1px; }
+        .menu ul { list-style: none; padding: 0; margin: 0; }
+        .menu li { padding: 14px 16px; color: #8e83b3; cursor: pointer; border-radius: 8px; margin-bottom: 8px; font-weight: 600; font-size: 13px; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        .menu li:hover, .menu li.active { background: #251854; color: #fff; }
+
+        /* CONTEÚDO PRINCIPAL */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; background: #0b071e; overflow-y: auto; }
+        .topbar { height: 70px; border-bottom: 1px solid #251854; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; flex-shrink: 0; }
+        .search-box input { background: #1c133a; border: 1px solid #251854; padding: 10px 15px; border-radius: 8px; color: #fff; width: 300px; font-size: 13px; }
+        .user-profile { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 35px; height: 35px; background: #a27bfa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #130c2e; }
+
+        /* BANNER STATUS VPS */
+        .banner-status { background: linear-gradient(135deg, #1f124d, #130c2e); border: 1px solid #3c2495; margin: 30px; padding: 25px; border-radius: 16px; display: flex; align-items: center; gap: 20px; }
+        .banner-icon { font-size: 32px; background: #2c1a6e; padding: 15px; border-radius: 12px; }
+        .banner-text h3 { margin: 0 0 5px 0; color: #a27bfa; font-size: 14px; letter-spacing: 1px; }
+        .banner-text p { margin: 0; color: #bcaedb; font-size: 14px; }
+
+        /* CARDS DE MONITORAMENTO */
+        .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 0 30px; margin-bottom: 30px; }
+        .card { background: #130c2e; border: 1px solid #1f124d; padding: 20px; border-radius: 16px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .card h4 { margin: 0 0 15px 0; font-size: 12px; color: #8e83b3; letter-spacing: 0.5px; text-transform: uppercase; }
+        .card .value { font-size: 36px; font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .card .sub { font-size: 10px; color: #00e676; display: block; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <!-- Barra Lateral -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span style="font-size: 24px;">📺</span>
+                <h1>LÉO TV STREAM</h1>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li class="active">📊 PAINEL GERAL</li>
+                    <li>🎬 CANAIS & FILMES</li>
+                    <li>📈 ESTATÍSTICAS</li>
+                    <li>👥 CLIENTES & PINS</li>
+                    <li>🏪 REVENDEDORES</li>
+                    <li>🛡️ SEGURANÇA</li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Barra Superior -->
+            <header class="topbar">
+                <div class="search-box">
+                    <input type="text" placeholder=" buscar no banco da vps..." />
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">L</div>
+                    <span style="font-weight: 600; font-size: 14px; color: #bcaedb;">MESTRE LÉO</span>
+                </div>
+            </header>
+
+            <!-- Banner VPS -->
+            <section class="banner-status">
+                <div class="banner-icon">💾</div>
+                <div class="banner-text">
+                    <h3>STATUS: SERVIDOR VPS ATIVO</h3>
+                    <p>Mestre Léo, seu painel foi migrado com sucesso para o Vue.js e está rodando direto na sua infraestrutura.</p>
+                </div>
+            </section>
+
+            <!-- Grid de Monitoramento -->
+            <section class="cards-grid">
+                <div class="card">
+                    <h4>CLIENTES ATIVOS</h4>
+                    <div class="value">0</div>
+                    <span class="sub">↗ SINAL ONLINE NA VPS</span>
+                </div>
+                <div class="card">
+                    <h4>SINAIS NA REDE</h4>
+                    <div class="value">0</div>
+                    <span class="sub">↗ SINAL ONLINE NA VPS</span>
+                </div>
+                <div class="card">
+                    <h4>ARENA GAMES</h4>
+                    <div class="value">0</div>
+                    <span class="sub">↗ SINAL ONLINE NA VPS</span>
+                </div>
+                <div class="card">
+                    <h4>SINAIS ALACARTE</h4>
+                    <div class="value">0</div>
+                    <span class="sub">↗ SINAL ONLINE NA VPS</span>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const { createApp, onMounted, onBeforeUnmount } = Vue
+
+        createApp({
+            setup() {
+                // TRAVA ADICIONAL ANTI-HACKER EXIGIDA
+                const travarDevTools = (e) => {
+                    // Bloqueia F12
+                    if (e.key === 'F12') {
+                        e.preventDefault()
+                        return false
+                    }
+                    // Bloqueia Ctrl+U (Ver Código Fonte)
+                    if (e.ctrlKey && e.key.toLowerCase() === 'u') {
+                        e.preventDefault()
+                        return false
+                    }
+                    // Bloqueia Ctrl+Shift+I, J, C (Inspecionar Elemento)
+                    if (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(e.key.toLowerCase())) {
+                        e.preventDefault()
+                        return false
+                    }
+                }
+
+                // Bloqueia clique direito do mouse na página inteira
+                const bloquearCliqueDireito = (e) => {
+                    e.preventDefault()
+                }
+
+                onMounted(() => {
+                    window.addEventListener('keydown', travarDevTools)
+                    window.addEventListener('contextmenu', bloquearCliqueDireito)
+                })
+
+                onBeforeUnmount(() => {
+                    window.removeEventListener('keydown', travarDevTools)
+                    window.removeEventListener('contextmenu', bloquearCliqueDireito)
+                })
+
+                return {}
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
